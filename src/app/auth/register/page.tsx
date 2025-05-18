@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -40,6 +41,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           targetPath: 'user/register', // Specify the target path
           actualMethod: 'POST',        // Specify the actual method for the backend
+          username,
           email,
           password
         }),
@@ -70,9 +72,19 @@ export default function RegisterPage() {
       <h1>Register</h1>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
+          <label htmlFor="username" style={{ display: 'block', marginBottom: '5px' }}>Username:</label>
+          <input
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            minLength={3}
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+          />
+        </div>
+        <div style={{ marginBottom: '15px' }}>
           <label htmlFor="email" style={{ display: 'block', marginBottom: '5px' }}>Email:</label>
           <input
-            type="email"
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
