@@ -53,9 +53,9 @@ export default function RegisterPage() {
         throw new Error(data.message || 'Registration failed');
       }
 
-      setMessage(data.message || 'Registration successful! Please check your email to confirm your account if required.');
-      // 可选：注册成功后自动跳转到登录页面或显示成功信息
-      router.push('/auth/login');
+      setMessage(data.message || '注册成功！请查收邮箱验证码完成激活。');
+      // 注册成功后自动跳转到验证页面并带上用户名
+      router.push(`/auth/verify?username=${encodeURIComponent(username)}`);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
