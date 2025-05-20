@@ -36,63 +36,38 @@ export default function AdminUserManagementPage() {
     }
     setError('');
 
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBaseUrl) {
-      setError('API base URL is not configured.');
-      setIsLoading(false);
-      setIsLoadingMore(false);
-      return;
-    }
-
-    // 实际应用中，需要从 localStorage 或其他地方获取 accessToken
-    const accessToken = localStorage.getItem('accessToken');
-    if (!accessToken) {
-      setError('Not authenticated. Please login.');
-      setIsLoading(false);
-      setIsLoadingMore(false);
-      // 可以考虑重定向到登录页
-      // import { useRouter } from 'next/navigation';
-      // const router = useRouter();
-      // router.push('/auth/login');
-      return;
-    }
-
     try {
-      const queryParams = new URLSearchParams({
-        targetPath: 'user/list', // Specify the target path for the GET proxy
-        limit: '10', // Default limit, can be made dynamic
-      });
-      if (token) {
-        queryParams.set('paginationToken', token);
-      }
-      
-      const url = `/api/proxy-get?${queryParams.toString()}`;
+      const params = new URLSearchParams();
+      params.append('targetPath', 'user/list');
+      params.append('limit', '10');
+      if (token) params.append('paginationToken', token);
 
-      const response = await fetch(url, {
+      const response = await fetch(`/api/proxy-get?${params.toString()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          // If the proxy-get itself needs authentication from the client
-          // 'Authorization': `Bearer ${accessToken}`,
-        },
+        }
       });
 
       const data: ListUsersResponse = await response.json();
 
       if (!response.ok) {
-        const errorMessage = typeof data === 'object' && data !== null && 'message' in data && typeof data.message === 'string'
-          ? data.message
-          : 'Failed to fetch users';
+        const errorMessage =
+          typeof data === 'object' &&
+          data !== null &&
+          'message' in data &&
+          typeof data.message === 'string'
+            ? data.message
+            : 'Failed to fetch users';
         throw new Error(errorMessage);
       }
 
       if (token) {
-        setUsers(prevUsers => [...prevUsers, ...data.users]);
+        setUsers((prevUsers) => [...prevUsers, ...data.users]);
       } else {
         setUsers(data.users);
       }
       setNextToken(data.nextToken);
-
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -107,6 +82,23 @@ export default function AdminUserManagementPage() {
 
   useEffect(() => {
     fetchUsers();
+    // 加载注册开关状态
+    (async () => {
+      try {
+        const params = new URLSearchParams();
+        params.append('targetPath', 'user/registration/status');
+        const res = await fetch(`/api/proxy-get?${params.toString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok && typeof data.enable === 'boolean') {
+          setRegOpen(data.enable);
+        }
+      } catch {
+        // 忽略错误，默认为开启
+      }
+    })();
   }, []);
 
   const getAttributeValue = (attributes: UserAttribute[], attributeName: string): string => {
@@ -114,12 +106,67 @@ export default function AdminUserManagementPage() {
     return attribute ? attribute.Value : 'N/A';
   };
 
+  // 注册开关控制
+  const [regOpen, setRegOpen] = useState<boolean | null>(null);
+  const [regChanging, setRegChanging] = useState(false);
+  const [regOpError, setRegOpError] = useState('');
+  // 初始假定为开启，如果后端有查询接口可扩展fetch注册状态
+
+  const handleToggleRegistration = async (enable: boolean) => {
+    setRegChanging(true);
+    setRegOpError('');
+    try {
+      const resp = await fetch('/api/proxy-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetPath: 'user/registration/status',
+          actualMethod: 'PATCH',
+          enable,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.message || '操作失败');
+      }
+      setRegOpen(enable);
+    } catch (err) {
+      if (err instanceof Error) setRegOpError(err.message);
+      else setRegOpError('操作注册功能时发生未知错误');
+    } finally {
+      setRegChanging(false);
+    }
+  };
+
   return (
     <div style={{ margin: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1>User Management</h1>
+      <div style={{ marginBottom: 12 }}>
+        <b>注册功能：</b>
+        <span style={{ color: regOpen === false ? 'red' : 'green' }}>
+          {regOpen === false ? '已关闭' : '已开启'}
+        </span>
+        <button
+          style={{
+            marginLeft: 12,
+            padding: '6px 14px',
+            backgroundColor: regOpen === false ? '#0070f3' : '#f44336',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+          disabled={regChanging}
+          onClick={() => handleToggleRegistration(!(regOpen !== false))}
+        >
+          {regOpen === false ? '开启注册' : '关闭注册'}
+        </button>
+        {regChanging && <span style={{ marginLeft: 8 }}>操作中...</span>}
+        {regOpError && <span style={{ color: 'red', marginLeft: 8 }}>{regOpError}</span>}
+      </div>
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
       {isLoading && <p>Loading users...</p>}
-      
+
       {!isLoading && users.length === 0 && !error && <p>No users found.</p>}
 
       {users.length > 0 && (
@@ -150,9 +197,17 @@ export default function AdminUserManagementPage() {
       )}
 
       {nextToken && !isLoadingMore && (
-        <button 
-          onClick={() => fetchUsers(nextToken)} 
-          style={{ marginTop: '20px', padding: '10px 15px', backgroundColor: '#0070f3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        <button
+          onClick={() => fetchUsers(nextToken)}
+          style={{
+            marginTop: '20px',
+            padding: '10px 15px',
+            backgroundColor: '#0070f3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
         >
           Load More
         </button>

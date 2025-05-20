@@ -23,16 +23,14 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await fetch('/api/proxy-post', { // Using the new POST proxy
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          targetPath: 'user/login', // Specify the target path
-          actualMethod: 'POST',     // Specify the actual method for the backend
           email,
-          password
+          password,
         }),
       });
 
@@ -42,16 +40,7 @@ export default function LoginPage() {
         throw new Error(data.message || 'Login failed');
       }
 
-      // 假设登录成功后，后端返回 token
-      // 在实际应用中，您需要安全地存储 token (例如 HttpOnly cookie 或 localStorage)
-      // 并处理后续的认证状态
-      console.log('Login successful:', data);
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('idToken', data.idToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-
-
-      // 登录成功后跳转到首页或其他受保护页面
+      // 登录成功后跳转到首页
       router.push('/');
     } catch (err) {
       if (err instanceof Error) {
