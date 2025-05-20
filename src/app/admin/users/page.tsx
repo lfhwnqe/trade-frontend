@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { fetchWithAuth } from '@/utils/fetchWithAuth';
 
 interface UserAttribute {
   Name: string;
@@ -27,6 +29,7 @@ export default function AdminUserManagementPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const router = useRouter();
 
   const fetchUsers = async (token?: string) => {
     if (token) {
@@ -42,12 +45,12 @@ export default function AdminUserManagementPage() {
       params.append('limit', '10');
       if (token) params.append('paginationToken', token);
 
-      const response = await fetch(`/api/proxy-get?${params.toString()}`, {
+      const response = await fetchWithAuth(`/api/proxy-get?${params.toString()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         }
-      });
+      }, router);
 
       const data: ListUsersResponse = await response.json();
 
@@ -87,10 +90,10 @@ export default function AdminUserManagementPage() {
       try {
         const params = new URLSearchParams();
         params.append('targetPath', 'user/registration/status');
-        const res = await fetch(`/api/proxy-get?${params.toString()}`, {
+        const res = await fetchWithAuth(`/api/proxy-get?${params.toString()}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
-        });
+        }, router);
         const data = await res.json();
         if (res.ok && typeof data.enable === 'boolean') {
           setRegOpen(data.enable);
@@ -116,7 +119,7 @@ export default function AdminUserManagementPage() {
     setRegChanging(true);
     setRegOpError('');
     try {
-      const resp = await fetch('/api/proxy-post', {
+      const resp = await fetchWithAuth('/api/proxy-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +127,7 @@ export default function AdminUserManagementPage() {
           actualMethod: 'PATCH',
           enable,
         }),
-      });
+      }, router);
       const data = await resp.json();
       if (!resp.ok) {
         throw new Error(data.message || '操作失败');
