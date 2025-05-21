@@ -40,16 +40,22 @@ export default function AdminUserManagementPage() {
     setError('');
 
     try {
-      const params = new URLSearchParams();
-      params.append('targetPath', 'user/list');
-      params.append('limit', '10');
-      if (token) params.append('paginationToken', token);
+      const proxyParams = {
+        targetPath: 'user/list',
+        actualMethod: 'GET',
+      };
+      const actualBody = {
+        limit: 10,
+        paginationToken: token,
+      };
 
-      const response = await fetchWithAuth(`/api/proxy-get?${params.toString()}`, {
-        method: 'GET',
+      const response = await fetchWithAuth(`/api/proxy-post`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        proxyParams: proxyParams,
+        actualBody: actualBody,
       }, router);
 
       const data: ListUsersResponse = await response.json();
@@ -88,11 +94,16 @@ export default function AdminUserManagementPage() {
     // 加载注册开关状态
     (async () => {
       try {
-        const params = new URLSearchParams();
-        params.append('targetPath', 'user/registration/status');
-        const res = await fetchWithAuth(`/api/proxy-get?${params.toString()}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+        const proxyParams = {
+          targetPath: 'user/registration/status',
+          actualMethod: 'GET',
+        };
+        const actualBody = {};
+        const res = await fetchWithAuth(`/api/proxy-post`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          proxyParams: proxyParams,
+          actualBody: actualBody,
         }, router);
         const data = await res.json();
         if (res.ok && typeof data.enable === 'boolean') {
@@ -119,14 +130,18 @@ export default function AdminUserManagementPage() {
     setRegChanging(true);
     setRegOpError('');
     try {
+      const proxyParams = {
+        targetPath: 'user/registration/status',
+        actualMethod: 'PATCH',
+      };
+      const actualBody = {
+        enable,
+      };
       const resp = await fetchWithAuth('/api/proxy-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetPath: 'user/registration/status',
-          actualMethod: 'PATCH',
-          enable,
-        }),
+        proxyParams: proxyParams,
+        actualBody: actualBody,
       }, router);
       const data = await resp.json();
       if (!resp.ok) {

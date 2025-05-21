@@ -35,10 +35,11 @@ export async function POST(request: NextRequest) {
     headers.set('Content-Type', 'application/json');
     headers.delete('content-length');
 
+    const method = actualMethod.toUpperCase();
     const backendResponse = await fetch(targetUrl, {
-      method: actualMethod.toUpperCase(),
+      method: method,
       headers: headers,
-      body: JSON.stringify(actualBody),
+      body: (method === 'GET' || method === 'HEAD') ? undefined : JSON.stringify(actualBody),
     });
 
     const responseHeaders = new Headers();
