@@ -34,15 +34,18 @@ type Trade = {
 
 async function fetchTrades(): Promise<Trade[]> {
   // POST 方式传递分页参数
-  const body = {
+  const proxyParams = {
     targetPath: 'trade/list',
     actualMethod: 'POST',
+  };
+  const actualBody = {
     limit: 10,
   };
   const res = await fetchWithAuth('/api/proxy-post', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    proxyParams: proxyParams,
+    actualBody: actualBody,
   });
   if (!res.ok) {
     const data = await res.json().catch(() => undefined);
@@ -52,15 +55,18 @@ async function fetchTrades(): Promise<Trade[]> {
 }
 
 async function createTrade(data: Partial<Trade>) {
-  const body = {
+  const proxyParams = {
     targetPath: 'trade',
     actualMethod: 'POST',
+  };
+  const actualBody = {
     ...data,
   };
   const res = await fetchWithAuth('/api/proxy-post', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    proxyParams: proxyParams,
+    actualBody: actualBody,
   });
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || '新建失败');
@@ -68,15 +74,18 @@ async function createTrade(data: Partial<Trade>) {
 }
 
 async function updateTrade(id: string, data: Partial<Trade>) {
-  const body = {
+  const proxyParams = {
     targetPath: `trade/${id}`,
     actualMethod: 'PATCH',
+  };
+  const actualBody = {
     ...data,
   };
   const res = await fetchWithAuth('/api/proxy-post', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    proxyParams: proxyParams,
+    actualBody: actualBody,
   });
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || '更新失败');
@@ -84,14 +93,16 @@ async function updateTrade(id: string, data: Partial<Trade>) {
 }
 
 async function deleteTrade(id: string) {
-  const body = {
+  const proxyParams = {
     targetPath: `trade/${id}`,
     actualMethod: 'DELETE',
   };
+  const actualBody = {};
   const res = await fetchWithAuth('/api/proxy-post', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    proxyParams: proxyParams,
+    actualBody: actualBody,
   });
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || '删除失败');

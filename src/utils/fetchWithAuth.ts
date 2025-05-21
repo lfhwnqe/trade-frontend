@@ -1,5 +1,15 @@
 import { useRouter } from 'next/navigation';
 
+interface ProxyParams {
+  targetPath: string;
+  actualMethod: string;
+}
+
+interface Init extends RequestInit {
+  proxyParams?: ProxyParams;
+  actualBody?: Record<string, unknown>;
+}
+
 /**
  * 用于在 react 组件内统一处理登录态过期的 fetch 封装
  * @param input fetch url
@@ -9,9 +19,21 @@ import { useRouter } from 'next/navigation';
  */
 export async function fetchWithAuth(
   input: RequestInfo | URL,
-  init?: RequestInit,
+  init?: Init,
   router?: ReturnType<typeof useRouter>,
-) {
+): Promise<Response> {
+  // 如果 init 中有 proxyParams 和 actualBody，则修改 body
+  if (init?.proxyParams && init?.actualBody) {
+    init.body = JSON.stringify({
+      request: init.proxyParams,
+      body: init.actualBody,
+    });
+    init.headers = {
+      ...init.headers,
+      'Content-Type': 'application/json',
+    };
+  }
+
   const resp = await fetch(input, init);
 
   if (resp.status === 401) {

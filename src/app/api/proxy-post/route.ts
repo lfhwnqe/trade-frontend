@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const requestBody = await request.json();
-    const { targetPath, actualMethod, ...actualBody } = requestBody;
+
+    // 区分代理参数和实际请求参数
+    const { request: proxyParams, body: actualBody } = requestBody;
+    const { targetPath, actualMethod } = proxyParams;
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -20,7 +23,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'actualMethod is required in the request body' }, { status: 400 });
     }
 
-    // Preserve original search parameters if any, though less common for POST-like proxies
     const targetUrl = `${apiBaseUrl}${targetPath}${request.nextUrl.search}`;
 
     const headers = new Headers(request.headers);
@@ -30,16 +32,13 @@ export async function POST(request: NextRequest) {
     headers.delete('x-nextjs-data');
     headers.delete('x-invoke-path');
     headers.delete('x-invoke-query');
-    // Ensure content-type is set correctly if the body is JSON
     headers.set('Content-Type', 'application/json');
-    // Remove original Content-Length to let fetch recalculate it based on the new body
     headers.delete('content-length');
 
-
     const backendResponse = await fetch(targetUrl, {
-      method: actualMethod.toUpperCase(), // Use the method specified in the body
+      method: actualMethod.toUpperCase(),
       headers: headers,
-      body: JSON.stringify(actualBody), // Send the rest of the body
+      body: JSON.stringify(actualBody),
     });
 
     const responseHeaders = new Headers();
@@ -49,21 +48,20 @@ export async function POST(request: NextRequest) {
         responseHeaders.set(key, value);
       }
     });
-    
-    const responseBody = await backendResponse.text(); // Read body once to avoid issues
+
+    const responseBody = await backendResponse.text();
 
     return new NextResponse(responseBody, {
       status: backendResponse.status,
       statusText: backendResponse.statusText,
       headers: responseHeaders,
     });
-
   } catch (error) {
     console.error('Error in POST proxy:', error);
     let message = 'An error occurred while proxying the request.';
     if (error instanceof Error) {
       message = error.message;
     }
-    return NextResponse.json({ message }, { status: 502 }); // Bad Gateway
+    return NextResponse.json({ message }, { status: 502 });
   }
 }
