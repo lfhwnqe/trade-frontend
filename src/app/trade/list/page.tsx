@@ -1,8 +1,12 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { useEffect, useState, useMemo } from 'react';
-import { fetchWithAuth } from '@/utils/fetchWithAuth';
+import * as React from "react";
+import { useEffect, useState, useMemo } from "react";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -14,21 +18,34 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from '@tanstack/react-table';
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "@tanstack/react-table";
+import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+  DropdownMenuContent,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -36,8 +53,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { entryDirectionOptions, signalTypeOptions, marketStructureOptions } from '../config';
+} from "@/components/ui/table";
+import {
+  entryDirectionOptions,
+  signalTypeOptions,
+  marketStructureOptions,
+} from "../config";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 type Trade = {
   transactionId?: string;
@@ -63,7 +90,6 @@ type Trade = {
   updatedAt?: string;
 };
 
-
 type TradeListResponse = {
   items: Trade[];
   total: number;
@@ -73,32 +99,36 @@ type TradeListResponse = {
 };
 
 type TradeQuery = {
-  dateTimeRange?: string;
+  dateTimeRange?: DateRange;
   marketStructure?: string;
   signalType?: string;
   entryDirection?: string;
 };
 
-async function fetchTrades(params: { page: number; pageSize: number; query?: TradeQuery }): Promise<TradeListResponse> {
+async function fetchTrades(params: {
+  page: number;
+  pageSize: number;
+  query?: Omit<TradeQuery, "dateTimeRange"> & { dateTimeRange?: string };
+}): Promise<TradeListResponse> {
   const { page, pageSize, query } = params;
   const proxyParams = {
-    targetPath: 'trade/list',
-    actualMethod: 'POST',
+    targetPath: "trade/list",
+    actualMethod: "POST",
   };
   const actualBody = {
     page,
     limit: pageSize,
     ...query,
   };
-  const res = await fetchWithAuth('/api/proxy-post', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     proxyParams,
     actualBody,
   });
   if (!res.ok) {
     const data = await res.json().catch(() => undefined);
-    throw new Error((data && data.message) || '获取交易列表失败');
+    throw new Error((data && data.message) || "获取交易列表失败");
   }
   const data = await res.json();
   // 保证格式一定一致
@@ -121,7 +151,7 @@ type CreateTradeDto = {
   vah?: number;
   val?: number;
   poc?: number;
-  entryDirection: 'Long' | 'Short' | '';
+  entryDirection: "Long" | "Short" | "";
   entry?: number;
   stopLoss?: number;
   target?: number;
@@ -147,7 +177,7 @@ function toDto(form: Partial<Trade>): Partial<CreateTradeDto> {
     dateTimeRange: form.dateTimeRange ?? "",
     marketStructure: form.marketStructure ?? "",
     signalType: form.signalType ?? "",
-    entryDirection: (form.entryDirection ?? "") as 'Long' | 'Short' | '',
+    entryDirection: (form.entryDirection ?? "") as "Long" | "Short" | "",
     vah: parseNum(form.vah),
     val: parseNum(form.val),
     poc: parseNum(form.poc),
@@ -158,8 +188,8 @@ function toDto(form: Partial<Trade>): Partial<CreateTradeDto> {
     hypothesisPaths: Array.isArray(form.hypothesisPaths)
       ? form.hypothesisPaths
       : typeof form.hypothesisPaths === "string"
-        ? (form.hypothesisPaths as string).split(",").map((s: string) => s.trim())
-        : [],
+      ? (form.hypothesisPaths as string).split(",").map((s: string) => s.trim())
+      : [],
     actualPath: form.actualPath ?? "",
     profitLoss: parseNum(form.profitLoss),
     rr: form.rr ?? "",
@@ -171,57 +201,62 @@ function toDto(form: Partial<Trade>): Partial<CreateTradeDto> {
 
 async function createTrade(data: Partial<CreateTradeDto>) {
   const proxyParams = {
-    targetPath: 'trade',
-    actualMethod: 'POST',
+    targetPath: "trade",
+    actualMethod: "POST",
   };
   const actualBody = data;
-  const res = await fetchWithAuth('/api/proxy-post', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     proxyParams: proxyParams,
     actualBody: actualBody,
   });
   const resData = await res.json();
-  if (!res.ok) throw new Error(resData.message || '新建失败');
+  if (!res.ok) throw new Error(resData.message || "新建失败");
   return resData;
 }
 
 async function updateTrade(id: string, data: Partial<CreateTradeDto>) {
   const proxyParams = {
     targetPath: `trade/${id}`,
-    actualMethod: 'PATCH',
+    actualMethod: "PATCH",
   };
   const actualBody = data;
-  const res = await fetchWithAuth('/api/proxy-post', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     proxyParams: proxyParams,
     actualBody: actualBody,
   });
   const resData = await res.json();
-  if (!res.ok) throw new Error(resData.message || '更新失败');
+  if (!res.ok) throw new Error(resData.message || "更新失败");
   return resData;
 }
 
 async function deleteTrade(id: string) {
   const proxyParams = {
     targetPath: `trade/${id}`,
-    actualMethod: 'DELETE',
+    actualMethod: "DELETE",
   };
   const actualBody = {};
-  const res = await fetchWithAuth('/api/proxy-post', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     proxyParams: proxyParams,
     actualBody: actualBody,
   });
   const resData = await res.json();
-  if (!res.ok) throw new Error(resData.message || '删除失败');
+  if (!res.ok) throw new Error(resData.message || "删除失败");
   return resData;
 }
 
 function isErrorWithMessage(e: unknown): e is { message: string } {
-  return !!(e && typeof e === 'object' && 'message' in e && typeof (e as Record<string, unknown>).message === 'string');
+  return !!(
+    e &&
+    typeof e === "object" &&
+    "message" in e &&
+    typeof (e as Record<string, unknown>).message === "string"
+  );
 }
 
 export default function TradeListPage() {
@@ -241,10 +276,33 @@ export default function TradeListPage() {
   // 查询表单，只包含常用查询项，也可自行扩展
   const [queryForm, setQueryForm] = useState<TradeQuery>({});
 
-  const fetchAll = async (_page = page, _pageSize = pageSize, _query = queryForm) => {
+  const fetchAll = async (
+    _page = page,
+    _pageSize = pageSize,
+    _query = queryForm
+  ) => {
     setLoading(true);
     try {
-      const res = await fetchTrades({ page: _page, pageSize: _pageSize, query: _query });
+      // 处理 'all' 值为空字符串 和 dateTimeRange
+      let apiDateTimeRange: string | undefined = undefined;
+      if (_query?.dateTimeRange?.from) {
+        apiDateTimeRange = format(_query.dateTimeRange.from, "yyyy-MM");
+      }
+
+      const processedQuery = {
+        marketStructure:
+          _query?.marketStructure === "all" ? "" : _query?.marketStructure,
+        signalType: _query?.signalType === "all" ? "" : _query?.signalType,
+        entryDirection:
+          _query?.entryDirection === "all" ? "" : _query?.entryDirection,
+        dateTimeRange: apiDateTimeRange, // Pass formatted string or undefined
+      };
+
+      const res = await fetchTrades({
+        page: _page,
+        pageSize: _pageSize,
+        query: processedQuery,
+      });
       setTrades(res.items);
       setTotal(res.total);
       setPage(res.page);
@@ -261,133 +319,202 @@ export default function TradeListPage() {
   }, []);
 
   // 简化编辑表单字段，生产版可自行丰富
-  const tradeFields: { key: keyof Trade; label: string; required?: boolean; type?: string; options?: {label:string,value:string;}[]; min?: number; max?: number; step?: number }[] = [
-    { key: 'dateTimeRange', label: '时间段', required: true },
-    { key: 'marketStructure', label: '结构', options: marketStructureOptions },
-    { key: 'signalType', label: '信号', options: signalTypeOptions, required: true },
-    { key: 'entryDirection', label: '方向', options: entryDirectionOptions, required: true },
-    { key: 'vah', label: 'VAH', required: true, type: 'number', step:0.01 },
-    { key: 'val', label: 'VAL', required: true, type: 'number', step:0.01 },
-    { key: 'poc', label: 'POC', required: true, type: 'number', step:0.01 },
-    { key: 'entry', label: '入场', required: true, type: 'number', step:0.01 },
-    { key: 'stopLoss', label: '止损', required: true, type: 'number', step:0.01 },
-    { key: 'target', label: '目标', required: true, type: 'number', step:0.01 },
-    { key: 'profitLoss', label: '盈亏%', required: true, type: 'number', step:0.01 },
-    { key: 'executionMindsetScore', label: '评分(1-5)', required: true, type: 'number', min:1, max:5 },
+  const tradeFields: {
+    key: keyof Trade;
+    label: string;
+    required?: boolean;
+    type?: string;
+    options?: { label: string; value: string }[];
+    min?: number;
+    max?: number;
+    step?: number;
+  }[] = [
+    { key: "dateTimeRange", label: "时间段", required: true },
+    { key: "marketStructure", label: "结构", options: marketStructureOptions },
+    {
+      key: "signalType",
+      label: "信号",
+      options: signalTypeOptions,
+      required: true,
+    },
+    {
+      key: "entryDirection",
+      label: "方向",
+      options: entryDirectionOptions,
+      required: true,
+    },
+    { key: "vah", label: "VAH", required: true, type: "number", step: 0.01 },
+    { key: "val", label: "VAL", required: true, type: "number", step: 0.01 },
+    { key: "poc", label: "POC", required: true, type: "number", step: 0.01 },
+    { key: "entry", label: "入场", required: true, type: "number", step: 0.01 },
+    {
+      key: "stopLoss",
+      label: "止损",
+      required: true,
+      type: "number",
+      step: 0.01,
+    },
+    {
+      key: "target",
+      label: "目标",
+      required: true,
+      type: "number",
+      step: 0.01,
+    },
+    {
+      key: "profitLoss",
+      label: "盈亏%",
+      required: true,
+      type: "number",
+      step: 0.01,
+    },
+    {
+      key: "executionMindsetScore",
+      label: "评分(1-5)",
+      required: true,
+      type: "number",
+      min: 1,
+      max: 5,
+    },
     // 生产环境可以补充其余字段
-    { key: 'rr', label: 'RR' },
+    { key: "rr", label: "RR" },
   ];
 
-  const columns = useMemo<ColumnDef<Trade>[]>(() => [
-    {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="选择所有"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="选择行"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    { 
-      accessorKey: 'dateTimeRange', 
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            时间段
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      }
-    },
-    { 
-      accessorKey: 'marketStructure', 
-      header: '结构',
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("marketStructure")}</div>
-      ),
-    },
-    { 
-      accessorKey: 'signalType', 
-      header: '信号',
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("signalType")}</div>
-      ),
-    },
-    { 
-      accessorKey: 'entryDirection', 
-      header: '方向',
-      cell: ({ row }) => (
-        <div className="capitalize">{row.getValue("entryDirection")}</div>
-      ),
-    },
-    { 
-      accessorKey: 'entry', 
-      header: () => <div className="text-right">入场</div>,
-      cell: ({ row }) => {
-        const value = row.getValue("entry");
-        return <div className="text-right font-medium">{value}</div>
+  const columns = useMemo<ColumnDef<Trade>[]>(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="选择所有"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="选择行"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
       },
-    },
-    { 
-      accessorKey: 'profitLoss', 
-      header: () => <div className="text-right">盈亏</div>,
-      cell: ({ row }) => {
-        const value = parseFloat(row.getValue("profitLoss") as string);
-        const formatted = !isNaN(value) ? `${value}%` : '-';
-        return <div className="text-right font-medium">{formatted}</div>
+      {
+        accessorKey: "dateTimeRange",
+        header: ({ column }) => {
+          return (
+            <Button
+              variant="ghost"
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              时间段
+              <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+          );
+        },
       },
-    },
-    { 
-      accessorKey: 'executionMindsetScore', 
-      header: () => <div className="text-center">评分</div>,
-      cell: ({ row }) => {
-        const value = row.getValue("executionMindsetScore");
-        return <div className="text-center font-medium">{value}</div>
+      {
+        accessorKey: "marketStructure",
+        header: "结构",
+        cell: ({ row }) => (
+          <div className="capitalize">{row.getValue("marketStructure")}</div>
+        ),
       },
-    },
-    {
-      id: 'actions',
-      header: '操作',
-      cell: ({ row }) => {
-        const trade = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">打开菜单</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>操作</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => { setEditTrade(trade); setForm(trade); setOpenDialog(true); }}>编辑</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setDeleteId(trade.transactionId ?? null)}>删除</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+      {
+        accessorKey: "signalType",
+        header: "信号",
+        cell: ({ row }) => (
+          <div className="capitalize">{row.getValue("signalType")}</div>
+        ),
       },
-    },
-  ], []);
+      {
+        accessorKey: "entryDirection",
+        header: "方向",
+        cell: ({ row }) => (
+          <div className="capitalize">{row.getValue("entryDirection")}</div>
+        ),
+      },
+      {
+        accessorKey: "entry",
+        header: () => <div className="text-right">入场</div>,
+        cell: ({ row }) => {
+          const value = row.getValue("entry");
+          return <div className="text-right font-medium">{value}</div>;
+        },
+      },
+      {
+        accessorKey: "profitLoss",
+        header: () => <div className="text-right">盈亏</div>,
+        cell: ({ row }) => {
+          const value = parseFloat(row.getValue("profitLoss") as string);
+          const formatted = !isNaN(value) ? `${value}%` : "-";
+          return <div className="text-right font-medium">{formatted}</div>;
+        },
+      },
+      {
+        accessorKey: "executionMindsetScore",
+        header: () => <div className="text-center">评分</div>,
+        cell: ({ row }) => {
+          const value = row.getValue("executionMindsetScore");
+          return <div className="text-center font-medium">{value}</div>;
+        },
+      },
+      {
+        id: "actions",
+        header: "操作",
+        cell: ({ row }) => {
+          const trade = row.original;
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">打开菜单</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>操作</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditTrade(trade);
+                    setForm(trade);
+                    setOpenDialog(true);
+                  }}
+                >
+                  编辑
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setDeleteId(trade.transactionId ?? null)}
+                >
+                  删除
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
+      },
+    ],
+    []
+  );
 
   // 表格状态
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
     data: trades,
@@ -426,7 +553,7 @@ export default function TradeListPage() {
       if (isErrorWithMessage(err)) {
         alert(err.message);
       } else {
-        alert('未知错误');
+        alert("未知错误");
       }
     }
   }
@@ -441,7 +568,7 @@ export default function TradeListPage() {
         if (isErrorWithMessage(err)) {
           alert(err.message);
         } else {
-          alert('未知错误');
+          alert("未知错误");
         }
       }
     }
@@ -451,67 +578,133 @@ export default function TradeListPage() {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">交易列表</h1>
-        <Button onClick={() => { setForm({}); setEditTrade(null); setOpenDialog(true); }}>新增交易</Button>
+        <Button
+          onClick={() => {
+            setForm({});
+            setEditTrade(null);
+            setOpenDialog(true);
+          }}
+        >
+          新增交易
+        </Button>
       </div>
 
       {/* 查询表单 */}
       <form
         className="flex flex-wrap gap-2 mb-4 items-end"
-        onSubmit={e => {
+        onSubmit={(e) => {
           e.preventDefault();
           setPage(1);
           fetchAll(1, pageSize, queryForm);
         }}
       >
         <div>
-          <label className="block text-xs">时间段</label>
-          <Input
-            value={queryForm.dateTimeRange ?? ''}
-            onChange={e => setQueryForm(v => ({ ...v, dateTimeRange: e.target.value }))}
-            placeholder="例如2025-05"
-            className="w-32"
-          />
+          <label className="block text-xs mb-1">时间段</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant={"outline"}
+                className={cn(
+                  "w-[240px] justify-start text-left font-normal",
+                  !queryForm.dateTimeRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {queryForm.dateTimeRange?.from ? (
+                  queryForm.dateTimeRange.to ? (
+                    <>
+                      {format(queryForm.dateTimeRange.from, "yyyy-MM-dd")} -{" "}
+                      {format(queryForm.dateTimeRange.to, "yyyy-MM-dd")}
+                    </>
+                  ) : (
+                    format(queryForm.dateTimeRange.from, "yyyy-MM-dd")
+                  )
+                ) : (
+                  <span>选择日期范围</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={queryForm.dateTimeRange?.from}
+                selected={queryForm.dateTimeRange}
+                onSelect={(range) =>
+                  setQueryForm((v) => ({ ...v, dateTimeRange: range }))
+                }
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
-          <label className="block text-xs">结构</label>
-          <select
-            className="border p-2 rounded w-24"
-            value={queryForm.marketStructure ?? ''}
-            onChange={e => setQueryForm(v => ({ ...v, marketStructure: e.target.value }))}
+          <label className="block text-xs mb-1">结构</label>
+          <Select
+            value={queryForm.marketStructure ?? ""}
+            onValueChange={(value: string) =>
+              setQueryForm((v) => ({ ...v, marketStructure: value }))
+            }
           >
-            <option value="">全部</option>
-            {marketStructureOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              {marketStructureOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label className="block text-xs">信号类型</label>
-          <select
-            className="border p-2 rounded w-24"
-            value={queryForm.signalType ?? ''}
-            onChange={e => setQueryForm(v => ({ ...v, signalType: e.target.value }))}
+          <label className="block text-xs mb-1">信号类型</label>
+          <Select
+            value={queryForm.signalType ?? ""}
+            onValueChange={(value: string) =>
+              setQueryForm((v) => ({ ...v, signalType: value }))
+            }
           >
-            <option value="">全部</option>
-            {signalTypeOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              {signalTypeOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label className="block text-xs">方向</label>
-          <select
-            className="border p-2 rounded w-24"
-            value={queryForm.entryDirection ?? ''}
-            onChange={e => setQueryForm(v => ({ ...v, entryDirection: e.target.value }))}
+          <label className="block text-xs mb-1">方向</label>
+          <Select
+            value={queryForm.entryDirection ?? ""}
+            onValueChange={(value: string) =>
+              setQueryForm((v) => ({ ...v, entryDirection: value }))
+            }
           >
-            <option value="">全部</option>
-            {entryDirectionOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              {entryDirectionOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Button type="submit" className="ml-2" variant="secondary">查询</Button>
+        <Button type="submit" className="ml-2" variant="secondary">
+          查询
+        </Button>
         <Button
           type="button"
           variant="outline"
@@ -528,14 +721,6 @@ export default function TradeListPage() {
 
       {/* 表格过滤和列显示控制 */}
       <div className="flex items-center py-4">
-        <Input
-          placeholder="搜索时间段..."
-          value={(table.getColumn('dateTimeRange')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('dateTimeRange')?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -556,16 +741,23 @@ export default function TradeListPage() {
                       column.toggleVisibility(!!value)
                     }
                   >
-                    {column.id === 'dateTimeRange' ? '时间段' :
-                     column.id === 'marketStructure' ? '结构' :
-                     column.id === 'signalType' ? '信号' :
-                     column.id === 'entryDirection' ? '方向' :
-                     column.id === 'entry' ? '入场' :
-                     column.id === 'profitLoss' ? '盈亏' :
-                     column.id === 'executionMindsetScore' ? '评分' :
-                     column.id}
+                    {column.id === "dateTimeRange"
+                      ? "时间段"
+                      : column.id === "marketStructure"
+                      ? "结构"
+                      : column.id === "signalType"
+                      ? "信号"
+                      : column.id === "entryDirection"
+                      ? "方向"
+                      : column.id === "entry"
+                      ? "入场"
+                      : column.id === "profitLoss"
+                      ? "盈亏"
+                      : column.id === "executionMindsetScore"
+                      ? "评分"
+                      : column.id}
                   </DropdownMenuCheckboxItem>
-                )
+                );
               })}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -587,7 +779,7 @@ export default function TradeListPage() {
                             header.getContext()
                           )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -601,14 +793,20 @@ export default function TradeListPage() {
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   {loading ? "加载中..." : "暂无数据"}
                 </TableCell>
               </TableRow>
@@ -632,7 +830,9 @@ export default function TradeListPage() {
           >
             上一页
           </Button>
-          <span className="mx-2 text-sm">第 {page} / {totalPages} 页</span>
+          <span className="mx-2 text-sm">
+            第 {page} / {totalPages} 页
+          </span>
           <Button
             variant="outline"
             size="sm"
@@ -649,7 +849,7 @@ export default function TradeListPage() {
           <select
             className="border p-1 rounded ml-2 text-sm"
             value={pageSize}
-            onChange={e => {
+            onChange={(e) => {
               const size = Number(e.target.value);
               setPageSize(size);
               setPage(1);
@@ -657,8 +857,10 @@ export default function TradeListPage() {
               table.setPageSize(size);
             }}
           >
-            {[10, 20, 50].map(sz => (
-              <option key={sz} value={sz}>{sz}条/页</option>
+            {[10, 20, 50].map((sz) => (
+              <option key={sz} value={sz}>
+                {sz}条/页
+              </option>
             ))}
           </select>
         </div>
@@ -666,37 +868,44 @@ export default function TradeListPage() {
 
       {/* 新增/编辑弹窗 */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-      <DialogContent className="sm:max-w-[825px]">
-
-        {/* <DialogContent className="max-w-fit"> */}
+        <DialogContent className="sm:max-w-[825px]">
+          {/* <DialogContent className="max-w-fit"> */}
           <DialogHeader>
-            <DialogTitle>{editTrade ? '编辑交易' : '新增交易'}</DialogTitle>
+            <DialogTitle>{editTrade ? "编辑交易" : "新增交易"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-3 gap-4">
-              {tradeFields.map(f => (
+              {tradeFields.map((f) => (
                 <div key={f.key as string} className="space-y-2">
                   <label className="text-sm font-medium">
                     {f.label}
                     {f.required && <span className="text-red-500 ml-1">*</span>}
                   </label>
                   {f.options ? (
-                    <select
-                      value={form[f.key] ?? ''}
-                      onChange={e => setForm(v => ({ ...v, [f.key]: e.target.value }))}
-                      required={f.required}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    <Select
+                      value={form[f.key] ?? ""}
+                      onValueChange={(value: string) =>
+                        setForm((v) => ({ ...v, [f.key]: value }))
+                      }
                     >
-                      <option value="">请选择</option>
-                      {f.options.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="请选择" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {f.options.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <Input
-                      type={f.type || 'text'}
-                      value={form[f.key] ?? ''}
-                      onChange={e => setForm(v => ({ ...v, [f.key]: e.target.value }))}
+                      type={f.type || "text"}
+                      value={form[f.key] ?? ""}
+                      onChange={(e) =>
+                        setForm((v) => ({ ...v, [f.key]: e.target.value }))
+                      }
                       required={f.required}
                       className="w-full"
                       min={f.min}
@@ -708,20 +917,39 @@ export default function TradeListPage() {
               ))}
             </div>
             <DialogFooter className="mt-6 pt-4 border-t">
-              <Button variant="outline" type="button" onClick={() => setOpenDialog(false)}>取消</Button>
-              <Button type="submit" className="ml-2">提交</Button>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setOpenDialog(false)}
+              >
+                取消
+              </Button>
+              <Button type="submit" className="ml-2">
+                提交
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* 删除确认 */}
-      <Dialog open={!!deleteId} onOpenChange={v => { if (!v) setDeleteId(null); }}>
+      <Dialog
+        open={!!deleteId}
+        onOpenChange={(v) => {
+          if (!v) setDeleteId(null);
+        }}
+      >
         <DialogContent>
-          <DialogHeader><DialogTitle>确认删除此交易？</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>确认删除此交易？</DialogTitle>
+          </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>取消</Button>
-            <Button variant="destructive" onClick={handleDelete}>删除</Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              删除
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
