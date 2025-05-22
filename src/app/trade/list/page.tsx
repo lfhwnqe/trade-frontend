@@ -1,43 +1,30 @@
 "use client";
 
-import * as React from "react";
-import { useEffect, useState, useMemo } from "react";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { DateRange } from "react-day-picker";
-import { cn } from "@/lib/utils";
+import * as React from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import {
   ColumnDef,
-  ColumnFiltersState,
   SortingState,
   VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  RowSelectionState
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuContent,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -46,64 +33,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  entryDirectionOptions,
-  signalTypeOptions,
-  marketStructureOptions,
-} from "../config";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { entryDirectionOptions, signalTypeOptions, marketStructureOptions, TradeQuery, TradeListResponse, Trade, ApiQueryParameters, TradeFieldConfig } from "../config";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-
-type Trade = {
-  transactionId?: string;
-  dateTimeRange?: string;
-  marketStructure?: string;
-  signalType?: string;
-  vah?: string;
-  val?: string;
-  poc?: string;
-  entryDirection?: string; // 前端表单扩展，适配DTO
-  entry?: string;
-  stopLoss?: string;
-  target?: string;
-  volumeProfileImage?: string;
-  hypothesisPaths?: string | string[]; // 允许逗号分隔/数组
-  actualPath?: string;
-  profitLoss?: string;
-  rr?: string;
-  analysisError?: string;
-  executionMindsetScore?: string;
-  improvement?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-type TradeListResponse = {
-  items: Trade[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
-
-type TradeQuery = {
-  dateTimeRange?: DateRange;
-  marketStructure?: string;
-  signalType?: string;
-  entryDirection?: string;
-};
+import { DataTable } from '@/components/common/DataTable';
 
 async function fetchTrades(params: {
   page: number;
@@ -131,7 +64,6 @@ async function fetchTrades(params: {
     throw new Error((data && data.message) || "获取交易列表失败");
   }
   const data = await res.json();
-  // 保证格式一定一致
   return {
     items: data.data?.items || [],
     total: data.data?.total || 0,
@@ -141,9 +73,6 @@ async function fetchTrades(params: {
   };
 }
 
-/**
- * 与后端 CreateTradeDto 对齐的类型
- */
 type CreateTradeDto = {
   dateTimeRange: string;
   marketStructure: string;
@@ -165,11 +94,7 @@ type CreateTradeDto = {
   improvement: string;
 };
 
-/**
- * 表单转后端 DTO 字段映射+类型校正
- */
 function toDto(form: Partial<Trade>): Partial<CreateTradeDto> {
-  // 解决 number 字段 "" 转 NaN 问题
   function parseNum(v: string | undefined) {
     return v === undefined || v === "" ? undefined : Number(v);
   }
@@ -208,8 +133,8 @@ async function createTrade(data: Partial<CreateTradeDto>) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    proxyParams: proxyParams,
-    actualBody: actualBody,
+    proxyParams,
+    actualBody,
   });
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "新建失败");
@@ -225,8 +150,8 @@ async function updateTrade(id: string, data: Partial<CreateTradeDto>) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    proxyParams: proxyParams,
-    actualBody: actualBody,
+    proxyParams,
+    actualBody,
   });
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "更新失败");
@@ -242,8 +167,8 @@ async function deleteTrade(id: string) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    proxyParams: proxyParams,
-    actualBody: actualBody,
+    proxyParams,
+    actualBody,
   });
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "删除失败");
@@ -267,36 +192,42 @@ export default function TradeListPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Trade>>({});
 
-  // 分页和查询相关状态
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
-  // 查询表单，只包含常用查询项，也可自行扩展
   const [queryForm, setQueryForm] = useState<TradeQuery>({});
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
-  const fetchAll = async (
+  const fetchAll = useCallback(async (
     _page = page,
     _pageSize = pageSize,
-    _query = queryForm
+    _query = queryForm,
+    _sorting = sorting
   ) => {
     setLoading(true);
     try {
-      // 处理 'all' 值为空字符串 和 dateTimeRange
       let apiDateTimeRange: string | undefined = undefined;
       if (_query?.dateTimeRange?.from) {
         apiDateTimeRange = format(_query.dateTimeRange.from, "yyyy-MM");
       }
 
-      const processedQuery = {
+      const processedQuery: ApiQueryParameters = {
         marketStructure:
-          _query?.marketStructure === "all" ? "" : _query?.marketStructure,
-        signalType: _query?.signalType === "all" ? "" : _query?.signalType,
+          _query?.marketStructure === "all" ? undefined : _query?.marketStructure,
+        signalType: _query?.signalType === "all" ? undefined : _query?.signalType,
         entryDirection:
-          _query?.entryDirection === "all" ? "" : _query?.entryDirection,
-        dateTimeRange: apiDateTimeRange, // Pass formatted string or undefined
+          _query?.entryDirection === "all" ? undefined : _query?.entryDirection,
+        dateTimeRange: apiDateTimeRange,
       };
+      
+      if (_sorting.length > 0) {
+        processedQuery.sortBy = _sorting[0].id;
+        processedQuery.sortOrder = _sorting[0].desc ? 'DESC' : 'ASC';
+      }
 
       const res = await fetchTrades({
         page: _page,
@@ -305,241 +236,160 @@ export default function TradeListPage() {
       });
       setTrades(res.items);
       setTotal(res.total);
-      setPage(res.page);
-      setPageSize(res.pageSize);
+      setPage(res.page); // API might return corrected page
+      setPageSize(res.pageSize); // API might return corrected pageSize
       setTotalPages(res.totalPages);
+    } catch(err) {
+      if (isErrorWithMessage(err)) {
+        alert("获取列表失败: " + err.message);
+      } else {
+        alert("获取列表失败: 未知错误");
+      }
+      // Reset to a safe state if fetch fails
+      setTrades([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, queryForm, sorting, setLoading, setTrades, setTotal, setPage, setPageSize, setTotalPages]);
 
   useEffect(() => {
-    fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchAll(); // Called on mount and when fetchAll identity changes (due to its own deps changing)
+  }, [fetchAll]);
 
-  // 简化编辑表单字段，生产版可自行丰富
-  const tradeFields: {
-    key: keyof Trade;
-    label: string;
-    required?: boolean;
-    type?: string;
-    options?: { label: string; value: string }[];
-    min?: number;
-    max?: number;
-    step?: number;
-  }[] = [
-    { key: "dateTimeRange", label: "时间段", required: true },
-    { key: "marketStructure", label: "结构", options: marketStructureOptions },
-    {
-      key: "signalType",
-      label: "信号",
-      options: signalTypeOptions,
-      required: true,
-    },
-    {
-      key: "entryDirection",
-      label: "方向",
-      options: entryDirectionOptions,
-      required: true,
-    },
-    { key: "vah", label: "VAH", required: true, type: "number", step: 0.01 },
-    { key: "val", label: "VAL", required: true, type: "number", step: 0.01 },
-    { key: "poc", label: "POC", required: true, type: "number", step: 0.01 },
-    { key: "entry", label: "入场", required: true, type: "number", step: 0.01 },
-    {
-      key: "stopLoss",
-      label: "止损",
-      required: true,
-      type: "number",
-      step: 0.01,
-    },
-    {
-      key: "target",
-      label: "目标",
-      required: true,
-      type: "number",
-      step: 0.01,
-    },
-    {
-      key: "profitLoss",
-      label: "盈亏%",
-      required: true,
-      type: "number",
-      step: 0.01,
-    },
-    {
-      key: "executionMindsetScore",
-      label: "评分(1-5)",
-      required: true,
-      type: "number",
-      min: 1,
-      max: 5,
-    },
-    // 生产环境可以补充其余字段
-    { key: "rr", label: "RR" },
+  const tradeFields: TradeFieldConfig[] = [
+    { key: "dateTimeRange", label: "时间段", required: true, type: 'date' },
+    { key: "marketStructure", label: "市场结构", options: marketStructureOptions, required: true },
+    { key: "signalType", label: "信号类型", options: signalTypeOptions, required: true },
+    { key: "entryDirection", label: "入场方向", options: entryDirectionOptions, required: true },
+    { key: "entry", label: "入场价格", required: true, type: 'number' },
+    { key: "stopLoss", label: "止损价格", required: true, type: 'number' },
+    { key: "takeProfit", label: "止盈价格", type: 'number' },
+    { key: "tradeDuration", label: "持仓时间" },
+    { key: "riskRewardRatio", label: "风险回报比", type: 'number' },
+    { key: "profitLoss", label: "盈亏 (%)", type: 'number' },
+    { key: "executionMindsetScore", label: "执行心态评分 (1-10)", required: true, type: 'number' },
+    { key: "notes", label: "备注" },
   ];
 
-  const columns = useMemo<ColumnDef<Trade>[]>(
-    () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="选择所有"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="选择行"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
-        accessorKey: "dateTimeRange",
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === "asc")
-              }
-            >
-              时间段
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          );
-        },
-      },
-      {
-        accessorKey: "marketStructure",
-        header: "结构",
-        cell: ({ row }) => (
-          <div className="capitalize">{row.getValue("marketStructure")}</div>
-        ),
-      },
-      {
-        accessorKey: "signalType",
-        header: "信号",
-        cell: ({ row }) => (
-          <div className="capitalize">{row.getValue("signalType")}</div>
-        ),
-      },
-      {
-        accessorKey: "entryDirection",
-        header: "方向",
-        cell: ({ row }) => (
-          <div className="capitalize">{row.getValue("entryDirection")}</div>
-        ),
-      },
-      {
-        accessorKey: "entry",
-        header: () => <div className="text-right">入场</div>,
-        cell: ({ row }) => {
-          const value = row.getValue("entry");
-          return <div className="text-right font-medium">{value}</div>;
-        },
-      },
-      {
-        accessorKey: "profitLoss",
-        header: () => <div className="text-right">盈亏</div>,
-        cell: ({ row }) => {
-          const value = parseFloat(row.getValue("profitLoss") as string);
-          const formatted = !isNaN(value) ? `${value}%` : "-";
-          return <div className="text-right font-medium">{formatted}</div>;
-        },
-      },
-      {
-        accessorKey: "executionMindsetScore",
-        header: () => <div className="text-center">评分</div>,
-        cell: ({ row }) => {
-          const value = row.getValue("executionMindsetScore");
-          return <div className="text-center font-medium">{value}</div>;
-        },
-      },
-      {
-        id: "actions",
-        header: "操作",
-        cell: ({ row }) => {
-          const trade = row.original;
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">打开菜单</span>
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>操作</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setEditTrade(trade);
-                    setForm(trade);
-                    setOpenDialog(true);
-                  }}
-                >
-                  编辑
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setDeleteId(trade.transactionId ?? null)}
-                >
-                  删除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        },
-      },
-    ],
-    []
-  );
-
-  // 表格状态
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
-
-  const table = useReactTable({
-    data: trades,
-    columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
+  const columns = useMemo<ColumnDef<Trade>[]>(() => [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) =>
+            table.toggleAllPageRowsSelected(!!value)
+          }
+          aria-label="选择所有"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="选择行"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
     },
-  });
+    {
+      accessorKey: "dateTimeRange",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          时间段 <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => row.original.dateTimeRange ?? "-",
+    },
+    {
+      accessorKey: "marketStructure",
+      header: "结构",
+      cell: ({ row }) => <div className="capitalize">{row.original.marketStructure ?? "-"}</div>,
+    },
+    {
+      accessorKey: "signalType",
+      header: "信号",
+      cell: ({ row }) => <div className="capitalize">{row.original.signalType ?? "-"}</div>,
+    },
+    {
+      accessorKey: "entryDirection",
+      header: "方向",
+      cell: ({ row }) => <div className="capitalize">{row.original.entryDirection ?? "-"}</div>,
+    },
+    {
+      accessorKey: "entry",
+      header: () => <div className="text-right">入场</div>,
+      cell: ({ row }) => <div className="text-right font-medium">{row.original.entry?.toString() ?? "-"}</div>,
+    },
+    {
+      accessorKey: "profitLoss",
+      header: () => <div className="text-right">盈亏</div>,
+      cell: ({ row }) => { 
+        const value = row.original.profitLoss;
+        const formatted = typeof value === 'number' ? `${value}%` : "-";
+        return <div className="text-right font-medium">{formatted}</div>;
+      },
+    },
+    {
+      accessorKey: "executionMindsetScore",
+      header: () => <div className="text-center">评分</div>,
+      cell: ({ row }) => <div className="text-center font-medium">{row.original.executionMindsetScore?.toString() ?? "-"}</div>,
+    },
+    {
+      id: "actions",
+      header: "操作",
+      cell: ({ row }) => {
+        const trade = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="actions"
+                variant="ghost"
+                className="h-8 w-8 p-0"
+              >
+                <span className="sr-only">打开菜单</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>操作</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => { setEditTrade(trade); setForm(trade); setOpenDialog(true); }}>编辑</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setDeleteId(trade.transactionId ?? null)}>删除</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ], []);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    // fetchAll will be called by useEffect due to fetchAll's dependency on 'page'
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPage(1); // Reset to first page when page size changes
+    // fetchAll will be called by useEffect due to fetchAll's dependency on 'pageSize' and 'page'
+  };
+
+  const handleSortingChange = (newSorting: SortingState) => {
+    setSorting(newSorting);
+    // fetchAll will be called by useEffect due to fetchAll's dependency on 'sorting'
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     try {
-      // 统一转 DTO 字段（编辑/新增都走一遍，后端字段冗余不会报错）
-      const dtoData = toDto(form);
+      const dtoData = toDto(form as Trade);
       if (editTrade?.transactionId) {
         await updateTrade(editTrade.transactionId, dtoData);
       } else {
@@ -556,9 +406,9 @@ export default function TradeListPage() {
         alert("未知错误");
       }
     }
-  }
+  };
 
-  async function handleDelete() {
+  const handleDelete = async () => {
     if (deleteId) {
       try {
         await deleteTrade(deleteId);
@@ -572,7 +422,25 @@ export default function TradeListPage() {
         }
       }
     }
-  }
+  };
+
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> |
+           { target: { name: string; value: string | number | readonly string[] | undefined } }
+  ) => {
+    const name = event.target.name as keyof Trade;
+    const value = event.target.value;
+
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: keyof Trade, value: string) => {
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDateRangeChange = (dateRange: DateRange | undefined) => {
+    setForm(prev => ({ ...prev, dateTimeRange: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined }));
+  };
 
   return (
     <div className="p-4">
@@ -589,7 +457,6 @@ export default function TradeListPage() {
         </Button>
       </div>
 
-      {/* 查询表单 */}
       <form
         className="flex flex-wrap gap-2 mb-4 items-end"
         onSubmit={(e) => {
@@ -712,211 +579,94 @@ export default function TradeListPage() {
           onClick={() => {
             setQueryForm({});
             setPage(1);
-            fetchAll(1, pageSize, {});
+            // setSorting([]); // Optionally reset sorting
+            // fetchAll will be called by useEffect due to queryForm, page (and sorting if reset) changing in fetchAll's deps
           }}
         >
           重置
         </Button>
       </form>
 
-      {/* 表格过滤和列显示控制 */}
-      <div className="flex items-center py-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              显示列 <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id === "dateTimeRange"
-                      ? "时间段"
-                      : column.id === "marketStructure"
-                      ? "结构"
-                      : column.id === "signalType"
-                      ? "信号"
-                      : column.id === "entryDirection"
-                      ? "方向"
-                      : column.id === "entry"
-                      ? "入场"
-                      : column.id === "profitLoss"
-                      ? "盈亏"
-                      : column.id === "executionMindsetScore"
-                      ? "评分"
-                      : column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <DataTable
+        columns={columns}
+        data={trades}
+        loading={loading}
+        page={page}
+        pageSize={pageSize}
+        totalItems={total}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        sorting={sorting}
+        onSortingChange={handleSortingChange}
+        columnVisibility={columnVisibility}
+        onColumnVisibilityChange={setColumnVisibility}
+        rowSelection={rowSelection}
+        onRowSelectionChange={setRowSelection}
+      />
 
-      {/* 表格主体 */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  {loading ? "加载中..." : "暂无数据"}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* 分页和选择信息 */}
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          已选择 {table.getFilteredSelectedRowModel().rows.length} 条，共
-          {table.getFilteredRowModel().rows.length} 条
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage() || page <= 1}
-          >
-            上一页
-          </Button>
-          <span className="mx-2 text-sm">
-            第 {page} / {totalPages} 页
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              table.nextPage();
-              if (page < totalPages) {
-                fetchAll(page + 1, pageSize);
-              }
-            }}
-            disabled={!table.getCanNextPage() || page >= totalPages}
-          >
-            下一页
-          </Button>
-          <select
-            className="border p-1 rounded ml-2 text-sm"
-            value={pageSize}
-            onChange={(e) => {
-              const size = Number(e.target.value);
-              setPageSize(size);
-              setPage(1);
-              fetchAll(1, size);
-              table.setPageSize(size);
-            }}
-          >
-            {[10, 20, 50].map((sz) => (
-              <option key={sz} value={sz}>
-                {sz}条/页
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* 新增/编辑弹窗 */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="sm:max-w-[825px]">
-          {/* <DialogContent className="max-w-fit"> */}
           <DialogHeader>
-            <DialogTitle>{editTrade ? "编辑交易" : "新增交易"}</DialogTitle>
+            <DialogTitle>{editTrade?.transactionId ? '编辑交易记录' : '新增交易记录'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-3 gap-4">
-              {tradeFields.map((f) => (
-                <div key={f.key as string} className="space-y-2">
-                  <label className="text-sm font-medium">
-                    {f.label}
-                    {f.required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  {f.options ? (
+            <div className="grid gap-4 py-4">
+              {tradeFields.map((field) => (
+                <div key={field.key} className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor={field.key} className="text-right">{field.label}{field.required && '*'}:</label>
+                  {field.key === 'dateTimeRange' ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "col-span-3 justify-start text-left font-normal",
+                            !form.dateTimeRange && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {form.dateTimeRange ? format(new Date(form.dateTimeRange), "PPP") : <span>选择日期</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={form.dateTimeRange ? new Date(form.dateTimeRange) : undefined}
+                          onSelect={(date) => handleDateRangeChange(date ? { from: date, to: date } : undefined)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : field.options ? (
                     <Select
-                      value={form[f.key] ?? ""}
-                      onValueChange={(value: string) =>
-                        setForm((v) => ({ ...v, [f.key]: value }))
-                      }
+                      value={(form[field.key as keyof Trade] as string | undefined) ?? ''}
+                      onValueChange={(val) => handleSelectChange(field.key, val)}
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="请选择" />
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder={`选择${field.label}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        {f.options.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
+                        {field.options.map(option => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   ) : (
                     <Input
-                      type={f.type || "text"}
-                      value={form[f.key] ?? ""}
-                      onChange={(e) =>
-                        setForm((v) => ({ ...v, [f.key]: e.target.value }))
-                      }
-                      required={f.required}
-                      className="w-full"
-                      min={f.min}
-                      max={f.max}
-                      step={f.step}
+                      id={field.key}
+                      name={field.key}
+                      type={field.type === 'number' ? 'number' : 'text'}
+                      value={form[field.key as keyof Trade] ?? ''}
+                      onChange={handleChange}
+                      className="col-span-3"
+                      required={field.required}
                     />
                   )}
                 </div>
               ))}
             </div>
-            <DialogFooter className="mt-6 pt-4 border-t">
+            <DialogFooter>
               <Button
                 variant="outline"
                 type="button"
@@ -932,7 +682,6 @@ export default function TradeListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 删除确认 */}
       <Dialog
         open={!!deleteId}
         onOpenChange={(v) => {
