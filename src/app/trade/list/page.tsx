@@ -666,46 +666,50 @@ export default function TradeListPage() {
 
       {/* 新增/编辑弹窗 */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent>
+      <DialogContent className="sm:max-w-[825px]">
+
+        {/* <DialogContent className="max-w-fit"> */}
           <DialogHeader>
             <DialogTitle>{editTrade ? '编辑交易' : '新增交易'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {tradeFields.map(f => (
-              <div key={f.key as string} className="flex flex-col gap-1">
-                <label className="text-sm">
-                  {f.label}
-                  {f.required && <span className="text-red-500 ml-1">*</span>}
-                </label>
-                {f.options ? (
-                  <select
-                    value={form[f.key] ?? ''}
-                    onChange={e => setForm(v => ({ ...v, [f.key]: e.target.value }))}
-                    required={f.required}
-                    className="border p-2 rounded"
-                  >
-                    <option value="">请选择</option>
-                    {f.options.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <Input
-                    type={f.type || 'text'}
-                    value={form[f.key] ?? ''}
-                    onChange={e => setForm(v => ({ ...v, [f.key]: e.target.value }))}
-                    required={f.required}
-                    className="border p-2 rounded"
-                    min={f.min}
-                    max={f.max}
-                    step={f.step}
-                  />
-                )}
-              </div>
-            ))}
-            <DialogFooter className="mt-4 flex justify-end gap-2">
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-3 gap-4">
+              {tradeFields.map(f => (
+                <div key={f.key as string} className="space-y-2">
+                  <label className="text-sm font-medium">
+                    {f.label}
+                    {f.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  {f.options ? (
+                    <select
+                      value={form[f.key] ?? ''}
+                      onChange={e => setForm(v => ({ ...v, [f.key]: e.target.value }))}
+                      required={f.required}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">请选择</option>
+                      {f.options.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      type={f.type || 'text'}
+                      value={form[f.key] ?? ''}
+                      onChange={e => setForm(v => ({ ...v, [f.key]: e.target.value }))}
+                      required={f.required}
+                      className="w-full"
+                      min={f.min}
+                      max={f.max}
+                      step={f.step}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <DialogFooter className="mt-6 pt-4 border-t">
               <Button variant="outline" type="button" onClick={() => setOpenDialog(false)}>取消</Button>
-              <Button type="submit">提交</Button>
+              <Button type="submit" className="ml-2">提交</Button>
             </DialogFooter>
           </form>
         </DialogContent>
