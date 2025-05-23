@@ -1,132 +1,58 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { format } from "date-fns";
-import { DateRange } from "react-day-picker";
-import {
-  fetchTrades,
-  createTrade,
-  updateTrade,
-  deleteTrade,
-  toDto,
-} from "./request";
-import {
-  ColumnDef,
-  SortingState,
-  VisibilityState,
-  RowSelectionState,
-} from "@tanstack/react-table";
+import { useEffect, useMemo } from "react";
+import { createTrade, updateTrade, deleteTrade, toDto } from "./request";
+import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { DataTable } from "@/components/common/DataTable";
 import { isErrorWithMessage } from "@/utils";
 import TradeQueryForm from "./components/TradeQueryForm";
 import { TradeFormDialog } from "./components/TradeFormDialog";
 import {
   Trade,
-  TradeQuery,
-  ApiQueryParameters,
   TradeFieldConfig,
   entryDirectionOptions,
   signalTypeOptions,
   marketStructureOptions,
 } from "../config";
+import { useTradeList } from "./useTradeList";
+import { format } from 'date-fns';
 
 export default function TradeListPage() {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editTrade, setEditTrade] = useState<Partial<Trade> | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<Trade>>({});
-
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const [queryForm, setQueryForm] = useState<TradeQuery>({});
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
-
-  const fetchAll = useCallback(
-    async (
-      _page = page,
-      _pageSize = pageSize,
-      _query = queryForm,
-      _sorting = sorting
-    ) => {
-      setLoading(true);
-      try {
-        let apiDateTimeRange: string | undefined = undefined;
-        if (_query?.dateTimeRange?.from) {
-          apiDateTimeRange = format(_query.dateTimeRange.from, "yyyy-MM");
-        }
-
-        const processedQuery: ApiQueryParameters = {
-          marketStructure:
-            _query?.marketStructure === "all"
-              ? undefined
-              : _query?.marketStructure,
-          signalType:
-            _query?.signalType === "all" ? undefined : _query?.signalType,
-          entryDirection:
-            _query?.entryDirection === "all"
-              ? undefined
-              : _query?.entryDirection,
-          dateTimeRange: apiDateTimeRange,
-        };
-
-        if (_sorting.length > 0) {
-          processedQuery.sortBy = _sorting[0].id;
-          processedQuery.sortOrder = _sorting[0].desc ? "DESC" : "ASC";
-        }
-
-        const res = await fetchTrades({
-          page: _page,
-          pageSize: _pageSize,
-          query: processedQuery,
-        });
-        setTrades(res.items);
-        setTotal(res.total);
-        setPage(res.page); // API might return corrected page
-        setPageSize(res.pageSize); // API might return corrected pageSize
-        setTotalPages(res.totalPages);
-      } catch (err) {
-        if (isErrorWithMessage(err)) {
-          alert("获取列表失败: " + err.message);
-        } else {
-          alert("获取列表失败: 未知错误");
-        }
-        // Reset to a safe state if fetch fails
-        setTrades([]);
-        setTotal(0);
-        setTotalPages(1);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [
-      page,
-      pageSize,
-      queryForm,
-      sorting,
-      setLoading,
-      setTrades,
-      setTotal,
-      setPage,
-      setPageSize,
-      setTotalPages,
-    ]
-  );
+  // 使用自定义 hook 管理状态和操作
+  const {
+    trades,
+    loading,
+    pagination,
+    queryForm,
+    sorting,
+    columnVisibility,
+    rowSelection,
+    dialog,
+    fetchAll,
+    updateQueryForm,
+    updateSorting,
+    updateColumnVisibility,
+    updateRowSelection,
+    updatePagination,
+    openDialog,
+    closeDialog,
+    updateForm,
+    setDeleteId,
+  } = useTradeList();
 
   useEffect(() => {
-    fetchAll(); // Called on mount and when fetchAll identity changes (due to its own deps changing)
+    fetchAll(); // 页面加载时获取数据
   }, [fetchAll]);
 
   const tradeFields: TradeFieldConfig[] = [
@@ -258,22 +184,20 @@ export default function TradeListPage() {
         cell: ({ row }) => {
           const trade = row.original;
           return (
-            <div className="text-center font-medium">
+            <div className="flex space-x-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => {
-                  setEditTrade(trade);
-                  setForm(trade);
-                  setOpenDialog(true);
+                  openDialog(trade);
                 }}
               >
                 编辑
               </Button>
               <Button
-                variant="outline"
-                onClick={() => {
-                  setDeleteId(trade.transactionId ?? null);
-                }}
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteId(trade.transactionId || null)}
               >
                 删除
               </Button>
@@ -285,101 +209,42 @@ export default function TradeListPage() {
     []
   );
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    // fetchAll will be called by useEffect due to fetchAll's dependency on 'page'
-  };
-
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setPage(1); // Reset to first page when page size changes
-    // fetchAll will be called by useEffect due to fetchAll's dependency on 'pageSize' and 'page'
-  };
-
-  const handleSortingChange = (newSorting: SortingState) => {
-    setSorting(newSorting);
-    // fetchAll will be called by useEffect due to fetchAll's dependency on 'sorting'
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const dtoData = toDto(form as Trade);
-      if (editTrade?.transactionId) {
-        await updateTrade(editTrade.transactionId, dtoData);
+      if (dialog.editTrade?.transactionId) {
+        await updateTrade(dialog.editTrade.transactionId, toDto(dialog.form));
+        alert("交易更新成功");
       } else {
-        await createTrade(dtoData);
+        await createTrade(toDto(dialog.form));
+        alert("交易创建成功");
       }
-      setOpenDialog(false);
-      setEditTrade(null);
-      setForm({});
-      fetchAll();
-    } catch (err: unknown) {
+      closeDialog();
+      fetchAll(); // 刷新数据
+    } catch (err) {
       if (isErrorWithMessage(err)) {
-        alert(err.message);
+        alert("操作失败: " + err.message);
       } else {
-        alert("未知错误");
+        alert("操作失败: 未知错误");
       }
     }
   };
 
   const handleDelete = async () => {
-    if (deleteId) {
-      try {
-        await deleteTrade(deleteId);
-        setDeleteId(null);
-        fetchAll();
-      } catch (err: unknown) {
-        if (isErrorWithMessage(err)) {
-          alert(err.message);
-        } else {
-          alert("未知错误");
-        }
+    if (!dialog.deleteId) return;
+
+    try {
+      await deleteTrade(dialog.deleteId);
+      alert("交易删除成功");
+      setDeleteId(null);
+      fetchAll(); // 刷新数据
+    } catch (err) {
+      if (isErrorWithMessage(err)) {
+        alert("删除失败: " + err.message);
+      } else {
+        alert("删除失败: 未知错误");
       }
     }
-  };
-
-  const handleChange = (
-    event:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | {
-          target: {
-            name: string;
-            value: string | number | readonly string[] | undefined;
-          };
-        }
-  ) => {
-    const name = event.target.name as keyof Trade;
-    const value = event.target.value;
-
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: keyof Trade, value: string) => {
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleDateRangeChange = (dateRange: DateRange | undefined) => {
-    setForm((prev) => ({
-      ...prev,
-      dateTimeRange: dateRange?.from
-        ? format(dateRange.from, "yyyy-MM-dd")
-        : undefined,
-    }));
-  };
-
-  const handleQuerySubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1); // Reset to first page on new query
-    fetchAll(1, pageSize, queryForm, sorting); // Pass current sorting
-  };
-
-  const handleQueryReset = () => {
-    setQueryForm({});
-    setPage(1);
-    // setSorting([]); // Optionally reset sorting, if desired
-    // fetchAll will be called by useEffect due to queryForm and page changes
-    // If sorting is also reset, ensure fetchAll's dependencies include it or call fetchAll explicitly here.
   };
 
   return (
@@ -388,9 +253,8 @@ export default function TradeListPage() {
         <h1 className="text-2xl font-bold">交易列表</h1>
         <Button
           onClick={() => {
-            setForm({});
-            setEditTrade(null);
-            setOpenDialog(true);
+            updateForm({});
+            openDialog(null);
           }}
         >
           新增交易
@@ -399,48 +263,103 @@ export default function TradeListPage() {
 
       <TradeQueryForm
         queryForm={queryForm}
-        onQueryFormChange={setQueryForm}
-        onSubmit={handleQuerySubmit}
-        onReset={handleQueryReset}
+        onQueryFormChange={(newQueryForm) => {
+          updateQueryForm(newQueryForm);
+          updatePagination(1, pagination.pageSize);
+          fetchAll(1, pagination.pageSize, newQueryForm, sorting);
+        }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          fetchAll(1, pagination.pageSize, queryForm, sorting);
+        }}
+        onReset={() => {
+          updateQueryForm({});
+          updatePagination(1, pagination.pageSize);
+          updateSorting([]);
+          fetchAll(1, pagination.pageSize, {}, []);
+        }}
       />
 
       <DataTable
         columns={columns}
         data={trades}
-        loading={loading}
-        page={page}
-        pageSize={pageSize}
-        totalItems={total}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
+        onPaginationChange={(newPage, newPageSize) => {
+          if (
+            newPage !== pagination.page ||
+            newPageSize !== pagination.pageSize
+          ) {
+            updatePagination(newPage, newPageSize);
+            fetchAll(newPage, newPageSize);
+          }
+        }}
+        pagination={{
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          totalPages: pagination.totalPages,
+        }}
         sorting={sorting}
-        onSortingChange={handleSortingChange}
+        onSortingChange={(newSorting) => {
+          updateSorting(newSorting);
+          fetchAll(pagination.page, pagination.pageSize, queryForm, newSorting);
+        }}
         columnVisibility={columnVisibility}
-        onColumnVisibilityChange={setColumnVisibility}
+        onColumnVisibilityChange={updateColumnVisibility}
         rowSelection={rowSelection}
-        onRowSelectionChange={setRowSelection}
+        onRowSelectionChange={updateRowSelection}
+        loading={loading}
       />
 
-      <TradeFormDialog
-        open={openDialog}
-        onOpenChange={setOpenDialog}
-        editTrade={editTrade}
-        form={form}
-        tradeFields={tradeFields}
-        handleChange={handleChange}
-        handleSelectChange={handleSelectChange}
-        handleDateRangeChange={handleDateRangeChange}
-        handleSubmit={handleSubmit}
-      />
+      <Dialog
+        open={dialog.open}
+        onOpenChange={(open) => !open && closeDialog()}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dialog.editTrade?.transactionId ? "编辑交易" : "添加交易"}
+            </DialogTitle>
+          </DialogHeader>
 
-      {deleteId && (
-        <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+          <TradeFormDialog
+            open={dialog.open}
+            onOpenChange={(open) => !open && closeDialog()}
+            editTrade={dialog.editTrade}
+            form={dialog.form}
+            tradeFields={tradeFields}
+            handleChange={(e) => {
+              const name = e.target.name as keyof Trade;
+              const value = e.target.value;
+              updateForm({ ...dialog.form, [name]: value });
+            }}
+            handleSelectChange={(name, value) => {
+              updateForm({ ...dialog.form, [name]: value });
+            }}
+            handleDateRangeChange={(dateRange) => {
+              updateForm({
+                ...dialog.form,
+                dateTimeRange: dateRange?.from
+                  ? format(dateRange.from, "yyyy-MM-dd")
+                  : undefined,
+              });
+            }}
+            handleSubmit={handleSubmit}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {dialog.deleteId && (
+        <Dialog
+          open={!!dialog.deleteId}
+          onOpenChange={(open) => !open && setDeleteId(null)}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>确认删除</DialogTitle>
             </DialogHeader>
-            <p>你确定要删除这条交易记录吗？此操作无法撤销。</p>
+            <div className="py-4">
+              确定要删除这条交易记录吗？此操作无法撤销。
+            </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteId(null)}>
                 取消

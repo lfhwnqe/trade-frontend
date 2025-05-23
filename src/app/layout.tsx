@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{filter:"invert(0)"}}>
+    <html lang="zh-cn" style={{filter:"invert(0)"}}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
