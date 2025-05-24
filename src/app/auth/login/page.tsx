@@ -40,7 +40,15 @@ export default function LoginPage() {
         throw new Error(data.message || 'Login failed');
       }
 
-      // 登录成功后跳转到首页
+      // 登录成功后跳转回之前想访问的页面（如果有），否则首页
+      if (typeof window !== 'undefined') {
+        const redirectPath = window.localStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          window.localStorage.removeItem('redirectAfterLogin');
+          router.push(redirectPath);
+          return;
+        }
+      }
       router.push('/');
     } catch (err) {
       if (err instanceof Error) {

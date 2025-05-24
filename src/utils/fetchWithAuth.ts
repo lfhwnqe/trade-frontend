@@ -37,10 +37,15 @@ export async function fetchWithAuth(
   const resp = await fetch(input, init);
 
   if (resp.status === 401) {
-    // 前端收到 401，自动跳转到登录页
+    // 前端收到 401，自动跳转到登录页，并记录当前页面方便回跳
     if (typeof window !== 'undefined') {
+      try {
+        const currentPath = window.location.pathname + window.location.search + window.location.hash;
+        window.localStorage.setItem('redirectAfterLogin', currentPath);
+      } catch {}
       window.location.href = '/auth/login';
     } else if (router) {
+      // 注意 SSR 下无法安全设置 localStorage，只能在浏览器端做
       router.push('/auth/login');
     }
     // 可抛异常终止业务
