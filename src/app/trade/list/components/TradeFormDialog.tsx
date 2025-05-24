@@ -42,6 +42,7 @@ interface TradeFormDialogProps {
   handleSelectChange: (key: keyof Trade, value: string) => void;
   handleDateRangeChange: (dateRange: DateRange | undefined) => void; // 确保与 page.tsx 中的类型一致
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  updateForm: (patch: Partial<Trade>) => void;
 }
 
 export function TradeFormDialog({
@@ -54,6 +55,7 @@ export function TradeFormDialog({
   handleSelectChange,
   handleDateRangeChange,
   handleSubmit,
+  updateForm,
 }: TradeFormDialogProps) {
   // 类型保护辅助，断言是否 ImageResource[]
   function isImageResourceArray(val: unknown): val is ImageResource[] {
@@ -71,26 +73,16 @@ export function TradeFormDialog({
   };
 
   // 图片上传字段配置
+  // 图片上传字段增量 patch，直接走 props.updateForm，避免覆盖其它内容
   const handleImageChange =
     (key: "volumeProfileImage" | "hypothesisPaths" | "actualPath") =>
     (v: ImageResource[]) => {
-      const nextForm = { ...form, [key]: v };
-      // 推荐由上层 props 明确 setForm，不再用 any
-      if (
-        typeof window !== "undefined" &&
-        "updateForm" in window &&
-        typeof (window as { updateForm?: unknown }).updateForm === "function"
-      ) {
-        (window as { updateForm: (n: typeof nextForm) => void }).updateForm(
-          nextForm
-        );
+      if (typeof window !== "undefined" && "updateForm" in window && typeof (window as { updateForm?: unknown }).updateForm === "function") {
+        // 若你在全局用 window.updateForm 调试，可保留
+        (window as { updateForm: (k: Partial<Record<"volumeProfileImage" | "hypothesisPaths" | "actualPath", ImageResource[]>>) => void }).updateForm({ [key]: v });
       }
-      // 如果 form 上存在 setForm，并且其为函数则调用
-      if (
-        Object.prototype.hasOwnProperty.call(form, "setForm") &&
-        typeof (form as { setForm?: unknown }).setForm === "function"
-      ) {
-        (form as { setForm: (v: typeof nextForm) => void }).setForm(nextForm);
+      if (typeof updateForm === "function") {
+        updateForm({ [key]: v });
       }
     };
 
@@ -328,6 +320,22 @@ export function TradeFormDialog({
                 </div>
               );
             })}
+          </div>
+          {/* ====== DEBUG：图片组件上传数据实时展示 ====== */}
+          <div className="mt-6 p-3 border bg-muted/80 rounded-lg text-xs font-mono break-all select-all">
+            <div className="font-bold pb-2">【调试用】图片组件上传/回填数据：</div>
+            <div className="pb-1 text-blue-900 break-words">
+              <div>volumeProfileImage:</div>
+              <pre>{JSON.stringify(form.volumeProfileImage, null, 2)}</pre>
+            </div>
+            <div className="pb-1 text-green-900 break-words">
+              <div>hypothesisPaths:</div>
+              <pre>{JSON.stringify(form.hypothesisPaths, null, 2)}</pre>
+            </div>
+            <div className="pb-1 text-indigo-900 break-words">
+              <div>actualPath:</div>
+              <pre>{JSON.stringify(form.actualPath, null, 2)}</pre>
+            </div>
           </div>
           <DialogFooter className="shrink-0 mt-2">
             <Button type="submit">

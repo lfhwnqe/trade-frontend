@@ -330,20 +330,20 @@ export default function TradeListPage() {
             handleChange={(e) => {
               const name = e.target.name as keyof Trade;
               const value = e.target.value;
-              updateForm({ ...dialog.form, [name]: value });
+              updateForm({ [name]: value });
             }}
             handleSelectChange={(name, value) => {
-              updateForm({ ...dialog.form, [name]: value });
+              updateForm({ [name]: value });
             }}
             handleDateRangeChange={(dateRange) => {
               updateForm({
-                ...dialog.form,
                 dateTimeRange: dateRange?.from
                   ? format(dateRange.from, "yyyy-MM-dd")
                   : undefined,
               });
             }}
             handleSubmit={handleSubmit}
+            updateForm={updateForm}
           />
         </DialogContent>
       </Dialog>

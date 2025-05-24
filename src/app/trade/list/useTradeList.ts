@@ -116,7 +116,7 @@ export function useTradeList() {
   // u66f4u65b0u8868u5355  // 更新表单
   const updateForm = useCallback((newForm: Partial<Trade>) => {
     setState(draft => {
-      draft.dialog.form = newForm;
+      draft.dialog.form = { ...draft.dialog.form, ...newForm };
     });
   }, [setState]);
   
