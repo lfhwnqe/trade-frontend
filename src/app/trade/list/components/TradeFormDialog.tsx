@@ -88,7 +88,7 @@ export function TradeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[825px] h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-[1100px] h-[92vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle>
             {editTrade?.transactionId ? "编辑交易记录" : "新增交易记录"}
@@ -322,7 +322,7 @@ export function TradeFormDialog({
             })}
           </div>
           {/* ====== DEBUG：图片组件上传数据实时展示 ====== */}
-          <div className="mt-6 p-3 border bg-muted/80 rounded-lg text-xs font-mono break-all select-all">
+          {/* <div className="mt-6 p-3 border bg-muted/80 rounded-lg text-xs font-mono break-all select-all">
             <div className="font-bold pb-2">【调试用】图片组件上传/回填数据：</div>
             <div className="pb-1 text-blue-900 break-words">
               <div>volumeProfileImage:</div>
@@ -336,7 +336,7 @@ export function TradeFormDialog({
               <div>actualPath:</div>
               <pre>{JSON.stringify(form.actualPath, null, 2)}</pre>
             </div>
-          </div>
+          </div> */}
           <DialogFooter className="shrink-0 mt-2">
             <Button type="submit">
               {editTrade?.transactionId ? "保存更改" : "创建记录"}
