@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { format } from "date-fns";
+import { ImageUploader } from "./ImageUploader";
+import type { ImageResource } from "../request";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils"; // 假设你的 cn 工具函数路径
 import { Button } from "@/components/ui/button";
@@ -52,6 +54,21 @@ export function TradeFormDialog({
   handleDateRangeChange,
   handleSubmit,
 }: TradeFormDialogProps) {
+  // 图片上传字段配置
+  const handleImageChange =
+    (key: "volumeProfileImage" | "hypothesisPaths" | "actualPath") =>
+    (v: ImageResource[]) => {
+      // 用 form 对象的结构安全复制
+      const nextForm = { ...form, [key]: v };
+      // 直接复用 handleChange 方式向外传递（这里要求父组件 handleChange 能处理对象，但通常需有专门 setForm）
+      // 如有专门 setForm 建议直接用
+      if (typeof (window as any).updateForm === "function") {
+        (window as any).updateForm(nextForm);
+      }
+      // 如果只有 handleChange 可以逐一派发
+      if ((form as any).setForm) (form as any).setForm(nextForm);
+    };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[825px]">
@@ -61,6 +78,25 @@ export function TradeFormDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
+          {/* 三个图片字段独立插入上传组件 */}
+          <ImageUploader
+            label="成交量分布图"
+            value={(form.volumeProfileImage as ImageResource[]) || []}
+            onChange={handleImageChange("volumeProfileImage")}
+            max={undefined}
+          />
+          <ImageUploader
+            label="假设路径"
+            value={(form.hypothesisPaths as ImageResource[]) || []}
+            onChange={handleImageChange("hypothesisPaths")}
+            max={3}
+          />
+          <ImageUploader
+            label="实际路径"
+            value={(form.actualPath as ImageResource[]) || []}
+            onChange={handleImageChange("actualPath")}
+            max={undefined}
+          />
           <div className="grid gap-4 py-4">
             {tradeFields.map((field) => (
               <div

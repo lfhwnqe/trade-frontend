@@ -1,6 +1,20 @@
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { Trade, TradeListResponse, TradeQuery } from "../config";
 
+// 允许的图片类型
+export const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp"
+];
+
+// 图片资源类型定义
+export interface ImageResource {
+  key: string;
+  url: string;
+}
+
 export async function fetchTrades(params: {
   page: number;
   pageSize: number;
@@ -136,4 +150,52 @@ export async function deleteTrade(id: string) {
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "删除失败");
   return resData;
+}
+
+/**
+ * 获取图片上传URL
+ * @param params 上传参数
+ * @returns 上传URL和文件键值
+ */
+export async function getImageUploadUrl(params: {
+  fileName: string;
+  fileType: string;
+  date: string;
+}): Promise<{ uploadUrl: string; key: string }> {
+  const proxyParams = {
+    targetPath: "image/upload-url",
+    actualMethod: "POST",
+  };
+  const actualBody = params;
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "获取上传URL失败");
+  return {
+    uploadUrl: data.data.uploadUrl,
+    key: data.data.key,
+  };
+}
+
+/**
+ * 直接上传文件到S3
+ * @param uploadUrl 上传URL
+ * @param file 文件对象
+ */
+export async function uploadToS3(uploadUrl: string, file: File): Promise<void> {
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type,
+    },
+    body: file,
+  });
+  
+  if (!res.ok) {
+    throw new Error("上传到S3失败");
+  }
 }
