@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import {
   TradeQuery,
   marketStructureOptions,
-  signalTypeOptions,
   entryDirectionOptions,
   Option,
 } from "../../config";

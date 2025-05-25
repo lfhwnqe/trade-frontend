@@ -23,11 +23,9 @@ import {
   TradeFieldConfig,
   entryDirectionOptions,
   marketStructureOptions,
-  signalTypeOptions,
 } from "../config";
 import { useTradeList } from "./useTradeList";
-import { format } from 'date-fns';
-
+import { format } from "date-fns";
 
 export default function TradeListPage() {
   // 使用自定义 hook 管理状态和操作
@@ -59,19 +57,29 @@ export default function TradeListPage() {
   // 扩展字段，和后端 DTO 保持一致，表单展示建议分组区域（基础/图片/分析/计划/复盘）
   const tradeFields: TradeFieldConfig[] = [
     // ===== 交易基础信息 =====
-    { key: "status", label: "交易状态", required: true, options: [
-      { label: "已分析", value: "ANALYZED" },
-      { label: "已入场", value: "ENTERED" },
-      { label: "已离场", value: "EXITED" }
-    ]},
-    { key: "marketStructure", label: "市场结构", required: true, options: marketStructureOptions },
+    {
+      key: "status",
+      label: "交易状态",
+      required: true,
+      options: [
+        { label: "已分析", value: "ANALYZED" },
+        { label: "已入场", value: "ENTERED" },
+        { label: "已离场", value: "EXITED" },
+      ],
+    },
+    {
+      key: "marketStructure",
+      label: "市场结构",
+      required: true,
+      options: marketStructureOptions,
+    },
     { key: "marketStructureAnalysis", label: "结构分析", type: "text" },
     // 入场方向只在已入场/已离场时必填
     {
       key: "entryDirection",
       label: "入场方向",
       required: (status) => status === "ENTERED" || status === "EXITED",
-      options: entryDirectionOptions
+      options: entryDirectionOptions,
     },
 
     // ===== 图片相关（分组内多选或上传） =====
@@ -93,39 +101,55 @@ export default function TradeListPage() {
     // ===== 入场记录（根据状态显隐）======
     // ===== 入场记录（根据状态判定必填）======
     {
-      key: "entry", label: "入场价格", type: "number",
-      required: (status) => status === "ENTERED" || status === "EXITED"
+      key: "entry",
+      label: "入场价格",
+      type: "number",
+      required: (status) => status === "ENTERED" || status === "EXITED",
     },
     {
-      key: "entryTime", label: "入场时间", type: "date",
-      required: (status) => status === "ENTERED" || status === "EXITED"
+      key: "entryTime",
+      label: "入场时间",
+      type: "date",
+      required: (status) => status === "ENTERED" || status === "EXITED",
     },
     {
-      key: "stopLoss", label: "止损点", type: "number",
-      required: (status) => status === "ENTERED" || status === "EXITED"
+      key: "stopLoss",
+      label: "止损点",
+      type: "number",
+      required: (status) => status === "ENTERED" || status === "EXITED",
     },
     {
-      key: "takeProfit", label: "止盈点", type: "number",
-      required: (status) => status === "ENTERED" || status === "EXITED"
+      key: "takeProfit",
+      label: "止盈点",
+      type: "number",
+      required: (status) => status === "ENTERED" || status === "EXITED",
     },
     {
-      key: "entryReason", label: "入场理由", type: "text",
-      required: (status) => status === "ENTERED" || status === "EXITED"
+      key: "entryReason",
+      label: "入场理由",
+      type: "text",
+      required: (status) => status === "ENTERED" || status === "EXITED",
     },
 
     // ===== 离场及复盘 =====
     // ===== 离场及复盘（根据 status 判定必填）=====
     {
-      key: "exitPrice", label: "离场价格", type: "number",
-      required: (status) => status === "EXITED"
+      key: "exitPrice",
+      label: "离场价格",
+      type: "number",
+      required: (status) => status === "EXITED",
     },
     {
-      key: "exitTime", label: "离场时间", type: "date",
-      required: (status) => status === "EXITED"
+      key: "exitTime",
+      label: "离场时间",
+      type: "date",
+      required: (status) => status === "EXITED",
     },
     {
-      key: "exitReason", label: "离场理由", type: "text",
-      required: (status) => status === "ENTERED" || status === "EXITED"
+      key: "exitReason",
+      label: "离场理由",
+      type: "text",
+      required: (status) => status === "ENTERED" || status === "EXITED",
     },
     {
       key: "tradeResult",
@@ -133,21 +157,27 @@ export default function TradeListPage() {
       options: [
         { label: "盈利", value: "PROFIT" },
         { label: "亏损", value: "LOSS" },
-        { label: "保本", value: "BREAKEVEN" }
+        { label: "保本", value: "BREAKEVEN" },
       ],
-      required: (status) => status === "EXITED"
+      required: (status) => status === "EXITED",
     },
     {
-      key: "followedPlan", label: "是否执行了计划", type: "checkbox",
-      required: (status) => status === "EXITED"
+      key: "followedPlan",
+      label: "是否执行了计划",
+      type: "checkbox",
+      required: (status) => status === "EXITED",
     },
     {
-      key: "followedPlanId", label: "计划ID", type: "text",
-      required: (status, form) => status === "EXITED" && !!form?.followedPlan
+      key: "followedPlanId",
+      label: "计划ID",
+      type: "text",
+      required: (status, form) => status === "EXITED" && !!form?.followedPlan,
     },
     {
-      key: "mentalityNotes", label: "心态记录", type: "text",
-      required: (status) => status === "ENTERED" || status === "EXITED"
+      key: "mentalityNotes",
+      label: "心态记录",
+      type: "text",
+      required: (status) => status === "ENTERED" || status === "EXITED",
     },
     { key: "actualPathAnalysis", label: "实际路径复盘", type: "text" },
     { key: "remarks", label: "备注", type: "text" },
@@ -231,9 +261,10 @@ export default function TradeListPage() {
         header: () => <div className="text-right">盈亏%</div>,
         cell: ({ row }) => {
           const value = row.original.profitLossPercentage;
-          const formatted = value !== undefined && value !== null && value !== ""
-            ? `${value}%`
-            : "-";
+          const formatted =
+            value !== undefined && value !== null && value !== ""
+              ? `${value}%`
+              : "-";
           return <div className="text-right font-medium">{formatted}</div>;
         },
       },
