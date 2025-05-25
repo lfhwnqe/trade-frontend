@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     // 其它 token（如 refreshToken）可在此处继续写入cookie
     return response;
   } catch (error) {
+    console.error('登录接口服务异常:', error);
     return NextResponse.json(
       { message: '登录接口服务异常' },
       { status: 502 }
