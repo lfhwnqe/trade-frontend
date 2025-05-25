@@ -84,10 +84,10 @@ export default function TradeListPage() {
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            时间段 <ArrowUpDown className="ml-2 h-4 w-4" />
+            行情分析时间 <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => row.original.dateTimeRange ?? "-",
+        cell: ({ row }) => row.original.analysisTime ?? "-",
       },
       {
         accessorKey: "marketStructure",

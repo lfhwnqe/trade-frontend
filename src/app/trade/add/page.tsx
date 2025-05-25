@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createTrade, toDto, fetchTradeDetail } from "../list/request";
+import { createTrade, toDto, fetchTradeDetail, updateTrade } from "../list/request";
 import { Trade } from "../config";
 import type { ImageResource } from "../config";
 import { TradeFormDialog } from "../list/components/TradeFormDialog";
@@ -16,6 +16,7 @@ export default function TradeAddPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<Partial<Trade>>({
+    analysisTime: undefined,
     status: undefined, // 需选
     marketStructure: undefined, // 需选
     volumeProfileImages: [],
@@ -55,21 +56,27 @@ export default function TradeAddPage() {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setLoading(true);
+      const id = searchParams.get("id");
       try {
-        await createTrade(toDto(form));
-        alert("新建成功");
-        router.push("/trade/list"); // 也可根据实际路由为 /trade
+        if (id) {
+          await updateTrade(id, toDto(form));
+          alert("更新成功");
+        } else {
+          await createTrade(toDto(form));
+          alert("新建成功");
+        }
+        router.push("/trade/list");
       } catch (error: unknown) {
         if (typeof error === "object" && error && "message" in error) {
-          alert((error as { message?: string }).message || "创建失败");
+          alert((error as { message?: string }).message || (id ? "更新失败" : "创建失败"));
         } else {
-          alert("创建失败");
+          alert(id ? "更新失败" : "创建失败");
         }
       } finally {
         setLoading(false);
       }
     },
-    [form, router]
+    [form, router, searchParams]
   );
 
   // 字段变化处理
@@ -128,6 +135,7 @@ export default function TradeAddPage() {
 
   // 支持底层 updateForm 合并对象
   const updateForm = useCallback((patch: Partial<Trade>) => {
+    console.log("updateForm", patch);
     setForm((prev) => ({
       ...prev,
       ...patch,

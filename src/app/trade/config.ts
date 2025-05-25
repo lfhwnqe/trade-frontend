@@ -5,9 +5,14 @@ import { DateRange } from 'react-day-picker';
 
 export type Option = { label: string; value: string }; // 新增 Option 类型
 
+export enum EntryDirection {
+  多 = '多',
+  空 = '空',
+}
+
 export const entryDirectionOptions: Option[] = [
-  { label: "多单", value: "Long" },
-  { label: "空单", value: "Short" },
+  { label: "多单", value: EntryDirection.多 },
+  { label: "空单", value: EntryDirection.空 },
 ];
 
 // 市场结构枚举
@@ -16,6 +21,7 @@ export enum MarketStructure {
   IMBALANCED = '趋势',
   UNSEEN = '暂无法判断',
 }
+
 export const marketStructureOptions = [
   { label: "震荡", value: MarketStructure.BALANCED },
   { label: "趋势", value: MarketStructure.IMBALANCED },
@@ -41,22 +47,23 @@ export interface EntryPlan {
   exitSignal?: string;
 }
 
-// 入场方向枚举
-export enum EntryDirection {
-  LONG = '多',
-  SHORT = '空',
-}
-
 // 交易记录状态枚举
 export enum TradeStatus {
   ANALYZED = '已分析',
   ENTERED = '已入场',
   EXITED = '已离场',
 }
+// 交易状态选项
+export const tradeStatusOptions = [
+  { label: "已分析", value: TradeStatus.ANALYZED },
+  { label: "已入场", value: TradeStatus.ENTERED },
+  { label: "已离场", value: TradeStatus.EXITED },
+];
 /**
  * Trade 前端完整类型定义，对齐后端 CreateTradeDto
  */
 export type Trade = {
+  analysisTime?: string;
   transactionId?: string;
   // 状态与基础分析
   status?: TradeStatus;

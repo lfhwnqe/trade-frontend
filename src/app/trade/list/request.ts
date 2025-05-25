@@ -88,6 +88,7 @@ export type CreateTradeDto = {
   status: TradeStatus;
 
   // ===== 入场前分析 =====
+  analysisTime?: string;
   volumeProfileImages: ImageResource[];
   poc: number;
   val: number;
@@ -145,6 +146,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
       : [];
 
   return {
+    analysisTime: form.analysisTime,
     // ===== 交易状态 =====
     status: form.status!,
     // ===== 入场前分析 =====

@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import { format } from "date-fns";
+import { DateTimePicker } from "./DateTimePicker";
 import { ImageUploader } from "./ImageUploader";
 import type { ImageResource } from "../../config";
+import { entryDirectionOptions, marketStructureOptions, tradeStatusOptions } from "../../config";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,20 +27,6 @@ import { Trade, TradeStatus } from "@/app/trade/config";
 import { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
 
-// 市场结构选项
-const marketStructureOptions = [
-  { label: "上升趋势", value: "UPTREND" },
-  { label: "下降趋势", value: "DOWNTREND" },
-  { label: "区间震荡", value: "RANGE" },
-  { label: "趋势转变中", value: "TRANSITION" },
-];
-
-// 入场方向选项
-const entryDirectionOptions = [
-  { label: "做多", value: "LONG" },
-  { label: "做空", value: "SHORT" },
-];
-
 // 交易结果选项
 const tradeResultOptions = [
   { label: "盈利", value: "PROFIT" },
@@ -46,12 +34,6 @@ const tradeResultOptions = [
   { label: "保本", value: "BREAKEVEN" },
 ];
 
-// 交易状态选项
-const tradeStatusOptions = [
-  { label: "已分析", value: "ANALYZED" },
-  { label: "已入场", value: "ENTERED" },
-  { label: "已离场", value: "EXITED" },
-];
 const followedPlanOptions = [
   { label: "是", value: "true" },
   { label: "否", value: "false" },
@@ -126,6 +108,7 @@ export function TradeForm({
   handleImageChange,
   handlePlanChange,
   handleSubmit,
+  updateForm,
 }: TradeFormProps) {
   return (
     <div className="w-full mx-auto  bg-muted/50  ">
@@ -133,7 +116,20 @@ export function TradeForm({
         {/* 1. 入场前分析 */}
         <div className="bg-muted/50 border rounded-lg p-4 pt-3">
           <div className="font-semibold text-base pb-2">入场前分析</div>
-          <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4 mb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-x-6 gap-y-4 mb-2">
+            {/* 行情分析时间 */}
+            <div>
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                行情分析时间
+                <span className="ml-0.5 text-destructive">*</span>:
+              </label>
+              <DateTimePicker
+                analysisTime={form.analysisTime}
+                updateForm={(patch) =>
+                  updateForm({ analysisTime: patch.analysisTime })
+                }
+              />
+            </div>
             {/* 交易状态 */}
             <div>
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
