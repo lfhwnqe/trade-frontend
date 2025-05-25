@@ -3,7 +3,7 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { ImageUploader } from "./ImageUploader";
-import type { ImageResource } from "../request";
+import type { ImageResource } from "../../config";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Trade, TradeStatus } from "@/app/trade/config";
 import { DateRange } from "react-day-picker";
+import { Textarea } from "@/components/ui/textarea";
 
 // 市场结构选项
 const marketStructureOptions = [
@@ -198,21 +199,6 @@ export function TradeFormDialog({
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* 结构分析 */}
-                <div>
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    结构分析:
-                  </label>
-                  <Input
-                    id="marketStructureAnalysis"
-                    name="marketStructureAnalysis"
-                    type="text"
-                    value={(form.marketStructureAnalysis as string) ?? ""}
-                    onChange={handleChange}
-                  />
-                </div>
-
                 {/* 入场方向 - 只在已入场/已离场时必填 */}
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -241,6 +227,23 @@ export function TradeFormDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                {/* 结构分析 */}
+                <div>
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    结构分析:
+                  </label>
+                  <Textarea
+                    id="marketStructureAnalysis"
+                    name="marketStructureAnalysis"
+                    value={(form.marketStructureAnalysis as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange(
+                        "marketStructureAnalysis",
+                        e.target.value
+                      )
+                    }
+                  />
                 </div>
 
                 {/* 成交量分布图 */}
@@ -334,12 +337,20 @@ export function TradeFormDialog({
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     关键价位说明:
                   </label>
-                  <Input
+                  {/* <Input
                     id="keyPriceLevels"
                     name="keyPriceLevels"
                     type="text"
                     value={(form.keyPriceLevels as string) ?? ""}
                     onChange={handleChange}
+                  /> */}
+                  <Textarea
+                    id="keyPriceLevels"
+                    name="keyPriceLevels"
+                    value={(form.keyPriceLevels as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange("keyPriceLevels", e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -507,7 +518,19 @@ export function TradeFormDialog({
                     )}
                     :
                   </label>
-                  <Input
+                  <Textarea
+                    id="entryReason"
+                    name="entryReason"
+                    value={(form.entryReason as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange("entryReason", e.target.value)
+                    }
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
+                  />
+                  {/* <Input
                     id="entryReason"
                     name="entryReason"
                     type="text"
@@ -517,7 +540,7 @@ export function TradeFormDialog({
                       form.status === TradeStatus.ENTERED ||
                       form.status === TradeStatus.EXITED
                     }
-                  />
+                  /> */}
                 </div>
 
                 {/* 离场理由 */}
@@ -530,7 +553,19 @@ export function TradeFormDialog({
                     )}
                     :
                   </label>
-                  <Input
+                  <Textarea
+                    id="exitReason"
+                    name="exitReason"
+                    value={(form.exitReason as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange("exitReason", e.target.value)
+                    }
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
+                  />
+                  {/* <Input
                     id="exitReason"
                     name="exitReason"
                     type="text"
@@ -540,7 +575,7 @@ export function TradeFormDialog({
                       form.status === TradeStatus.ENTERED ||
                       form.status === TradeStatus.EXITED
                     }
-                  />
+                  /> */}
                 </div>
 
                 {/* 心态记录 */}
@@ -553,7 +588,19 @@ export function TradeFormDialog({
                     )}
                     :
                   </label>
-                  <Input
+                  <Textarea
+                    id="mentalityNotes"
+                    name="mentalityNotes"
+                    value={(form.mentalityNotes as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange("mentalityNotes", e.target.value)
+                    }
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
+                  />
+                  {/* <Input
                     id="mentalityNotes"
                     name="mentalityNotes"
                     type="text"
@@ -563,7 +610,7 @@ export function TradeFormDialog({
                       form.status === TradeStatus.ENTERED ||
                       form.status === TradeStatus.EXITED
                     }
-                  />
+                  /> */}
                 </div>
               </div>
             </div>
@@ -729,49 +776,6 @@ export function TradeFormDialog({
                     max={5}
                   />
                 </div>
-
-                {/* 实际路径复盘 */}
-                <div>
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    实际路径复盘:
-                  </label>
-                  <Input
-                    id="actualPathAnalysis"
-                    name="actualPathAnalysis"
-                    type="text"
-                    value={(form.actualPathAnalysis as string) ?? ""}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                {/* 备注 */}
-                <div>
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    备注:
-                  </label>
-                  <Input
-                    id="remarks"
-                    name="remarks"
-                    type="text"
-                    value={(form.remarks as string) ?? ""}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                {/* 经验总结 */}
-                <div>
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    经验总结:
-                  </label>
-                  <Input
-                    id="lessonsLearned"
-                    name="lessonsLearned"
-                    type="text"
-                    value={(form.lessonsLearned as string) ?? ""}
-                    onChange={handleChange}
-                  />
-                </div>
-
                 {/* 盈亏% */}
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -798,6 +802,71 @@ export function TradeFormDialog({
                     value={(form.riskRewardRatio as string) ?? ""}
                     onChange={handleChange}
                   />
+                </div>
+                {/* 实际路径复盘 */}
+                <div>
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    实际路径复盘:
+                  </label>
+                  <Textarea
+                    id="actualPathAnalysis"
+                    name="actualPathAnalysis"
+                    value={(form.actualPathAnalysis as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange("actualPathAnalysis", e.target.value)
+                    }
+                  />
+                  {/* <Input
+                    id="actualPathAnalysis"
+                    name="actualPathAnalysis"
+                    type="text"
+                    value={(form.actualPathAnalysis as string) ?? ""}
+                    onChange={handleChange}
+                  /> */}
+                </div>
+
+                {/* 备注 */}
+                <div>
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    备注:
+                  </label>
+                  <Textarea
+                    id="remarks"
+                    name="remarks"
+                    value={(form.remarks as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange("remarks", e.target.value)
+                    }
+                  />
+                  {/* <Input
+                    id="remarks"
+                    name="remarks"
+                    type="text"
+                    value={(form.remarks as string) ?? ""}
+                    onChange={handleChange}
+                  /> */}
+                </div>
+
+                {/* 经验总结 */}
+                <div>
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    经验总结:
+                  </label>
+                  <Textarea
+                    id="lessonsLearned"
+                    name="lessonsLearned"
+                    value={(form.lessonsLearned as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange("lessonsLearned", e.target.value)
+                    }
+                  />
+                  {/* <Input
+                    id="lessonsLearned"
+                    name="lessonsLearned"
+                    type="text"
+                    value={(form.lessonsLearned as string) ?? ""}
+                    onChange={handleChange}
+                  /> */}
                 </div>
               </div>
             </div>

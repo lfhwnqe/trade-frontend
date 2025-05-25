@@ -1,19 +1,24 @@
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
-import { Trade, TradeListResponse, TradeQuery } from "../config";
+import type {
+  EntryDirection,
+  EntryPlan,
+  Trade,
+  TradeListResponse,
+  TradeQuery,
+  TradeStatus,
+  MarketStructure,
+  ImageResource,
+} from "../config";
 
 // 允许的图片类型
 export const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
   "image/gif",
-  "image/webp"
+  "image/webp",
 ];
 
 // 图片资源类型定义
-export interface ImageResource {
-  key: string;
-  url: string;
-}
 
 export async function fetchTrades(params: {
   page: number;
@@ -50,99 +55,120 @@ export async function fetchTrades(params: {
   };
 }
 
+
+/** 交易结果枚举，与后端同步 */
+export enum TradeResult {
+  PROFIT = "盈利",
+  LOSS = "亏损",
+  BREAKEVEN = "保本",
+}
+
+/**
+ * CreateTradeDto 类型，对齐后端 CreateTradeDto （所有字段类型与必选/可选严格一致，见后端 dto 和 entity 注释）
+ */
 export type CreateTradeDto = {
-  dateTimeRange: string;
-  marketStructure: string;
-  signalType: string;
-  vah?: number;
-  val?: number;
-  poc?: number;
-  entryDirection: "Long" | "Short" | "";
-  entry?: number;
+  // ===== 交易状态 =====
+  status: TradeStatus;
+
+  // ===== 入场前分析 =====
+  volumeProfileImages: ImageResource[];
+  poc: number;
+  val: number;
+  vah: number;
+  keyPriceLevels?: string;
+  marketStructure: MarketStructure;
+  marketStructureAnalysis: string;
+  expectedPathImages?: ImageResource[];
+  expectedPathAnalysis?: string;
+  entryPlanA: EntryPlan;
+  entryPlanB?: EntryPlan;
+  entryPlanC?: EntryPlan;
+
+  // ===== 入场记录 =====
+  entryPrice?: number;
+  entryTime?: string;
+  entryDirection?: EntryDirection;
   stopLoss?: number;
-  target?: number;
-  volumeProfileImage: string;
-  hypothesisPaths: string[];
-  actualPath: string;
-  profitLoss?: number;
-  rr: string;
-  analysisError: string;
-  executionMindsetScore?: number;
-  improvement: string;
+  takeProfit?: number;
+  entryReason?: string;
+  exitReason?: string;
+  mentalityNotes?: string;
+
+  // ===== 离场后分析 =====
+  exitPrice?: number;
+  exitTime?: string;
+  tradeResult?: TradeResult;
+  followedPlan?: boolean;
+  followedPlanId?: string;
+  actualPathImages?: ImageResource[];
+  actualPathAnalysis?: string;
+  remarks?: string;
+  lessonsLearned?: string;
+  analysisImages?: ImageResource[];
+
+  // ===== 基础字段 =====
+  profitLossPercentage?: number;
+  riskRewardRatio?: string;
 };
 
 /**
  * toDto: 将前端表单 Trade 对象映射为后端 DTO CreateTradeDto 格式
  * 完全覆盖后端结构：状态、图片组、计划对象等全部处理
  */
-export function toDto(form: Partial<Trade>): any {
-  // 数值安全转换
-  function parseNum(v: any) {
-    if (v === undefined || v === "" || v === null) return undefined;
-    const n = Number(v);
-    return isNaN(n) ? undefined : n;
-  }
-
-  // 图片组类型转换 ImageResource[]，或空数组
-  function asImageArray(val: any): { key: string, url: string }[] {
-    if (Array.isArray(val)) return val.filter(x => x && typeof x.url === "string" && typeof x.key === "string");
-    return [];
-  }
-
-  // 计划对象转换
-  function asEntryPlan(obj: any): any {
-    if (!obj || typeof obj !== "object") return undefined;
-    const { entryReason, entrySignal, exitSignal } = obj;
-    if (!entryReason && !entrySignal && !exitSignal) return undefined;
-    return {
-      entryReason: entryReason ?? "",
-      entrySignal: entrySignal ?? "",
-      exitSignal: exitSignal ?? "",
-    };
-  }
-
-  // 枚举、布尔、文本处理
-  const tradeResultMap = { PROFIT: "盈利", LOSS: "亏损", BREAKEVEN: "保本" };
-  const statusVal = form.status ?? "ANALYZED";
+/**
+ * toDto: 表单 Trade -> 后端 CreateTradeDto
+ * 保证所有字段严格对齐，类型安全转换
+ */
+export function toDto(form: Partial<Trade>): CreateTradeDto {
+  const parseNum = (v: string | number | undefined) =>
+    v === undefined || v === "" || v === null ? undefined : (isNaN(Number(v)) ? undefined : Number(v));
+  const asImageArray = (val?: ImageResource[]) =>
+    Array.isArray(val)
+      ? val.filter((x) => x && typeof x.url === "string" && typeof x.key === "string")
+      : [];
 
   return {
     // ===== 交易状态 =====
-    status: statusVal,
+    status: form.status!,
     // ===== 入场前分析 =====
     volumeProfileImages: asImageArray(form.volumeProfileImages),
-    poc: parseNum(form.poc),
-    val: parseNum(form.val),
-    vah: parseNum(form.vah),
-    keyPriceLevels: form.keyPriceLevels ?? "",
-    marketStructure: form.marketStructure ?? "",
-    marketStructureAnalysis: form.marketStructureAnalysis ?? "",
+    poc: parseNum(form.poc)!,
+    val: parseNum(form.val)!,
+    vah: parseNum(form.vah)!,
+    keyPriceLevels: form.keyPriceLevels,
+    marketStructure: form.marketStructure!,
+    marketStructureAnalysis: form.marketStructureAnalysis || "",
     expectedPathImages: asImageArray(form.expectedPathImages),
-    expectedPathAnalysis: form.expectedPathAnalysis ?? "",
-    entryPlanA: asEntryPlan(form.entryPlanA),
-    entryPlanB: asEntryPlan(form.entryPlanB),
-    entryPlanC: asEntryPlan(form.entryPlanC),
+    expectedPathAnalysis: form.expectedPathAnalysis,
+    entryPlanA: form.entryPlanA ?? { entryReason: "", entrySignal: "", exitSignal: "" },
+    entryPlanB: form.entryPlanB,
+    entryPlanC: form.entryPlanC,
+
     // ===== 入场记录 =====
     entryPrice: parseNum(form.entry),
-    entryTime: form.entryTime ?? "",
-    entryDirection: form.entryDirection ?? "",
+    entryTime: form.entryTime,
+    entryDirection: form.entryDirection,
     stopLoss: parseNum(form.stopLoss),
     takeProfit: parseNum(form.takeProfit),
-    entryReason: form.entryReason ?? "",
-    exitReason: form.exitReason ?? "",
-    mentalityNotes: form.mentalityNotes ?? "",
+    entryReason: form.entryReason,
+    exitReason: form.exitReason,
+    mentalityNotes: form.mentalityNotes,
+
     // ===== 离场后分析 =====
     exitPrice: parseNum(form.exitPrice),
-    exitTime: form.exitTime ?? "",
-    tradeResult: form.tradeResult ?? "",
-    followedPlan: !!form.followedPlan,
-    followedPlanId: form.followedPlanId ?? "",
+    exitTime: form.exitTime,
+    tradeResult: form.tradeResult as TradeResult | undefined,
+    followedPlan: form.followedPlan,
+    followedPlanId: form.followedPlanId,
     actualPathImages: asImageArray(form.actualPathImages),
-    actualPathAnalysis: form.actualPathAnalysis ?? "",
-    remarks: form.remarks ?? "",
-    lessonsLearned: form.lessonsLearned ?? "",
-    analysisImages: [], // 预留，当前表单暂未填
+    actualPathAnalysis: form.actualPathAnalysis,
+    remarks: form.remarks,
+    lessonsLearned: form.lessonsLearned,
+    analysisImages: asImageArray(form.analysisImages),
+
+    // ===== 计算字段/可选 =====
     profitLossPercentage: parseNum(form.profitLossPercentage),
-    riskRewardRatio: form.riskRewardRatio ?? "",
+    riskRewardRatio: form.riskRewardRatio,
   };
 }
 
@@ -239,7 +265,7 @@ export async function uploadToS3(uploadUrl: string, file: File): Promise<void> {
     },
     body: file,
   });
-  
+
   if (!res.ok) {
     throw new Error("上传到S3失败");
   }
