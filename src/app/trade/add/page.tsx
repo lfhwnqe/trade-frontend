@@ -136,25 +136,31 @@ export default function TradeAddPage() {
 
   // 主体渲染，非弹窗模式而是全宽居中大表单
   return (
-    <div className="flex flex-col items-center justify-center min-h-[92vh] p-4">
-      <div className="w-full bg-white rounded-lg shadowborder">
-        <h1 className="text-2xl font-bold mb-4">新增/编辑交易记录</h1>
-        <TradeFormDialog
-          editTrade={null}
-          form={form}
-          handleChange={handleChange}
-          handleSelectChange={handleSelectChange}
-          handleDateRangeChange={handleDateRangeChange}
-          handleImageChange={handleImageChange}
-          handlePlanChange={handlePlanChange}
-          handleSubmit={handleSubmit}
-          updateForm={updateForm}
-        />
-        {(loading || detailLoading) && (
-          <div className="mt-4 text-center text-gray-500">
-            {loading ? "保存中..." : "加载详情中..."}
-          </div>
-        )}
+    <div className="flex flex-col items-center justify-center min-h-[92vh]">
+      <div className="w-full bg-white rounded-lg shadowborder flex flex-col">
+        {/* 固定顶部 */}
+        <div className="sticky top-0 z-10 bg-white shadow px-6 py-4 rounded-t-lg">
+          <h1 className="text-2xl font-bold">新增/编辑交易记录</h1>
+        </div>
+        {/* 滚动表单内容 */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <TradeFormDialog
+            editTrade={null}
+            form={form}
+            handleChange={handleChange}
+            handleSelectChange={handleSelectChange}
+            handleDateRangeChange={handleDateRangeChange}
+            handleImageChange={handleImageChange}
+            handlePlanChange={handlePlanChange}
+            handleSubmit={handleSubmit}
+            updateForm={updateForm}
+          />
+          {(loading || detailLoading) && (
+            <div className="mt-4 text-center text-gray-500">
+              {loading ? "保存中..." : "加载详情中..."}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
