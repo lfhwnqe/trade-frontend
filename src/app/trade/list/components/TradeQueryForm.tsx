@@ -18,7 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { TradeQuery, marketStructureOptions, signalTypeOptions, entryDirectionOptions, Option } from "../../config";
+import {
+  TradeQuery,
+  marketStructureOptions,
+  signalTypeOptions,
+  entryDirectionOptions,
+  Option,
+} from "../../config";
 
 interface TradeQueryFormProps {
   queryForm: TradeQuery;
@@ -34,10 +40,7 @@ export default function TradeQueryForm({
   onReset,
 }: TradeQueryFormProps) {
   return (
-    <form
-      className="flex flex-wrap gap-2 mb-4 items-end"
-      onSubmit={onSubmit}
-    >
+    <form className="flex flex-wrap gap-2 mb-4 items-end" onSubmit={onSubmit}>
       <div>
         <label className="block text-xs mb-1">时间段</label>
         <Popover>
@@ -93,27 +96,6 @@ export default function TradeQueryForm({
           <SelectContent>
             <SelectItem value="all">全部</SelectItem>
             {marketStructureOptions.map((opt: Option) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <label className="block text-xs mb-1">信号类型</label>
-        <Select
-          value={queryForm.signalType ?? ""}
-          onValueChange={(value: string) =>
-            onQueryFormChange({ ...queryForm, signalType: value })
-          }
-        >
-          <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder="全部" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部</SelectItem>
-            {signalTypeOptions.map((opt: Option) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>

@@ -71,33 +71,78 @@ export type CreateTradeDto = {
   improvement: string;
 };
 
-export function toDto(form: Partial<Trade>): Partial<CreateTradeDto> {
-  function parseNum(v: string | undefined) {
-    return v === undefined || v === "" ? undefined : Number(v);
+/**
+ * toDto: 将前端表单 Trade 对象映射为后端 DTO CreateTradeDto 格式
+ * 完全覆盖后端结构：状态、图片组、计划对象等全部处理
+ */
+export function toDto(form: Partial<Trade>): any {
+  // 数值安全转换
+  function parseNum(v: any) {
+    if (v === undefined || v === "" || v === null) return undefined;
+    const n = Number(v);
+    return isNaN(n) ? undefined : n;
   }
+
+  // 图片组类型转换 ImageResource[]，或空数组
+  function asImageArray(val: any): { key: string, url: string }[] {
+    if (Array.isArray(val)) return val.filter(x => x && typeof x.url === "string" && typeof x.key === "string");
+    return [];
+  }
+
+  // 计划对象转换
+  function asEntryPlan(obj: any): any {
+    if (!obj || typeof obj !== "object") return undefined;
+    const { entryReason, entrySignal, exitSignal } = obj;
+    if (!entryReason && !entrySignal && !exitSignal) return undefined;
+    return {
+      entryReason: entryReason ?? "",
+      entrySignal: entrySignal ?? "",
+      exitSignal: exitSignal ?? "",
+    };
+  }
+
+  // 枚举、布尔、文本处理
+  const tradeResultMap = { PROFIT: "盈利", LOSS: "亏损", BREAKEVEN: "保本" };
+  const statusVal = form.status ?? "ANALYZED";
+
   return {
-    dateTimeRange: form.dateTimeRange ?? "",
-    marketStructure: form.marketStructure ?? "",
-    signalType: form.signalType ?? "",
-    entryDirection: (form.entryDirection ?? "") as "Long" | "Short" | "",
-    vah: parseNum(form.vah),
-    val: parseNum(form.val),
+    // ===== 交易状态 =====
+    status: statusVal,
+    // ===== 入场前分析 =====
+    volumeProfileImages: asImageArray(form.volumeProfileImages),
     poc: parseNum(form.poc),
-    entry: parseNum(form.entry),
+    val: parseNum(form.val),
+    vah: parseNum(form.vah),
+    keyPriceLevels: form.keyPriceLevels ?? "",
+    marketStructure: form.marketStructure ?? "",
+    marketStructureAnalysis: form.marketStructureAnalysis ?? "",
+    expectedPathImages: asImageArray(form.expectedPathImages),
+    expectedPathAnalysis: form.expectedPathAnalysis ?? "",
+    entryPlanA: asEntryPlan(form.entryPlanA),
+    entryPlanB: asEntryPlan(form.entryPlanB),
+    entryPlanC: asEntryPlan(form.entryPlanC),
+    // ===== 入场记录 =====
+    entryPrice: parseNum(form.entry),
+    entryTime: form.entryTime ?? "",
+    entryDirection: form.entryDirection ?? "",
     stopLoss: parseNum(form.stopLoss),
-    target: parseNum(form.target),
-    volumeProfileImage: form.volumeProfileImage ?? "",
-    hypothesisPaths: Array.isArray(form.hypothesisPaths)
-      ? form.hypothesisPaths
-      : typeof form.hypothesisPaths === "string"
-      ? (form.hypothesisPaths as string).split(",").map((s: string) => s.trim())
-      : [],
-    actualPath: form.actualPath ?? "",
-    profitLoss: parseNum(form.profitLoss),
-    rr: form.rr ?? "",
-    analysisError: form.analysisError ?? "",
-    executionMindsetScore: parseNum(form.executionMindsetScore),
-    improvement: form.improvement ?? "",
+    takeProfit: parseNum(form.takeProfit),
+    entryReason: form.entryReason ?? "",
+    exitReason: form.exitReason ?? "",
+    mentalityNotes: form.mentalityNotes ?? "",
+    // ===== 离场后分析 =====
+    exitPrice: parseNum(form.exitPrice),
+    exitTime: form.exitTime ?? "",
+    tradeResult: form.tradeResult ?? "",
+    followedPlan: !!form.followedPlan,
+    followedPlanId: form.followedPlanId ?? "",
+    actualPathImages: asImageArray(form.actualPathImages),
+    actualPathAnalysis: form.actualPathAnalysis ?? "",
+    remarks: form.remarks ?? "",
+    lessonsLearned: form.lessonsLearned ?? "",
+    analysisImages: [], // 预留，当前表单暂未填
+    profitLossPercentage: parseNum(form.profitLossPercentage),
+    riskRewardRatio: form.riskRewardRatio ?? "",
   };
 }
 

@@ -17,10 +17,16 @@ export const signalTypeOptions: Option[] = [
   // 如有更多类型可补充
 ];
 
-export const marketStructureOptions: Option[] = [
-  { label: "结构1", value: "结构1" },
-  { label: "结构2", value: "结构2" },
-  // 如有更多类型可补充
+// 市场结构枚举
+export enum MarketStructure {
+  BALANCED = '震荡',
+  IMBALANCED = '趋势',
+  UNSEEN = '暂无法判断',
+}
+export const marketStructureOptions = [
+  { label: "震荡", value: MarketStructure.BALANCED },
+  { label: "趋势", value: MarketStructure.IMBALANCED },
+  { label: "暂无法判断", value: MarketStructure.UNSEEN },
 ];
 
 /**
@@ -32,30 +38,71 @@ export const tradeFieldConfigs = {
   marketStructure: marketStructureOptions,
 };
 
+export interface ImageResource {
+  key: string;
+  url: string;
+}
+
+export interface EntryPlan {
+  entryReason?: string;
+  entrySignal?: string;
+  exitSignal?: string;
+}
+
+/**
+ * Trade 前端完整类型定义，对齐后端 CreateTradeDto
+ */
 export type Trade = {
   transactionId?: string;
-  dateTimeRange?: string; // 注意：在表单和查询中可能是 DateRange 或 string，API 可能是 string
+  // 状态与基础分析
+  status?: string;
+  dateTimeRange?: string;
   marketStructure?: string;
+  marketStructureAnalysis?: string;
   signalType?: string;
+
+  // 图片相关（用数组类型）
+  volumeProfileImages?: ImageResource[];
+  expectedPathImages?: ImageResource[];
+  actualPathImages?: ImageResource[];
+  analysisImages?: ImageResource[];
+
+  // 价格/价值区等
   vah?: string;
   val?: string;
   poc?: string;
+  keyPriceLevels?: string;
+
+  // 入场计划
+  entryPlanA?: EntryPlan;
+  entryPlanB?: EntryPlan;
+  entryPlanC?: EntryPlan;
+
+  // 入场记录
+  entry?: string;
+  entryTime?: string;
   entryDirection?: string;
-  entry?: string; // 通常是 number，但 DTO 中可能是 string
-  stopLoss?: string; // 通常是 number
-  target?: string; // 通常是 number
-  takeProfit?: string; // 新增，通常是 number
-  tradeDuration?: string; // 新增
-  riskRewardRatio?: string; // 新增，通常是 number
-  volumeProfileImage?: string;
-  hypothesisPaths?: string | string[];
-  actualPath?: string;
-  profitLoss?: string; // 通常是 number
-  rr?: string; // 这个可能与 riskRewardRatio 重复或相关
-  analysisError?: string;
-  executionMindsetScore?: string; // 通常是 number (1-10)
-  improvement?: string;
-  notes?: string; // 新增
+  stopLoss?: string;
+  takeProfit?: string;
+  entryReason?: string;
+
+  // 离场分析及复盘
+  exitPrice?: string;
+  exitTime?: string;
+  exitReason?: string;
+  tradeResult?: string;
+  followedPlan?: boolean;
+  followedPlanId?: string;
+  mentalityNotes?: string;
+  actualPathAnalysis?: string;
+  remarks?: string;
+  lessonsLearned?: string;
+  profitLossPercentage?: string;
+  riskRewardRatio?: string;
+
+  // 旧遗留/兼容字段
+  tradeDuration?: string;
+  notes?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -85,9 +132,13 @@ export interface ApiQueryParameters {
 }
 
 export interface TradeFieldConfig {
-  key: keyof Omit<Trade, 'transactionId'>; // transactionId is not usually part of the form fields directly editable like this
+  key: keyof Omit<Trade, 'transactionId'>;
   label: string;
-  required?: boolean;
-  options?: readonly Option[]; // 使用 Option 类型
-  type?: 'text' | 'number' | 'date'; // Optional: for input types, though not strictly used by current Input component props
+  /**
+   * 可以为 boolean 或函数: (status, form) => boolean
+   * 用于支持根据 status 动态判定某字段是否 required
+   */
+  required?: boolean | ((status: string | undefined, form?: Trade) => boolean);
+  options?: readonly Option[];
+  type?: 'text' | 'number' | 'date' | 'image-array' | 'plan' | 'checkbox';
 }
