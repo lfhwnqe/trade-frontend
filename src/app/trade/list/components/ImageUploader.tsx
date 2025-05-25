@@ -157,14 +157,14 @@ export function ImageUploader({
 
   return (
     <div className="mb-3">
-      {label && (
+      {/* {label && (
         <div className="font-semibold mb-1 flex items-center gap-2">
           {label}
           <span className="text-xs text-muted-foreground">
             {max ? `(最多${max}张)` : ""}
           </span>
         </div>
-      )}
+      )} */}
       <div
         {...getRootProps({
           className:
@@ -220,15 +220,14 @@ export function ImageUploader({
         {/* 添加按钮 */}
         {!reachMax && (
           <div
-            className="w-28 h-28 border border-dashed rounded-lg bg-background text-muted-foreground hover:bg-accent hover:border-primary hover:text-primary transition flex flex-col items-center justify-center gap-1 cursor-pointer select-none"
+            className="w-14 h-14 border border-dashed rounded-lg bg-background text-muted-foreground hover:bg-accent hover:border-primary hover:text-primary transition flex flex-col items-center justify-center gap-1 cursor-pointer select-none"
             tabIndex={-1}
             onClick={open}
-            style={{ minWidth: 92 }}
+            style={{ minWidth: 60 }}
             role="button"
             aria-label="添加图片"
           >
             <Upload className="mb-1" />
-            <span className="text-xs">添加图片</span>
             <input
               {...getInputProps({
                 className: "hidden",
