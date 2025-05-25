@@ -144,7 +144,7 @@ export default function TradeListPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  openDialog(trade);
+                  router.push(`/trade/add?id=${trade.transactionId}`);
                 }}
               >
                 编辑

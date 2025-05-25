@@ -56,6 +56,23 @@ export async function fetchTrades(params: {
 }
 
 
+/** 获取单条交易详情 */
+export async function fetchTradeDetail(transactionId: string): Promise<Trade> {
+  const proxyParams = {
+    targetPath: `trade/${transactionId}`,
+    actualMethod: "GET"
+  };
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody: {},
+  });
+  if (!res.ok) throw new Error("获取详情失败");
+  // 兼容 response 结构
+  const data = await res.json();
+  return data.data || data;
+}
 /** 交易结果枚举，与后端同步 */
 export enum TradeResult {
   PROFIT = "盈利",

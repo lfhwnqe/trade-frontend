@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { createTrade, toDto } from "../list/request";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createTrade, toDto, fetchTradeDetail } from "../list/request";
 import { Trade } from "../config";
 import type { ImageResource } from "../config";
 import { TradeFormDialog } from "../list/components/TradeFormDialog";
@@ -14,6 +14,7 @@ import { TradeFormDialog } from "../list/components/TradeFormDialog";
  */
 export default function TradeAddPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<Partial<Trade>>({
     status: undefined, // 需选
     marketStructure: undefined, // 需选
@@ -25,6 +26,29 @@ export default function TradeAddPage() {
     // 其它字段默认空即可
   });
   const [loading, setLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // 详情回填逻辑
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) {
+      setDetailLoading(true);
+      fetchTradeDetail(id)
+        .then((data) => {
+          // 合并已有字段，防止丢失自定义初值
+          setForm((prev) => ({
+            ...prev,
+            ...data,
+          }));
+        })
+        .catch((e) => {
+          alert("加载详情失败：" + (e && e.message ? e.message : e));
+        })
+        .finally(() => {
+          setDetailLoading(false);
+        });
+    }
+  }, [searchParams]);
 
   // 提交函数
   const handleSubmit = useCallback(
@@ -114,7 +138,7 @@ export default function TradeAddPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[92vh] p-4">
       <div className="w-full bg-white rounded-lg shadowborder">
-        <h1 className="text-2xl font-bold mb-4">新增交易记录</h1>
+        <h1 className="text-2xl font-bold mb-4">新增/编辑交易记录</h1>
         <TradeFormDialog
           editTrade={null}
           form={form}
@@ -126,8 +150,10 @@ export default function TradeAddPage() {
           handleSubmit={handleSubmit}
           updateForm={updateForm}
         />
-        {loading && (
-          <div className="mt-4 text-center text-gray-500">保存中...</div>
+        {(loading || detailLoading) && (
+          <div className="mt-4 text-center text-gray-500">
+            {loading ? "保存中..." : "加载详情中..."}
+          </div>
         )}
       </div>
     </div>
