@@ -28,7 +28,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Trade, Option } from "@/app/trade/config";
+import { Trade, TradeStatus } from "@/app/trade/config";
 import { DateRange } from "react-day-picker";
 
 // 市场结构选项
@@ -92,7 +92,7 @@ function EntryPlanForm({
         <label className="text-sm">入场理由</label>
         <Input
           value={value?.entryReason ?? ""}
-          onChange={e => onChange({ ...value, entryReason: e.target.value })}
+          onChange={(e) => onChange({ ...value, entryReason: e.target.value })}
           placeholder="请输入入场理由"
         />
       </div>
@@ -100,7 +100,7 @@ function EntryPlanForm({
         <label className="text-sm">入场信号</label>
         <Input
           value={value?.entrySignal ?? ""}
-          onChange={e => onChange({ ...value, entrySignal: e.target.value })}
+          onChange={(e) => onChange({ ...value, entrySignal: e.target.value })}
           placeholder="请输入入场信号"
         />
       </div>
@@ -108,7 +108,7 @@ function EntryPlanForm({
         <label className="text-sm">退出信号</label>
         <Input
           value={value?.exitSignal ?? ""}
-          onChange={e => onChange({ ...value, exitSignal: e.target.value })}
+          onChange={(e) => onChange({ ...value, exitSignal: e.target.value })}
           placeholder="请输入退出信号"
         />
       </div>
@@ -154,7 +154,7 @@ export function TradeFormDialog({
                   <Select
                     name="status"
                     value={(form.status as string) ?? ""}
-                    onValueChange={value =>
+                    onValueChange={(value) =>
                       handleSelectChange("status" as keyof Trade, value)
                     }
                   >
@@ -179,8 +179,11 @@ export function TradeFormDialog({
                   <Select
                     name="marketStructure"
                     value={(form.marketStructure as string) ?? ""}
-                    onValueChange={value =>
-                      handleSelectChange("marketStructure" as keyof Trade, value)
+                    onValueChange={(value) =>
+                      handleSelectChange(
+                        "marketStructure" as keyof Trade,
+                        value
+                      )
                     }
                   >
                     <SelectTrigger className="w-full">
@@ -214,14 +217,16 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     入场方向
-                    {(form.status === "ENTERED" || form.status === "EXITED") && (
+                    {(form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED) && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Select
                     name="entryDirection"
                     value={(form.entryDirection as string) ?? ""}
-                    onValueChange={value =>
+                    onValueChange={(value) =>
                       handleSelectChange("entryDirection" as keyof Trade, value)
                     }
                   >
@@ -248,12 +253,14 @@ export function TradeFormDialog({
                     value={
                       Array.isArray(form.volumeProfileImages) &&
                       (form.volumeProfileImages as unknown[]).every(
-                        v => typeof v === "object" && v !== null && "url" in v
+                        (v) => typeof v === "object" && v !== null && "url" in v
                       )
                         ? (form.volumeProfileImages as unknown as ImageResource[])
                         : []
                     }
-                    onChange={imgs => handleImageChange("volumeProfileImages", imgs)}
+                    onChange={(imgs) =>
+                      handleImageChange("volumeProfileImages", imgs)
+                    }
                     max={5}
                   />
                 </div>
@@ -268,12 +275,14 @@ export function TradeFormDialog({
                     value={
                       Array.isArray(form.expectedPathImages) &&
                       (form.expectedPathImages as unknown[]).every(
-                        v => typeof v === "object" && v !== null && "url" in v
+                        (v) => typeof v === "object" && v !== null && "url" in v
                       )
                         ? (form.expectedPathImages as unknown as ImageResource[])
                         : []
                     }
-                    onChange={imgs => handleImageChange("expectedPathImages", imgs)}
+                    onChange={(imgs) =>
+                      handleImageChange("expectedPathImages", imgs)
+                    }
                     max={5}
                   />
                 </div>
@@ -345,7 +354,7 @@ export function TradeFormDialog({
                   <div className="font-medium mb-2">A 计划</div>
                   <EntryPlanForm
                     value={form.entryPlanA as EntryPlan}
-                    onChange={v => handlePlanChange("entryPlanA", v)}
+                    onChange={(v) => handlePlanChange("entryPlanA", v)}
                   />
                 </div>
 
@@ -354,7 +363,7 @@ export function TradeFormDialog({
                   <div className="font-medium mb-2">B 计划</div>
                   <EntryPlanForm
                     value={form.entryPlanB as EntryPlan}
-                    onChange={v => handlePlanChange("entryPlanB", v)}
+                    onChange={(v) => handlePlanChange("entryPlanB", v)}
                   />
                 </div>
 
@@ -363,7 +372,7 @@ export function TradeFormDialog({
                   <div className="font-medium mb-2">C 计划</div>
                   <EntryPlanForm
                     value={form.entryPlanC as EntryPlan}
-                    onChange={v => handlePlanChange("entryPlanC", v)}
+                    onChange={(v) => handlePlanChange("entryPlanC", v)}
                   />
                 </div>
               </div>
@@ -377,9 +386,11 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     入场价格
-                    {(form.status === "ENTERED" || form.status === "EXITED") && (
+                    {(form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED) && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Input
                     id="entry"
@@ -387,7 +398,10 @@ export function TradeFormDialog({
                     type="number"
                     value={(form.entry as string) ?? ""}
                     onChange={handleChange}
-                    required={form.status === "ENTERED" || form.status === "EXITED"}
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
                   />
                 </div>
 
@@ -395,9 +409,11 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     入场时间
-                    {(form.status === "ENTERED" || form.status === "EXITED") && (
+                    {(form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED) && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -405,13 +421,15 @@ export function TradeFormDialog({
                         variant={"outline"}
                         className={cn(
                           "justify-start text-left font-normal w-full",
-                          !form.entryTime && "text-muted-foreground",
+                          !form.entryTime && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {form.entryTime
-                          ? format(new Date(form.entryTime as string), "PPP")
-                          : <span>选择日期</span>}
+                        {form.entryTime ? (
+                          format(new Date(form.entryTime as string), "PPP")
+                        ) : (
+                          <span>选择日期</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -422,9 +440,9 @@ export function TradeFormDialog({
                             ? new Date(form.entryTime as string)
                             : undefined
                         }
-                        onSelect={date =>
+                        onSelect={(date) =>
                           handleDateRangeChange(
-                            date ? { from: date, to: date } : undefined,
+                            date ? { from: date, to: date } : undefined
                           )
                         }
                         initialFocus
@@ -437,9 +455,11 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     止损点
-                    {(form.status === "ENTERED" || form.status === "EXITED") && (
+                    {(form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED) && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Input
                     id="stopLoss"
@@ -447,7 +467,10 @@ export function TradeFormDialog({
                     type="number"
                     value={(form.stopLoss as string) ?? ""}
                     onChange={handleChange}
-                    required={form.status === "ENTERED" || form.status === "EXITED"}
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
                   />
                 </div>
 
@@ -455,9 +478,11 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     止盈点
-                    {(form.status === "ENTERED" || form.status === "EXITED") && (
+                    {(form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED) && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Input
                     id="takeProfit"
@@ -465,7 +490,10 @@ export function TradeFormDialog({
                     type="number"
                     value={(form.takeProfit as string) ?? ""}
                     onChange={handleChange}
-                    required={form.status === "ENTERED" || form.status === "EXITED"}
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
                   />
                 </div>
 
@@ -473,9 +501,11 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     入场理由
-                    {(form.status === "ENTERED" || form.status === "EXITED") && (
+                    {(form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED) && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Input
                     id="entryReason"
@@ -483,7 +513,10 @@ export function TradeFormDialog({
                     type="text"
                     value={(form.entryReason as string) ?? ""}
                     onChange={handleChange}
-                    required={form.status === "ENTERED" || form.status === "EXITED"}
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
                   />
                 </div>
 
@@ -491,9 +524,11 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     离场理由
-                    {(form.status === "ENTERED" || form.status === "EXITED") && (
+                    {(form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED) && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Input
                     id="exitReason"
@@ -501,7 +536,10 @@ export function TradeFormDialog({
                     type="text"
                     value={(form.exitReason as string) ?? ""}
                     onChange={handleChange}
-                    required={form.status === "ENTERED" || form.status === "EXITED"}
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
                   />
                 </div>
 
@@ -509,9 +547,11 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     心态记录
-                    {(form.status === "ENTERED" || form.status === "EXITED") && (
+                    {(form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED) && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Input
                     id="mentalityNotes"
@@ -519,7 +559,10 @@ export function TradeFormDialog({
                     type="text"
                     value={(form.mentalityNotes as string) ?? ""}
                     onChange={handleChange}
-                    required={form.status === "ENTERED" || form.status === "EXITED"}
+                    required={
+                      form.status === TradeStatus.ENTERED ||
+                      form.status === TradeStatus.EXITED
+                    }
                   />
                 </div>
               </div>
@@ -533,9 +576,10 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     离场价格
-                    {form.status === "EXITED" && (
+                    {form.status === TradeStatus.EXITED && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Input
                     id="exitPrice"
@@ -543,7 +587,7 @@ export function TradeFormDialog({
                     type="number"
                     value={(form.exitPrice as string) ?? ""}
                     onChange={handleChange}
-                    required={form.status === "EXITED"}
+                    required={form.status === TradeStatus.EXITED}
                   />
                 </div>
 
@@ -551,9 +595,10 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     离场时间
-                    {form.status === "EXITED" && (
+                    {form.status === TradeStatus.EXITED && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -561,13 +606,15 @@ export function TradeFormDialog({
                         variant={"outline"}
                         className={cn(
                           "justify-start text-left font-normal w-full",
-                          !form.exitTime && "text-muted-foreground",
+                          !form.exitTime && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {form.exitTime
-                          ? format(new Date(form.exitTime as string), "PPP")
-                          : <span>选择日期</span>}
+                        {form.exitTime ? (
+                          format(new Date(form.exitTime as string), "PPP")
+                        ) : (
+                          <span>选择日期</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -578,9 +625,9 @@ export function TradeFormDialog({
                             ? new Date(form.exitTime as string)
                             : undefined
                         }
-                        onSelect={date =>
+                        onSelect={(date) =>
                           handleDateRangeChange(
-                            date ? { from: date, to: date } : undefined,
+                            date ? { from: date, to: date } : undefined
                           )
                         }
                         initialFocus
@@ -593,14 +640,15 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     交易结果
-                    {form.status === "EXITED" && (
+                    {form.status === TradeStatus.EXITED && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <Select
                     name="tradeResult"
                     value={(form.tradeResult as string) ?? ""}
-                    onValueChange={value =>
+                    onValueChange={(value) =>
                       handleSelectChange("tradeResult" as keyof Trade, value)
                     }
                   >
@@ -621,16 +669,19 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     是否执行了计划
-                    {form.status === "EXITED" && (
+                    {form.status === TradeStatus.EXITED && (
                       <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    )}
+                    :
                   </label>
                   <input
                     id="followedPlan"
                     name="followedPlan"
                     type="checkbox"
                     checked={!!form.followedPlan}
-                    onChange={e => updateForm({ followedPlan: e.target.checked })}
+                    onChange={(e) =>
+                      updateForm({ followedPlan: e.target.checked })
+                    }
                     className="w-4 h-4 mt-1"
                   />
                 </div>
@@ -639,9 +690,11 @@ export function TradeFormDialog({
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     计划ID
-                    {form.status === "EXITED" && !!form.followedPlan && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}:
+                    {form.status === TradeStatus.EXITED &&
+                      !!form.followedPlan && (
+                        <span className="ml-0.5 text-destructive">*</span>
+                      )}
+                    :
                   </label>
                   <Input
                     id="followedPlanId"
@@ -649,7 +702,9 @@ export function TradeFormDialog({
                     type="text"
                     value={(form.followedPlanId as string) ?? ""}
                     onChange={handleChange}
-                    required={form.status === "EXITED" && !!form.followedPlan}
+                    required={
+                      form.status === TradeStatus.EXITED && !!form.followedPlan
+                    }
                   />
                 </div>
 
@@ -663,12 +718,14 @@ export function TradeFormDialog({
                     value={
                       Array.isArray(form.actualPathImages) &&
                       (form.actualPathImages as unknown[]).every(
-                        v => typeof v === "object" && v !== null && "url" in v
+                        (v) => typeof v === "object" && v !== null && "url" in v
                       )
                         ? (form.actualPathImages as unknown as ImageResource[])
                         : []
                     }
-                    onChange={imgs => handleImageChange("actualPathImages", imgs)}
+                    onChange={(imgs) =>
+                      handleImageChange("actualPathImages", imgs)
+                    }
                     max={5}
                   />
                 </div>
