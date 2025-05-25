@@ -184,7 +184,7 @@ export default function TradeListPage() {
         cell: ({ row }) => {
           const trade = row.original;
           return (
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 justify-center">
               <Button
                 variant="outline"
                 size="sm"

@@ -77,9 +77,24 @@ export function TradeFormDialog({
   const handleImageChange =
     (key: "volumeProfileImage" | "hypothesisPaths" | "actualPath") =>
     (v: ImageResource[]) => {
-      if (typeof window !== "undefined" && "updateForm" in window && typeof (window as { updateForm?: unknown }).updateForm === "function") {
+      if (
+        typeof window !== "undefined" &&
+        "updateForm" in window &&
+        typeof (window as { updateForm?: unknown }).updateForm === "function"
+      ) {
         // 若你在全局用 window.updateForm 调试，可保留
-        (window as { updateForm: (k: Partial<Record<"volumeProfileImage" | "hypothesisPaths" | "actualPath", ImageResource[]>>) => void }).updateForm({ [key]: v });
+        (
+          window as {
+            updateForm: (
+              k: Partial<
+                Record<
+                  "volumeProfileImage" | "hypothesisPaths" | "actualPath",
+                  ImageResource[]
+                >
+              >
+            ) => void;
+          }
+        ).updateForm({ [key]: v });
       }
       if (typeof updateForm === "function") {
         updateForm({ [key]: v });
@@ -267,7 +282,7 @@ export function TradeFormDialog({
                                 )
                               }
                             >
-                              <SelectTrigger className="">
+                              <SelectTrigger className="w-full">
                                 <SelectValue
                                   placeholder={`选择 ${field.label}`}
                                 />
