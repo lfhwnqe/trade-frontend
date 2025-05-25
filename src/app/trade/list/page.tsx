@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { createTrade, updateTrade, deleteTrade, toDto } from "./request";
 import { ColumnDef, SortingState, VisibilityState, RowSelectionState } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
@@ -23,6 +24,7 @@ import { useTradeList } from "./useTradeList";
 import { format } from "date-fns";
 
 export default function TradeListPage() {
+  const router = useRouter();
   // 使用自定义 hook 管理状态和操作
   const {
     trades,
@@ -206,8 +208,7 @@ export default function TradeListPage() {
         <h1 className="text-2xl font-bold">交易列表</h1>
         <Button
           onClick={() => {
-            updateForm({});
-            openDialog(null);
+            router.push("/trade/add");
           }}
         >
           新增交易
@@ -251,49 +252,36 @@ export default function TradeListPage() {
         onRowSelectionChange={(newSelection) => updateRowSelection(newSelection as RowSelectionState)}
       />
 
-      <Dialog
-        open={dialog.open}
-        onOpenChange={(open) => !open && closeDialog()}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {dialog.editTrade?.transactionId ? "编辑交易" : "添加交易"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <TradeFormDialog
-            open={dialog.open}
-            onOpenChange={(open) => !open && closeDialog()}
-            editTrade={dialog.editTrade}
-            form={dialog.form}
-            handleChange={(e) => {
-              const name = e.target.name as keyof Trade;
-              const value = e.target.value;
-              updateForm({ [name]: value });
-            }}
-            handleSelectChange={(name, value) => {
-              updateForm({ [name]: value });
-            }}
-            handleDateRangeChange={(dateRange) => {
-              updateForm({
-                dateTimeRange: dateRange?.from
-                  ? format(dateRange.from, "yyyy-MM-dd")
-                  : undefined,
-              });
-            }}
-            // 图片和计划类型需特殊处理，底层子组件需通过 updateForm 合并嵌套对象
-            handleImageChange={(key, v) => {
-              updateForm({ [key]: v });
-            }}
-            handlePlanChange={(key, v) => {
-              updateForm({ [key]: v });
-            }}
-            handleSubmit={handleSubmit}
-            updateForm={updateForm}
-          />
-        </DialogContent>
-      </Dialog>
+      {dialog.open && (
+        <TradeFormDialog
+          editTrade={dialog.editTrade}
+          form={dialog.form}
+          handleChange={(e) => {
+            const name = e.target.name as keyof Trade;
+            const value = e.target.value;
+            updateForm({ [name]: value });
+          }}
+          handleSelectChange={(name, value) => {
+            updateForm({ [name]: value });
+          }}
+          handleDateRangeChange={(dateRange) => {
+            updateForm({
+              dateTimeRange: dateRange?.from
+                ? format(dateRange.from, "yyyy-MM-dd")
+                : undefined,
+            });
+          }}
+          // 图片和计划类型需特殊处理，底层子组件需通过 updateForm 合并嵌套对象
+          handleImageChange={(key, v) => {
+            updateForm({ [key]: v });
+          }}
+          handlePlanChange={(key, v) => {
+            updateForm({ [key]: v });
+          }}
+          handleSubmit={handleSubmit}
+          updateForm={updateForm}
+        />
+      )}
 
       {dialog.deleteId && (
         <Dialog
