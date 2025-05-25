@@ -18,12 +18,7 @@ import { DataTable } from "@/components/common/DataTable";
 import { isErrorWithMessage } from "@/utils";
 import TradeQueryForm from "./components/TradeQueryForm";
 import { TradeFormDialog } from "./components/TradeFormDialog";
-import {
-  Trade,
-  TradeFieldConfig,
-  entryDirectionOptions,
-  marketStructureOptions,
-} from "../config";
+import { Trade } from "../config";
 import { useTradeList } from "./useTradeList";
 import { format } from "date-fns";
 
@@ -53,138 +48,6 @@ export default function TradeListPage() {
   useEffect(() => {
     fetchAll(); // 页面加载时获取数据
   }, [fetchAll]);
-
-  // 扩展字段，和后端 DTO 保持一致，表单展示建议分组区域（基础/图片/分析/计划/复盘）
-  const tradeFields: TradeFieldConfig[] = [
-    // ===== 交易基础信息 =====
-    {
-      key: "status",
-      label: "交易状态",
-      required: true,
-      options: [
-        { label: "已分析", value: "ANALYZED" },
-        { label: "已入场", value: "ENTERED" },
-        { label: "已离场", value: "EXITED" },
-      ],
-    },
-    {
-      key: "marketStructure",
-      label: "市场结构",
-      required: true,
-      options: marketStructureOptions,
-    },
-    { key: "marketStructureAnalysis", label: "结构分析", type: "text" },
-    // 入场方向只在已入场/已离场时必填
-    {
-      key: "entryDirection",
-      label: "入场方向",
-      required: (status) => status === "ENTERED" || status === "EXITED",
-      options: entryDirectionOptions,
-    },
-
-    // ===== 图片相关（分组内多选或上传） =====
-    { key: "volumeProfileImages", label: "成交量分布图", type: "image-array" },
-    { key: "expectedPathImages", label: "假设路径图", type: "image-array" },
-    { key: "actualPathImages", label: "实际路径图", type: "image-array" },
-
-    // ===== 价值区价位等 =====
-    { key: "poc", label: "POC价格", type: "number" },
-    { key: "val", label: "价值区下沿", type: "number" },
-    { key: "vah", label: "价值区上沿", type: "number" },
-    { key: "keyPriceLevels", label: "关键价位说明", type: "text" },
-
-    // ===== 入场计划区域（嵌套对象） =====
-    { key: "entryPlanA", label: "入场计划A", type: "plan" },
-    { key: "entryPlanB", label: "入场计划B", type: "plan" },
-    { key: "entryPlanC", label: "入场计划C", type: "plan" },
-
-    // ===== 入场记录（根据状态显隐）======
-    // ===== 入场记录（根据状态判定必填）======
-    {
-      key: "entry",
-      label: "入场价格",
-      type: "number",
-      required: (status) => status === "ENTERED" || status === "EXITED",
-    },
-    {
-      key: "entryTime",
-      label: "入场时间",
-      type: "date",
-      required: (status) => status === "ENTERED" || status === "EXITED",
-    },
-    {
-      key: "stopLoss",
-      label: "止损点",
-      type: "number",
-      required: (status) => status === "ENTERED" || status === "EXITED",
-    },
-    {
-      key: "takeProfit",
-      label: "止盈点",
-      type: "number",
-      required: (status) => status === "ENTERED" || status === "EXITED",
-    },
-    {
-      key: "entryReason",
-      label: "入场理由",
-      type: "text",
-      required: (status) => status === "ENTERED" || status === "EXITED",
-    },
-
-    // ===== 离场及复盘 =====
-    // ===== 离场及复盘（根据 status 判定必填）=====
-    {
-      key: "exitPrice",
-      label: "离场价格",
-      type: "number",
-      required: (status) => status === "EXITED",
-    },
-    {
-      key: "exitTime",
-      label: "离场时间",
-      type: "date",
-      required: (status) => status === "EXITED",
-    },
-    {
-      key: "exitReason",
-      label: "离场理由",
-      type: "text",
-      required: (status) => status === "ENTERED" || status === "EXITED",
-    },
-    {
-      key: "tradeResult",
-      label: "交易结果",
-      options: [
-        { label: "盈利", value: "PROFIT" },
-        { label: "亏损", value: "LOSS" },
-        { label: "保本", value: "BREAKEVEN" },
-      ],
-      required: (status) => status === "EXITED",
-    },
-    {
-      key: "followedPlan",
-      label: "是否执行了计划",
-      type: "checkbox",
-      required: (status) => status === "EXITED",
-    },
-    {
-      key: "followedPlanId",
-      label: "计划ID",
-      type: "text",
-      required: (status, form) => status === "EXITED" && !!form?.followedPlan,
-    },
-    {
-      key: "mentalityNotes",
-      label: "心态记录",
-      type: "text",
-      required: (status) => status === "ENTERED" || status === "EXITED",
-    },
-    { key: "actualPathAnalysis", label: "实际路径复盘", type: "text" },
-    { key: "remarks", label: "备注", type: "text" },
-    { key: "lessonsLearned", label: "经验总结", type: "text" },
-    { key: "profitLossPercentage", label: "盈亏%", type: "number" },
-    { key: "riskRewardRatio", label: "风险回报比", type: "text" },
-  ];
 
   const columns = useMemo<ColumnDef<Trade>[]>(
     () => [
@@ -404,7 +267,6 @@ export default function TradeListPage() {
             onOpenChange={(open) => !open && closeDialog()}
             editTrade={dialog.editTrade}
             form={dialog.form}
-            tradeFields={tradeFields}
             handleChange={(e) => {
               const name = e.target.name as keyof Trade;
               const value = e.target.value;
