@@ -59,6 +59,15 @@ const tradeStatusOptions = [
   { label: "已入场", value: "ENTERED" },
   { label: "已离场", value: "EXITED" },
 ];
+const followedPlanOptions = [
+  { label: "是", value: "true" },
+  { label: "否", value: "false" },
+];
+const planOptions = [
+  { label: "A计划", value: "A" },
+  { label: "B计划", value: "B" },
+  { label: "C计划", value: "C" },
+];
 
 interface TradeFormDialogProps {
   open: boolean;
@@ -128,7 +137,6 @@ export function TradeFormDialog({
   handleImageChange,
   handlePlanChange,
   handleSubmit,
-  updateForm,
 }: TradeFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,7 +154,7 @@ export function TradeFormDialog({
             {/* 1. 入场前分析 */}
             <div className="bg-muted/50 border rounded-lg p-4 pt-3">
               <div className="font-semibold text-base pb-2">入场前分析</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 mb-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 mb-2">
                 {/* 交易状态 */}
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -228,67 +236,6 @@ export function TradeFormDialog({
                     </SelectContent>
                   </Select>
                 </div>
-                {/* 结构分析 */}
-                <div>
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    结构分析:
-                  </label>
-                  <Textarea
-                    id="marketStructureAnalysis"
-                    name="marketStructureAnalysis"
-                    value={(form.marketStructureAnalysis as string) ?? ""}
-                    onChange={(e) =>
-                      handleSelectChange(
-                        "marketStructureAnalysis",
-                        e.target.value
-                      )
-                    }
-                  />
-                </div>
-
-                {/* 成交量分布图 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    成交量分布图：
-                  </label>
-                  <ImageUploader
-                    label="成交量分布图"
-                    value={
-                      Array.isArray(form.volumeProfileImages) &&
-                      (form.volumeProfileImages as unknown[]).every(
-                        (v) => typeof v === "object" && v !== null && "url" in v
-                      )
-                        ? (form.volumeProfileImages as unknown as ImageResource[])
-                        : []
-                    }
-                    onChange={(imgs) =>
-                      handleImageChange("volumeProfileImages", imgs)
-                    }
-                    max={5}
-                  />
-                </div>
-
-                {/* 假设路径图 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    假设路径图：
-                  </label>
-                  <ImageUploader
-                    label="假设路径图"
-                    value={
-                      Array.isArray(form.expectedPathImages) &&
-                      (form.expectedPathImages as unknown[]).every(
-                        (v) => typeof v === "object" && v !== null && "url" in v
-                      )
-                        ? (form.expectedPathImages as unknown as ImageResource[])
-                        : []
-                    }
-                    onChange={(imgs) =>
-                      handleImageChange("expectedPathImages", imgs)
-                    }
-                    max={5}
-                  />
-                </div>
 
                 {/* POC价格 */}
                 <div>
@@ -331,19 +278,28 @@ export function TradeFormDialog({
                     onChange={handleChange}
                   />
                 </div>
-
+                {/* 结构分析 */}
+                <div className="col-span-full">
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    结构分析:
+                  </label>
+                  <Textarea
+                    id="marketStructureAnalysis"
+                    name="marketStructureAnalysis"
+                    value={(form.marketStructureAnalysis as string) ?? ""}
+                    onChange={(e) =>
+                      handleSelectChange(
+                        "marketStructureAnalysis",
+                        e.target.value
+                      )
+                    }
+                  />
+                </div>
                 {/* 关键价位说明 */}
-                <div>
+                <div className="col-span-full">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     关键价位说明:
                   </label>
-                  {/* <Input
-                    id="keyPriceLevels"
-                    name="keyPriceLevels"
-                    type="text"
-                    value={(form.keyPriceLevels as string) ?? ""}
-                    onChange={handleChange}
-                  /> */}
                   <Textarea
                     id="keyPriceLevels"
                     name="keyPriceLevels"
@@ -351,6 +307,49 @@ export function TradeFormDialog({
                     onChange={(e) =>
                       handleSelectChange("keyPriceLevels", e.target.value)
                     }
+                  />
+                </div>
+                {/* 成交量分布图 */}
+                <div className="col-span-full">
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    成交量分布图：
+                  </label>
+                  <ImageUploader
+                    label="成交量分布图"
+                    value={
+                      Array.isArray(form.volumeProfileImages) &&
+                      (form.volumeProfileImages as unknown[]).every(
+                        (v) => typeof v === "object" && v !== null && "url" in v
+                      )
+                        ? (form.volumeProfileImages as unknown as ImageResource[])
+                        : []
+                    }
+                    onChange={(imgs) =>
+                      handleImageChange("volumeProfileImages", imgs)
+                    }
+                    max={5}
+                  />
+                </div>
+
+                {/* 假设路径图 */}
+                <div className="col-span-full">
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    假设路径图：
+                  </label>
+                  <ImageUploader
+                    label="假设路径图"
+                    value={
+                      Array.isArray(form.expectedPathImages) &&
+                      (form.expectedPathImages as unknown[]).every(
+                        (v) => typeof v === "object" && v !== null && "url" in v
+                      )
+                        ? (form.expectedPathImages as unknown as ImageResource[])
+                        : []
+                    }
+                    onChange={(imgs) =>
+                      handleImageChange("expectedPathImages", imgs)
+                    }
+                    max={5}
                   />
                 </div>
               </div>
@@ -509,7 +508,7 @@ export function TradeFormDialog({
                 </div>
 
                 {/* 入场理由 */}
-                <div>
+                <div className="sm:col-span-3">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     入场理由
                     {(form.status === TradeStatus.ENTERED ||
@@ -530,21 +529,10 @@ export function TradeFormDialog({
                       form.status === TradeStatus.EXITED
                     }
                   />
-                  {/* <Input
-                    id="entryReason"
-                    name="entryReason"
-                    type="text"
-                    value={(form.entryReason as string) ?? ""}
-                    onChange={handleChange}
-                    required={
-                      form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED
-                    }
-                  /> */}
                 </div>
 
                 {/* 离场理由 */}
-                <div>
+                <div className="sm:col-span-3">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     离场理由
                     {(form.status === TradeStatus.ENTERED ||
@@ -565,21 +553,10 @@ export function TradeFormDialog({
                       form.status === TradeStatus.EXITED
                     }
                   />
-                  {/* <Input
-                    id="exitReason"
-                    name="exitReason"
-                    type="text"
-                    value={(form.exitReason as string) ?? ""}
-                    onChange={handleChange}
-                    required={
-                      form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED
-                    }
-                  /> */}
                 </div>
 
                 {/* 心态记录 */}
-                <div>
+                <div className="sm:col-span-3">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     心态记录
                     {(form.status === TradeStatus.ENTERED ||
@@ -600,17 +577,6 @@ export function TradeFormDialog({
                       form.status === TradeStatus.EXITED
                     }
                   />
-                  {/* <Input
-                    id="mentalityNotes"
-                    name="mentalityNotes"
-                    type="text"
-                    value={(form.mentalityNotes as string) ?? ""}
-                    onChange={handleChange}
-                    required={
-                      form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED
-                    }
-                  /> */}
                 </div>
               </div>
             </div>
@@ -618,7 +584,7 @@ export function TradeFormDialog({
             {/* 4. 离场后分析 */}
             <div className="bg-muted/50 border rounded-lg p-4 pt-3 space-y-2">
               <div className="font-semibold text-base pb-2">离场后分析</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
                 {/* 离场价格 */}
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -721,60 +687,54 @@ export function TradeFormDialog({
                     )}
                     :
                   </label>
-                  <input
-                    id="followedPlan"
+                  <Select
                     name="followedPlan"
-                    type="checkbox"
-                    checked={!!form.followedPlan}
-                    onChange={(e) =>
-                      updateForm({ followedPlan: e.target.checked })
+                    value={(form.followedPlan ?? false).toString()}
+                    onValueChange={(value) =>
+                      handleSelectChange("followedPlan" as keyof Trade, value)
                     }
-                    className="w-4 h-4 mt-1"
-                  />
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="选择 是否执行了计划" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {followedPlanOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* 计划ID */}
                 <div>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    计划ID
+                    计划类型
                     {form.status === TradeStatus.EXITED &&
                       !!form.followedPlan && (
                         <span className="ml-0.5 text-destructive">*</span>
                       )}
                     :
                   </label>
-                  <Input
-                    id="followedPlanId"
+                  <Select
                     name="followedPlanId"
-                    type="text"
                     value={(form.followedPlanId as string) ?? ""}
-                    onChange={handleChange}
-                    required={
-                      form.status === TradeStatus.EXITED && !!form.followedPlan
+                    onValueChange={(value) =>
+                      handleSelectChange("followedPlanId" as keyof Trade, value)
                     }
-                  />
-                </div>
-
-                {/* 实际路径图 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    实际路径图：
-                  </label>
-                  <ImageUploader
-                    label="实际路径图"
-                    value={
-                      Array.isArray(form.actualPathImages) &&
-                      (form.actualPathImages as unknown[]).every(
-                        (v) => typeof v === "object" && v !== null && "url" in v
-                      )
-                        ? (form.actualPathImages as unknown as ImageResource[])
-                        : []
-                    }
-                    onChange={(imgs) =>
-                      handleImageChange("actualPathImages", imgs)
-                    }
-                    max={5}
-                  />
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="选择 计划" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {planOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {/* 盈亏% */}
                 <div>
@@ -803,8 +763,30 @@ export function TradeFormDialog({
                     onChange={handleChange}
                   />
                 </div>
+                {/* 实际路径图 */}
+                <div className="col-span-full">
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    实际路径图：
+                  </label>
+                  <ImageUploader
+                    label="实际路径图"
+                    value={
+                      Array.isArray(form.actualPathImages) &&
+                      (form.actualPathImages as unknown[]).every(
+                        (v) => typeof v === "object" && v !== null && "url" in v
+                      )
+                        ? (form.actualPathImages as unknown as ImageResource[])
+                        : []
+                    }
+                    onChange={(imgs) =>
+                      handleImageChange("actualPathImages", imgs)
+                    }
+                    max={5}
+                  />
+                </div>
+
                 {/* 实际路径复盘 */}
-                <div>
+                <div className="col-span-full">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     实际路径复盘:
                   </label>
@@ -816,17 +798,10 @@ export function TradeFormDialog({
                       handleSelectChange("actualPathAnalysis", e.target.value)
                     }
                   />
-                  {/* <Input
-                    id="actualPathAnalysis"
-                    name="actualPathAnalysis"
-                    type="text"
-                    value={(form.actualPathAnalysis as string) ?? ""}
-                    onChange={handleChange}
-                  /> */}
                 </div>
 
                 {/* 备注 */}
-                <div>
+                <div className="col-span-full">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     备注:
                   </label>
@@ -838,17 +813,10 @@ export function TradeFormDialog({
                       handleSelectChange("remarks", e.target.value)
                     }
                   />
-                  {/* <Input
-                    id="remarks"
-                    name="remarks"
-                    type="text"
-                    value={(form.remarks as string) ?? ""}
-                    onChange={handleChange}
-                  /> */}
                 </div>
 
                 {/* 经验总结 */}
-                <div>
+                <div className="col-span-full">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     经验总结:
                   </label>
@@ -860,13 +828,6 @@ export function TradeFormDialog({
                       handleSelectChange("lessonsLearned", e.target.value)
                     }
                   />
-                  {/* <Input
-                    id="lessonsLearned"
-                    name="lessonsLearned"
-                    type="text"
-                    value={(form.lessonsLearned as string) ?? ""}
-                    onChange={handleChange}
-                  /> */}
                 </div>
               </div>
             </div>

@@ -157,14 +157,6 @@ export function ImageUploader({
 
   return (
     <div className="mb-3">
-      {/* {label && (
-        <div className="font-semibold mb-1 flex items-center gap-2">
-          {label}
-          <span className="text-xs text-muted-foreground">
-            {max ? `(最多${max}张)` : ""}
-          </span>
-        </div>
-      )} */}
       <div
         {...getRootProps({
           className:
