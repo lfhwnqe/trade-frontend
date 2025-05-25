@@ -41,21 +41,34 @@ export interface EntryPlan {
   exitSignal?: string;
 }
 
+// 入场方向枚举
+export enum EntryDirection {
+  LONG = '多',
+  SHORT = '空',
+}
+
+// 交易记录状态枚举
+export enum TradeStatus {
+  ANALYZED = '已分析',
+  ENTERED = '已入场',
+  EXITED = '已离场',
+}
 /**
  * Trade 前端完整类型定义，对齐后端 CreateTradeDto
  */
 export type Trade = {
   transactionId?: string;
   // 状态与基础分析
-  status?: string;
+  status?: TradeStatus;
   dateTimeRange?: string;
-  marketStructure?: string;
+  marketStructure?: MarketStructure;
   marketStructureAnalysis?: string;
   signalType?: string;
 
   // 图片相关（用数组类型）
   volumeProfileImages?: ImageResource[];
   expectedPathImages?: ImageResource[];
+  expectedPathAnalysis?: string;
   actualPathImages?: ImageResource[];
   analysisImages?: ImageResource[];
 
@@ -73,7 +86,7 @@ export type Trade = {
   // 入场记录
   entry?: string;
   entryTime?: string;
-  entryDirection?: string;
+  entryDirection?: EntryDirection;
   stopLoss?: string;
   takeProfit?: string;
   entryReason?: string;
