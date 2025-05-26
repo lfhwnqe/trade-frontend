@@ -5,10 +5,10 @@ import { useDropzone } from "react-dropzone";
 import { nanoid } from "nanoid";
 import {
   ALLOWED_IMAGE_TYPES,
-  ImageResource,
   getImageUploadUrl,
   uploadToS3,
 } from "../request";
+import { ImageResource } from "../../config";
 import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

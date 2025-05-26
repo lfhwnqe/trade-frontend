@@ -4,7 +4,12 @@ import * as React from "react";
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createTrade, updateTrade, deleteTrade, toDto } from "./request";
-import { ColumnDef, SortingState, VisibilityState, RowSelectionState } from "@tanstack/react-table";
+import {
+  ColumnDef,
+  SortingState,
+  VisibilityState,
+  RowSelectionState,
+} from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,7 +46,6 @@ export default function TradeListPage() {
     updateColumnVisibility,
     updateRowSelection,
     updatePagination,
-    openDialog,
     closeDialog,
     updateForm,
     setDeleteId,
@@ -247,9 +251,15 @@ export default function TradeListPage() {
         totalPages={pagination.totalPages}
         onPageChange={updatePagination}
         onPageSizeChange={updatePagination}
-        onSortingChange={(newSorting) => updateSorting(newSorting as SortingState)}
-        onColumnVisibilityChange={(newVisibility) => updateColumnVisibility(newVisibility as VisibilityState)}
-        onRowSelectionChange={(newSelection) => updateRowSelection(newSelection as RowSelectionState)}
+        onSortingChange={(newSorting) =>
+          updateSorting(newSorting as SortingState)
+        }
+        onColumnVisibilityChange={(newVisibility) =>
+          updateColumnVisibility(newVisibility as VisibilityState)
+        }
+        onRowSelectionChange={(newSelection) =>
+          updateRowSelection(newSelection as RowSelectionState)
+        }
       />
 
       {dialog.open && (
