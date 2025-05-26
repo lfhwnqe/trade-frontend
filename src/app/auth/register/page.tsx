@@ -1,130 +1,183 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { createImmerAtom, useAtomImmer } from "@/hooks/useAtomImmer";
 
 export default function RegisterPage() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const formAtom = React.useMemo(
+    () =>
+      createImmerAtom({
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        error: "",
+        message: "",
+        isLoading: false,
+      }),
+    []
+  );
+  const [form, setForm] = useAtomImmer(formAtom);
   const router = useRouter();
+  const isMobile = useIsMobile();
 
-  const handleSubmit = async (event: FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setIsLoading(true);
-    setError('');
-    setMessage('');
+    setForm(draft => {
+      draft.isLoading = true;
+      draft.error = "";
+      draft.message = "";
+    });
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      setIsLoading(false);
+    if (form.password !== form.confirmPassword) {
+      setForm(draft => {
+        draft.error = "两次输入的密码不一致。";
+        draft.isLoading = false;
+      });
       return;
     }
 
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBaseUrl) {
-      // setError('API base URL is not configured.'); // No longer needed
-      // setIsLoading(false);
-      // return;
-    }
-
     try {
-      const response = await fetch('/api/proxy-post', { // Using the new POST proxy
-        method: 'POST',
+      const response = await fetch("/api/proxy-post", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          targetPath: 'user/register', // Specify the target path
-          actualMethod: 'POST',        // Specify the actual method for the backend
-          username,
-          email,
-          password
+          targetPath: "user/register",
+          actualMethod: "POST",
+          username: form.username,
+          email: form.email,
+          password: form.password,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+        throw new Error(data.message || "注册失败");
       }
 
-      setMessage(data.message || '注册成功！请查收邮箱验证码完成激活。');
+      setForm(draft => {
+        draft.message = data.message || "注册成功！请查收邮箱验证码完成激活。";
+      });
       // 注册成功后自动跳转到验证页面并带上用户名
-      router.push(`/auth/verify?username=${encodeURIComponent(username)}`);
+      router.push(`/auth/verify?username=${encodeURIComponent(form.username)}`);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred during registration.');
-      }
+      setForm(draft => {
+        draft.error =
+          err instanceof Error
+            ? err.message
+            : "注册过程中出现未知异常。";
+      });
     } finally {
-      setIsLoading(false);
+      setForm(draft => {
+        draft.isLoading = false;
+      });
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-      <h1>Register</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="username" style={{ display: 'block', marginBottom: '5px' }}>Username:</label>
-          <input
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            minLength={3}
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-          />
+    <div className="flex min-h-screen items-center justify-center bg-muted/40">
+      <div
+        className={`w-full ${isMobile ? 'max-w-full rounded-none shadow-none px-3' : 'max-w-md rounded-xl shadow-md px-8'} bg-background p-6 space-y-6`}
+      >
+        <h1 className="text-2xl font-bold text-center mb-2">注册</h1>
+        <form className="space-y-5" onSubmit={handleSubmit} autoComplete="off">
+          <div>
+            <label htmlFor="username" className="block mb-1 text-sm font-medium">
+              用户名
+            </label>
+            <Input
+              id="username"
+              name="username"
+              placeholder="请输入用户名"
+              minLength={3}
+              value={form.username}
+              required
+              onChange={e => setForm(draft => { draft.username = e.target.value })}
+              aria-invalid={!!form.error}
+              autoComplete="username"
+            />
+          </div>
+          <div>
+            <label htmlFor="email" className="block mb-1 text-sm font-medium">
+              邮箱
+            </label>
+            <Input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="请输入邮箱"
+              value={form.email}
+              required
+              onChange={e => setForm(draft => { draft.email = e.target.value })}
+              aria-invalid={!!form.error}
+              autoComplete="email"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block mb-1 text-sm font-medium">
+              密码
+            </label>
+            <Input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="请输入密码"
+              value={form.password}
+              minLength={8}
+              required
+              onChange={e => setForm(draft => { draft.password = e.target.value })}
+              aria-invalid={!!form.error}
+              autoComplete="new-password"
+            />
+          </div>
+          <div>
+            <label htmlFor="confirmPassword" className="block mb-1 text-sm font-medium">
+              确认密码
+            </label>
+            <Input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              placeholder="请再次输入密码"
+              value={form.confirmPassword}
+              minLength={8}
+              required
+              onChange={e => setForm(draft => { draft.confirmPassword = e.target.value })}
+              aria-invalid={!!form.error}
+              autoComplete="new-password"
+            />
+          </div>
+          {form.error && (
+            <div className="text-destructive text-sm py-1 text-center">
+              {form.error}
+            </div>
+          )}
+          {form.message && (
+            <div className="text-green-600 text-sm py-1 text-center">
+              {form.message}
+            </div>
+          )}
+          <Button type="submit" className="w-full" disabled={form.isLoading}>
+            {form.isLoading ? "注册中..." : "注册"}
+          </Button>
+        </form>
+        <div className="text-center text-sm text-muted-foreground mt-2">
+          已有账号？{" "}
+          <a
+            href="/auth/login"
+            className="text-primary font-medium hover:underline"
+          >
+            去登录
+          </a>
         </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="email" style={{ display: 'block', marginBottom: '5px' }}>Email:</label>
-          <input
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-          />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="password" style={{ display: 'block', marginBottom: '5px' }}>Password:</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-          />
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label htmlFor="confirmPassword" style={{ display: 'block', marginBottom: '5px' }}>Confirm Password:</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            minLength={8}
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-          />
-        </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {message && <p style={{ color: 'green' }}>{message}</p>}
-        <button type="submit" disabled={isLoading} style={{ padding: '10px 15px', backgroundColor: '#0070f3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-          {isLoading ? 'Registering...' : 'Register'}
-        </button>
-      </form>
-      <p style={{ marginTop: '20px' }}>
-        Already have an account? <a href="/auth/login" style={{ color: '#0070f3' }}>Login here</a>
-      </p>
+      </div>
     </div>
   );
 }
