@@ -1,43 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/utils/fetchWithAuth';
+import { useAtomImmer } from '@/hooks/useAtomImmer';
+import {
+  usersAtom,
+  nextTokenAtom,
+  isLoadingAtom,
+  errorAtom,
+  isLoadingMoreAtom,
+  regOpenAtom,
+  regChangingAtom,
+  regOpErrorAtom,
+  ListUsersResponse,
+  UserAttribute,
+} from './atom';
 
-interface UserAttribute {
-  Name: string;
-  Value: string;
-}
 
-interface User {
-  userId: string;
-  attributes: UserAttribute[];
-  enabled: boolean;
-  userStatus: string;
-  createdAt: string;
-  lastModifiedAt: string;
-}
-
-interface ListUsersResponse {
-  users: User[];
-  nextToken?: string;
-}
 
 export default function AdminUserManagementPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [nextToken, setNextToken] = useState<string | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [users, updateUsers] = useAtomImmer(usersAtom);
+  const [nextToken, updateNextToken] = useAtomImmer(nextTokenAtom);
+  const [isLoading, updateIsLoading] = useAtomImmer(isLoadingAtom);
+  const [error, updateError] = useAtomImmer(errorAtom);
+  const [isLoadingMore, updateIsLoadingMore] = useAtomImmer(isLoadingMoreAtom);
   const router = useRouter();
 
   const fetchUsers = async (token?: string) => {
     if (token) {
-      setIsLoadingMore(true);
+      updateIsLoadingMore(true);
     } else {
-      setIsLoading(true);
+      updateIsLoading(true);
     }
-    setError('');
+    updateError('');
 
     try {
       const proxyParams = {
@@ -72,20 +68,20 @@ export default function AdminUserManagementPage() {
       }
 
       if (token) {
-        setUsers((prevUsers) => [...prevUsers, ...data.users]);
+        updateUsers(draft => { draft.push(...data.users); });
       } else {
-        setUsers(data.users);
+        updateUsers(data.users);
       }
-      setNextToken(data.nextToken);
+      updateNextToken(data.nextToken);
     } catch (err) {
       if (err instanceof Error) {
-        setError(err.message);
+        updateError(err.message);
       } else {
-        setError('An unexpected error occurred while fetching users.');
+        updateError('An unexpected error occurred while fetching users.');
       }
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      updateIsLoading(false);
+      updateIsLoadingMore(false);
     }
   };
 
@@ -107,7 +103,7 @@ export default function AdminUserManagementPage() {
         }, router);
         const data = await res.json();
         if (res.ok && typeof data.enable === 'boolean') {
-          setRegOpen(data.enable);
+          updateRegOpen(data.enable);
         }
       } catch {
         // 忽略错误，默认为开启
@@ -121,14 +117,14 @@ export default function AdminUserManagementPage() {
   };
 
   // 注册开关控制
-  const [regOpen, setRegOpen] = useState<boolean | null>(null);
-  const [regChanging, setRegChanging] = useState(false);
-  const [regOpError, setRegOpError] = useState('');
+  const [regOpen, updateRegOpen] = useAtomImmer(regOpenAtom);
+  const [regChanging, updateRegChanging] = useAtomImmer(regChangingAtom);
+  const [regOpError, updateRegOpError] = useAtomImmer(regOpErrorAtom);
   // 初始假定为开启，如果后端有查询接口可扩展fetch注册状态
 
   const handleToggleRegistration = async (enable: boolean) => {
-    setRegChanging(true);
-    setRegOpError('');
+    updateRegChanging(true);
+    updateRegOpError('');
     try {
       const proxyParams = {
         targetPath: 'user/registration/status',
@@ -147,12 +143,12 @@ export default function AdminUserManagementPage() {
       if (!resp.ok) {
         throw new Error(data.message || '操作失败');
       }
-      setRegOpen(enable);
+      updateRegOpen(enable);
     } catch (err) {
-      if (err instanceof Error) setRegOpError(err.message);
-      else setRegOpError('操作注册功能时发生未知错误');
+      if (err instanceof Error) updateRegOpError(err.message);
+      else updateRegOpError('操作注册功能时发生未知错误');
     } finally {
-      setRegChanging(false);
+      updateRegChanging(false);
     }
   };
 
