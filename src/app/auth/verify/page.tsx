@@ -1,24 +1,14 @@
-'use client';
+"use client";
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { createImmerAtom, useAtomImmer } from "@/hooks/useAtomImmer";
+import { useAtomImmer } from "@/hooks/useAtomImmer";
+import { formAtom } from "./atom";
 
 export default function VerifyPage() {
-  const formAtom = React.useMemo(
-    () =>
-      createImmerAtom({
-        username: "",
-        code: "",
-        error: "",
-        message: "",
-        isLoading: false,
-      }),
-    []
-  );
   const [form, setForm] = useAtomImmer(formAtom);
 
   const router = useRouter();
@@ -29,21 +19,21 @@ export default function VerifyPage() {
   React.useEffect(() => {
     const uname = searchParams.get("username");
     if (uname)
-      setForm(draft => {
+      setForm((draft) => {
         draft.username = uname;
       });
   }, [searchParams, setForm]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setForm(draft => {
+    setForm((draft) => {
       draft.isLoading = true;
       draft.error = "";
       draft.message = "";
     });
 
     if (!form.username || !form.code) {
-      setForm(draft => {
+      setForm((draft) => {
         draft.error = "用户名和验证码均不能为空";
         draft.isLoading = false;
       });
@@ -70,21 +60,19 @@ export default function VerifyPage() {
         throw new Error(data.message || "验证码确认失败");
       }
 
-      setForm(draft => {
+      setForm((draft) => {
         draft.message = data.message || "账号已成功验证，现在可以登录。";
       });
       setTimeout(() => {
         router.push("/auth/login");
       }, 1000);
     } catch (err) {
-      setForm(draft => {
+      setForm((draft) => {
         draft.error =
-          err instanceof Error
-            ? err.message
-            : "验证码确认发生未知错误";
+          err instanceof Error ? err.message : "验证码确认发生未知错误";
       });
     } finally {
-      setForm(draft => {
+      setForm((draft) => {
         draft.isLoading = false;
       });
     }
@@ -93,12 +81,19 @@ export default function VerifyPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40">
       <div
-        className={`w-full ${isMobile ? 'max-w-full rounded-none shadow-none px-3' : 'max-w-md rounded-xl shadow-md px-8'} bg-background p-6 space-y-6`}
+        className={`w-full ${
+          isMobile
+            ? "max-w-full rounded-none shadow-none px-3"
+            : "max-w-md rounded-xl shadow-md px-8"
+        } bg-background p-6 space-y-6`}
       >
         <h1 className="text-2xl font-bold text-center mb-2">注册账号激活</h1>
         <form className="space-y-5" onSubmit={handleSubmit} autoComplete="off">
           <div>
-            <label htmlFor="username" className="block mb-1 text-sm font-medium">
+            <label
+              htmlFor="username"
+              className="block mb-1 text-sm font-medium"
+            >
               用户名
             </label>
             <Input
@@ -109,7 +104,11 @@ export default function VerifyPage() {
               required
               minLength={3}
               maxLength={64}
-              onChange={e => setForm(draft => { draft.username = e.target.value })}
+              onChange={(e) =>
+                setForm((draft) => {
+                  draft.username = e.target.value;
+                })
+              }
               aria-invalid={!!form.error}
               autoComplete="username"
               placeholder="请输入用户名"
@@ -126,7 +125,11 @@ export default function VerifyPage() {
               required
               minLength={4}
               maxLength={10}
-              onChange={e => setForm(draft => { draft.code = e.target.value })}
+              onChange={(e) =>
+                setForm((draft) => {
+                  draft.code = e.target.value;
+                })
+              }
               aria-invalid={!!form.error}
               autoComplete="one-time-code"
               placeholder="请输入邮箱中的验证码"
