@@ -2,16 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useAtomImmer, createImmerAtom } from "@/hooks/useAtomImmer";
+import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const loginFormAtom = createImmerAtom({
-  email: "",
-  password: "",
-  error: "",
-  isLoading: false,
-});
+import { loginFormAtom } from "./atom";
 
 export default function LoginPage() {
   const [form, setForm] = useAtomImmer(loginFormAtom);
@@ -94,7 +88,10 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="block mb-1 text-sm font-medium">
+            <label
+              htmlFor="password"
+              className="block mb-1 text-sm font-medium"
+            >
               密码
             </label>
             <Input
