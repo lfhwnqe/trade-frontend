@@ -5,7 +5,11 @@ import { format } from "date-fns";
 import { DateTimePicker } from "./DateTimePicker";
 import { ImageUploader } from "./ImageUploader";
 import type { ImageResource } from "../../config";
-import { entryDirectionOptions, marketStructureOptions, tradeStatusOptions } from "../../config";
+import {
+  entryDirectionOptions,
+  marketStructureOptions,
+  tradeStatusOptions,
+} from "../../config";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -285,7 +289,6 @@ export function TradeForm({
                 成交量分布图：
               </label>
               <ImageUploader
-                label="成交量分布图"
                 value={
                   Array.isArray(form.volumeProfileImages) &&
                   (form.volumeProfileImages as unknown[]).every(
@@ -306,7 +309,6 @@ export function TradeForm({
                 假设路径图：
               </label>
               <ImageUploader
-                label="假设路径图"
                 value={
                   Array.isArray(form.expectedPathImages) &&
                   (form.expectedPathImages as unknown[]).every(
@@ -724,7 +726,6 @@ export function TradeForm({
                 实际路径图：
               </label>
               <ImageUploader
-                label="实际路径图"
                 value={
                   Array.isArray(form.actualPathImages) &&
                   (form.actualPathImages as unknown[]).every(

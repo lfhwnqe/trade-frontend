@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
+  DialogTitle,  
   DialogOverlay,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -23,7 +23,6 @@ import {
  * 图片多图上传控件（支持真实上传、云端预览，shadcn 风格，支持回填和大图预览）
  * @param value 当前图片资源数组
  * @param onChange 变动回调
- * @param label 上方字段提示文本
  * @param max 最多几张（不限传 Infinity 或不设）
  * @param disabled 是否禁用
  */
@@ -51,13 +50,11 @@ function VisuallyHidden(props: React.HTMLAttributes<HTMLSpanElement>) {
 export function ImageUploader({
   value,
   onChange,
-  label,
   max,
   disabled,
 }: {
   value: ImageResource[];
   onChange: (v: ImageResource[]) => void;
-  label?: React.ReactNode;
   max?: number;
   disabled?: boolean;
 }) {
