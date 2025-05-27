@@ -27,9 +27,12 @@ import { TradeFormDialog } from "./components/TradeFormDialog";
 import { Trade } from "../config";
 import { useTradeList } from "./useTradeList";
 import { format } from "date-fns";
+import { useAlert } from "@/components/common/alert";
 
 export default function TradeListPage() {
   const router = useRouter();
+  const [success, errorAlert] = useAlert()
+
   // 使用自定义 hook 管理状态和操作
   const {
     trades,
@@ -173,18 +176,18 @@ export default function TradeListPage() {
     try {
       if (dialog.editTrade?.transactionId) {
         await updateTrade(dialog.editTrade.transactionId, toDto(dialog.form));
-        alert("交易更新成功");
+        success("交易更新成功");
       } else {
         await createTrade(toDto(dialog.form));
-        alert("交易创建成功");
+        success("交易创建成功");
       }
       closeDialog();
       fetchAll(); // 刷新数据
     } catch (err) {
       if (isErrorWithMessage(err)) {
-        alert("操作失败: " + err.message);
+        errorAlert("操作失败: " + err.message);
       } else {
-        alert("操作失败: 未知错误");
+        errorAlert("操作失败: 未知错误");
       }
     }
   };
@@ -194,14 +197,14 @@ export default function TradeListPage() {
 
     try {
       await deleteTrade(dialog.deleteId);
-      alert("交易删除成功");
+      success("交易删除成功");
       setDeleteId(null);
       fetchAll(); // 刷新数据
     } catch (err) {
       if (isErrorWithMessage(err)) {
-        alert("删除失败: " + err.message);
+        error("删除失败: " + err.message);
       } else {
-        alert("删除失败: 未知错误");
+        error("删除失败: 未知错误");
       }
     }
   };

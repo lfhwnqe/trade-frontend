@@ -14,12 +14,14 @@ import {
 import { Trade } from "../config";
 import type { ImageResource } from "../config";
 import { TradeFormDialog } from "../list/components/TradeFormDialog";
+import { useAlert } from "@/components/common/alert";
 
 /**
  * 新增交易页面
  * 复用 TradeFormDialog，独立页逻辑
  */
 export default function TradeAddPage() {
+  const [success, errorAlert] = useAlert();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useAtomImmer(formAtom);
@@ -39,13 +41,13 @@ export default function TradeAddPage() {
           });
         })
         .catch((e) => {
-          alert("加载详情失败：" + (e && e.message ? e.message : e));
+          errorAlert("加载详情失败：" + (e && e.message ? e.message : e));
         })
         .finally(() => {
           setDetailLoading(false);
         });
     }
-  }, [searchParams]);
+  }, [searchParams, errorAlert, setDetailLoading, setForm]);
 
   // 提交函数
   const handleSubmit = useCallback(
@@ -56,26 +58,26 @@ export default function TradeAddPage() {
       try {
         if (id) {
           await updateTrade(id, toDto(form));
-          alert("更新成功");
+          success("更新成功");
         } else {
           await createTrade(toDto(form));
-          alert("新建成功");
+          success("新建成功");
         }
         router.push("/trade/list");
       } catch (error: unknown) {
         if (typeof error === "object" && error && "message" in error) {
-          alert(
+          errorAlert(
             (error as { message?: string }).message ||
               (id ? "更新失败" : "创建失败")
           );
         } else {
-          alert(id ? "更新失败" : "创建失败");
+          errorAlert(id ? "更新失败" : "创建失败");
         }
       } finally {
         setLoading(false);
       }
     },
-    [form, router, searchParams]
+    [form, router, searchParams, success, errorAlert]
   );
 
   // 字段变化处理
