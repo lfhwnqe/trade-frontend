@@ -1,6 +1,6 @@
 'use client';
 import { Suspense } from 'react';
-import TradeAddPage from './suspense';
+import TradeAddPage from './tradeAddPage';
 
 export default function PageWrapper() {
   return (

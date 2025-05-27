@@ -1,6 +1,6 @@
 'use client';
 import { Suspense } from 'react';
-import VerifyPage from './suspense';
+import VerifyPage from './verifyPage';
 
 export default function PageWrapper() {
   return (
