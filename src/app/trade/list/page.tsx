@@ -56,7 +56,7 @@ export default function TradeListPage() {
 
   useEffect(() => {
     fetchAll(); // 页面加载时获取数据
-  }, [fetchAll]);
+  }, []);
 
   const columns = useMemo<ColumnDef<Trade>[]>(
     () => [
@@ -202,9 +202,9 @@ export default function TradeListPage() {
       fetchAll(); // 刷新数据
     } catch (err) {
       if (isErrorWithMessage(err)) {
-        error("删除失败: " + err.message);
+        errorAlert("删除失败: " + err.message);
       } else {
-        error("删除失败: 未知错误");
+        errorAlert("删除失败: 未知错误");
       }
     }
   };
