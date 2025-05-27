@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useAtomImmer } from "@/hooks/useAtomImmer";
+import { formAtom, loadingAtom, detailLoadingAtom } from "./atom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createTrade, toDto, fetchTradeDetail, updateTrade } from "../list/request";
 import { Trade } from "../config";
@@ -15,19 +17,9 @@ import { TradeFormDialog } from "../list/components/TradeFormDialog";
 export default function TradeAddPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [form, setForm] = useState<Partial<Trade>>({
-    analysisTime: undefined,
-    status: undefined, // 需选
-    marketStructure: undefined, // 需选
-    volumeProfileImages: [],
-    expectedPathImages: [],
-    entryPlanA: { entryReason: "", entrySignal: "", exitSignal: "" },
-    entryPlanB: { entryReason: "", entrySignal: "", exitSignal: "" },
-    entryPlanC: { entryReason: "", entrySignal: "", exitSignal: "" },
-    // 其它字段默认空即可
-  });
-  const [loading, setLoading] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [form, setForm] = useAtomImmer(formAtom);
+  const [loading, setLoading] = useAtomImmer(loadingAtom);
+  const [detailLoading, setDetailLoading] = useAtomImmer(detailLoadingAtom);
 
   // 详情回填逻辑
   useEffect(() => {
@@ -37,10 +29,9 @@ export default function TradeAddPage() {
       fetchTradeDetail(id)
         .then((data) => {
           // 合并已有字段，防止丢失自定义初值
-          setForm((prev) => ({
-            ...prev,
-            ...data,
-          }));
+          setForm(draft => {
+            Object.assign(draft, data);
+          });
         })
         .catch((e) => {
           alert("加载详情失败：" + (e && e.message ? e.message : e));
@@ -82,28 +73,27 @@ export default function TradeAddPage() {
   // 字段变化处理
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
-    }));
+    setForm(draft => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      draft[name] = type === "number" ? (value === "" ? "" : Number(value)) : value;
+    });
   }, []);
 
   // Select 类型变化
   const handleSelectChange = useCallback((key: keyof Trade, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setForm(draft => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      draft[key] = value as any;
+    });
   }, []);
 
   // 时间区间/日期变化
   const handleDateRangeChange = useCallback(
     (dateRange: import("react-day-picker").DateRange | undefined) => {
-      setForm((prev) => ({
-        ...prev,
-        entryTime: dateRange?.from ? dateRange.from.toISOString() : undefined,
-        exitTime: dateRange?.to ? dateRange.to.toISOString() : undefined,
-      }));
+      setForm(draft => {
+        draft["entryTime"] = dateRange?.from ? dateRange.from.toISOString() : undefined;
+        draft["exitTime"] = dateRange?.to ? dateRange.to.toISOString() : undefined;
+      });
     },
     []
   );
@@ -111,20 +101,20 @@ export default function TradeAddPage() {
   // 图片
   const handleImageChange = useCallback(
     (key: string, value: ImageResource[]) => {
-      setForm((prev) => ({
-        ...prev,
-        [key]: value,
-      }));
+      setForm(draft => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        draft[key] = value as any;
+      });
     },
     []
   );
 
   // 计划字段
   const handlePlanChange = useCallback((key: string, value: EntryPlan) => {
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setForm(draft => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      draft[key] = value as any;
+    });
   }, []);
 
   type EntryPlan = {
@@ -136,10 +126,9 @@ export default function TradeAddPage() {
   // 支持底层 updateForm 合并对象
   const updateForm = useCallback((patch: Partial<Trade>) => {
     console.log("updateForm", patch);
-    setForm((prev) => ({
-      ...prev,
-      ...patch,
-    }));
+    setForm(draft => {
+      Object.assign(draft, patch);
+    });
   }, []);
 
   // 主体渲染，非弹窗模式而是全宽居中大表单
