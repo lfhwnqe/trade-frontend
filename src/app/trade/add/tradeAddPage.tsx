@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useCallback, useEffect, Suspense } from "react";
+import { useCallback, useEffect, Suspense, useRef } from "react";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { formAtom, loadingAtom, detailLoadingAtom } from "./atom";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,6 +16,11 @@ import type { ImageResource } from "../config";
 import { TradeFormDialog } from "../list/components/TradeFormDialog";
 import { useAlert } from "@/components/common/alert";
 
+type EntryPlan = {
+  entryReason?: string;
+  entrySignal?: string;
+  exitSignal?: string;
+};
 /**
  * 新增交易页面
  * 复用 TradeFormDialog，独立页逻辑
@@ -27,10 +32,11 @@ export default function TradeAddPage() {
   const [form, setForm] = useAtomImmer(formAtom);
   const [loading, setLoading] = useAtomImmer(loadingAtom);
   const [detailLoading, setDetailLoading] = useAtomImmer(detailLoadingAtom);
-
+  // 主体渲染，非弹窗模式而是全宽居中大表单
+  const id = searchParams.get("id");
+  
   // 详情回填逻辑
   useEffect(() => {
-    const id = searchParams.get("id");
     if (id) {
       setDetailLoading(true);
       fetchTradeDetail(id)
@@ -49,11 +55,21 @@ export default function TradeAddPage() {
     }
   }, [searchParams, errorAlert, setDetailLoading, setForm]);
 
-  // 提交函数
+  // 提交函数 - 添加节流控制避免重复提交
+  const submittingRef = useRef(false);
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+
+      // 如果已经在提交中，则直接返回
+      if (submittingRef.current || loading) {
+        return;
+      }
+
+      // 设置提交状态
+      submittingRef.current = true;
       setLoading(true);
+
       const id = searchParams.get("id");
       try {
         if (id) {
@@ -75,9 +91,11 @@ export default function TradeAddPage() {
         }
       } finally {
         setLoading(false);
+        // 重置提交状态
+        submittingRef.current = false;
       }
     },
-    [form, router, searchParams, success, errorAlert]
+    [form, router, searchParams, success, errorAlert, loading]
   );
 
   // 字段变化处理
@@ -132,12 +150,6 @@ export default function TradeAddPage() {
     });
   }, []);
 
-  type EntryPlan = {
-    entryReason?: string;
-    entrySignal?: string;
-    exitSignal?: string;
-  };
-
   // 支持底层 updateForm 合并对象
   const updateForm = useCallback((patch: Partial<Trade>) => {
     console.log("updateForm", patch);
@@ -146,7 +158,6 @@ export default function TradeAddPage() {
     });
   }, []);
 
-  // 主体渲染，非弹窗模式而是全宽居中大表单
   return (
     <Suspense fallback={<div>加载中...</div>}>
       <div className="flex flex-col items-center justify-center min-h-[92vh]">
@@ -158,7 +169,7 @@ export default function TradeAddPage() {
           {/* 滚动表单内容 */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <TradeFormDialog
-              editTrade={null}
+              editTrade={id ? form : null}
               form={form}
               handleChange={handleChange}
               handleSelectChange={handleSelectChange}
@@ -167,6 +178,7 @@ export default function TradeAddPage() {
               handlePlanChange={handlePlanChange}
               handleSubmit={handleSubmit}
               updateForm={updateForm}
+              loading={loading}
             />
             {(loading || detailLoading) && (
               <div className="mt-4 text-center text-gray-500">

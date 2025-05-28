@@ -58,6 +58,7 @@ interface TradeFormProps {
   handlePlanChange: (key: string, value: EntryPlan) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   updateForm: (patch: Partial<Trade>) => void;
+  loading?: boolean; // 添加loading属性
 }
 
 interface EntryPlan {
@@ -113,6 +114,7 @@ export function TradeForm({
   handlePlanChange,
   handleSubmit,
   updateForm,
+  loading = false, // 默认为false
 }: TradeFormProps) {
   return (
     <div className="w-full mx-auto  bg-muted/50  ">
@@ -782,8 +784,18 @@ export function TradeForm({
         </div>
         {/* 提交按钮 */}
         <div className="shrink-0 mt-2 flex justify-end">
-          <Button type="submit">
-            {editTrade?.transactionId ? "保存更改" : "创建记录"}
+          <Button type="submit" disabled={loading}>
+            {loading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                处理中...
+              </>
+            ) : (
+              editTrade?.transactionId ? "保存更改" : "创建记录"
+            )}
           </Button>
         </div>
       </form>
