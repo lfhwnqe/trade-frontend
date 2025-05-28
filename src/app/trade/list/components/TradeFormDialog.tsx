@@ -122,7 +122,7 @@ export function TradeForm({
         {/* 1. 入场前分析 */}
         <div className="bg-muted/50 border rounded-lg p-4 pt-3">
           <div className="font-semibold text-base pb-2">入场前分析</div>
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-x-6 gap-y-4 mb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4 mb-2">
             {/* 行情分析时间 */}
             <div>
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -178,36 +178,6 @@ export function TradeForm({
                 </SelectTrigger>
                 <SelectContent>
                   {marketStructureOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 入场方向 - 只在已入场/已离场时必填 */}
-            <div>
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                入场方向
-                {(form.status === TradeStatus.ENTERED ||
-                  form.status === TradeStatus.EXITED) && (
-                  <span className="ml-0.5 text-destructive">*</span>
-                )}
-                :
-              </label>
-              <Select
-                name="entryDirection"
-                value={(form.entryDirection as string) ?? ""}
-                onValueChange={(value) =>
-                  handleSelectChange("entryDirection" as keyof Trade, value)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择 入场方向" />
-                </SelectTrigger>
-                <SelectContent>
-                  {entryDirectionOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -362,7 +332,37 @@ export function TradeForm({
         {/* 3. 入场记录 */}
         <div className="bg-muted/50 border rounded-lg p-4 pt-3">
           <div className="font-semibold text-base pb-2">入场记录</div>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-x-6 gap-y-4">
+
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-x-6 gap-y-4">
+            {/* 入场方向 - 只在已入场/已离场时必填 */}
+            <div>
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                入场方向
+                {(form.status === TradeStatus.ENTERED ||
+                  form.status === TradeStatus.EXITED) && (
+                  <span className="ml-0.5 text-destructive">*</span>
+                )}
+                :
+              </label>
+              <Select
+                name="entryDirection"
+                value={(form.entryDirection as string) ?? ""}
+                onValueChange={(value) =>
+                  handleSelectChange("entryDirection" as keyof Trade, value)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择 入场方向" />
+                </SelectTrigger>
+                <SelectContent>
+                  {entryDirectionOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {/* 入场价格 */}
             <div>
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -787,14 +787,32 @@ export function TradeForm({
           <Button type="submit" disabled={loading}>
             {loading ? (
               <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 处理中...
               </>
+            ) : editTrade?.transactionId ? (
+              "保存更改"
             ) : (
-              editTrade?.transactionId ? "保存更改" : "创建记录"
+              "创建记录"
             )}
           </Button>
         </div>
