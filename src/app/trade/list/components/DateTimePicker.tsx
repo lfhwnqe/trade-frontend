@@ -1,19 +1,27 @@
 import * as React from "react";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DateTimePickerProps {
   analysisTime?: string;
   updateForm: (patch: { analysisTime: string }) => void;
+  /** 是否显示时间选择器 */
+  showTimePicker?: boolean;
+  /** 是否显示秒选择器 */
+  showSeconds?: boolean;
+  /** 占位符文本 */
+  placeholder?: string;
+  /** 日期格式 */
+  dateFormat?: string;
 }
 
 function parseDateTime(datetime?: string) {
@@ -43,6 +51,10 @@ function toDatetimeString(date?: Date, hour?: string, minute?: string, second?: 
 export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   analysisTime,
   updateForm,
+  showTimePicker = true,
+  showSeconds = true,
+  placeholder = "选择日期与时间",
+  dateFormat = "yyyy-MM-dd",
 }) => {
   const init = parseDateTime(analysisTime);
   const [date, setDate] = React.useState<Date | undefined>(init.date);
@@ -89,6 +101,34 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     pushChange(date, h, m, s);
   };
 
+  // 生成时间选项
+  const generateTimeOptions = (max: number) => {
+    return Array.from({ length: max }, (_, i) => {
+      const value = i.toString().padStart(2, "0");
+      return (
+        <SelectItem key={value} value={value}>
+          {value}
+        </SelectItem>
+      );
+    });
+  };
+
+  // 格式化显示时间
+  const formatDisplayTime = () => {
+    if (!date) return "";
+    
+    let timeStr = "";
+    if (showTimePicker) {
+      if (showSeconds) {
+        timeStr = `${hour || "00"}:${minute || "00"}:${second || "00"}`;
+      } else {
+        timeStr = `${hour || "00"}:${minute || "00"}`;
+      }
+    }
+    
+    return timeStr ? `${format(date, dateFormat)} ${timeStr}` : format(date, dateFormat);
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -101,13 +141,9 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {date ? (
-            <span>
-              {format(date, "yyyy-MM-dd")}
-              {" "}
-              {`${hour || "00"}:${minute || "00"}:${second || "00"}`}
-            </span>
+            <span>{formatDisplayTime()}</span>
           ) : (
-            <span>选择日期与时间</span>
+            <span>{placeholder}</span>
           )}
         </Button>
       </PopoverTrigger>
@@ -119,49 +155,55 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
             onSelect={onCalendarChange}
             initialFocus
           />
-          <div className="flex items-center gap-1 mt-2">
-            <Input
-              type="number"
-              className="w-12 h-8 px-2 py-1"
-              min={0}
-              max={23}
-              value={hour}
-              onChange={e => {
-                const v = e.target.value.replace(/\D/, "");
-                setHour(v);
-                onTimeChange("hour", v);
-              }}
-              placeholder="时"
-            />
-            <span>:</span>
-            <Input
-              type="number"
-              className="w-12 h-8 px-2 py-1"
-              min={0}
-              max={59}
-              value={minute}
-              onChange={e => {
-                const v = e.target.value.replace(/\D/, "");
-                setMinute(v);
-                onTimeChange("minute", v);
-              }}
-              placeholder="分"
-            />
-            <span>:</span>
-            <Input
-              type="number"
-              className="w-12 h-8 px-2 py-1"
-              min={0}
-              max={59}
-              value={second}
-              onChange={e => {
-                const v = e.target.value.replace(/\D/, "");
-                setSecond(v);
-                onTimeChange("second", v);
-              }}
-              placeholder="秒"
-            />
-          </div>
+          {showTimePicker && (
+            <div className="space-y-2">
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">时间</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={hour}
+                  onValueChange={(value) => onTimeChange("hour", value)}
+                >
+                  <SelectTrigger className="w-[70px]">
+                    <SelectValue placeholder="时" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px] overflow-y-auto">
+                    {generateTimeOptions(24)}
+                  </SelectContent>
+                </Select>
+                <span>:</span>
+                <Select
+                  value={minute}
+                  onValueChange={(value) => onTimeChange("minute", value)}
+                >
+                  <SelectTrigger className="w-[70px]">
+                    <SelectValue placeholder="分" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px] overflow-y-auto">
+                    {generateTimeOptions(60)}
+                  </SelectContent>
+                </Select>
+                {showSeconds && (
+                  <>
+                    <span>:</span>
+                    <Select
+                      value={second}
+                      onValueChange={(value) => onTimeChange("second", value)}
+                    >
+                      <SelectTrigger className="w-[70px]">
+                        <SelectValue placeholder="秒" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
+                        {generateTimeOptions(60)}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
