@@ -73,62 +73,85 @@ export function ImageUploader({
       const n = max ? max - value.length : acceptedFiles.length;
       if (n <= 0) return;
       const filesToAdd = acceptedFiles.slice(0, n);
-
-      for (const file of filesToAdd) {
-        // 生成唯一 loadingKey
-        const loadingKey = "__loading__" + nanoid();
-        console.log("[ImageUploader] 开始上传文件:", file);
-
-        // 先添加 loading 占位：此时以 props.value 为准
-        onChange([...value, { key: loadingKey, url: "" }]);
-
-        try {
-          const dateStr = new Date().toISOString().slice(0, 10);
-          const { uploadUrl, key } = await getImageUploadUrl({
-            fileName: encodeURIComponent(file.name),
-            fileType: file.type,
-            date: dateStr,
-          });
-          console.log("[ImageUploader] 获得uploadUrl与key:", {
-            uploadUrl,
-            key,
-          });
-          await uploadToS3(uploadUrl, file);
-          console.log("[ImageUploader] S3上传成功:", file.name);
-
-          let cdnUrl = "";
-          if (key.startsWith("http")) {
-            cdnUrl = key;
-          } else {
-            const cloudfrontDomain =
-              process.env.NEXT_PUBLIC_IMAGE_CDN_PREFIX ||
-              "dyslh3g7kcbva.cloudfront.net";
-            cdnUrl = `https://${cloudfrontDomain}/${key}`;
+      
+      // 为所有文件创建唯一的 loading 占位符
+      const loadingPlaceholders = filesToAdd.map(() => ({
+        key: "__loading__" + nanoid(),
+        url: ""
+      }));
+      
+      // 一次性添加所有 loading 占位符
+      const newValueWithLoading = [...value, ...loadingPlaceholders];
+      onChange(newValueWithLoading);
+      
+      console.log(`[ImageUploader] 开始批量上传 ${filesToAdd.length} 个文件`);
+      
+      // 并行上传所有文件
+      const uploadResults = await Promise.allSettled(
+        filesToAdd.map(async (file, index) => {
+          const loadingKey = loadingPlaceholders[index].key;
+          
+          try {
+            console.log(`[ImageUploader] 上传文件 ${index + 1}/${filesToAdd.length}: ${file.name}`);
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const { uploadUrl, key } = await getImageUploadUrl({
+              fileName: encodeURIComponent(file.name),
+              fileType: file.type,
+              date: dateStr,
+            });
+            
+            await uploadToS3(uploadUrl, file);
+            
+            let cdnUrl = "";
+            if (key.startsWith("http")) {
+              cdnUrl = key;
+            } else {
+              const cloudfrontDomain =
+                process.env.NEXT_PUBLIC_IMAGE_CDN_PREFIX ||
+                "dyslh3g7kcbva.cloudfront.net";
+              cdnUrl = `https://${cloudfrontDomain}/${key}`;
+            }
+            
+            console.log(`[ImageUploader] 文件 ${file.name} 上传成功: ${cdnUrl}`);
+            return { success: true, loadingKey, result: { key, url: cdnUrl } };
+          } catch (err) {
+            let msg = "未知错误";
+            if (err && typeof err === "object" && "message" in err) {
+              msg = (err as { message: string }).message;
+            }
+            console.error(`[ImageUploader] 文件 ${file.name} 上传失败: ${msg}`, err);
+            return { success: false, loadingKey, error: msg };
           }
-          console.log("[ImageUploader] 完整图片cdnUrl:", cdnUrl);
-
-          // 注意此处！以“最新一轮的 value”进行替换，保证回填图片不丢
-          // 先过滤掉 loadingKey，再追加新图片
-          onChange(
-            [...value, { key: loadingKey, url: "" }]
-              .filter((img) => img.key !== loadingKey)
-              .concat([{ key, url: cdnUrl }])
-          );
-        } catch (err) {
-          let msg = "未知错误";
-          if (err && typeof err === "object" && "message" in err) {
-            msg = (err as { message: string }).message;
-          }
-          alert("上传失败: " + msg);
-          console.error("[ImageUploader] 上传失败", err);
-
-          // 上传失败也保证只移除 loading（保持其他 value 不变）
-          onChange(
-            [...value, { key: loadingKey, url: "" }].filter(
-              (img) => img.key !== loadingKey
-            )
-          );
-        }
+        })
+      );
+      
+      // 处理上传结果
+      let failedCount = 0;
+      
+      // 更新最终结果
+      const finalValue = newValueWithLoading.filter(img => {
+        // 保留所有非 loading 图片
+        if (!img.key.startsWith("__loading__")) return true;
+        
+        // 过滤所有 loading 占位
+        return false;
+      });
+      
+      // 添加成功上传的图片
+      const successfulUploads = uploadResults
+        .filter(result => result.status === "fulfilled" && (result.value as any).success)
+        .map(result => (result.value as any).result);
+      
+      // 计算失败的数量
+      failedCount = uploadResults.filter(
+        result => result.status === "rejected" || ((result.status === "fulfilled") && !(result.value as any).success)
+      ).length;
+      
+      onChange([...finalValue, ...successfulUploads]);
+      
+      // 显示失败信息
+      if (failedCount > 0) {
+        alert(`${failedCount} 张图片上传失败，请重试`);
       }
     },
     [onChange, value, max]
@@ -138,7 +161,7 @@ export function ImageUploader({
     onDrop,
     accept: ALLOWED_IMAGE_TYPES.reduce((acc, t) => ({ ...acc, [t]: [] }), {}),
     multiple: true,
-    maxFiles: max,
+    maxFiles: max ? max - value.length : undefined,
     noClick: true,
     disabled: disabled || reachMax,
   });
@@ -216,7 +239,8 @@ export function ImageUploader({
             role="button"
             aria-label="添加图片"
           >
-            <Upload className="mb-1" />
+            <Upload size={18} className="mb-1" />
+            <span className="text-xs">上传</span>
             <input
               {...getInputProps({
                 className: "hidden",
@@ -253,7 +277,10 @@ export function ImageUploader({
         </DialogContent>
       </Dialog>
       {isDragActive && !disabled && (
-        <div className="mt-2 text-primary text-xs">松开图片即可上传</div>
+        <div className="mt-2 text-primary text-xs">松开即可上传图片</div>
+      )}
+      {!isDragActive && !disabled && !reachMax && (
+        <div className="mt-2 text-muted-foreground text-xs">点击上传按钮或拖拽图片到此处，可批量上传{max ? `（最多${max}张）` : ""}</div>
       )}
     </div>
   );
