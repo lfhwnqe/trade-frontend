@@ -55,23 +55,45 @@ export const tradeListAtom = createImmerAtom<TradeListState>(initialState);
 
 // 辅助函数：处理查询参数
 export function processQueryParams(query: TradeQuery, sorting: SortingState): ApiQueryParameters {
-  let apiDateTimeRange: string | undefined = undefined;
+  // 处理日期范围
+  let dateFrom: string | undefined = undefined;
+  let dateTo: string | undefined = undefined;
+  
   if (query?.dateTimeRange?.from) {
-    apiDateTimeRange = format(query.dateTimeRange.from, "yyyy-MM");
+    dateFrom = format(query.dateTimeRange.from, "yyyy-MM-dd");
+    
+    if (query.dateTimeRange.to) {
+      dateTo = format(query.dateTimeRange.to, "yyyy-MM-dd");
+    }
   }
 
   const processedQuery: ApiQueryParameters = {
+    // 市场结构
     marketStructure:
       query?.marketStructure === "all"
         ? undefined
         : query?.marketStructure,
+    // 信号类型
     signalType:
       query?.signalType === "all" ? undefined : query?.signalType,
+    // 入场方向
     entryDirection:
       query?.entryDirection === "all"
         ? undefined
         : query?.entryDirection,
-    dateTimeRange: apiDateTimeRange,
+    // 交易状态
+    tradeStatus:
+      query?.tradeStatus === "all"
+        ? undefined
+        : query?.tradeStatus,
+    // 交易结果
+    tradeResult:
+      query?.tradeResult === "all"
+        ? undefined
+        : query?.tradeResult,
+    // 日期范围
+    dateFrom,
+    dateTo,
   };
 
   if (sorting.length > 0) {

@@ -22,8 +22,17 @@ import {
   TradeQuery,
   marketStructureOptions,
   entryDirectionOptions,
+  tradeStatusOptions,
   Option,
 } from "../../config";
+
+// 交易结果选项
+const tradeResultOptions = [
+  { label: "全部", value: "all" },
+  { label: "盈利", value: "盈利" },
+  { label: "亏损", value: "亏损" },
+  { label: "保本", value: "保本" },
+];
 
 interface TradeQueryFormProps {
   queryForm: TradeQuery;
@@ -38,6 +47,19 @@ export default function TradeQueryForm({
   onSubmit,
   onReset,
 }: TradeQueryFormProps) {
+  // 内部重置函数，确保所有字段都被重置
+  const handleReset = () => {
+    // 重置所有查询条件
+    onQueryFormChange({
+      dateTimeRange: undefined,
+      marketStructure: 'all',
+      entryDirection: 'all',
+      tradeStatus: 'all',
+      tradeResult: 'all',
+    });
+    // 调用外部重置函数
+    onReset();
+  };
   return (
     <form className="flex flex-wrap gap-2 mb-4 items-end" onSubmit={onSubmit}>
       <div>
@@ -123,6 +145,48 @@ export default function TradeQueryForm({
           </SelectContent>
         </Select>
       </div>
+      <div>
+        <label className="block text-xs mb-1">状态</label>
+        <Select
+          value={queryForm.tradeStatus ?? ""}
+          onValueChange={(value: string) =>
+            onQueryFormChange({ ...queryForm, tradeStatus: value })
+          }
+        >
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="全部" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部</SelectItem>
+            {tradeStatusOptions.map((opt: Option) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <label className="block text-xs mb-1">结果</label>
+        <Select
+          value={queryForm.tradeResult ?? ""}
+          onValueChange={(value: string) =>
+            onQueryFormChange({ ...queryForm, tradeResult: value })
+          }
+        >
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="全部" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部</SelectItem>
+            {tradeResultOptions.map((opt: Option) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <Button type="submit" className="ml-2" variant="secondary">
         查询
       </Button>
@@ -130,7 +194,7 @@ export default function TradeQueryForm({
         type="button"
         variant="outline"
         className="ml-1"
-        onClick={onReset}
+        onClick={handleReset}
       >
         重置
       </Button>

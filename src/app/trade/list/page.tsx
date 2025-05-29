@@ -106,10 +106,10 @@ export default function TradeListPage() {
         ),
       },
       {
-        accessorKey: "signalType",
+        accessorKey: "status",
         header: "信号",
         cell: ({ row }) => (
-          <div className="capitalize">{row.original.signalType ?? "-"}</div>
+          <div className="capitalize">{row.original.status ?? "-"}</div>
         ),
       },
       {
@@ -121,10 +121,10 @@ export default function TradeListPage() {
       },
       {
         accessorKey: "entry",
-        header: () => <div className="text-right">入场</div>,
+        header: () => <div className="text-right">入场方向</div>,
         cell: ({ row }) => (
           <div className="text-right font-medium">
-            {row.original.entry?.toString() ?? "-"}
+            {row.original.entryDirection?.toString() ?? "-"}
           </div>
         ),
       },

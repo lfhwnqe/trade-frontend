@@ -132,13 +132,18 @@ export type TradeQuery = {
   marketStructure?: string;
   signalType?: string;
   entryDirection?: string;
+  tradeStatus?: string;
+  tradeResult?: string;
 };
 
 export interface ApiQueryParameters {
   marketStructure?: string;
   signalType?: string;
   entryDirection?: string;
-  dateTimeRange?: string; // yyyy-MM format
+  tradeStatus?: string;
+  tradeResult?: string;
+  dateFrom?: string; // yyyy-MM-dd format
+  dateTo?: string; // yyyy-MM-dd format
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
 }
