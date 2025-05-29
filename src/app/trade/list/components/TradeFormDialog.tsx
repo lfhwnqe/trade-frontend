@@ -395,40 +395,10 @@ export function TradeForm({
                 )}
                 :
               </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "justify-start text-left font-normal w-full",
-                      !form.entryTime && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.entryTime ? (
-                      format(new Date(form.entryTime as string), "PPP")
-                    ) : (
-                      <span>选择日期</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={
-                      form.entryTime
-                        ? new Date(form.entryTime as string)
-                        : undefined
-                    }
-                    onSelect={(date) =>
-                      handleDateRangeChange(
-                        date ? { from: date, to: date } : undefined
-                      )
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DateTimePicker
+                analysisTime={form.entryTime as string}
+                updateForm={patch => updateForm({ entryTime: patch.analysisTime })}
+              />
             </div>
             {/* 止损点 */}
             <div>
@@ -577,40 +547,10 @@ export function TradeForm({
                 )}
                 :
               </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "justify-start text-left font-normal w-full",
-                      !form.exitTime && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.exitTime ? (
-                      format(new Date(form.exitTime as string), "PPP")
-                    ) : (
-                      <span>选择日期</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={
-                      form.exitTime
-                        ? new Date(form.exitTime as string)
-                        : undefined
-                    }
-                    onSelect={(date) =>
-                      handleDateRangeChange(
-                        date ? { from: date, to: date } : undefined
-                      )
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DateTimePicker
+                analysisTime={form.exitTime as string}
+                updateForm={patch => updateForm({ exitTime: patch.analysisTime })}
+              />
             </div>
             {/* 交易结果 */}
             <div>
