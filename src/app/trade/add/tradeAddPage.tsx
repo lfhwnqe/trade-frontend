@@ -53,7 +53,8 @@ export default function TradeAddPage() {
           setDetailLoading(false);
         });
     }
-  }, [searchParams, errorAlert, setDetailLoading, setForm]);
+  }, []);
+  // }, [searchParams, errorAlert, setDetailLoading, setForm]);
 
   // 离开页面时自动重置表单，避免脏数据
   useEffect(() => {
