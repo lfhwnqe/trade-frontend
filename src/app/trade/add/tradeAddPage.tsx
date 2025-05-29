@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useCallback, useEffect, Suspense, useRef } from "react";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
-import { formAtom, loadingAtom, detailLoadingAtom } from "./atom";
+import { formAtom, loadingAtom, detailLoadingAtom, formInitialState } from "./atom";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createTrade,
@@ -29,7 +29,7 @@ export default function TradeAddPage() {
   const [success, errorAlert] = useAlert();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [form, setForm] = useAtomImmer(formAtom);
+  const [form, setForm, resetForm] = useAtomImmer(formAtom);
   const [loading, setLoading] = useAtomImmer(loadingAtom);
   const [detailLoading, setDetailLoading] = useAtomImmer(detailLoadingAtom);
   // 主体渲染，非弹窗模式而是全宽居中大表单
@@ -55,6 +55,13 @@ export default function TradeAddPage() {
     }
   }, [searchParams, errorAlert, setDetailLoading, setForm]);
 
+  // 离开页面时自动重置表单，避免脏数据
+  useEffect(() => {
+    return () => {
+      resetForm(formInitialState);
+    };
+  }, [resetForm]);
+  
   // 提交函数 - 添加节流控制避免重复提交
   const submittingRef = useRef(false);
   const handleSubmit = useCallback(

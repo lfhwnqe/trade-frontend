@@ -7,7 +7,7 @@ import type { Trade } from "../config";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type FormState = Partial<Trade> & { [key: string]: any };
 
-export const formAtom = createImmerAtom<FormState>({
+export const formInitialState: FormState = {
   analysisTime: undefined,
   status: undefined,
   marketStructure: undefined,
@@ -16,7 +16,9 @@ export const formAtom = createImmerAtom<FormState>({
   entryPlanA: { entryReason: "", entrySignal: "", exitSignal: "" },
   entryPlanB: { entryReason: "", entrySignal: "", exitSignal: "" },
   entryPlanC: { entryReason: "", entrySignal: "", exitSignal: "" },
-});
+};
+
+export const formAtom = createImmerAtom<FormState>(formInitialState);
 
 export const loadingAtom = createImmerAtom(false);
 export const detailLoadingAtom = createImmerAtom(false);
