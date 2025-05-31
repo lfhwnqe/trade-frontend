@@ -128,7 +128,7 @@ export function TradeForm({
               />
             </div>
             {/* 交易状态 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 交易状态<span className="ml-0.5 text-destructive">*</span>:
               </label>
@@ -153,7 +153,7 @@ export function TradeForm({
             </div>
 
             {/* 市场结构 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 市场结构<span className="ml-0.5 text-destructive">*</span>:
               </label>
@@ -178,7 +178,7 @@ export function TradeForm({
             </div>
 
             {/* POC价格 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 POC价格:
               </label>
@@ -192,7 +192,7 @@ export function TradeForm({
             </div>
 
             {/* 价值区下沿 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 价值区下沿:
               </label>
@@ -206,7 +206,7 @@ export function TradeForm({
             </div>
 
             {/* 价值区上沿 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 价值区上沿:
               </label>
@@ -219,7 +219,7 @@ export function TradeForm({
               />
             </div>
             {/* 结构分析 */}
-            <div className="col-span-2">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 结构分析:
               </label>
@@ -233,7 +233,7 @@ export function TradeForm({
               />
             </div>
             {/* 关键价位说明 */}
-            <div className="col-span-2">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 关键价位说明:
               </label>
@@ -247,7 +247,7 @@ export function TradeForm({
               />
             </div>
             {/* 成交量分布图 */}
-            <div className="col-span-full">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 成交量分布图：
               </label>
@@ -267,181 +267,7 @@ export function TradeForm({
               />
             </div>
             {/* 假设路径图 */}
-            <div className="col-span-full">
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                假设路径图：
-              </label>
-              <ImageUploader
-                value={
-                  Array.isArray(form.expectedPathImages) &&
-                  (form.expectedPathImages as unknown[]).every(
-                    (v) => typeof v === "object" && v !== null && "url" in v
-                  )
-                    ? (form.expectedPathImages as unknown as ImageResource[])
-                    : []
-                }
-                onChange={(imgs) =>
-                  handleImageChange("expectedPathImages", imgs)
-                }
-                max={5}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4 mb-2">
-            {/* 行情分析时间 */}
-            <div>
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                行情分析时间
-                <span className="ml-0.5 text-destructive">*</span>:
-              </label>
-              <DateCalendarPicker
-                analysisTime={form.analysisTime}
-                updateForm={(patch) =>
-                  updateForm({ analysisTime: patch.analysisTime })
-                }
-              />
-            </div>
-            {/* 交易状态 */}
-            <div>
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                交易状态<span className="ml-0.5 text-destructive">*</span>:
-              </label>
-              <Select
-                name="status"
-                value={(form.status as string) ?? ""}
-                onValueChange={(value) =>
-                  handleSelectChange("status" as keyof Trade, value)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择 交易状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tradeStatusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 市场结构 */}
-            <div>
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                市场结构<span className="ml-0.5 text-destructive">*</span>:
-              </label>
-              <Select
-                name="marketStructure"
-                value={(form.marketStructure as string) ?? ""}
-                onValueChange={(value) =>
-                  handleSelectChange("marketStructure" as keyof Trade, value)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择 市场结构" />
-                </SelectTrigger>
-                <SelectContent>
-                  {marketStructureOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* POC价格 */}
-            <div>
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                POC价格:
-              </label>
-              <Input
-                id="poc"
-                name="poc"
-                type="number"
-                value={(form.poc as string) ?? ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* 价值区下沿 */}
-            <div>
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                价值区下沿:
-              </label>
-              <Input
-                id="val"
-                name="val"
-                type="number"
-                value={(form.val as string) ?? ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* 价值区上沿 */}
-            <div>
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                价值区上沿:
-              </label>
-              <Input
-                id="vah"
-                name="vah"
-                type="number"
-                value={(form.vah as string) ?? ""}
-                onChange={handleChange}
-              />
-            </div>
-            {/* 结构分析 */}
             <div className="col-span-2">
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                结构分析:
-              </label>
-              <Textarea
-                id="marketStructureAnalysis"
-                name="marketStructureAnalysis"
-                value={(form.marketStructureAnalysis as string) ?? ""}
-                onChange={(e) =>
-                  handleSelectChange("marketStructureAnalysis", e.target.value)
-                }
-              />
-            </div>
-            {/* 关键价位说明 */}
-            <div className="col-span-2">
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                关键价位说明:
-              </label>
-              <Textarea
-                id="keyPriceLevels"
-                name="keyPriceLevels"
-                value={(form.keyPriceLevels as string) ?? ""}
-                onChange={(e) =>
-                  handleSelectChange("keyPriceLevels", e.target.value)
-                }
-              />
-            </div>
-            {/* 成交量分布图 */}
-            <div className="col-span-full">
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                成交量分布图：
-              </label>
-              <ImageUploader
-                value={
-                  Array.isArray(form.volumeProfileImages) &&
-                  (form.volumeProfileImages as unknown[]).every(
-                    (v) => typeof v === "object" && v !== null && "url" in v
-                  )
-                    ? (form.volumeProfileImages as unknown as ImageResource[])
-                    : []
-                }
-                onChange={(imgs) =>
-                  handleImageChange("volumeProfileImages", imgs)
-                }
-                max={5}
-              />
-            </div>
-            {/* 假设路径图 */}
-            <div className="col-span-full">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 假设路径图：
               </label>
@@ -498,9 +324,9 @@ export function TradeForm({
         <div className="bg-muted/50 border rounded-lg p-4 pt-3">
           <div className="font-semibold text-base pb-2">入场记录</div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-x-6 gap-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
             {/* 入场方向 - 只在已入场/已离场时必填 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 入场方向
                 {(form.status === TradeStatus.ENTERED ||
@@ -529,7 +355,7 @@ export function TradeForm({
               </Select>
             </div>
             {/* 入场价格 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 入场价格
                 {(form.status === TradeStatus.ENTERED ||
@@ -551,7 +377,7 @@ export function TradeForm({
               />
             </div>
             {/* 入场时间 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 入场时间
                 {(form.status === TradeStatus.ENTERED ||
@@ -562,11 +388,13 @@ export function TradeForm({
               </label>
               <DateCalendarPicker
                 analysisTime={form.entryTime as string}
-                updateForm={patch => updateForm({ entryTime: patch.analysisTime })}
+                updateForm={(patch) =>
+                  updateForm({ entryTime: patch.analysisTime })
+                }
               />
             </div>
             {/* 止损点 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 止损点
                 {(form.status === TradeStatus.ENTERED ||
@@ -588,7 +416,7 @@ export function TradeForm({
               />
             </div>
             {/* 止盈点 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 止盈点
                 {(form.status === TradeStatus.ENTERED ||
@@ -610,7 +438,7 @@ export function TradeForm({
               />
             </div>
             {/* 入场理由 */}
-            <div className="sm:col-span-2">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 入场理由
                 {(form.status === TradeStatus.ENTERED ||
@@ -633,7 +461,7 @@ export function TradeForm({
               />
             </div>
             {/* 离场理由 */}
-            <div className="sm:col-span-2">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 离场理由
                 {(form.status === TradeStatus.ENTERED ||
@@ -656,7 +484,7 @@ export function TradeForm({
               />
             </div>
             {/* 心态记录 */}
-            <div className="sm:col-span-2">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 心态记录
                 {(form.status === TradeStatus.ENTERED ||
@@ -684,9 +512,9 @@ export function TradeForm({
         {/* 4. 离场后分析 */}
         <div className="bg-muted/50 border rounded-lg p-4 pt-3 space-y-2">
           <div className="font-semibold text-base pb-2">离场后分析</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
             {/* 离场价格 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 离场价格
                 {form.status === TradeStatus.EXITED && (
@@ -704,7 +532,7 @@ export function TradeForm({
               />
             </div>
             {/* 离场时间 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 离场时间
                 {form.status === TradeStatus.EXITED && (
@@ -714,11 +542,13 @@ export function TradeForm({
               </label>
               <DateCalendarPicker
                 analysisTime={form.exitTime as string}
-                updateForm={patch => updateForm({ exitTime: patch.analysisTime })}
+                updateForm={(patch) =>
+                  updateForm({ exitTime: patch.analysisTime })
+                }
               />
             </div>
             {/* 交易结果 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 交易结果
                 {form.status === TradeStatus.EXITED && (
@@ -746,7 +576,7 @@ export function TradeForm({
               </Select>
             </div>
             {/* 是否执行了计划 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 是否执行了计划
                 {form.status === TradeStatus.EXITED && (
@@ -774,7 +604,7 @@ export function TradeForm({
               </Select>
             </div>
             {/* 计划ID */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 计划类型
                 {form.status === TradeStatus.EXITED && !!form.followedPlan && (
@@ -802,7 +632,7 @@ export function TradeForm({
               </Select>
             </div>
             {/* 盈亏% */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 盈亏%:
               </label>
@@ -815,7 +645,7 @@ export function TradeForm({
               />
             </div>
             {/* 风险回报比 */}
-            <div>
+            <div className="col-span-2">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 风险回报比:
               </label>
@@ -846,7 +676,7 @@ export function TradeForm({
               />
             </div>
             {/* 实际路径复盘 */}
-            <div className="col-span-full">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 实际路径复盘:
               </label>
@@ -860,7 +690,7 @@ export function TradeForm({
               />
             </div>
             {/* 备注 */}
-            <div className="col-span-full">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 备注:
               </label>
@@ -872,7 +702,7 @@ export function TradeForm({
               />
             </div>
             {/* 经验总结 */}
-            <div className="col-span-full">
+            <div className="col-span-3">
               <label className="block pb-1 text-sm font-medium text-muted-foreground">
                 经验总结:
               </label>
