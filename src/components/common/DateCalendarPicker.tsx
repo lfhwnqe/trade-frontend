@@ -1,6 +1,8 @@
+"use client";
+
 import * as React from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Clock } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,9 +11,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TimePickerComponent } from "./TimePickerComponent";
 
-interface DateTimePickerProps {
+interface DateCalendarPickerProps {
   analysisTime?: string;
   updateForm: (patch: { analysisTime: string }) => void;
   /** 是否显示时间选择器 */
@@ -48,7 +50,7 @@ function toDatetimeString(date?: Date, hour?: string, minute?: string, second?: 
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
 
-export const DateTimePicker: React.FC<DateTimePickerProps> = ({
+export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
   analysisTime,
   updateForm,
   showTimePicker = true,
@@ -87,6 +89,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     setDate(val);
     pushChange(val, hour, minute, second);
   };
+  
   const onTimeChange = (
     type: "hour" | "minute" | "second",
     value: string
@@ -99,18 +102,6 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     const m = type === "minute" ? value : minute;
     const s = type === "second" ? value : second;
     pushChange(date, h, m, s);
-  };
-
-  // 生成时间选项
-  const generateTimeOptions = (max: number) => {
-    return Array.from({ length: max }, (_, i) => {
-      const value = i.toString().padStart(2, "0");
-      return (
-        <SelectItem key={value} value={value}>
-          {value}
-        </SelectItem>
-      );
-    });
   };
 
   // 格式化显示时间
@@ -136,7 +127,8 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
           variant={"outline"}
           className={cn(
             "justify-start text-left font-normal w-full",
-            !date && "text-muted-foreground"
+            !date && "text-muted-foreground",
+            "bg-muted"
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -147,8 +139,8 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <div className="flex flex-col gap-2 p-4">
+      <PopoverContent className="w-auto p-0" align="start">
+        <div className="flex flex-col gap-4 p-4">
           <Calendar
             mode="single"
             selected={date}
@@ -156,54 +148,45 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
             initialFocus
           />
           {showTimePicker && (
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-2" />
-                <span className="text-sm font-medium">时间</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={hour}
-                  onValueChange={(value) => onTimeChange("hour", value)}
-                >
-                  <SelectTrigger className="w-[70px]">
-                    <SelectValue placeholder="时" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px] overflow-y-auto">
-                    {generateTimeOptions(24)}
-                  </SelectContent>
-                </Select>
-                <span>:</span>
-                <Select
-                  value={minute}
-                  onValueChange={(value) => onTimeChange("minute", value)}
-                >
-                  <SelectTrigger className="w-[70px]">
-                    <SelectValue placeholder="分" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[200px] overflow-y-auto">
-                    {generateTimeOptions(60)}
-                  </SelectContent>
-                </Select>
-                {showSeconds && (
-                  <>
-                    <span>:</span>
-                    <Select
-                      value={second}
-                      onValueChange={(value) => onTimeChange("second", value)}
-                    >
-                      <SelectTrigger className="w-[70px]">
-                        <SelectValue placeholder="秒" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[200px] overflow-y-auto">
-                        {generateTimeOptions(60)}
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
-              </div>
-            </div>
+            <TimePickerComponent 
+              hour={hour}
+              minute={minute}
+              second={second}
+              onTimeChange={onTimeChange}
+              showSeconds={showSeconds}
+            />
           )}
+          <div className="flex justify-between pt-2 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const now = new Date();
+                setDate(now);
+                setHour(now.getHours().toString().padStart(2, "0"));
+                setMinute(now.getMinutes().toString().padStart(2, "0"));
+                setSecond(now.getSeconds().toString().padStart(2, "0"));
+                pushChange(now, now.getHours().toString().padStart(2, "0"), 
+                  now.getMinutes().toString().padStart(2, "0"), 
+                  now.getSeconds().toString().padStart(2, "0"));
+              }}
+            >
+              重置为当前时间
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDate(undefined);
+                setHour("");
+                setMinute("");
+                setSecond("");
+                updateForm({ analysisTime: "" });
+              }}
+            >
+              清空
+            </Button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

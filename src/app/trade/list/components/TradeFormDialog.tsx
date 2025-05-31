@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
-import { DateTimePicker } from "./DateTimePicker";
+import { DateCalendarPicker } from "../../../../components/common/DateCalendarPicker";
 import { ImageUploader } from "./ImageUploader";
 import type { ImageResource } from "../../config";
 import {
@@ -10,8 +9,6 @@ import {
   marketStructureOptions,
   tradeStatusOptions,
 } from "../../config";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,12 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Trade, TradeStatus } from "@/app/trade/config";
 import { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
@@ -129,7 +120,7 @@ export function TradeForm({
                 行情分析时间
                 <span className="ml-0.5 text-destructive">*</span>:
               </label>
-              <DateTimePicker
+              <DateCalendarPicker
                 analysisTime={form.analysisTime}
                 updateForm={(patch) =>
                   updateForm({ analysisTime: patch.analysisTime })
@@ -303,7 +294,7 @@ export function TradeForm({
                 行情分析时间
                 <span className="ml-0.5 text-destructive">*</span>:
               </label>
-              <DateTimePicker
+              <DateCalendarPicker
                 analysisTime={form.analysisTime}
                 updateForm={(patch) =>
                   updateForm({ analysisTime: patch.analysisTime })
@@ -569,7 +560,7 @@ export function TradeForm({
                 )}
                 :
               </label>
-              <DateTimePicker
+              <DateCalendarPicker
                 analysisTime={form.entryTime as string}
                 updateForm={patch => updateForm({ entryTime: patch.analysisTime })}
               />
@@ -721,7 +712,7 @@ export function TradeForm({
                 )}
                 :
               </label>
-              <DateTimePicker
+              <DateCalendarPicker
                 analysisTime={form.exitTime as string}
                 updateForm={patch => updateForm({ exitTime: patch.analysisTime })}
               />
