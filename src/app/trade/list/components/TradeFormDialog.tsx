@@ -3,8 +3,9 @@
 import * as React from "react";
 import { DateCalendarPicker } from "../../../../components/common/DateCalendarPicker";
 import { ImageUploader } from "./ImageUploader";
-import type { ImageResource } from "../../config";
+import type { ImageResource, Trade } from "../../config";
 import {
+  TradeStatus,
   entryDirectionOptions,
   marketStructureOptions,
   tradeStatusOptions,
@@ -18,9 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trade, TradeStatus } from "@/app/trade/config";
 import { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
+import { useAlert } from "@/components/common/alert";
 
 // 交易结果选项
 const tradeResultOptions = [
@@ -29,10 +30,7 @@ const tradeResultOptions = [
   { label: "保本", value: "BREAKEVEN" },
 ];
 
-const followedPlanOptions = [
-  { label: "是", value: "true" },
-  { label: "否", value: "false" },
-];
+// 计划选项
 const planOptions = [
   { label: "A计划", value: "A" },
   { label: "B计划", value: "B" },
@@ -100,16 +98,143 @@ export function TradeForm({
   form,
   handleChange,
   handleSelectChange,
-  handleDateRangeChange,
   handleImageChange,
   handlePlanChange,
   handleSubmit,
   updateForm,
   loading = false, // 默认为false
 }: TradeFormProps) {
+  // 错误信息状态
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [success, errorAlert] = useAlert();
+  // 创建自定义的表单更新处理函数，在更新表单数据的同时清除相应字段的错误
+  const handleFormChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    // 清除当前字段的错误提示
+    setErrors(prev => {
+      const newErrors = {...prev};
+      delete newErrors[e.target.name];
+      return newErrors;
+    });
+    // 调用原始的handleChange函数
+    handleChange(e);
+  }, [handleChange]);
+  
+  // 创建自定义的选择更新处理函数
+  const handleFormSelectChange = React.useCallback((key: keyof Trade, value: string) => {
+    // 清除当前字段的错误提示
+    setErrors(prev => {
+      const newErrors = {...prev};
+      delete newErrors[key as string];
+      return newErrors;
+    });
+    // 调用原始的handleSelectChange函数
+    handleSelectChange(key, value);
+  }, [handleSelectChange]);
+  
+  // 创建自定义的表单更新函数
+  const handleFormUpdate = React.useCallback((patch: Partial<Trade>) => {
+    // 清除更新字段的错误提示
+    setErrors(prev => {
+      const newErrors = {...prev};
+      Object.keys(patch).forEach(key => {
+        delete newErrors[key];
+      });
+      return newErrors;
+    });
+    // 调用原始的updateForm函数
+    updateForm(patch);
+  }, [updateForm]);
+  
+  // 验证表单
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    // 必填字段验证
+    if (!form.analysisTime) {
+      newErrors.analysisTime = '行情分析时间为必填项';
+    }
+    
+    if (!form.status) {
+      newErrors.status = '交易状态为必填项';
+    }
+    
+    if (!form.marketStructure) {
+      newErrors.marketStructure = '市场结构为必填项';
+    }
+    
+    // 根据交易状态验证必填字段
+    if (form.status === TradeStatus.ENTERED || form.status === TradeStatus.EXITED) {
+      if (!form.entryDirection) {
+        newErrors.entryDirection = '入场方向为必填项';
+      }
+      
+      if (!form.entry) {
+        newErrors.entry = '入场价格为必填项';
+      }
+      
+      if (!form.entryTime) {
+        newErrors.entryTime = '入场时间为必填项';
+      }
+      
+      if (!form.stopLoss) {
+        newErrors.stopLoss = '止损点为必填项';
+      }
+      
+      if (!form.takeProfit) {
+        newErrors.takeProfit = '止盈点为必填项';
+      }
+    }
+    
+    // 已离场状态的额外验证
+    if (form.status === TradeStatus.EXITED) {
+      if (!form.exitPrice) {
+        newErrors.exitPrice = '离场价格为必填项';
+      }
+      
+      if (!form.exitTime) {
+        newErrors.exitTime = '离场时间为必填项';
+      }
+      
+      if (!form.tradeResult) {
+        newErrors.tradeResult = '交易结果为必填项';
+      }
+      
+      // 如果选择了执行计划，则计划类型必填
+      if (form.followedPlan && !form.followedPlanId) {
+        newErrors.followedPlanId = '计划类型为必填项';
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // 包装提交处理函数
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // 验证表单
+    if (validateForm()) {
+      // 验证通过，调用原始的提交函数
+      handleSubmit(e);
+    } else {
+      // 滚动到第一个错误字段
+      const firstErrorField = document.getElementById(Object.keys(errors)[0]);
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      
+      // 显示错误提示
+      const errorCount = Object.keys(errors).length;
+      errorAlert(`表单有 ${errorCount} 个必填项未填写，请检查标记为红色的字段。`);
+    }
+  };
   return (
     <div className="w-full mx-auto  bg-muted/50  ">
-      <form onSubmit={handleSubmit} className="flex flex-col min-h-0 gap-y-6">
+      <form
+        onSubmit={handleFormSubmit}
+        className="flex flex-col min-h-0 gap-y-6"
+      >
         {/* 1. 入场前分析 */}
         <div className="bg-muted/50 border rounded-lg p-4 pt-3">
           <div className="font-semibold text-base pb-2">入场前分析</div>
@@ -123,9 +248,14 @@ export function TradeForm({
               <DateCalendarPicker
                 analysisTime={form.analysisTime}
                 updateForm={(patch) =>
-                  updateForm({ analysisTime: patch.analysisTime })
+                  handleFormUpdate({ analysisTime: patch.analysisTime })
                 }
               />
+              {errors.analysisTime && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.analysisTime}
+                </p>
+              )}
             </div>
             {/* 交易状态 */}
             <div className="col-span-2">
@@ -136,10 +266,14 @@ export function TradeForm({
                 name="status"
                 value={(form.status as string) ?? ""}
                 onValueChange={(value) =>
-                  handleSelectChange("status" as keyof Trade, value)
+                  handleFormSelectChange("status" as keyof Trade, value)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger
+                  className={`w-full ${
+                    errors.status ? "border-destructive" : ""
+                  }`}
+                >
                   <SelectValue placeholder="选择 交易状态" />
                 </SelectTrigger>
                 <SelectContent>
@@ -150,6 +284,9 @@ export function TradeForm({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.status && (
+                <p className="text-sm text-destructive mt-1">{errors.status}</p>
+              )}
             </div>
 
             {/* 市场结构 */}
@@ -161,10 +298,14 @@ export function TradeForm({
                 name="marketStructure"
                 value={(form.marketStructure as string) ?? ""}
                 onValueChange={(value) =>
-                  handleSelectChange("marketStructure" as keyof Trade, value)
+                  handleFormSelectChange("marketStructure" as keyof Trade, value)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger
+                  className={`w-full ${
+                    errors.marketStructure ? "border-destructive" : ""
+                  }`}
+                >
                   <SelectValue placeholder="选择 市场结构" />
                 </SelectTrigger>
                 <SelectContent>
@@ -175,6 +316,11 @@ export function TradeForm({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.marketStructure && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.marketStructure}
+                </p>
+              )}
             </div>
 
             {/* POC价格 */}
@@ -187,7 +333,7 @@ export function TradeForm({
                 name="poc"
                 type="number"
                 value={(form.poc as string) ?? ""}
-                onChange={handleChange}
+                onChange={handleFormChange}
               />
             </div>
 
@@ -201,7 +347,7 @@ export function TradeForm({
                 name="val"
                 type="number"
                 value={(form.val as string) ?? ""}
-                onChange={handleChange}
+                onChange={handleFormChange}
               />
             </div>
 
@@ -215,7 +361,7 @@ export function TradeForm({
                 name="vah"
                 type="number"
                 value={(form.vah as string) ?? ""}
-                onChange={handleChange}
+                onChange={handleFormChange}
               />
             </div>
             {/* 结构分析 */}
@@ -339,10 +485,14 @@ export function TradeForm({
                 name="entryDirection"
                 value={(form.entryDirection as string) ?? ""}
                 onValueChange={(value) =>
-                  handleSelectChange("entryDirection" as keyof Trade, value)
+                  handleFormSelectChange("entryDirection" as keyof Trade, value)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger
+                  className={`w-full ${
+                    errors.entryDirection ? "border-destructive" : ""
+                  }`}
+                >
                   <SelectValue placeholder="选择 入场方向" />
                 </SelectTrigger>
                 <SelectContent>
@@ -353,6 +503,11 @@ export function TradeForm({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.entryDirection && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.entryDirection}
+                </p>
+              )}
             </div>
             {/* 入场价格 */}
             <div className="col-span-2">
@@ -369,12 +524,12 @@ export function TradeForm({
                 name="entry"
                 type="number"
                 value={(form.entry as string) ?? ""}
-                onChange={handleChange}
-                required={
-                  form.status === TradeStatus.ENTERED ||
-                  form.status === TradeStatus.EXITED
-                }
+                onChange={handleFormChange}
+                className={errors.entry ? 'border-destructive' : ''}
               />
+              {errors.entry && (
+                <p className="text-sm text-destructive mt-1">{errors.entry}</p>
+              )}
             </div>
             {/* 入场时间 */}
             <div className="col-span-2">
@@ -387,11 +542,16 @@ export function TradeForm({
                 :
               </label>
               <DateCalendarPicker
-                analysisTime={form.entryTime as string}
+                analysisTime={form.entryTime}
                 updateForm={(patch) =>
-                  updateForm({ entryTime: patch.analysisTime })
+                  handleFormUpdate({ entryTime: patch.analysisTime })
                 }
               />
+              {errors.entryTime && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.entryTime}
+                </p>
+              )}
             </div>
             {/* 止损点 */}
             <div className="col-span-2">
@@ -408,12 +568,14 @@ export function TradeForm({
                 name="stopLoss"
                 type="number"
                 value={(form.stopLoss as string) ?? ""}
-                onChange={handleChange}
-                required={
-                  form.status === TradeStatus.ENTERED ||
-                  form.status === TradeStatus.EXITED
-                }
+                onChange={handleFormChange}
+                className={errors.stopLoss ? 'border-destructive' : ''}
               />
+              {errors.stopLoss && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.stopLoss}
+                </p>
+              )}
             </div>
             {/* 止盈点 */}
             <div className="col-span-2">
@@ -430,12 +592,14 @@ export function TradeForm({
                 name="takeProfit"
                 type="number"
                 value={(form.takeProfit as string) ?? ""}
-                onChange={handleChange}
-                required={
-                  form.status === TradeStatus.ENTERED ||
-                  form.status === TradeStatus.EXITED
-                }
+                onChange={handleFormChange}
+                className={errors.takeProfit ? 'border-destructive' : ''}
               />
+              {errors.takeProfit && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.takeProfit}
+                </p>
+              )}
             </div>
             {/* 入场理由 */}
             <div className="col-span-3">
@@ -451,14 +615,21 @@ export function TradeForm({
                 id="entryReason"
                 name="entryReason"
                 value={(form.entryReason as string) ?? ""}
-                onChange={(e) =>
-                  handleSelectChange("entryReason", e.target.value)
-                }
-                required={
-                  form.status === TradeStatus.ENTERED ||
-                  form.status === TradeStatus.EXITED
-                }
+                onChange={(e) => {
+                  setErrors(prev => {
+                    const newErrors = {...prev};
+                    delete newErrors['entryReason'];
+                    return newErrors;
+                  });
+                  handleSelectChange("entryReason", e.target.value);
+                }}
+                className={errors.entryReason ? "border-destructive" : ""}
               />
+              {errors.entryReason && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.entryReason}
+                </p>
+              )}
             </div>
             {/* 离场理由 */}
             <div className="col-span-3">
@@ -474,14 +645,21 @@ export function TradeForm({
                 id="exitReason"
                 name="exitReason"
                 value={(form.exitReason as string) ?? ""}
-                onChange={(e) =>
-                  handleSelectChange("exitReason", e.target.value)
-                }
-                required={
-                  form.status === TradeStatus.ENTERED ||
-                  form.status === TradeStatus.EXITED
-                }
+                onChange={(e) => {
+                  setErrors(prev => {
+                    const newErrors = {...prev};
+                    delete newErrors['exitReason'];
+                    return newErrors;
+                  });
+                  handleSelectChange("exitReason", e.target.value);
+                }}
+                className={errors.exitReason ? "border-destructive" : ""}
               />
+              {errors.exitReason && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.exitReason}
+                </p>
+              )}
             </div>
             {/* 心态记录 */}
             <div className="col-span-3">
@@ -497,14 +675,21 @@ export function TradeForm({
                 id="mentalityNotes"
                 name="mentalityNotes"
                 value={(form.mentalityNotes as string) ?? ""}
-                onChange={(e) =>
-                  handleSelectChange("mentalityNotes", e.target.value)
-                }
-                required={
-                  form.status === TradeStatus.ENTERED ||
-                  form.status === TradeStatus.EXITED
-                }
+                onChange={(e) => {
+                  setErrors(prev => {
+                    const newErrors = {...prev};
+                    delete newErrors['mentalityNotes'];
+                    return newErrors;
+                  });
+                  handleSelectChange("mentalityNotes", e.target.value);
+                }}
+                className={errors.mentalityNotes ? "border-destructive" : ""}
               />
+              {errors.mentalityNotes && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.mentalityNotes}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -527,9 +712,14 @@ export function TradeForm({
                 name="exitPrice"
                 type="number"
                 value={(form.exitPrice as string) ?? ""}
-                onChange={handleChange}
-                required={form.status === TradeStatus.EXITED}
+                onChange={handleFormChange}
+                className={errors.exitPrice ? 'border-destructive' : ''}
               />
+              {errors.exitPrice && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.exitPrice}
+                </p>
+              )}
             </div>
             {/* 离场时间 */}
             <div className="col-span-2">
@@ -541,11 +731,16 @@ export function TradeForm({
                 :
               </label>
               <DateCalendarPicker
-                analysisTime={form.exitTime as string}
+                analysisTime={form.exitTime}
                 updateForm={(patch) =>
-                  updateForm({ exitTime: patch.analysisTime })
+                  handleFormUpdate({ exitTime: patch.analysisTime })
                 }
               />
+              {errors.exitTime && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.exitTime}
+                </p>
+              )}
             </div>
             {/* 交易结果 */}
             <div className="col-span-2">
@@ -560,10 +755,14 @@ export function TradeForm({
                 name="tradeResult"
                 value={(form.tradeResult as string) ?? ""}
                 onValueChange={(value) =>
-                  handleSelectChange("tradeResult" as keyof Trade, value)
+                  handleFormSelectChange("tradeResult" as keyof Trade, value)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger
+                  className={`w-full ${
+                    errors.tradeResult ? "border-destructive" : ""
+                  }`}
+                >
                   <SelectValue placeholder="选择 交易结果" />
                 </SelectTrigger>
                 <SelectContent>
@@ -574,6 +773,11 @@ export function TradeForm({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.tradeResult && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.tradeResult}
+                </p>
+              )}
             </div>
             {/* 是否执行了计划 */}
             <div className="col-span-2">
@@ -586,20 +790,33 @@ export function TradeForm({
               </label>
               <Select
                 name="followedPlan"
-                value={(form.followedPlan ?? false).toString()}
-                onValueChange={(value) =>
-                  handleSelectChange("followedPlan" as keyof Trade, value)
+                value={
+                  form.followedPlan === true
+                    ? "true"
+                    : form.followedPlan === false
+                    ? "false"
+                    : ""
                 }
+                onValueChange={(value) => {
+                  const boolValue = value === 'true';
+                  handleFormUpdate({ followedPlan: boolValue });
+                  
+                  // 如果选择了"否"，清除followedPlanId字段的错误
+                  if (!boolValue) {
+                    setErrors(prev => {
+                      const newErrors = {...prev};
+                      delete newErrors['followedPlanId'];
+                      return newErrors;
+                    });
+                  }
+                }}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择 是否执行了计划" />
+                  <SelectValue placeholder="选择 是否执行计划" />
                 </SelectTrigger>
                 <SelectContent>
-                  {followedPlanOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="true">是</SelectItem>
+                  <SelectItem value="false">否</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -616,10 +833,14 @@ export function TradeForm({
                 name="followedPlanId"
                 value={(form.followedPlanId as string) ?? ""}
                 onValueChange={(value) =>
-                  handleSelectChange("followedPlanId" as keyof Trade, value)
+                  handleFormSelectChange("followedPlanId" as keyof Trade, value)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger
+                  className={`w-full ${
+                    errors.followedPlanId ? "border-destructive" : ""
+                  }`}
+                >
                   <SelectValue placeholder="选择 计划" />
                 </SelectTrigger>
                 <SelectContent>
@@ -630,6 +851,11 @@ export function TradeForm({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.followedPlanId && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.followedPlanId}
+                </p>
+              )}
             </div>
             {/* 盈亏% */}
             <div className="col-span-2">
@@ -641,7 +867,7 @@ export function TradeForm({
                 name="profitLossPercentage"
                 type="number"
                 value={(form.profitLossPercentage as string) ?? ""}
-                onChange={handleChange}
+                onChange={handleFormChange}
               />
             </div>
             {/* 风险回报比 */}
@@ -654,7 +880,7 @@ export function TradeForm({
                 name="riskRewardRatio"
                 type="text"
                 value={(form.riskRewardRatio as string) ?? ""}
-                onChange={handleChange}
+                onChange={handleFormChange}
               />
             </div>
             {/* 实际路径图 */}
@@ -710,16 +936,31 @@ export function TradeForm({
                 id="lessonsLearned"
                 name="lessonsLearned"
                 value={(form.lessonsLearned as string) ?? ""}
-                onChange={(e) =>
-                  handleSelectChange("lessonsLearned", e.target.value)
-                }
+                onChange={(e) => {
+                  setErrors(prev => {
+                    const newErrors = {...prev};
+                    delete newErrors['lessonsLearned'];
+                    return newErrors;
+                  });
+                  handleSelectChange("lessonsLearned", e.target.value);
+                }}
               />
             </div>
           </div>
         </div>
         {/* 提交按钮 */}
         <div className="shrink-0 mt-2 flex justify-end">
-          <Button type="submit" disabled={loading}>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="relative"
+              >
+                {Object.keys(errors).length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+                  </span>
+                )}
             {loading ? (
               <>
                 <svg
