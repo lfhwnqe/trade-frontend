@@ -18,9 +18,9 @@ import {
 } from "../list/request";
 import { Trade } from "../config";
 import type { ImageResource } from "../config";
-import { TradeFormDialog } from "../list/components/TradeFormDialog";
+import { TradeFormDialog, TradeFormRef } from "../list/components/TradeFormDialog";
 import { useAlert } from "@/components/common/alert";
-import { cn } from "@/lib/utils";
+import { LoadingButton } from "../components/LoadingButton";
 
 type EntryPlan = {
   entryReason?: string;
@@ -71,6 +71,8 @@ export default function TradeAddPage({ className }: { className?: string }) {
 
   // 提交函数 - 添加节流控制避免重复提交
   const submittingRef = useRef(false);
+  // 创建对表单组件的引用
+  const formRef = useRef<TradeFormRef>(null);
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -182,6 +184,7 @@ export default function TradeAddPage({ className }: { className?: string }) {
         {/* 滚动表单内容 */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <TradeFormDialog
+            ref={formRef}
             editTrade={id ? form : null}
             form={form}
             handleChange={handleChange}
@@ -199,7 +202,17 @@ export default function TradeAddPage({ className }: { className?: string }) {
             </div>
           )}
         </div>
-        {/* <div className="h-16">asd</div> */}
+        <div className="mt-4 flex justify-end">
+          <LoadingButton 
+            loading={loading} 
+            editTrade={form} 
+            errors={{}} 
+            onSubmit={() => {
+              // 直接调用表单组件的 submit 方法
+              formRef.current?.submit();
+            }} 
+          />
+        </div>
       </div>
     </Suspense>
   );
