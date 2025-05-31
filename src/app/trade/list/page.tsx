@@ -210,7 +210,7 @@ export default function TradeListPage() {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 flex-1">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">交易列表</h1>
         <Button
