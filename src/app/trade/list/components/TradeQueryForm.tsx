@@ -178,7 +178,6 @@ export default function TradeQueryForm({
             <SelectValue placeholder="全部" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部</SelectItem>
             {tradeResultOptions.map((opt: Option) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}

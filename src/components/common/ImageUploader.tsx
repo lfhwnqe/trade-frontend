@@ -87,7 +87,11 @@ export function ImageUploader({
       console.log(`[ImageUploader] 开始批量上传 ${filesToAdd.length} 个文件`);
       
       // 并行上传所有文件
-      const uploadResults = await Promise.allSettled(
+      // 定义上传结果类型，避免 any
+      type UploadResult =
+        | { success: true; loadingKey: string; result: ImageResource }
+        | { success: false; loadingKey: string; error: string };
+      const uploadResults = await Promise.allSettled<UploadResult>(
         filesToAdd.map(async (file, index) => {
           const loadingKey = loadingPlaceholders[index].key;
           
@@ -139,12 +143,17 @@ export function ImageUploader({
       
       // 添加成功上传的图片
       const successfulUploads = uploadResults
-        .filter(result => result.status === "fulfilled" && (result.value as any).success)
-        .map(result => (result.value as any).result);
+        .filter((result) => 
+          result.status === "fulfilled" && result.value.success
+        )
+        .map(result => {
+          // 由于前面的过滤，这里 result.status 一定是 fulfilled，result.value.success 一定为 true
+          return (result as PromiseFulfilledResult<{ success: true; loadingKey: string; result: ImageResource }>).value.result;
+        });
       
       // 计算失败的数量
       failedCount = uploadResults.filter(
-        result => result.status === "rejected" || ((result.status === "fulfilled") && !(result.value as any).success)
+        result => result.status === "rejected" || (result.status === "fulfilled" && !result.value.success)
       ).length;
       
       onChange([...finalValue, ...successfulUploads]);
