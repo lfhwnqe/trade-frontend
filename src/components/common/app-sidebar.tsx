@@ -48,8 +48,7 @@ const simulationItems = [
   },
 ];
 
-
-export function AppSidebar({menuType}: {menuType: "trade" | "simulation"}) {
+export function AppSidebar({ menuType }: { menuType: "trade" | "simulation" }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -88,17 +87,19 @@ export function AppSidebar({menuType}: {menuType: "trade" | "simulation"}) {
           <SidebarGroupLabel>模拟交易系统</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {(menuType === "trade" ? tradeItems : simulationItems).map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  {/* 重点：将 isActive 属性传给 SidebarMenuButton */}
-                  <SidebarMenuButton asChild isActive={pathname === item.url}>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {(menuType === "trade" ? tradeItems : simulationItems).map(
+                (item) => (
+                  <SidebarMenuItem key={item.title}>
+                    {/* 重点：将 isActive 属性传给 SidebarMenuButton */}
+                    <SidebarMenuButton asChild isActive={pathname === item.url}>
+                      <a href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -117,6 +118,9 @@ export function AppSidebar({menuType}: {menuType: "trade" | "simulation"}) {
                 side="top"
                 className="w-[--radix-popper-anchor-width]"
               >
+                <DropdownMenuItem onClick={() => router.push("/")}>
+                  <span>首页</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleLogout}
                   disabled={isLoggingOut}
