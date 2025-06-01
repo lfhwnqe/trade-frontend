@@ -18,7 +18,10 @@ import {
 } from "../list/request";
 import { Trade } from "../config";
 import type { ImageResource } from "../config";
-import { TradeFormDialog, TradeFormRef } from "../list/components/TradeFormDialog";
+import {
+  TradeFormDialog,
+  TradeFormRef,
+} from "../list/components/TradeFormDialog";
 import { useAlert } from "@/components/common/alert";
 import { LoadingButton } from "../components/LoadingButton";
 
@@ -31,7 +34,7 @@ type EntryPlan = {
  * 新增交易页面
  * 复用 TradeFormDialog，独立页逻辑
  */
-export default function TradeAddPage({ className }: { className?: string }) {
+export default function TradeAddPage() {
   const [success, errorAlert] = useAlert();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -203,14 +206,14 @@ export default function TradeAddPage({ className }: { className?: string }) {
           )}
         </div>
         <div className="mt-4 flex justify-end">
-          <LoadingButton 
-            loading={loading} 
-            editTrade={form} 
-            errors={{}} 
+          <LoadingButton
+            loading={loading}
+            editTrade={form}
+            errors={{}}
             onSubmit={() => {
               // 直接调用表单组件的 submit 方法
               formRef.current?.submit();
-            }} 
+            }}
           />
         </div>
       </div>

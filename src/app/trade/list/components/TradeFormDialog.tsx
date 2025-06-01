@@ -109,7 +109,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     },
     ref
   ) => {
-    const [_, errorAlert] = useAlert();
+    const [, errorAlert] = useAlert();
     // 错误信息状态
     const [errors, setErrors] = React.useState<Record<string, string>>({});
     // 创建自定义的表单更新处理函数，在更新表单数据的同时清除相应字段的错误
