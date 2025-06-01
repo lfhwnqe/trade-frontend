@@ -98,7 +98,7 @@ export default function TradeAddPage({ className }: { className?: string }) {
           await createTrade(toDto(form));
           success("新建成功");
         }
-        router.push("/trade/list");
+        router.push("/simulation/list");
       } catch (error: unknown) {
         if (typeof error === "object" && error && "message" in error) {
           errorAlert(

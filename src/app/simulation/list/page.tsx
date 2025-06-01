@@ -151,7 +151,7 @@ export default function TradeListPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  router.push(`/trade/add?id=${trade.transactionId}`);
+                  router.push(`/simulation/add?id=${trade.transactionId}`);
                 }}
               >
                 编辑
