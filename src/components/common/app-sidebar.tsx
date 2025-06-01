@@ -49,13 +49,13 @@ export function AppSidebar() {
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("idToken");
       localStorage.removeItem("token");
-      
+
       // 使用登出接口清除 HTTP-only cookie
       await fetch("/api/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      
+
       // 跳转到登录页面
       router.push("/auth/login");
     } catch (error) {
@@ -70,7 +70,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>交易系统</SidebarGroupLabel>
+          <SidebarGroupLabel>模拟交易系统</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
