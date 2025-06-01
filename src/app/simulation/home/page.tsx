@@ -11,7 +11,7 @@ function fetchStats() {
     method: "POST",
     credentials: "include",
     proxyParams: {
-      targetPath: "trade/stats",
+      targetPath: "simulation-train/stats",
       actualMethod: "GET",
     },
     actualBody: {},
@@ -59,12 +59,12 @@ export default function TradeHomePage() {
 
       {/* 操作按钮 */}
       <div className="flex gap-4">
-        <Link href="/trade/list">
+        <Link href="/simulation/list">
           <Button variant="default" size="lg" className="shadow-md">
             查看交易列表
           </Button>
         </Link>
-        <Link href="/trade/add">
+        <Link href="/simulation/add">
           <Button variant="secondary" size="lg" className="shadow-md">
             新增交易
           </Button>

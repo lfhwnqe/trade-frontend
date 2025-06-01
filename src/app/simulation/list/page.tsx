@@ -215,7 +215,7 @@ export default function TradeListPage() {
         <h1 className="text-2xl font-bold">交易列表</h1>
         <Button
           onClick={() => {
-            router.push("/trade/add");
+            router.push("/simulation/add");
           }}
         >
           新增交易

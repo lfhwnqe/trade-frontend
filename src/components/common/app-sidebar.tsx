@@ -49,7 +49,7 @@ const simulationItems = [
 ];
 
 
-export function AppSidebar(menuType: "trade" | "simulation") {
+export function AppSidebar({menuType}: {menuType: "trade" | "simulation"}) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 

@@ -7,8 +7,8 @@ import {
   ALLOWED_IMAGE_TYPES,
   getImageUploadUrl,
   uploadToS3,
-} from "../request";
-import { ImageResource } from "../../config";
+} from "../../app/trade/list/request";
+import { ImageResource } from "../../app/trade/config";
 import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

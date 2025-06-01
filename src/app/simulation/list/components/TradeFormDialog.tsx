@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { DateCalendarPicker } from "../../../../components/common/DateCalendarPicker";
-import { ImageUploader } from "./ImageUploader";
+import { ImageUploader } from "@/components/common/ImageUploader";
 import type { ImageResource, Trade } from "../../config";
 import {
   TradeStatus,

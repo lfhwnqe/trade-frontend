@@ -27,7 +27,7 @@ export async function fetchTrades(params: {
 }): Promise<TradeListResponse> {
   const { page, pageSize, query } = params;
   const proxyParams = {
-    targetPath: "trade/list",
+    targetPath: "simulation-train/list",
     actualMethod: "POST",
   };
   const actualBody = {
@@ -55,12 +55,11 @@ export async function fetchTrades(params: {
   };
 }
 
-
 /** 获取单条交易详情 */
 export async function fetchTradeDetail(transactionId: string): Promise<Trade> {
   const proxyParams = {
-    targetPath: `trade/${transactionId}`,
-    actualMethod: "GET"
+    targetPath: `simulation-train/${transactionId}`,
+    actualMethod: "GET",
   };
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -139,10 +138,16 @@ export type CreateTradeDto = {
  */
 export function toDto(form: Partial<Trade>): CreateTradeDto {
   const parseNum = (v: string | number | undefined) =>
-    v === undefined || v === "" || v === null ? undefined : (isNaN(Number(v)) ? undefined : Number(v));
+    v === undefined || v === "" || v === null
+      ? undefined
+      : isNaN(Number(v))
+      ? undefined
+      : Number(v);
   const asImageArray = (val?: ImageResource[]) =>
     Array.isArray(val)
-      ? val.filter((x) => x && typeof x.url === "string" && typeof x.key === "string")
+      ? val.filter(
+          (x) => x && typeof x.url === "string" && typeof x.key === "string"
+        )
       : [];
 
   return {
@@ -159,7 +164,11 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     marketStructureAnalysis: form.marketStructureAnalysis || "",
     expectedPathImages: asImageArray(form.expectedPathImages),
     expectedPathAnalysis: form.expectedPathAnalysis,
-    entryPlanA: form.entryPlanA ?? { entryReason: "", entrySignal: "", exitSignal: "" },
+    entryPlanA: form.entryPlanA ?? {
+      entryReason: "",
+      entrySignal: "",
+      exitSignal: "",
+    },
     entryPlanB: form.entryPlanB,
     entryPlanC: form.entryPlanC,
 
@@ -193,7 +202,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
 
 export async function createTrade(data: Partial<CreateTradeDto>) {
   const proxyParams = {
-    targetPath: "trade",
+    targetPath: "simulation-train",
     actualMethod: "POST",
   };
   const actualBody = data;
@@ -210,7 +219,7 @@ export async function createTrade(data: Partial<CreateTradeDto>) {
 
 export async function updateTrade(id: string, data: Partial<CreateTradeDto>) {
   const proxyParams = {
-    targetPath: `trade/${id}`,
+    targetPath: `simulation-train/${id}`,
     actualMethod: "PATCH",
   };
   const actualBody = data;
@@ -227,7 +236,7 @@ export async function updateTrade(id: string, data: Partial<CreateTradeDto>) {
 
 export async function deleteTrade(id: string) {
   const proxyParams = {
-    targetPath: `trade/${id}`,
+    targetPath: `simulation-train/${id}`,
     actualMethod: "DELETE",
   };
   const actualBody = {};
