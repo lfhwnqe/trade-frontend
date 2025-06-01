@@ -22,7 +22,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 // Menu items.
-const items = [
+const tradeItems = [
   {
     title: "首页",
     url: "/trade/home",
@@ -35,7 +35,21 @@ const items = [
   },
 ];
 
-export function AppSidebar() {
+const simulationItems = [
+  {
+    title: "首页",
+    url: "/simulation/home",
+    icon: Home,
+  },
+  {
+    title: "交易记录",
+    url: "/simulation/list",
+    icon: Inbox,
+  },
+];
+
+
+export function AppSidebar(menuType: "trade" | "simulation") {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -73,7 +87,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>模拟交易系统</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {(menuType === "trade" ? tradeItems : simulationItems).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <a href={item.url}>
