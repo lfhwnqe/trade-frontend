@@ -14,7 +14,7 @@ export default function Home() {
         <Separator />
         <section className="w-full space-y-3">
           <p className="text-lg leading-7">
-            基于现代前后端架构打造，专为日常交易记录与查询而设计。系统支持录入、管理和分析各类交易数据，助力你轻松梳理资产流动与投资绩效。
+            专为日常交易记录与查询而设计。系统支持录入、管理和分析各类交易数据，助力你轻松梳理资产流动与投资绩效。
           </p>
           <ul className="list-disc pl-6 space-y-1 text-base">
             <li>强大的交易记录与筛选功能</li>
@@ -31,8 +31,8 @@ export default function Home() {
         </div>
       </main>
       <footer className="mt-8 text-sm text-muted-foreground">
-        © {new Date().getFullYear()} 我的交易系统 | 技术栈：Next.js · shadcn/ui
-        · TailwindCSS
+        © {new Date().getFullYear()} MMC Trading | 技术栈：Next.js · shadcn/ui ·
+        TailwindCSS
       </footer>
     </div>
   );
