@@ -36,7 +36,7 @@ export default function TradeHomePage() {
       .then((data) => {
         setStats({
           thisMonthClosedTradeCount: data.thisMonthClosedTradeCount ?? 0,
-          thisMonthWinRate: data.thisMonthWinRate ?? 0
+          thisMonthWinRate: data.thisMonthWinRate ?? 0,
         });
         setLoading(false);
         setError(null);
@@ -83,9 +83,7 @@ export default function TradeHomePage() {
         {/* 卡片2 */}
         <div className="rounded-xl bg-background shadow p-6 flex flex-col items-center">
           <span className="text-2xl font-semibold text-green-600">
-            {loading
-              ? "..."
-              : `${stats.thisMonthWinRate}%`}
+            {loading ? "..." : `${stats.thisMonthWinRate}%`}
           </span>
           <span className="mt-2 text-muted-foreground">本月交易胜率</span>
         </div>
@@ -94,9 +92,9 @@ export default function TradeHomePage() {
           {error ? (
             <span className="text-red-500 text-base">{error}</span>
           ) : (
-            <span className="text-2xl font-semibold text-orange-500">&nbsp;</span>
+            <span className="text-2xl font-semibold text-orange-500">新功能</span>
           )}
-          <span className="mt-2 text-muted-foreground">&nbsp;</span>
+          <span className="mt-2 text-muted-foreground">敬请期待</span>
         </div>
       </div>
     </div>
