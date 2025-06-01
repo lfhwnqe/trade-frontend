@@ -99,15 +99,13 @@ function EntryPlanForm({
 export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
   (
     {
-      editTrade,
       form,
       handleChange,
       handleSelectChange,
       handleImageChange,
       handlePlanChange,
       handleSubmit,
-      updateForm,
-      loading = false, // 默认为false
+      updateForm, // 默认为false
     },
     ref
   ) => {
@@ -248,7 +246,9 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
         // 显示错误提示
         const errorCount = Object.keys(errors).length;
-        errorAlert(`表单有 ${errorCount} 个必填项未填写，请检查标记为红色的字段。`);
+        errorAlert(
+          `表单有 ${errorCount} 个必填项未填写，请检查标记为红色的字段。`
+        );
       }
     };
 
@@ -1040,7 +1040,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 );
 
 // 设置 displayName 属性，用于开发调试
-TradeForm.displayName = 'TradeForm';
+TradeForm.displayName = "TradeForm";
 
 // 兼容性导出，方便老代码引用
 export { TradeForm as TradeFormDialog };
