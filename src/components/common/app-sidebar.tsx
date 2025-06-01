@@ -18,7 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 
 // Menu items.
@@ -51,6 +51,7 @@ const simulationItems = [
 
 export function AppSidebar({menuType}: {menuType: "trade" | "simulation"}) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -89,7 +90,8 @@ export function AppSidebar({menuType}: {menuType: "trade" | "simulation"}) {
             <SidebarMenu>
               {(menuType === "trade" ? tradeItems : simulationItems).map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  {/* 重点：将 isActive 属性传给 SidebarMenuButton */}
+                  <SidebarMenuButton asChild isActive={pathname === item.url}>
                     <a href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
