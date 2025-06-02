@@ -48,10 +48,14 @@ export default function VerifyPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          targetPath: "user/confirm",
-          actualMethod: "POST",
-          username: form.username,
-          code: form.code,
+          request: {
+            targetPath: "user/confirm",
+            actualMethod: "POST"
+          },
+          body: {
+            username: form.username,
+            code: form.code
+          }
         }),
       });
 

@@ -36,11 +36,15 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          targetPath: "user/register",
-          actualMethod: "POST",
-          username: form.username,
-          email: form.email,
-          password: form.password,
+          request: {
+            targetPath: "user/register",
+            actualMethod: "POST"
+          },
+          body: {
+            username: form.username,
+            email: form.email,
+            password: form.password
+          }
         }),
       });
 
