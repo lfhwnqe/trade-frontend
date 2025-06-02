@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
+import { useAlert } from "./alert";
 
 // Menu items.
 const tradeItems = [
@@ -52,6 +53,7 @@ export function AppSidebar({ menuType }: { menuType: "trade" | "simulation" }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [errorAlert] = useAlert();
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -74,7 +76,7 @@ export function AppSidebar({ menuType }: { menuType: "trade" | "simulation" }) {
       router.push("/auth/login");
     } catch (error) {
       console.error("登出过程中发生错误:", error);
-      alert("登出过程中发生错误，请重试");
+      errorAlert("登出过程中发生错误，请重试");
     } finally {
       setIsLoggingOut(false);
     }

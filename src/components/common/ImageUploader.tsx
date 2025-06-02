@@ -18,6 +18,7 @@ import {
   DialogOverlay,
   DialogClose,
 } from "@/components/ui/dialog";
+import { useAlert } from "./alert";
 
 /**
  * 图片多图上传控件（支持真实上传、云端预览，shadcn 风格，支持回填和大图预览）
@@ -58,6 +59,7 @@ export function ImageUploader({
   max?: number;
   disabled?: boolean;
 }) {
+  const [,errorAlert]= useAlert()
   // 检查是否已达最大数量
   const reachMax = !!max && value.length >= max;
 
@@ -160,7 +162,7 @@ export function ImageUploader({
       
       // 显示失败信息
       if (failedCount > 0) {
-        alert(`${failedCount} 张图片上传失败，请重试`);
+        errorAlert(`${failedCount} 张图片上传失败，请重试`);
       }
     },
     [onChange, value, max]

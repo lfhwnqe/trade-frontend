@@ -9,6 +9,7 @@ import {
   VisibilityState,
   RowSelectionState,
 } from "@tanstack/react-table";
+import { useAlert } from "@/components/common/alert";
 
 /**
  * 交易列表 hook
@@ -16,6 +17,7 @@ import {
  */
 export function useTradeList() {
   const [state, setState, resetState] = useAtomImmer(tradeListAtom);
+  const [errorAlert] = useAlert();
 
   // 获取所有交易数据
   const fetchAll = useCallback(
@@ -48,9 +50,9 @@ export function useTradeList() {
         });
       } catch (err) {
         if (isErrorWithMessage(err)) {
-          alert("获取列表失败: " + err.message);
+          errorAlert("获取列表失败: " + err.message);
         } else {
-          alert("获取列表失败: 系统错误");
+          errorAlert("获取列表失败: 系统错误");
         }
 
         // 重置到空状态
