@@ -65,7 +65,7 @@ export default function TradeQueryForm({
   return (
     <form className="flex flex-wrap gap-2 mb-4 items-end" onSubmit={onSubmit}>
       <div>
-        <label className="block text-xs mb-1">时间段</label>
+        <label className="block text-xs mb-1">创建时间</label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -97,9 +97,18 @@ export default function TradeQueryForm({
               mode="range"
               defaultMonth={queryForm.dateTimeRange?.from}
               selected={queryForm.dateTimeRange}
-              onSelect={(range) =>
-                onQueryFormChange({ ...queryForm, dateTimeRange: range })
-              }
+              onSelect={(range) => {
+                // 如果只选择了一个日期，将其同时设置为开始和结束日期
+                if (range?.from && !range.to) {
+                  const completeRange = {
+                    from: range.from,
+                    to: range.from
+                  };
+                  onQueryFormChange({ ...queryForm, dateTimeRange: completeRange });
+                } else {
+                  onQueryFormChange({ ...queryForm, dateTimeRange: range });
+                }
+              }}
               numberOfMonths={2}
             />
           </PopoverContent>
