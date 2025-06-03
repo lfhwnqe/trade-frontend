@@ -45,10 +45,8 @@ export async function fetchTrades(params: {
     const data = await res.json().catch(() => undefined);
     throw new Error((data && data.message) || "获取交易列表失败");
   }
-  console.log("resss:", res);
 
   const data = await res.json();
-  console.log("123fetchTrades res:", data);
   return {
     items: data.data?.items || [],
     total: data.data?.total || 0,
