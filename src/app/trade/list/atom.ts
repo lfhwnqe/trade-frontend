@@ -94,7 +94,17 @@ export function processQueryParams(query: TradeQuery, sorting: SortingState): Ap
     // 日期范围
     dateFrom,
     dateTo,
+  // 新增: type/grade 过滤
   };
+
+  // type（交易类型）
+  if (query?.type && query.type !== "all") {
+    processedQuery.tradeType = query.type;
+  }
+  // grade（分级）
+  if (query?.grade && query.grade !== "all") {
+    processedQuery.grade = query.grade;
+  }
 
   if (sorting.length > 0) {
     processedQuery.sortBy = sorting[0].id;

@@ -24,6 +24,8 @@ import {
   entryDirectionOptions,
   tradeStatusOptions,
   Option,
+  tradeTypeOptions,
+  tradeGradeOptions,
 } from "../../config";
 
 // 交易结果选项
@@ -102,6 +104,48 @@ export default function TradeQueryForm({
             />
           </PopoverContent>
         </Popover>
+      </div>
+      <div>
+        <label className="block text-xs mb-1">交易类型</label>
+        <Select
+          value={queryForm.type ?? ""}
+          onValueChange={(value: string) =>
+            onQueryFormChange({ ...queryForm, type: value })
+          }
+        >
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="全部" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部</SelectItem>
+            {tradeTypeOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <label className="block text-xs mb-1">交易分级</label>
+        <Select
+          value={queryForm.grade ?? ""}
+          onValueChange={(value: string) =>
+            onQueryFormChange({ ...queryForm, grade: value })
+          }
+        >
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="全部" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部</SelectItem>
+            {tradeGradeOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <label className="block text-xs mb-1">结构</label>

@@ -177,6 +177,9 @@ export type TradeQuery = {
   entryDirection?: string;
   tradeStatus?: string;
   tradeResult?: string;
+  // 新增筛选字段
+  type?: string;
+  grade?: string;
 };
 
 export interface ApiQueryParameters {
@@ -189,6 +192,8 @@ export interface ApiQueryParameters {
   dateTo?: string; // yyyy-MM-dd format
   sortBy?: string;
   sortOrder?: "ASC" | "DESC";
+  tradeType?: string;
+  grade?: string;
 }
 
 export interface TradeFieldConfig {

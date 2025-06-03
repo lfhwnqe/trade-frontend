@@ -40,6 +40,7 @@ export function useTradeList() {
           query: processedQuery,
         });
 
+        console.log("fetchAll res:", res);
         setState((draft) => {
           draft.trades = res.items;
           draft.pagination.total = res.total;
@@ -70,6 +71,7 @@ export function useTradeList() {
       state.pagination.pageSize,
       state.queryForm,
       state.sorting,
+      errorAlert,
     ]
   );
 
