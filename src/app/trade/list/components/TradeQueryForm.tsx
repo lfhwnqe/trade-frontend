@@ -63,7 +63,7 @@ export default function TradeQueryForm({
     onReset();
   };
   return (
-    <form className="flex flex-wrap gap-2 mb-4 items-end" onSubmit={onSubmit}>
+    <form className="flex flex-wrap gap-2 grid-cols-6 mb-4 items-end" onSubmit={onSubmit}>
       <div>
         <label className="block text-xs mb-1">创建时间</label>
         <Popover>
@@ -114,7 +114,7 @@ export default function TradeQueryForm({
           </PopoverContent>
         </Popover>
       </div>
-      <div>
+      <div className="col-span-3">
         <label className="block text-xs mb-1">交易类型</label>
         <Select
           value={queryForm.type ?? ""}
@@ -135,7 +135,7 @@ export default function TradeQueryForm({
           </SelectContent>
         </Select>
       </div>
-      <div>
+      <div  className="col-span-2">
         <label className="block text-xs mb-1">交易分级</label>
         <Select
           value={queryForm.grade ?? ""}

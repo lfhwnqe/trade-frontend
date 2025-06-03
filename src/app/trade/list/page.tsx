@@ -97,6 +97,24 @@ export default function TradeListPage() {
         cell: ({ row }) => row.original.analysisTime ?? "-",
       },
       {
+        accessorKey: "tradeType",
+        header: "交易类型",
+        cell: ({ row }) => (
+          <div className="capitalize">
+            {row.original.tradeType ?? "-"}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "grade",
+        header: "交易分级",
+        cell: ({ row }) => (
+          <div className="capitalize">
+            {row.original.grade ?? "-"}
+          </div>
+        ),
+      },
+      {
         accessorKey: "marketStructure",
         header: "结构",
         cell: ({ row }) => (

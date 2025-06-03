@@ -91,6 +91,7 @@ export const tradeStatusOptions = [
 export type Trade = {
   analysisTime?: string;
   transactionId?: string;
+  tradeSubject?: string;
   // 状态与基础分析
   tradeType?: TradeType; // 新增字段：交易类型
   status?: TradeStatus;

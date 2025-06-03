@@ -158,6 +158,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       if (!form.analysisTime) {
         newErrors.analysisTime = "行情分析时间为必填项";
       }
+      
+      if (!form.tradeSubject) {
+        newErrors.tradeType = "交易标的为必填项";
+      }
 
       if (!form.tradeType) {
         newErrors.tradeType = "交易类型为必填项";
@@ -305,6 +309,24 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     </p>
                   )}
                 </div>
+                {/* 交易标的 */}
+                <div className="col-span-2">
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    交易标的<span className="ml-0.5 text-destructive">*</span>:
+                  </label>
+                  <Input
+                    id="tradeSubject"
+                    name="tradeSubject"
+                    value={(form.tradeSubject as string) ?? ""}
+                    onChange={handleFormChange}
+                    className={errors.tradeSubject ? "border-destructive" : ""}
+                  />
+                  {errors.tradeSubject && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.tradeSubject}
+                    </p>
+                  )}
+                </div>
                 {/* 交易类型 */}
                 <div className="col-span-2">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -362,24 +384,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     </SelectContent>
                   </Select>
                 </div>
-                {/* 分析是否过期 */}
-                <div className="col-span-2 flex items-center">
-                  <input
-                    id="analysisExpired"
-                    type="checkbox"
-                    className="mr-2"
-                    checked={!!form.analysisExpired}
-                    onChange={(e) =>
-                      handleFormUpdate({ analysisExpired: e.target.checked })
-                    }
-                  />
-                  <label
-                    htmlFor="analysisExpired"
-                    className="text-sm font-medium text-muted-foreground select-none"
-                  >
-                    分析已过期
-                  </label>
-                </div>
+
                 {/* 交易状态 */}
                 <div className="col-span-2">
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1027,6 +1032,24 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     value={(form.riskRewardRatio as string) ?? ""}
                     onChange={handleFormChange}
                   />
+                </div>
+                {/* 分析是否过期 */}
+                <div className="col-span-2 flex items-center">
+                  <input
+                    id="analysisExpired"
+                    type="checkbox"
+                    className="mr-2"
+                    checked={!!form.analysisExpired}
+                    onChange={(e) =>
+                      handleFormUpdate({ analysisExpired: e.target.checked })
+                    }
+                  />
+                  <label
+                    htmlFor="analysisExpired"
+                    className="text-sm font-medium text-muted-foreground select-none"
+                  >
+                    分析已过期
+                  </label>
                 </div>
                 {/* 实际路径图 */}
                 <div className="col-span-full">

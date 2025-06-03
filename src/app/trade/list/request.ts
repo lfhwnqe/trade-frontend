@@ -92,6 +92,7 @@ export type CreateTradeDto = {
   // ===== 入场前分析 =====
   analysisTime?: string;
   volumeProfileImages: ImageResource[];
+  tradeSubject: string;
   poc: number;
   val: number;
   vah: number;
@@ -163,6 +164,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     // ===== 交易状态 =====
     status: form.status!,
     // ===== 入场前分析 =====
+    tradeSubject: form.tradeSubject!,
     volumeProfileImages: asImageArray(form.volumeProfileImages),
     poc: parseNum(form.poc)!,
     val: parseNum(form.val)!,
