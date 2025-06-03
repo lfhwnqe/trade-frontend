@@ -86,7 +86,7 @@ export function AppSidebar({ menuType }: { menuType: "trade" | "simulation" }) {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>模拟交易系统</SidebarGroupLabel>
+          <SidebarGroupLabel>交易系统</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {(menuType === "trade" ? tradeItems : simulationItems).map(
