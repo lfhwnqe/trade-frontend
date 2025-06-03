@@ -8,6 +8,9 @@ import {
   TradeStatus,
   entryDirectionOptions,
   marketStructureOptions,
+  planOptions,
+  tradeGradeOptions,
+  tradeResultOptions,
   tradeStatusOptions,
 } from "../../config";
 import { Input } from "@/components/ui/input";
@@ -18,23 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { useAlert } from "@/components/common/alert";
-
-// 交易结果选项
-const tradeResultOptions = [
-  { label: "盈利", value: "PROFIT" },
-  { label: "亏损", value: "LOSS" },
-  { label: "保本", value: "BREAKEVEN" },
-];
-
-// 计划选项
-const planOptions = [
-  { label: "A计划", value: "A" },
-  { label: "B计划", value: "B" },
-  { label: "C计划", value: "C" },
-];
 
 export interface TradeFormProps {
   editTrade: Trade | null;
@@ -309,6 +299,48 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                       {errors.analysisTime}
                     </p>
                   )}
+                </div>
+                {/* 交易分级 */}
+                <div className="col-span-2">
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    交易分级
+                  </label>
+                  <Select
+                    name="grade"
+                    value={(form.grade as string) ?? ""}
+                    onValueChange={(value) =>
+                      handleFormSelectChange("grade", value)
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tradeGradeOptions.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* 分析是否过期 */}
+                <div className="col-span-2 flex items-center">
+                  <input
+                    id="analysisExpired"
+                    type="checkbox"
+                    className="mr-2"
+                    checked={!!form.analysisExpired}
+                    onChange={(e) =>
+                      handleFormUpdate({ analysisExpired: e.target.checked })
+                    }
+                  />
+                  <label
+                    htmlFor="analysisExpired"
+                    className="text-sm font-medium text-muted-foreground select-none"
+                  >
+                    分析已过期
+                  </label>
                 </div>
                 {/* 交易状态 */}
                 <div className="col-span-2">

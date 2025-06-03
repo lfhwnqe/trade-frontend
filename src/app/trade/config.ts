@@ -1,4 +1,4 @@
-import { DateRange } from 'react-day-picker';
+import { DateRange } from "react-day-picker";
 /**
  * 交易表单枚举/选项配置（与后端 CreateTradeDto 保持同步）
  */
@@ -6,8 +6,8 @@ import { DateRange } from 'react-day-picker';
 export type Option = { label: string; value: string }; // 新增 Option 类型
 
 export enum EntryDirection {
-  多 = '多',
-  空 = '空',
+  多 = "多",
+  空 = "空",
 }
 
 export const entryDirectionOptions: Option[] = [
@@ -17,10 +17,23 @@ export const entryDirectionOptions: Option[] = [
 
 // 市场结构枚举
 export enum MarketStructure {
-  BALANCED = '震荡',
-  IMBALANCED = '趋势',
-  UNSEEN = '暂无法判断',
+  BALANCED = "震荡",
+  IMBALANCED = "趋势",
+  UNSEEN = "暂无法判断",
 }
+// 交易结果选项
+export const tradeResultOptions = [
+  { label: "盈利", value: "PROFIT" },
+  { label: "亏损", value: "LOSS" },
+  { label: "保本", value: "BREAKEVEN" },
+];
+
+// 计划选项
+export const planOptions = [
+  { label: "A计划", value: "A" },
+  { label: "B计划", value: "B" },
+  { label: "C计划", value: "C" },
+];
 
 export const marketStructureOptions = [
   { label: "震荡", value: MarketStructure.BALANCED },
@@ -49,9 +62,9 @@ export interface EntryPlan {
 
 // 交易记录状态枚举
 export enum TradeStatus {
-  ANALYZED = '已分析',
-  ENTERED = '已入场',
-  EXITED = '已离场',
+  ANALYZED = "已分析",
+  ENTERED = "已入场",
+  EXITED = "已离场",
 }
 // 交易状态选项
 export const tradeStatusOptions = [
@@ -117,7 +130,23 @@ export type Trade = {
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
+  // 新增扩展字段
+  grade?: string;
+  analysisExpired?: boolean;
 };
+
+// 交易重要性分级枚举
+export enum TradeGrade {
+  高 = "高",
+  中 = "中",
+  低 = "低",
+}
+// 交易重要性分级选项
+export const tradeGradeOptions = [
+  { label: "高", value: TradeGrade.高 },
+  { label: "中", value: TradeGrade.中 },
+  { label: "低", value: TradeGrade.低 },
+];
 
 export type TradeListResponse = {
   items: Trade[];
@@ -145,11 +174,11 @@ export interface ApiQueryParameters {
   dateFrom?: string; // yyyy-MM-dd format
   dateTo?: string; // yyyy-MM-dd format
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: "ASC" | "DESC";
 }
 
 export interface TradeFieldConfig {
-  key: keyof Omit<Trade, 'transactionId'>;
+  key: keyof Omit<Trade, "transactionId">;
   label: string;
   /**
    * 可以为 boolean 或函数: (status, form) => boolean
@@ -157,5 +186,5 @@ export interface TradeFieldConfig {
    */
   required?: boolean | ((status: string | undefined, form?: Trade) => boolean);
   options?: readonly Option[];
-  type?: 'text' | 'number' | 'date' | 'image-array' | 'plan' | 'checkbox';
+  type?: "text" | "number" | "date" | "image-array" | "plan" | "checkbox";
 }

@@ -127,6 +127,9 @@ export type CreateTradeDto = {
   // ===== 基础字段 =====
   profitLossPercentage?: number;
   riskRewardRatio?: string;
+  // 新增
+  grade?: string;
+  analysisExpired?: boolean;
 };
 
 /**
@@ -178,6 +181,10 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     exitTime: form.exitTime,
     tradeResult: form.tradeResult as TradeResult | undefined,
     followedPlan: form.followedPlan,
+
+    // 新增扩展字段
+    grade: form.grade,
+    analysisExpired: !!form.analysisExpired,
     followedPlanId: form.followedPlanId,
     actualPathImages: asImageArray(form.actualPathImages),
     actualPathAnalysis: form.actualPathAnalysis,
