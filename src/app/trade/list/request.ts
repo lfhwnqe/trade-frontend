@@ -84,6 +84,8 @@ export enum TradeResult {
  * CreateTradeDto 类型，对齐后端 CreateTradeDto （所有字段类型与必选/可选严格一致，见后端 dto 和 entity 注释）
  */
 export type CreateTradeDto = {
+  // ===== 交易类型 =====
+  tradeType: string;
   // ===== 交易状态 =====
   status: TradeStatus;
 
@@ -150,6 +152,8 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
 
   return {
     analysisTime: form.analysisTime,
+    // ===== 交易类型 =====
+    tradeType: form.tradeType!,
     // ===== 交易状态 =====
     status: form.status!,
     // ===== 入场前分析 =====

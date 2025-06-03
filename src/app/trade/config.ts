@@ -21,6 +21,18 @@ export enum MarketStructure {
   IMBALANCED = "趋势",
   UNSEEN = "暂无法判断",
 }
+
+// 交易类型枚举
+export enum TradeType {
+  模拟交易 = "模拟交易",
+  真实交易 = "真实交易",
+}
+
+// 交易类型选项
+export const tradeTypeOptions = [
+  { label: TradeType.模拟交易, value: TradeType.模拟交易 },
+  { label: TradeType.真实交易, value: TradeType.真实交易 },
+];
 // 交易结果选项
 export const tradeResultOptions = [
   { label: "盈利", value: "PROFIT" },
@@ -47,6 +59,7 @@ export const marketStructureOptions = [
 export const tradeFieldConfigs = {
   entryDirection: entryDirectionOptions,
   marketStructure: marketStructureOptions,
+  tradeType: tradeTypeOptions,
 };
 
 export interface ImageResource {
@@ -79,6 +92,7 @@ export type Trade = {
   analysisTime?: string;
   transactionId?: string;
   // 状态与基础分析
+  tradeType?: TradeType; // 新增字段：交易类型
   status?: TradeStatus;
   dateTimeRange?: string;
   marketStructure?: MarketStructure;

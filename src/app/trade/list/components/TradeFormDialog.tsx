@@ -12,6 +12,7 @@ import {
   tradeGradeOptions,
   tradeResultOptions,
   tradeStatusOptions,
+  tradeTypeOptions,
 } from "../../config";
 import { Input } from "@/components/ui/input";
 import {
@@ -158,6 +159,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         newErrors.analysisTime = "行情分析时间为必填项";
       }
 
+      if (!form.tradeType) {
+        newErrors.tradeType = "交易类型为必填项";
+      }
+
       if (!form.status) {
         newErrors.status = "交易状态为必填项";
       }
@@ -297,6 +302,39 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   {errors.analysisTime && (
                     <p className="text-sm text-destructive mt-1">
                       {errors.analysisTime}
+                    </p>
+                  )}
+                </div>
+                {/* 交易类型 */}
+                <div className="col-span-2">
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    交易类型<span className="ml-0.5 text-destructive">*</span>:
+                  </label>
+                  <Select
+                    name="tradeType"
+                    value={form.tradeType ?? ""}
+                    onValueChange={(value) =>
+                      handleFormSelectChange("tradeType", value)
+                    }
+                  >
+                    <SelectTrigger
+                      className={`w-full ${
+                        errors.tradeType ? "border-destructive" : ""
+                      }`}
+                    >
+                      <SelectValue placeholder="请选择交易类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tradeTypeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.tradeType && (
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.tradeType}
                     </p>
                   )}
                 </div>
