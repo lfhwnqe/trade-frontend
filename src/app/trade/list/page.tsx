@@ -227,7 +227,7 @@ export default function TradeListPage() {
         onQueryFormChange={(newQueryForm) => {
           updateQueryForm(newQueryForm);
           updatePagination(1, pagination.pageSize);
-          fetchAll(1, pagination.pageSize, newQueryForm, sorting);
+          // fetchAll(1, pagination.pageSize, newQueryForm, sorting);
         }}
         onSubmit={(e) => {
           e.preventDefault();
