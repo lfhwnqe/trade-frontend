@@ -60,27 +60,30 @@ function EntryPlanForm({
   return (
     <div className="space-y-2">
       <div className="flex flex-col gap-1">
-        <label className="text-sm">入场理由</label>
-        <Input
+        <label className="block pb-1 text-sm font-medium text-muted-foreground">入场理由</label>
+        <Textarea
           value={value?.entryReason ?? ""}
           onChange={(e) => onChange({ ...value, entryReason: e.target.value })}
           placeholder="请输入入场理由"
+          className="min-h-[80px]"
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-sm">入场信号</label>
-        <Input
+        <label className="block pb-1 text-sm font-medium text-muted-foreground">入场信号</label>
+        <Textarea
           value={value?.entrySignal ?? ""}
           onChange={(e) => onChange({ ...value, entrySignal: e.target.value })}
           placeholder="请输入入场信号"
+          className="min-h-[80px]"
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-sm">退出信号</label>
-        <Input
+        <label className="block pb-1 text-sm font-medium text-muted-foreground">退出信号</label>
+        <Textarea
           value={value?.exitSignal ?? ""}
           onChange={(e) => onChange({ ...value, exitSignal: e.target.value })}
           placeholder="请输入退出信号"
+          className="min-h-[80px]"
         />
       </div>
     </div>
@@ -158,7 +161,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       if (!form.analysisTime) {
         newErrors.analysisTime = "行情分析时间为必填项";
       }
-      
+
       if (!form.tradeSubject) {
         newErrors.tradeType = "交易标的为必填项";
       }
@@ -577,7 +580,9 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
                 {/* 入场计划A */}
                 <div>
-                  <div className="font-medium mb-2">A 计划</div>
+                  <div className="font-semibold text-base mb-2 text-muted-foreground">
+                    A 计划
+                  </div>
                   <EntryPlanForm
                     value={form.entryPlanA as EntryPlan}
                     onChange={(v) => handlePlanChange("entryPlanA", v)}
@@ -585,7 +590,9 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 </div>
                 {/* 入场计划B */}
                 <div>
-                  <div className="font-medium mb-2">B 计划</div>
+                  <div className="font-semibold text-base mb-2 text-muted-foreground">
+                    B 计划
+                  </div>
                   <EntryPlanForm
                     value={form.entryPlanB as EntryPlan}
                     onChange={(v) => handlePlanChange("entryPlanB", v)}
@@ -593,7 +600,9 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 </div>
                 {/* 入场计划C */}
                 <div>
-                  <div className="font-medium mb-2">C 计划</div>
+                  <div className="font-semibold text-base mb-2 text-muted-foreground">
+                    C 计划
+                  </div>
                   <EntryPlanForm
                     value={form.entryPlanC as EntryPlan}
                     onChange={(v) => handlePlanChange("entryPlanC", v)}
