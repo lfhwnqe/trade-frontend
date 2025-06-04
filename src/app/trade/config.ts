@@ -20,6 +20,8 @@ export enum MarketStructure {
   BALANCED = "震荡",
   IMBALANCED = "趋势",
   UNSEEN = "暂无法判断",
+  STOP = "停止",
+  TRANSITION = "转换",
 }
 
 // 交易类型枚举
@@ -50,6 +52,9 @@ export const planOptions = [
 export const marketStructureOptions = [
   { label: "震荡", value: MarketStructure.BALANCED },
   { label: "趋势", value: MarketStructure.IMBALANCED },
+  { label: MarketStructure.STOP, value: MarketStructure.STOP },
+  { label: MarketStructure.TRANSITION, value: MarketStructure.TRANSITION },
+
   { label: "暂无法判断", value: MarketStructure.UNSEEN },
 ];
 
