@@ -122,27 +122,29 @@ export default function TradeListPage() {
             行情分析时间 <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => row.original.analysisTime ?? "-",
+        cell: ({ row }) => (
+          <div className="min-w-[140px]">{row.original.analysisTime ?? "-"}</div>
+        ),
       },
       {
         accessorKey: "tradeType",
         header: "交易类型",
         cell: ({ row }) => (
-          <div className="capitalize">{row.original.tradeType ?? "-"}</div>
+          <div className="capitalize min-w-[80px]">{row.original.tradeType ?? "-"}</div>
         ),
       },
       {
         accessorKey: "grade",
         header: "交易分级",
         cell: ({ row }) => (
-          <div className="capitalize">{row.original.grade ?? "-"}</div>
+          <div className="capitalize min-w-[80px]">{row.original.grade ?? "-"}</div>
         ),
       },
       {
         accessorKey: "marketStructure",
         header: "结构",
         cell: ({ row }) => (
-          <div className="capitalize">
+          <div className="capitalize min-w-[60px]">
             {row.original.marketStructure ?? "-"}
           </div>
         ),
@@ -151,23 +153,14 @@ export default function TradeListPage() {
         accessorKey: "status",
         header: "信号",
         cell: ({ row }) => (
-          <div className="capitalize">{row.original.status ?? "-"}</div>
+          <div className="capitalize min-w-[60px]">{row.original.status ?? "-"}</div>
         ),
       },
       {
         accessorKey: "entryDirection",
-        header: "方向",
+        header: "入场方向",
         cell: ({ row }) => (
-          <div className="capitalize">{row.original.entryDirection ?? "-"}</div>
-        ),
-      },
-      {
-        accessorKey: "entry",
-        header: () => <div className="text-right">入场方向</div>,
-        cell: ({ row }) => (
-          <div className="text-right font-medium">
-            {row.original.entryDirection?.toString() ?? "-"}
-          </div>
+          <div className="capitalize min-w-[80px]">{row.original.entryDirection ?? "-"}</div>
         ),
       },
       {
@@ -179,7 +172,7 @@ export default function TradeListPage() {
             value !== undefined && value !== null && value !== ""
               ? `${value}%`
               : "-";
-          return <div className="text-right font-medium">{formatted}</div>;
+          return <div className="text-right font-medium min-w-[80px]">{formatted}</div>;
         },
       },
       {
@@ -188,7 +181,7 @@ export default function TradeListPage() {
         cell: ({ row }) => {
           const trade = row.original;
           return (
-            <div className="flex space-x-2 justify-center">
+            <div className="flex space-x-2 justify-center min-w-[200px]">
               <Button
                 variant="outline"
                 size="sm"
@@ -215,6 +208,9 @@ export default function TradeListPage() {
             </div>
           );
         },
+        enableSorting: false,
+        enableHiding: false,
+        size: 200, // 固定操作列宽度
       },
     ],
     []

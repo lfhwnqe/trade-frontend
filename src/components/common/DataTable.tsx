@@ -152,16 +152,16 @@ export function DataTable<TData, TValue>({
 
       {/* Table Container - 可滚动区域 */}
       <div className="flex-1 min-h-0">
-        <div className={`rounded-md border relative h-full flex flex-col ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-          {/* 表格头部 - 固定 */}
-          <div className="flex-shrink-0">
-            <Table>
+        <div className={`rounded-md border relative h-full ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+          {/* 横向和纵向都可滚动的表格容器 */}
+          <div className="overflow-auto h-full">
+            <Table className="min-w-max">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
                       return (
-                        <TableHead key={header.id}>
+                        <TableHead key={header.id} className="whitespace-nowrap">
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -174,12 +174,6 @@ export function DataTable<TData, TValue>({
                   </TableRow>
                 ))}
               </TableHeader>
-            </Table>
-          </div>
-
-          {/* 表格内容 - 可滚动 */}
-          <div className="flex-1 overflow-auto">
-            <Table>
               <TableBody>
                 {loading && table.getRowModel().rows?.length === 0 ? (
                   <TableRow>
@@ -200,7 +194,7 @@ export function DataTable<TData, TValue>({
                       data-state={row.getIsSelected() && 'selected'}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
+                        <TableCell key={cell.id} className="whitespace-nowrap">
                           {flexRender(
                             cell.column.columnDef.cell,
                             cell.getContext()
