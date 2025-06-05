@@ -259,8 +259,9 @@ export default function TradeListPage() {
   };
 
   return (
-    <div className="p-4 flex-1">
-      <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col h-full p-4">
+      {/* 页面标题 */}
+      <div className="flex justify-between items-center mb-4 flex-shrink-0">
         <h1 className="text-2xl font-bold">交易列表</h1>
         <Button
           onClick={() => {
@@ -271,48 +272,54 @@ export default function TradeListPage() {
         </Button>
       </div>
 
-      <TradeQueryForm
-        queryForm={queryForm}
-        onQueryFormChange={(newQueryForm) => {
-          updateQueryForm(newQueryForm);
-          updatePagination(1, pagination.pageSize);
-          // fetchAll(1, pagination.pageSize, newQueryForm, sorting);
-        }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          fetchAll(1, pagination.pageSize, queryForm, sorting);
-        }}
-        onReset={() => {
-          updateQueryForm({});
-          updatePagination(1, pagination.pageSize);
-          updateSorting([]);
-          fetchAll(1, pagination.pageSize, {}, []);
-        }}
-      />
+      {/* 查询表单 */}
+      <div className="flex-shrink-0">
+        <TradeQueryForm
+          queryForm={queryForm}
+          onQueryFormChange={(newQueryForm) => {
+            updateQueryForm(newQueryForm);
+            updatePagination(1, pagination.pageSize);
+            fetchAll(1, pagination.pageSize, newQueryForm, sorting);
+          }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            fetchAll(1, pagination.pageSize, queryForm, sorting);
+          }}
+          onReset={() => {
+            updateQueryForm({});
+            updatePagination(1, pagination.pageSize);
+            updateSorting([]);
+            fetchAll(1, pagination.pageSize, {}, []);
+          }}
+        />
+      </div>
 
-      <DataTable<Trade, unknown>
-        columns={columns as ColumnDef<Trade, unknown>[]}
-        data={trades}
-        sorting={sorting}
-        columnVisibility={columnVisibility}
-        rowSelection={rowSelection}
-        loading={loading}
-        page={pagination.page}
-        pageSize={pagination.pageSize}
-        totalItems={pagination.total}
-        totalPages={pagination.totalPages}
-        onPageChange={(page, pageSize) => updatePagination(page, pageSize)}
-        onPageSizeChange={(page, pageSize) => updatePagination(page, pageSize)}
-        onSortingChange={(newSorting) =>
-          updateSorting(newSorting as SortingState)
-        }
-        onColumnVisibilityChange={(newVisibility) =>
-          updateColumnVisibility(newVisibility as VisibilityState)
-        }
-        onRowSelectionChange={(newSelection) =>
-          updateRowSelection(newSelection as RowSelectionState)
-        }
-      />
+      {/* 表格容器 - 可滚动区域 */}
+      <div className="flex-1 min-h-0">
+        <DataTable<Trade, unknown>
+          columns={columns as ColumnDef<Trade, unknown>[]}
+          data={trades}
+          sorting={sorting}
+          columnVisibility={columnVisibility}
+          rowSelection={rowSelection}
+          loading={loading}
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalItems={pagination.total}
+          totalPages={pagination.totalPages}
+          onPageChange={(page, pageSize) => updatePagination(page, pageSize)}
+          onPageSizeChange={(page, pageSize) => updatePagination(page, pageSize)}
+          onSortingChange={(newSorting) =>
+            updateSorting(newSorting as SortingState)
+          }
+          onColumnVisibilityChange={(newVisibility) =>
+            updateColumnVisibility(newVisibility as VisibilityState)
+          }
+          onRowSelectionChange={(newSelection) =>
+            updateRowSelection(newSelection as RowSelectionState)
+          }
+        />
+      </div>
 
       {dialog.open && (
         <TradeFormDialog

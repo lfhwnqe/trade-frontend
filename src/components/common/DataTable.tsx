@@ -115,14 +115,12 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    // enableRowSelection: true, // enable if you want row selection checkboxes by default for all rows
-    // getRowId: (row) => (row as any).id, // Adjust if your data has a unique ID other than 'id'
   });
 
   return (
-    <div>
-      {/* Toolbar Slot & Column Visibility */} 
-      <div className="flex items-center py-4">
+    <div className="flex flex-col h-full">
+      {/* Toolbar Slot & Column Visibility */}
+      <div className="flex items-center py-4 flex-shrink-0">
         {toolbarSlot}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -144,7 +142,6 @@ export function DataTable<TData, TValue>({
                       column.toggleVisibility(!!value)
                     }
                   >
-                    {/* You might want a more sophisticated way to get display names */} 
                     {typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}
                   </DropdownMenuCheckboxItem>
                 );
@@ -153,82 +150,93 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
 
-      {/* Table */}
-      <div className={`rounded-md border relative ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {loading && table.getRowModel().rows?.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    <span>加载中...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        
-        {/* Loading overlay for existing data */}
-        {loading && table.getRowModel().rows?.length > 0 && (
-          <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-            <div className="flex items-center space-x-2 bg-background px-4 py-2 rounded-md shadow-md">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              <span className="text-sm">正在加载...</span>
-            </div>
+      {/* Table Container - 可滚动区域 */}
+      <div className="flex-1 min-h-0">
+        <div className={`rounded-md border relative h-full flex flex-col ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+          {/* 表格头部 - 固定 */}
+          <div className="flex-shrink-0">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+            </Table>
           </div>
-        )}
+
+          {/* 表格内容 - 可滚动 */}
+          <div className="flex-1 overflow-auto">
+            <Table>
+              <TableBody>
+                {loading && table.getRowModel().rows?.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <span>加载中...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && 'selected'}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      暂无数据
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Loading overlay for existing data */}
+          {loading && table.getRowModel().rows?.length > 0 && (
+            <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+              <div className="flex items-center space-x-2 bg-background px-4 py-2 rounded-md shadow-md">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <span className="text-sm">正在加载...</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Pagination Controls */} 
-      <div className="flex items-center justify-between space-x-2 py-4">
+      {/* Pagination Controls - 固定在底部 */}
+      <div className="flex items-center justify-between space-x-2 py-4 flex-shrink-0 border-t bg-background">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} /{" "}
           {table.getFilteredRowModel().rows.length} 行已选择。
@@ -268,7 +276,7 @@ export function DataTable<TData, TValue>({
             disabled={loading}
             onChange={(e) => {
               const newSize = Number(e.target.value);
-              onPageSizeChange(1, newSize); // 改变每页大小时回到第一页
+              onPageSizeChange(1, newSize);
             }}
           >
             {[10, 20, 50, 100].map((sz) => (
