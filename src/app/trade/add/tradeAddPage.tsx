@@ -209,7 +209,7 @@ export default function TradeAddPage({
             </div>
           )}
         </div>
-        <div className="mt-4 flex justify-end">
+        <div className="pt-4 flex justify-end shadow-gray-400 shadow-2xl">
           <LoadingButton
             loading={loading}
             editTrade={form}
