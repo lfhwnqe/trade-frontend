@@ -36,20 +36,7 @@ const tradeItems = [
   },
 ];
 
-const simulationItems = [
-  {
-    title: "首页",
-    url: "/simulation/home",
-    icon: Home,
-  },
-  {
-    title: "交易记录",
-    url: "/simulation/list",
-    icon: Inbox,
-  },
-];
-
-export function AppSidebar({ menuType }: { menuType: "trade" | "simulation" }) {
+export function AppSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -89,7 +76,7 @@ export function AppSidebar({ menuType }: { menuType: "trade" | "simulation" }) {
           <SidebarGroupLabel>交易系统</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {(menuType === "trade" ? tradeItems : simulationItems).map(
+              {tradeItems.map(
                 (item) => (
                   <SidebarMenuItem key={item.title}>
                     {/* 重点：将 isActive 属性传给 SidebarMenuButton */}
