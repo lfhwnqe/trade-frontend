@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { CalendarIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { CalendarIcon, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -57,10 +57,10 @@ export default function TradeQueryForm({
     // 重置所有查询条件
     onQueryFormChange({
       dateTimeRange: undefined,
-      marketStructure: 'all',
-      entryDirection: 'all',
-      tradeStatus: 'all',
-      tradeResult: 'all',
+      marketStructure: "all",
+      entryDirection: "all",
+      tradeStatus: "all",
+      tradeResult: "all",
     });
     // 调用外部重置函数
     onReset();
@@ -112,9 +112,12 @@ export default function TradeQueryForm({
                     if (range?.from && !range.to) {
                       const completeRange = {
                         from: range.from,
-                        to: range.from
+                        to: range.from,
                       };
-                      onQueryFormChange({ ...queryForm, dateTimeRange: completeRange });
+                      onQueryFormChange({
+                        ...queryForm,
+                        dateTimeRange: completeRange,
+                      });
                     } else {
                       onQueryFormChange({ ...queryForm, dateTimeRange: range });
                     }
@@ -293,10 +296,12 @@ export default function TradeQueryForm({
               "transform hover:scale-105"
             )}
           >
-            <div className={cn(
-              "transition-transform duration-300",
-              isExpanded ? "rotate-180" : "rotate-0"
-            )}>
+            <div
+              className={cn(
+                "transition-transform duration-300",
+                isExpanded ? "rotate-180" : "rotate-0"
+              )}
+            >
               <ChevronDown className="h-4 w-4" />
             </div>
             {isExpanded ? "收起高级查询" : "展开高级查询"}
@@ -304,8 +309,8 @@ export default function TradeQueryForm({
 
           {/* 右侧：查询和重置按钮 */}
           <div className="flex gap-2">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-16 h-8 font-medium text-sm hover:scale-105 transition-transform duration-200"
               size="sm"
             >
