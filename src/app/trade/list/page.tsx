@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createTrade, updateTrade, deleteTrade, toDto } from "./request";
+import { createTrade, updateTrade, deleteTrade, copyTrade, toDto } from "./request";
 import {
   ColumnDef,
   SortingState,
@@ -31,7 +31,7 @@ import { useAlert } from "@/components/common/alert";
 
 export default function TradeListPage() {
   const router = useRouter();
-  const [success, errorAlert] = useAlert()
+  const [success, errorAlert] = useAlert();
 
   // 使用自定义 hook 管理状态和操作
   const {
@@ -53,6 +53,34 @@ export default function TradeListPage() {
     updateForm,
     setDeleteId,
   } = useTradeList();
+
+  // 复制交易记录相关状态
+  const [copyId, setCopyId] = useState<string | null>(null);
+  const [copyLoading, setCopyLoading] = useState(false);
+
+  // 处理复制交易记录
+  const handleCopy = async () => {
+    if (!copyId) return;
+    
+    try {
+      setCopyLoading(true);
+      const result = await copyTrade(copyId);
+      success('复制成功');
+      // 关闭对话框
+      setCopyId(null);
+      // 刷新列表
+      fetchAll();
+    } catch (error) {
+      console.error('复制交易记录失败:', error);
+      errorAlert(
+        isErrorWithMessage(error)
+          ? error.message
+          : '复制交易记录失败'
+      );
+    } finally {
+      setCopyLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchAll(); // 页面加载时获取数据
@@ -100,18 +128,14 @@ export default function TradeListPage() {
         accessorKey: "tradeType",
         header: "交易类型",
         cell: ({ row }) => (
-          <div className="capitalize">
-            {row.original.tradeType ?? "-"}
-          </div>
+          <div className="capitalize">{row.original.tradeType ?? "-"}</div>
         ),
       },
       {
         accessorKey: "grade",
         header: "交易分级",
         cell: ({ row }) => (
-          <div className="capitalize">
-            {row.original.grade ?? "-"}
-          </div>
+          <div className="capitalize">{row.original.grade ?? "-"}</div>
         ),
       },
       {
@@ -173,6 +197,13 @@ export default function TradeListPage() {
                 }}
               >
                 编辑
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCopyId(trade.transactionId || null)}
+              >
+                复制
               </Button>
               <Button
                 variant="destructive"
@@ -332,6 +363,30 @@ export default function TradeListPage() {
               </Button>
               <Button variant="destructive" onClick={handleDelete}>
                 删除
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {copyId && (
+        <Dialog
+          open={!!copyId}
+          onOpenChange={(open) => !open && setCopyId(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>确认复制</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              确定要复制这条交易记录吗？将创建一个新的交易记录，并将分析已过期字段设置为未过期。
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCopyId(null)} disabled={copyLoading}>
+                取消
+              </Button>
+              <Button onClick={handleCopy} disabled={copyLoading}>
+                {copyLoading ? '复制中...' : '确认复制'}
               </Button>
             </DialogFooter>
           </DialogContent>

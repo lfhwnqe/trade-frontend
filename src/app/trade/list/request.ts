@@ -266,6 +266,28 @@ export async function deleteTrade(id: string) {
 }
 
 /**
+ * 复制交易记录
+ * @param id 要复制的交易ID
+ * @returns 复制后的新交易记录
+ */
+export async function copyTrade(id: string) {
+  const proxyParams = {
+    targetPath: `trade/${id}/copy`,
+    actualMethod: "POST",
+  };
+  const actualBody = {};
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody,
+  });
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.message || "复制失败");
+  return resData;
+}
+
+/**
  * 获取图片上传URL
  * @param params 上传参数
  * @returns 上传URL和文件键值
