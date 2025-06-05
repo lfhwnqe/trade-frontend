@@ -1,6 +1,6 @@
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { tradeListAtom, processQueryParams } from "./atom";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { fetchTrades } from "./request";
 import { isErrorWithMessage } from "@/utils";
 import { Trade, TradeQuery } from "../config";
@@ -19,6 +19,9 @@ export function useTradeList() {
   const [state, setState, resetState] = useAtomImmer(tradeListAtom);
   const [errorAlert] = useAlert();
 
+  // 节流控制
+  const throttleRef = useRef<NodeJS.Timeout | null>(null);
+
   // 获取所有交易数据
   const fetchAll = useCallback(
     async (
@@ -27,42 +30,51 @@ export function useTradeList() {
       _query = state.queryForm,
       _sorting = state.sorting
     ) => {
+      // 清除之前的定时器
+      if (throttleRef.current) {
+        clearTimeout(throttleRef.current);
+      }
+
+      // 立即设置loading状态
       setState((draft) => {
         draft.loading = true;
       });
 
-      try {
-        const processedQuery = processQueryParams(_query, _sorting);
+      // 节流执行请求
+      throttleRef.current = setTimeout(async () => {
+        try {
+          const processedQuery = processQueryParams(_query, _sorting);
 
-        const res = await fetchTrades({
-          page: _page,
-          pageSize: _pageSize,
-          query: processedQuery,
-        });
+          const res = await fetchTrades({
+            page: _page,
+            pageSize: _pageSize,
+            query: processedQuery,
+          });
 
-        setState((draft) => {
-          draft.trades = res.items;
-          draft.pagination.total = res.total;
-          draft.pagination.page = res.page; // API 可以返回当前页
-          draft.pagination.pageSize = res.pageSize; // API 可以返回当前页大小
-          draft.pagination.totalPages = res.totalPages;
-          draft.loading = false;
-        });
-      } catch (err) {
-        if (isErrorWithMessage(err)) {
-          errorAlert("获取列表失败: " + err.message);
-        } else {
-          errorAlert("获取列表失败: 系统错误");
+          setState((draft) => {
+            draft.trades = res.items;
+            draft.pagination.total = res.total;
+            draft.pagination.page = res.page; // API 可以返回当前页
+            draft.pagination.pageSize = res.pageSize; // API 可以返回当前页大小
+            draft.pagination.totalPages = res.totalPages;
+            draft.loading = false;
+          });
+        } catch (err) {
+          if (isErrorWithMessage(err)) {
+            errorAlert("获取列表失败: " + err.message);
+          } else {
+            errorAlert("获取列表失败: 系统错误");
+          }
+
+          // 重置到空状态
+          setState((draft) => {
+            draft.trades = [];
+            draft.pagination.total = 0;
+            draft.pagination.totalPages = 1;
+            draft.loading = false;
+          });
         }
-
-        // 重置到空状态
-        setState((draft) => {
-          draft.trades = [];
-          draft.pagination.total = 0;
-          draft.pagination.totalPages = 1;
-          draft.loading = false;
-        });
-      }
+      }, 300); // 300ms 节流
     },
     [
       setState,
@@ -114,15 +126,20 @@ export function useTradeList() {
     [setState]
   );
 
-  // 更新分页
+  // 更新分页并触发数据获取
   const updatePagination = useCallback(
     (page?: number, pageSize?: number) => {
       setState((draft) => {
         if (page !== undefined) draft.pagination.page = page;
         if (pageSize !== undefined) draft.pagination.pageSize = pageSize;
       });
+      
+      // 立即触发数据获取
+      const newPage = page !== undefined ? page : state.pagination.page;
+      const newPageSize = pageSize !== undefined ? pageSize : state.pagination.pageSize;
+      fetchAll(newPage, newPageSize, state.queryForm, state.sorting);
     },
-    [setState]
+    [setState, state.pagination.page, state.pagination.pageSize, state.queryForm, state.sorting, fetchAll]
   );
 
   // 打开编辑对话框

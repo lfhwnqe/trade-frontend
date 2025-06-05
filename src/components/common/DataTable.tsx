@@ -40,8 +40,8 @@ interface DataTableProps<TData, TValue> {
   totalPages: number;
 
   // Callbacks to parent to update state and re-fetch
-  onPageChange: (page: number) => void; // Expects 1-indexed page
-  onPageSizeChange: (pageSize: number) => void;
+  onPageChange: (page: number, pageSize?: number) => void; // Expects 1-indexed page
+  onPageSizeChange: (page: number, pageSize: number) => void;
 
   // Sorting state and callback
   sorting: SortingState;
@@ -101,11 +101,15 @@ export function DataTable<TData, TValue>({
           pageIndex: page - 1,
           pageSize,
         });
-        onPageChange(newState.pageIndex + 1);
-        onPageSizeChange(newState.pageSize);
+        onPageChange(newState.pageIndex + 1, newState.pageSize);
+        if (newState.pageSize !== pageSize) {
+          onPageSizeChange(1, newState.pageSize); // 改变每页大小时回到第一页
+        }
       } else {
-        onPageChange(updater.pageIndex + 1);
-        onPageSizeChange(updater.pageSize);
+        onPageChange(updater.pageIndex + 1, updater.pageSize);
+        if (updater.pageSize !== pageSize) {
+          onPageSizeChange(1, updater.pageSize); // 改变每页大小时回到第一页
+        }
       }
     },
     getCoreRowModel: getCoreRowModel(),
@@ -149,8 +153,8 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
 
-      {/* Table */} 
-      <div className="rounded-md border">
+      {/* Table */}
+      <div className={`rounded-md border relative ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -171,7 +175,19 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading && table.getRowModel().rows?.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <span>加载中...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
@@ -193,12 +209,22 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  {loading ? "加载中..." : "暂无数据"}
+                  暂无数据
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        
+        {/* Loading overlay for existing data */}
+        {loading && table.getRowModel().rows?.length > 0 && (
+          <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+            <div className="flex items-center space-x-2 bg-background px-4 py-2 rounded-md shadow-md">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <span className="text-sm">正在加载...</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pagination Controls */} 
@@ -212,8 +238,12 @@ export function DataTable<TData, TValue>({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => {
+              if (page > 1) {
+                onPageChange(page - 1, pageSize);
+              }
+            }}
+            disabled={page <= 1 || loading}
           >
             上一页
           </Button>
@@ -223,18 +253,22 @@ export function DataTable<TData, TValue>({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() => {
+              if (page < totalPages) {
+                onPageChange(page + 1, pageSize);
+              }
+            }}
+            disabled={page >= totalPages || loading}
           >
             下一页
           </Button>
           <select
-            className="border p-1 rounded ml-2 text-sm"
+            className="border p-1 rounded ml-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             value={pageSize}
+            disabled={loading}
             onChange={(e) => {
               const newSize = Number(e.target.value);
-              onPageSizeChange(newSize); // Callback to parent
-              table.setPageSize(newSize); // Update table instance
+              onPageSizeChange(1, newSize); // 改变每页大小时回到第一页
             }}
           >
             {[10, 20, 50, 100].map((sz) => (

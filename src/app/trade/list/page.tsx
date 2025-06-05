@@ -64,7 +64,7 @@ export default function TradeListPage() {
     
     try {
       setCopyLoading(true);
-      const result = await copyTrade(copyId);
+      await copyTrade(copyId);
       success('复制成功');
       // 关闭对话框
       setCopyId(null);
@@ -301,8 +301,8 @@ export default function TradeListPage() {
         pageSize={pagination.pageSize}
         totalItems={pagination.total}
         totalPages={pagination.totalPages}
-        onPageChange={updatePagination}
-        onPageSizeChange={updatePagination}
+        onPageChange={(page, pageSize) => updatePagination(page, pageSize)}
+        onPageSizeChange={(page, pageSize) => updatePagination(page, pageSize)}
         onSortingChange={(newSorting) =>
           updateSorting(newSorting as SortingState)
         }
