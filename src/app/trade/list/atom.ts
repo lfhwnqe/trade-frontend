@@ -1,5 +1,5 @@
 import { createImmerAtom } from '@/hooks/useAtomImmer';
-import { SortingState, VisibilityState, RowSelectionState } from '@tanstack/react-table';
+import { SortingState, RowSelectionState } from '@tanstack/react-table';
 import { Trade, TradeQuery, ApiQueryParameters } from '../config';
 import { format } from 'date-fns';
 
@@ -18,7 +18,6 @@ interface TradeListState {
   pagination: PaginationState;
   queryForm: TradeQuery;
   sorting: SortingState;
-  columnVisibility: VisibilityState;
   rowSelection: RowSelectionState;
   dialog: {
     open: boolean;
@@ -40,7 +39,6 @@ const initialState: TradeListState = {
   },
   queryForm: {},
   sorting: [],
-  columnVisibility: {},
   rowSelection: {},
   dialog: {
     open: false,

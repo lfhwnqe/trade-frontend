@@ -7,7 +7,6 @@ import { createTrade, updateTrade, deleteTrade, copyTrade, toDto } from "./reque
 import {
   ColumnDef,
   SortingState,
-  VisibilityState,
   RowSelectionState,
 } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
@@ -40,13 +39,11 @@ export default function TradeListPage() {
     pagination,
     queryForm,
     sorting,
-    columnVisibility,
     rowSelection,
     dialog,
     fetchAll,
     updateQueryForm,
     updateSorting,
-    updateColumnVisibility,
     updateRowSelection,
     updatePagination,
     closeDialog,
@@ -112,68 +109,196 @@ export default function TradeListPage() {
         enableSorting: false,
         enableHiding: false,
       },
+      // 最高优先级：盈亏结果
       {
-        accessorKey: "dateTimeRange",
+        accessorKey: "profitLossPercentage",
         header: ({ column }) => (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            行情分析时间 <ArrowUpDown className="ml-2 h-4 w-4" />
+            盈亏% <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
-        cell: ({ row }) => (
-          <div className="min-w-[140px]">{row.original.analysisTime ?? "-"}</div>
-        ),
-      },
-      {
-        accessorKey: "tradeType",
-        header: "交易类型",
-        cell: ({ row }) => (
-          <div className="capitalize min-w-[80px]">{row.original.tradeType ?? "-"}</div>
-        ),
-      },
-      {
-        accessorKey: "grade",
-        header: "交易分级",
-        cell: ({ row }) => (
-          <div className="capitalize min-w-[80px]">{row.original.grade ?? "-"}</div>
-        ),
-      },
-      {
-        accessorKey: "marketStructure",
-        header: "结构",
-        cell: ({ row }) => (
-          <div className="capitalize min-w-[60px]">
-            {row.original.marketStructure ?? "-"}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "status",
-        header: "信号",
-        cell: ({ row }) => (
-          <div className="capitalize min-w-[60px]">{row.original.status ?? "-"}</div>
-        ),
-      },
-      {
-        accessorKey: "entryDirection",
-        header: "入场方向",
-        cell: ({ row }) => (
-          <div className="capitalize min-w-[80px]">{row.original.entryDirection ?? "-"}</div>
-        ),
-      },
-      {
-        accessorKey: "profitLossPercentage",
-        header: () => <div className="text-right">盈亏%</div>,
         cell: ({ row }) => {
           const value = row.original.profitLossPercentage;
           const formatted =
             value !== undefined && value !== null && value !== ""
               ? `${value}%`
               : "-";
-          return <div className="text-right font-medium min-w-[80px]">{formatted}</div>;
+          const isProfit = value && parseFloat(value) > 0;
+          const isLoss = value && parseFloat(value) < 0;
+          return (
+            <div className={`text-right font-bold min-w-[80px] ${
+              isProfit ? 'text-green-600 dark:text-green-400' :
+              isLoss ? 'text-red-600 dark:text-red-400' :
+              'text-gray-500 dark:text-gray-400'
+            }`}>
+              {formatted}
+            </div>
+          );
         },
+        enableHiding: true,
+      },
+      // 高优先级：交易状态
+      {
+        accessorKey: "status",
+        header: "交易状态",
+        cell: ({ row }) => {
+          const status = row.original.status;
+          const getStatusColor = (status: string) => {
+            switch (status) {
+              case "已分析": return "bg-blue-100 text-blue-800";
+              case "已入场": return "bg-yellow-100 text-yellow-800";
+              case "已离场": return "bg-green-100 text-green-800";
+              default: return "bg-gray-100 text-gray-800";
+            }
+          };
+          return (
+            <div className="min-w-[80px]">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status || "")}`}>
+                {status ?? "-"}
+              </span>
+            </div>
+          );
+        },
+        enableHiding: true,
+      },
+      // 高优先级：交易分级
+      {
+        accessorKey: "grade",
+        header: "分级",
+        cell: ({ row }) => {
+          const grade = row.original.grade;
+          const getGradeColor = (grade: string) => {
+            switch (grade) {
+              case "高": return "bg-red-100 text-red-800 border-red-200";
+              case "中": return "bg-orange-100 text-orange-800 border-orange-200";
+              case "低": return "bg-gray-100 text-gray-800 border-gray-200";
+              default: return "bg-gray-100 text-gray-800 border-gray-200";
+            }
+          };
+          return (
+            <div className="min-w-[60px]">
+              <span className={`px-2 py-1 rounded border text-xs font-medium ${getGradeColor(grade || "")}`}>
+                {grade ?? "-"}
+              </span>
+            </div>
+          );
+        },
+        enableHiding: true,
+      },
+      // 高优先级：入场方向
+      {
+        accessorKey: "entryDirection",
+        header: "方向",
+        cell: ({ row }) => {
+          const direction = row.original.entryDirection;
+          const isLong = direction === "多";
+          return (
+            <div className="min-w-[60px]">
+              <span className={`px-2 py-1 rounded text-xs font-bold ${
+                isLong ? 'bg-green-100 text-green-800' :
+                direction === "空" ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {direction ?? "-"}
+              </span>
+            </div>
+          );
+        },
+        enableHiding: true,
+      },
+      // 中优先级：交易主题
+      {
+        accessorKey: "tradeSubject",
+        header: "交易主题",
+        cell: ({ row }) => (
+          <div className="min-w-[120px] max-w-[200px] truncate" title={row.original.tradeSubject}>
+            {row.original.tradeSubject ?? "-"}
+          </div>
+        ),
+        enableHiding: true,
+      },
+      // 中优先级：分析时间
+      {
+        accessorKey: "analysisTime",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            分析时间 <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const time = row.original.analysisTime;
+          return (
+            <div className="min-w-[100px] text-sm">
+              {time ? time.split(' ')[0] : "-"}
+            </div>
+          );
+        },
+        enableHiding: true,
+      },
+      // 中优先级：入场时间
+      {
+        accessorKey: "entryTime",
+        header: "入场时间",
+        cell: ({ row }) => {
+          const time = row.original.entryTime;
+          return (
+            <div className="min-w-[100px] text-sm">
+              {time ? time.split(' ')[0] : "-"}
+            </div>
+          );
+        },
+        enableHiding: true,
+      },
+      // 中优先级：离场时间
+      {
+        accessorKey: "exitTime",
+        header: "离场时间",
+        cell: ({ row }) => {
+          const time = row.original.exitTime;
+          return (
+            <div className="min-w-[100px] text-sm">
+              {time ? time.split(' ')[0] : "-"}
+            </div>
+          );
+        },
+        enableHiding: true,
+      },
+      // 中优先级：市场结构
+      {
+        accessorKey: "marketStructure",
+        header: "市场结构",
+        cell: ({ row }) => (
+          <div className="min-w-[80px] text-sm">
+            {row.original.marketStructure ?? "-"}
+          </div>
+        ),
+        enableHiding: true,
+      },
+      // 低优先级：交易类型
+      {
+        accessorKey: "tradeType",
+        header: "类型",
+        cell: ({ row }) => (
+          <div className="min-w-[80px] text-sm">{row.original.tradeType ?? "-"}</div>
+        ),
+        enableHiding: true,
+      },
+      // 低优先级：风险收益比
+      {
+        accessorKey: "riskRewardRatio",
+        header: "风险收益比",
+        cell: ({ row }) => (
+          <div className="min-w-[100px] text-sm text-right">
+            {row.original.riskRewardRatio ?? "-"}
+          </div>
+        ),
+        enableHiding: true,
       },
       {
         id: "actions",
@@ -211,6 +336,10 @@ export default function TradeListPage() {
         enableSorting: false,
         enableHiding: false,
         size: 200, // 固定操作列宽度
+        enablePinning: true, // 启用列固定
+        meta: {
+          pinned: 'right', // 固定在右侧
+        },
       },
     ],
     []
@@ -296,7 +425,6 @@ export default function TradeListPage() {
           columns={columns as ColumnDef<Trade, unknown>[]}
           data={trades}
           sorting={sorting}
-          columnVisibility={columnVisibility}
           rowSelection={rowSelection}
           loading={loading}
           page={pagination.page}
@@ -308,12 +436,12 @@ export default function TradeListPage() {
           onSortingChange={(newSorting) =>
             updateSorting(newSorting as SortingState)
           }
-          onColumnVisibilityChange={(newVisibility) =>
-            updateColumnVisibility(newVisibility as VisibilityState)
-          }
           onRowSelectionChange={(newSelection) =>
             updateRowSelection(newSelection as RowSelectionState)
           }
+          initialColumnPinning={{
+            right: ['actions'], // 将操作列固定在右侧
+          }}
         />
       </div>
 

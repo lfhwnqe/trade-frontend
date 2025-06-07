@@ -6,7 +6,6 @@ import { isErrorWithMessage } from "@/utils";
 import { Trade, TradeQuery } from "../config";
 import {
   SortingState,
-  VisibilityState,
   RowSelectionState,
 } from "@tanstack/react-table";
 import { useAlert } from "@/components/common/alert";
@@ -106,15 +105,6 @@ export function useTradeList() {
     [setState]
   );
 
-  // 更新列可见性
-  const updateColumnVisibility = useCallback(
-    (newVisibility: VisibilityState) => {
-      setState((draft) => {
-        draft.columnVisibility = newVisibility;
-      });
-    },
-    [setState]
-  );
 
   // 更新行选择
   const updateRowSelection = useCallback(
@@ -190,7 +180,6 @@ export function useTradeList() {
     pagination: state.pagination,
     queryForm: state.queryForm,
     sorting: state.sorting,
-    columnVisibility: state.columnVisibility,
     rowSelection: state.rowSelection,
     dialog: state.dialog,
 
@@ -198,7 +187,6 @@ export function useTradeList() {
     fetchAll,
     updateQueryForm,
     updateSorting,
-    updateColumnVisibility,
     updateRowSelection,
     updatePagination,
     openDialog,

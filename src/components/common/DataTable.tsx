@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
   ColumnDef,
   SortingState,
-  VisibilityState,
   RowSelectionState,
   flexRender,
   getCoreRowModel,
@@ -11,13 +10,6 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -26,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -47,13 +39,15 @@ interface DataTableProps<TData, TValue> {
   sorting: SortingState;
   onSortingChange: React.Dispatch<React.SetStateAction<SortingState>>;
 
-  // Column Visibility
-  columnVisibility: VisibilityState;
-  onColumnVisibilityChange: React.Dispatch<React.SetStateAction<VisibilityState>>;
-
   // Row Selection
   rowSelection: RowSelectionState;
   onRowSelectionChange: React.Dispatch<React.SetStateAction<RowSelectionState>>;
+
+  // Column Pinning
+  initialColumnPinning?: {
+    left?: string[];
+    right?: string[];
+  };
 
   // Optional: Slot for table toolbar (e.g., global filter, additional actions)
   toolbarSlot?: React.ReactNode;
@@ -71,10 +65,9 @@ export function DataTable<TData, TValue>({
   onPageSizeChange,
   sorting,
   onSortingChange,
-  columnVisibility,
-  onColumnVisibilityChange,
   rowSelection,
   onRowSelectionChange,
+  initialColumnPinning,
   toolbarSlot,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
@@ -85,15 +78,14 @@ export function DataTable<TData, TValue>({
     pageCount: totalPages,
     state: {
       sorting,
-      columnVisibility,
       rowSelection,
       pagination: {
         pageIndex: page - 1, // Convert 1-indexed to 0-indexed for react-table
         pageSize,
       },
+      columnPinning: initialColumnPinning || {},
     },
     onSortingChange,
-    onColumnVisibilityChange,
     onRowSelectionChange,
     onPaginationChange: (updater) => {
       if (typeof updater === 'function') {
@@ -115,53 +107,47 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    // 启用列固定功能
+    enableColumnPinning: true,
+    initialState: {
+      columnPinning: initialColumnPinning || {},
+    },
   });
 
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar Slot & Column Visibility */}
-      <div className="flex items-center py-4 flex-shrink-0">
-        {toolbarSlot}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              列显示 <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {/* Toolbar Slot */}
+      {toolbarSlot && (
+        <div className="flex items-center py-4 flex-shrink-0">
+          {toolbarSlot}
+        </div>
+      )}
 
       {/* Table Container - 可滚动区域 */}
       <div className="flex-1 min-h-0">
         <div className={`rounded-md border relative h-full ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-          {/* 横向和纵向都可滚动的表格容器 */}
-          <div className="overflow-auto h-full">
+          {/* 横向和纵向都可滚动的表格容器，支持固定列 */}
+          <div className="overflow-auto h-full relative">
             <Table className="min-w-max">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
+                      const isPinned = header.column.getIsPinned();
                       return (
-                        <TableHead key={header.id} className="whitespace-nowrap">
+                        <TableHead
+                          key={header.id}
+                          className={`whitespace-nowrap ${
+                            isPinned === 'right'
+                              ? 'sticky right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-l border-border z-10'
+                              : ''
+                          }`}
+                          style={{
+                            ...(isPinned === 'right' && {
+                              right: 0,
+                            }),
+                          }}
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -193,14 +179,29 @@ export function DataTable<TData, TValue>({
                       key={row.id}
                       data-state={row.getIsSelected() && 'selected'}
                     >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="whitespace-nowrap">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
+                      {row.getVisibleCells().map((cell) => {
+                        const isPinned = cell.column.getIsPinned();
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            className={`whitespace-nowrap ${
+                              isPinned === 'right'
+                                ? 'sticky right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-l border-border z-10'
+                                : ''
+                            }`}
+                            style={{
+                              ...(isPinned === 'right' && {
+                                right: 0,
+                              }),
+                            }}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))
                 ) : (
