@@ -3,6 +3,7 @@
 import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { nanoid } from "nanoid";
+import imageCompression from "browser-image-compression";
 import {
   ALLOWED_IMAGE_TYPES,
   getImageUploadUrl,
@@ -26,6 +27,7 @@ import { useAlert } from "./alert";
  * @param onChange 变动回调
  * @param max 最多几张（不限传 Infinity 或不设）
  * @param disabled 是否禁用
+ * @param compress 是否压缩图片后再上传（默认为 true）
  */
 /** 隐藏视觉但对屏幕阅读器可见的文本，用于可访问性 */
 function VisuallyHidden(props: React.HTMLAttributes<HTMLSpanElement>) {
@@ -53,11 +55,13 @@ export function ImageUploader({
   onChange,
   max,
   disabled,
+  compress = true,
 }: {
   value: ImageResource[];
   onChange: (v: ImageResource[]) => void;
   max?: number;
   disabled?: boolean;
+  compress?: boolean;
 }) {
   const [,errorAlert]= useAlert()
   // 检查是否已达最大数量
@@ -71,6 +75,29 @@ export function ImageUploader({
    */
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
+      /**
+       * 压缩图片文件
+       */
+      const compressImage = async (file: File): Promise<File> => {
+        if (!compress) return file;
+        
+        try {
+          console.log(`[ImageUploader] 开始压缩图片: ${file.name}`);
+          const options = {
+            maxSizeMB: 1,             // 最大文件大小
+            maxWidthOrHeight: 1920,   // 最大宽度或高度
+            useWebWorker: true,       // 使用 Web Worker 加速
+            fileType: file.type       // 保持原始文件类型
+          };
+          
+          const compressedFile = await imageCompression(file, options);
+          console.log(`[ImageUploader] 图片压缩完成: ${file.name}, 原始大小: ${file.size / 1024}KB, 压缩后: ${compressedFile.size / 1024}KB`);
+          return compressedFile;
+        } catch (error) {
+          console.error(`[ImageUploader] 图片压缩失败: ${file.name}`, error);
+          return file; // 压缩失败则返回原始文件
+        }
+      };
       if (!acceptedFiles || acceptedFiles.length === 0) return;
       const n = max ? max - value.length : acceptedFiles.length;
       if (n <= 0) return;
@@ -86,7 +113,7 @@ export function ImageUploader({
       const newValueWithLoading = [...value, ...loadingPlaceholders];
       onChange(newValueWithLoading);
       
-      console.log(`[ImageUploader] 开始批量上传 ${filesToAdd.length} 个文件`);
+      console.log(`[ImageUploader] 开始批量上传 ${filesToAdd.length} 个文件${compress ? '（启用压缩）' : '（不压缩）'}`);
       
       // 并行上传所有文件
       // 定义上传结果类型，避免 any
@@ -98,7 +125,11 @@ export function ImageUploader({
           const loadingKey = loadingPlaceholders[index].key;
           
           try {
-            console.log(`[ImageUploader] 上传文件 ${index + 1}/${filesToAdd.length}: ${file.name}`);
+            console.log(`[ImageUploader] 处理文件 ${index + 1}/${filesToAdd.length}: ${file.name}`);
+            
+            // 压缩图片（如果启用了压缩）
+            const processedFile = await compressImage(file);
+            
             const dateStr = new Date().toISOString().slice(0, 10);
             const { uploadUrl, key } = await getImageUploadUrl({
               fileName: encodeURIComponent(file.name),
@@ -106,7 +137,7 @@ export function ImageUploader({
               date: dateStr,
             });
             
-            await uploadToS3(uploadUrl, file);
+            await uploadToS3(uploadUrl, processedFile);
             
             let cdnUrl = "";
             if (key.startsWith("http")) {
@@ -165,7 +196,7 @@ export function ImageUploader({
         errorAlert(`${failedCount} 张图片上传失败，请重试`);
       }
     },
-    [onChange, value, max]
+    [onChange, value, max, compress, errorAlert]
   );
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
