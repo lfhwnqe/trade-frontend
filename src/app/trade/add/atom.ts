@@ -8,7 +8,7 @@ import type { Trade } from "../config";
 export type FormState = Partial<Trade> & { [key: string]: any };
 
 export const formInitialState: FormState = {
-  analysisTime: undefined,
+  analysisTime: new Date().toISOString(), // 默认设置当前时间
   status: undefined,
   marketStructure: undefined,
   volumeProfileImages: [],
