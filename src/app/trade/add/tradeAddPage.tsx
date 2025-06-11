@@ -34,11 +34,7 @@ type EntryPlan = {
  * 新增交易页面
  * 复用 TradeFormDialog，独立页逻辑
  */
-export default function TradeAddPage({
-  className,
-}: {
-  className?: string;
-}) {
+export default function TradeAddPage({ className }: { className?: string }) {
   const [success, errorAlert] = useAlert();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -183,13 +179,18 @@ export default function TradeAddPage({
 
   return (
     <Suspense fallback={<div>加载中...</div>}>
-      <div className={  "w-full flex-1 flex flex-col  rounded-lg shadowborder h-full " + className}>
+      <div
+        className={
+          "w-full flex-1 flex flex-col  rounded-lg shadowborder h-full " +
+          className
+        }
+      >
         {/* 固定顶部 */}
-        <div className="h-16 bg-white shadow px-6 py-4 rounded-t-lg">
+        <div className="h-16 bg-white shadow px-6 py-4 rounded-lg border">
           <h1 className="text-2xl font-bold">新增/编辑交易记录</h1>
         </div>
         {/* 滚动表单内容 */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto py-4">
           <TradeFormDialog
             ref={formRef}
             editTrade={id ? form : null}
