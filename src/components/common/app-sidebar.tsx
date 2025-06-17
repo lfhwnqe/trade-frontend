@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, Home, Inbox, User2 } from "lucide-react";
+import { ChevronUp, Home, Inbox, User2, Database, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +33,28 @@ const tradeItems = [
     title: "交易记录",
     url: "/trade/list",
     icon: Inbox,
+  },
+];
+
+// RAG 模块菜单项
+const ragItems = [
+  {
+    title: "RAG 首页",
+    url: "/rag",
+    icon: Home,
+    description: "RAG 系统总览"
+  },
+  {
+    title: "数据管理",
+    url: "/rag/manage",
+    icon: Database,
+    description: "文档上传与管理"
+  },
+  {
+    title: "RAG 测试",
+    url: "/rag/test",
+    icon: Search,
+    description: "智能搜索测试"
   },
 ];
 
@@ -82,6 +104,26 @@ export function AppSidebar() {
                     {/* 重点：将 isActive 属性传给 SidebarMenuButton */}
                     <SidebarMenuButton asChild isActive={pathname === item.url}>
                       <a href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
+        <SidebarGroup>
+          <SidebarGroupLabel>RAG 知识库</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {ragItems.map(
+                (item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={pathname === item.url}>
+                      <a href={item.url} title={item.description}>
                         <item.icon />
                         <span>{item.title}</span>
                       </a>
