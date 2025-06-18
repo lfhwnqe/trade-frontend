@@ -4,7 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/common/app-sidebar";
 import { ErrorBoundary } from "@/components/rag";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Home, Database, Search } from "lucide-react";
+import { ChevronRight, Home, Database, Search, TestTube } from "lucide-react";
 import Link from "next/link";
 
 // 面包屑导航配置
@@ -20,6 +20,8 @@ const getBreadcrumbConfig = (pathname: string) => {
     
     if (segments.includes('manage')) {
       breadcrumbs.push({ label: '数据管理', href: '/rag/manage', icon: Database });
+    } else if (segments.includes('simple-test')) {
+      breadcrumbs.push({ label: 'RAG 简单测试', href: '/rag/simple-test', icon: TestTube });
     } else if (segments.includes('test')) {
       breadcrumbs.push({ label: 'RAG 测试', href: '/rag/test', icon: Search });
     }

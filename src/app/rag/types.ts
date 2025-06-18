@@ -183,3 +183,50 @@ export interface RAGSearchForm {
   rerankResults: boolean;
   includeMetadata: boolean;
 }
+
+// 简单测试相关类型
+export interface SimpleTestQueryDto {
+  query: string;
+  content?: string; // 可选的文本内容，用于向量化测试
+}
+
+export interface VectorizationResult {
+  // 向量化模型信息
+  model: string;
+  // 生成的向量ID
+  vectorId: string;
+  // 存储状态
+  storageStatus: 'success' | 'failed';
+  // token使用量
+  tokenUsage: {
+    inputTokens: number;
+    embeddingDimensions: number;
+  };
+  // 处理时间（毫秒）
+  processingTimeMs: number;
+  // 文本块信息
+  chunkInfo: {
+    chunkCount: number;
+    totalCharacters: number;
+    averageChunkSize: number;
+  };
+}
+
+export interface SimpleTestResponseDto {
+  query: string;
+  message: string;
+  timestamp: string;
+  mockResults: string[];
+  status: string;
+  vectorization?: VectorizationResult; // 向量化处理结果（如果提供了content）
+}
+
+// 使用场景类型
+export interface UsageScenario {
+  id: string;
+  title: string;
+  description: string;
+  queryExample: string;
+  contentExample?: string;
+  category: 'search' | 'vectorize' | 'both';
+}

@@ -311,7 +311,7 @@ export default function RAGHomePage() {
       </Card>
 
       {/* 功能导航 */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center mb-4">
@@ -362,6 +362,33 @@ export default function RAGHomePage() {
             >
               <Search className="mr-2 h-4 w-4" />
               开始测试
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center mb-4">
+              <Shield className="mr-3 h-8 w-8 text-purple-500" />
+              <div>
+                <CardTitle className="text-lg">简单测试</CardTitle>
+                <CardDescription>
+                  RAG系统基础功能测试和调试
+                </CardDescription>
+              </div>
+            </div>
+            <ul className="space-y-2 mb-4 text-sm text-muted-foreground">
+              <li>• 基础接口连通性测试</li>
+              <li>• 查看模拟响应数据</li>
+              <li>• 调试前后端通信</li>
+              <li>• 验证系统运行状态</li>
+            </ul>
+            <Button
+              className="w-full"
+              onClick={() => router.push('/rag/simple-test')}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              开始简单测试
             </Button>
           </CardContent>
         </Card>

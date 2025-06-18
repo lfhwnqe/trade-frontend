@@ -9,6 +9,8 @@ import type {
   HealthCheckResponse,
   ApiResponse,
   DocumentFilter,
+  SimpleTestQueryDto,
+  SimpleTestResponseDto,
 } from "./types";
 
 /**
@@ -168,6 +170,32 @@ export async function searchDocuments(
   
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "搜索文档失败");
+  return resData;
+}
+
+// ==================== 简单测试接口 ====================
+
+/**
+ * RAG 简单测试
+ */
+export async function simpleTest(
+  data: SimpleTestQueryDto
+): Promise<ApiResponse<SimpleTestResponseDto>> {
+  const proxyParams = {
+    targetPath: "rag/simple-test",
+    actualMethod: "POST",
+  };
+  const actualBody = data as unknown as Record<string, unknown>;
+  
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody,
+  });
+  
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.message || "RAG简单测试失败");
   return resData;
 }
 

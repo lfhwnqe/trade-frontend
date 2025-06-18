@@ -1,4 +1,4 @@
-import { LucideIcon, Home, TrendingUp, List, Plus, Edit } from 'lucide-react';
+import { LucideIcon, Home, TrendingUp, List, Plus, Edit, Database, Search, TestTube } from 'lucide-react';
 
 /**
  * 面包屑配置项接口
@@ -62,12 +62,31 @@ export const BREADCRUMB_CONFIG: BreadcrumbConfig = {
     label: '交易列表', 
     icon: List 
   },
-  '/trade/add': { 
-    label: '新增交易', 
+  '/trade/add': {
+    label: '新增交易',
     icon: Plus,
     editLabel: '编辑交易',
     editIcon: Edit,
     parentPath: '/trade/list'
+  },
+  '/rag': {
+    label: 'RAG 知识库',
+    icon: Database
+  },
+  '/rag/manage': {
+    label: '数据管理',
+    icon: Database,
+    parentPath: '/rag'
+  },
+  '/rag/test': {
+    label: 'RAG 测试',
+    icon: Search,
+    parentPath: '/rag'
+  },
+  '/rag/simple-test': {
+    label: 'RAG 简单测试',
+    icon: TestTube,
+    parentPath: '/rag'
   }
 } as const;
 
