@@ -185,10 +185,6 @@ export default function TradeAddPage({ className }: { className?: string }) {
           className
         }
       >
-        {/* 固定顶部 */}
-        <div className="h-16 bg-white shadow px-6 py-4 rounded-lg border">
-          <h1 className="text-2xl font-bold">新增/编辑交易记录</h1>
-        </div>
         {/* 滚动表单内容 */}
         <div className="flex-1 overflow-y-auto py-4">
           <TradeFormDialog
