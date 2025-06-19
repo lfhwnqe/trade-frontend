@@ -311,7 +311,34 @@ export default function RAGHomePage() {
       </Card>
 
       {/* 功能导航 */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center mb-4">
+              <FileText className="mr-3 h-8 w-8 text-purple-500" />
+              <div>
+                <CardTitle className="text-lg">文档列表</CardTitle>
+                <CardDescription>
+                  浏览和查看知识库中的所有文档
+                </CardDescription>
+              </div>
+            </div>
+            <ul className="space-y-2 mb-4 text-sm text-muted-foreground">
+              <li>• 快速浏览文档列表</li>
+              <li>• 查看文档详情和状态</li>
+              <li>• 智能搜索和筛选</li>
+              <li>• 响应式分页浏览</li>
+            </ul>
+            <Button
+              className="w-full"
+              onClick={() => router.push('/rag/documents')}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              查看文档列表
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center mb-4">
@@ -329,7 +356,7 @@ export default function RAGHomePage() {
               <li>• 文档分类和标签管理</li>
               <li>• 批量操作和数据导入导出</li>
             </ul>
-            <Button 
+            <Button
               className="w-full"
               onClick={() => router.push('/rag/manage')}
             >

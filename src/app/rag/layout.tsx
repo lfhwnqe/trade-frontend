@@ -20,6 +20,8 @@ const getBreadcrumbConfig = (pathname: string) => {
     
     if (segments.includes('manage')) {
       breadcrumbs.push({ label: '数据管理', href: '/rag/manage', icon: Database });
+    } else if (segments.includes('documents')) {
+      breadcrumbs.push({ label: '文档列表', href: '/rag/documents', icon: Database });
     } else if (segments.includes('simple-test')) {
       breadcrumbs.push({ label: 'RAG 简单测试', href: '/rag/simple-test', icon: TestTube });
     } else if (segments.includes('test')) {

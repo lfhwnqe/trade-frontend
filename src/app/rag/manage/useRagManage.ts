@@ -63,7 +63,7 @@ export function useRagManage() {
           };
 
           const response = await getDocuments(filters);
-          
+          console.log('getDocuments response',response);
           setRagState((draft) => {
             draft.manage.documents = response.data || [];
             draft.manage.loading = false;

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, Home, Inbox, User2, Database, Search } from "lucide-react";
+import { ChevronUp, Home, Inbox, User2, Database, Search, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +43,12 @@ const ragItems = [
     url: "/rag",
     icon: Home,
     description: "RAG 系统总览"
+  },
+  {
+    title: "文档列表",
+    url: "/rag/documents",
+    icon: FileText,
+    description: "浏览和查看文档"
   },
   {
     title: "数据管理",
