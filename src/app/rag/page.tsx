@@ -311,7 +311,7 @@ export default function RAGHomePage() {
       </Card>
 
       {/* 功能导航 */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-6">
             <div className="flex items-center mb-4">
@@ -416,6 +416,33 @@ export default function RAGHomePage() {
             >
               <Shield className="mr-2 h-4 w-4" />
               开始简单测试
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="pt-6">
+            <div className="flex items-center mb-4">
+              <Cpu className="mr-3 h-8 w-8 text-orange-500" />
+              <div>
+                <CardTitle className="text-lg">SVG 解析</CardTitle>
+                <CardDescription>
+                  测试SVG解析引擎功能
+                </CardDescription>
+              </div>
+            </div>
+            <ul className="space-y-2 mb-4 text-sm text-muted-foreground">
+              <li>• SVG文件解析和转换</li>
+              <li>• 图形元素识别和提取</li>
+              <li>• 节点关系分析</li>
+              <li>• 性能监控和调试</li>
+            </ul>
+            <Button
+              className="w-full"
+              onClick={() => router.push('/svg-test')}
+            >
+              <Cpu className="mr-2 h-4 w-4" />
+              SVG解析测试
             </Button>
           </CardContent>
         </Card>

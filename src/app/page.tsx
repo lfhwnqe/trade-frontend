@@ -28,6 +28,9 @@ export default function Home() {
           <Button asChild className="w-full sm:w-auto">
             <a href="/trade/list">进入交易列表</a>
           </Button>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <a href="/svg-test">SVG解析测试</a>
+          </Button>
         </div>
       </main>
       <footer className="mt-8 text-sm text-muted-foreground">
