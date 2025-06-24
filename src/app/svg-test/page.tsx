@@ -102,8 +102,8 @@ export default function SVGTestPage() {
         svgContent: svgContent.trim(),
         options,
       });
-      
-      setResult(response.data || null);
+
+      setResult(response);
       showAlert('SVG解析成功', 'success');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'SVG解析失败';
@@ -129,8 +129,8 @@ export default function SVGTestPage() {
         url: svgUrl.trim(),
         options,
       });
-      
-      setResult(response.data || null);
+
+      setResult(response);
       showAlert('SVG URL解析成功', 'success');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'SVG URL解析失败';
@@ -153,8 +153,8 @@ export default function SVGTestPage() {
     
     try {
       const response = await parseSVGFromFile(selectedFile, options);
-      
-      setResult(response.data || null);
+
+      setResult(response);
       showAlert('SVG文件解析成功', 'success');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'SVG文件解析失败';
@@ -182,10 +182,10 @@ export default function SVGTestPage() {
     
     try {
       const response = await validateSVG(svgContent.trim());
-      if (response.data?.valid) {
+      if (response.valid) {
         showAlert('SVG格式验证通过', 'success');
       } else {
-        showAlert(`SVG格式验证失败: ${response.data?.errors.length || 0}个错误`, 'error');
+        showAlert(`SVG格式验证失败: ${response.errors.length || 0}个错误`, 'error');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'SVG验证失败';
@@ -454,7 +454,7 @@ export default function SVGTestPage() {
               <CardTitle>解析结果</CardTitle>
               <CardDescription>
                 解析状态: {result.success ? '成功' : '失败'} |
-                解析时间: {formatParseTime(result.metrics.parseTime)}
+                解析时间: {result.metrics ? formatParseTime(result.metrics.parseTime) : '未知'}
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -486,17 +486,17 @@ export default function SVGTestPage() {
                 <div className="text-sm text-muted-foreground">边数量</div>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary">{result.metrics.elementCount}</div>
+                <div className="text-2xl font-bold text-primary">{result.metrics?.elementCount || 0}</div>
                 <div className="text-sm text-muted-foreground">元素总数</div>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-2xl font-bold text-primary">{formatFileSize(result.metrics.memoryUsage)}</div>
+                <div className="text-2xl font-bold text-primary">{result.metrics ? formatFileSize(result.metrics.memoryUsage) : '0 Bytes'}</div>
                 <div className="text-sm text-muted-foreground">内存使用</div>
               </div>
             </div>
 
             {/* 错误信息 */}
-            {result.errors.length > 0 && (
+            {result.errors && result.errors.length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground">
                   解析错误 ({result.errors.length} 条)

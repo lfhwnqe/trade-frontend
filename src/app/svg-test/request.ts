@@ -119,20 +119,20 @@ export interface ApiResponse<T> {
  */
 export async function parseSVG(
   data: SVGParseRequest
-): Promise<ApiResponse<SVGParseResponse>> {
+): Promise<SVGParseResponse> {
   const proxyParams = {
     targetPath: "svg-parser/parse",
     actualMethod: "POST",
   };
   const actualBody = data as unknown as Record<string, unknown>;
-  
+
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     proxyParams,
     actualBody,
   });
-  
+
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "SVG解析失败");
   return resData;
@@ -143,20 +143,20 @@ export async function parseSVG(
  */
 export async function parseSVGFromString(
   data: SVGParseFromString
-): Promise<ApiResponse<SVGParseResponse>> {
+): Promise<SVGParseResponse> {
   const proxyParams = {
     targetPath: "svg-parser/parse-string",
     actualMethod: "POST",
   };
   const actualBody = data as unknown as Record<string, unknown>;
-  
+
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     proxyParams,
     actualBody,
   });
-  
+
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "SVG字符串解析失败");
   return resData;
@@ -167,20 +167,20 @@ export async function parseSVGFromString(
  */
 export async function parseSVGFromUrl(
   data: SVGParseFromUrl
-): Promise<ApiResponse<SVGParseResponse>> {
+): Promise<SVGParseResponse> {
   const proxyParams = {
     targetPath: "svg-parser/parse-url",
     actualMethod: "POST",
   };
   const actualBody = data as unknown as Record<string, unknown>;
-  
+
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     proxyParams,
     actualBody,
   });
-  
+
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "SVG URL解析失败");
   return resData;
@@ -192,7 +192,7 @@ export async function parseSVGFromUrl(
 export async function parseSVGFromFile(
   file: File,
   options?: ParseOptions
-): Promise<ApiResponse<SVGParseResponse>> {
+): Promise<SVGParseResponse> {
   // 读取文件内容为字符串
   const fileContent = await file.text();
 
@@ -208,20 +208,20 @@ export async function parseSVGFromFile(
  */
 export async function validateSVG(
   svgContent: string
-): Promise<ApiResponse<{ valid: boolean; errors: ParseError[] }>> {
+): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
   const proxyParams = {
     targetPath: "svg-parser/validate",
     actualMethod: "POST",
   };
   const actualBody = { svgContent } as Record<string, unknown>;
-  
+
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     proxyParams,
     actualBody,
   });
-  
+
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "SVG验证失败");
   return resData;
