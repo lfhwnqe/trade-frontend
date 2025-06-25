@@ -112,6 +112,79 @@ export interface ApiResponse<T> {
   errors?: string[];
 }
 
+// ==================== 思维导图相关类型 ====================
+
+export interface MindMapNode {
+  id: string;
+  text: string;
+  level: number;
+  parentId?: string;
+  children?: MindMapNode[];
+  position?: { x: number; y: number };
+  style?: {
+    color?: string;
+    backgroundColor?: string;
+    fontSize?: number;
+    fontWeight?: string;
+  };
+}
+
+export interface MindMapData {
+  nodes: MindMapNode[];
+  links: Array<{
+    source: string;
+    target: string;
+    type?: string;
+  }>;
+  metadata?: {
+    title?: string;
+    author?: string;
+    created?: string;
+    modified?: string;
+    format?: string;
+  };
+}
+
+export interface ForceGraphData {
+  nodes: Array<{
+    id: string;
+    name: string;
+    val?: number;
+    group?: string;
+    level?: number;
+    [key: string]: any;
+  }>;
+  links: Array<{
+    source: string;
+    target: string;
+    value?: number;
+    type?: string;
+    [key: string]: any;
+  }>;
+}
+
+export interface MindMapParseResponse {
+  success: boolean;
+  data: {
+    mindMap: MindMapData;
+    graph: ForceGraphData;
+  };
+  metadata?: {
+    title?: string;
+    author?: string;
+    created?: string;
+    modified?: string;
+    format?: string;
+    fileName?: string;
+    fileSize?: number;
+  };
+}
+
+export interface MindMapParseRequest {
+  content: string;
+  format: string;
+}
+
 // ==================== API调用函数 ====================
 
 /**
@@ -224,6 +297,59 @@ export async function validateSVG(
 
   const resData = await res.json();
   if (!res.ok) throw new Error(resData.message || "SVG验证失败");
+  return resData;
+}
+
+/**
+ * 解析思维导图内容
+ */
+export async function parseMindMap(
+  data: MindMapParseRequest
+): Promise<MindMapParseResponse> {
+  const proxyParams = {
+    targetPath: "svg-parser/mindmap/parse",
+    actualMethod: "POST",
+  };
+  const actualBody = data as unknown as Record<string, unknown>;
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody,
+  });
+
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.message || "思维导图解析失败");
+  return resData;
+}
+
+/**
+ * 上传并解析思维导图文件
+ */
+export async function uploadAndParseMindMap(
+  file: File,
+  format?: string
+): Promise<MindMapParseResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (format) {
+    formData.append('format', format);
+  }
+
+  const proxyParams = {
+    targetPath: "svg-parser/mindmap/upload",
+    actualMethod: "POST",
+  };
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    proxyParams,
+    actualBody: formData as any,
+  });
+
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.message || "思维导图文件解析失败");
   return resData;
 }
 
