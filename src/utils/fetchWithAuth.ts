@@ -7,7 +7,7 @@ interface ProxyParams {
 
 interface Init extends RequestInit {
   proxyParams?: ProxyParams;
-  actualBody?: Record<string, unknown>;
+  actualBody?: Record<string, unknown> | FormData;
 }
 
 /**
@@ -24,14 +24,24 @@ export async function fetchWithAuth(
 ): Promise<Response> {
   // 如果 init 中有 proxyParams 和 actualBody，则修改 body
   if (init?.proxyParams && init?.actualBody) {
-    init.body = JSON.stringify({
-      request: init.proxyParams,
-      body: init.actualBody,
-    });
-    init.headers = {
-      ...init.headers,
-      'Content-Type': 'application/json',
-    };
+    if (init.actualBody instanceof FormData) {
+      // 处理文件上传：将代理参数添加到 FormData 中
+      const formData = init.actualBody;
+      formData.append('targetPath', init.proxyParams.targetPath);
+      formData.append('actualMethod', init.proxyParams.actualMethod);
+      init.body = formData;
+      // 不设置 Content-Type，让浏览器自动设置 multipart/form-data 边界
+    } else {
+      // 处理普通 JSON 请求
+      init.body = JSON.stringify({
+        request: init.proxyParams,
+        body: init.actualBody,
+      });
+      init.headers = {
+        ...init.headers,
+        'Content-Type': 'application/json',
+      };
+    }
   }
 
   const resp = await fetch(input, init);
