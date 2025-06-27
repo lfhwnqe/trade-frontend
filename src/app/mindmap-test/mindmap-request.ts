@@ -13,7 +13,7 @@ export interface MindMapNode {
   level: number;
   parentId?: string;
   children?: MindMapNode[];
-  attributes?: Record<string, any>;
+  attributes?: Record<string, unknown>;
   style?: {
     color?: string;
     backgroundColor?: string;
@@ -48,14 +48,14 @@ export interface ForceGraphData {
     level: number;
     size?: number;
     color?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }>;
   links: Array<{
     source: string;
     target: string;
     value?: number;
     type?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }>;
 }
 
@@ -114,6 +114,91 @@ export interface SubgraphNode {
   parentId?: string;
 }
 
+// G-RAG测试相关类型
+export interface GRAGTestRequest {
+  query: string;
+}
+
+export interface GRAGBatchTestRequest {
+  queries: string[];
+}
+
+export interface GRAGTestResult {
+  success: boolean;
+  query: string;
+  processingTime: number;
+  results?: {
+    keywordMatches: number;
+    contextResults: Array<{
+      graphId: string;
+      nodeId: string;
+      text: string;
+      context: SubgraphNode[];
+      contextSize: number;
+      error?: string;
+    }>;
+    totalContextNodes: number;
+  };
+  error?: string;
+  metadata?: {
+    searchType: string;
+    timestamp: string;
+  };
+}
+
+export interface GRAGBatchTestResult {
+  success: boolean;
+  totalQueries: number;
+  totalProcessingTime: number;
+  averageProcessingTime: number;
+  results: Array<{
+    query: string;
+    success: boolean;
+    processingTime: number;
+    keywordMatches: number;
+    contextResults: number;
+    totalContextNodes: number;
+    error?: string;
+  }>;
+  summary: {
+    successfulQueries: number;
+    failedQueries: number;
+    totalMatches: number;
+    totalContextNodes: number;
+  };
+  metadata: {
+    testType: string;
+    timestamp: string;
+  };
+}
+
+export interface GRAGPerformanceTestResult {
+  success: boolean;
+  totalIterations: number;
+  totalTime: number;
+  results: Array<{
+    iteration: number;
+    query: string;
+    processingTime: number;
+    keywordMatches: number;
+    contextSize: number;
+    success: boolean;
+    error?: string;
+  }>;
+  statistics: {
+    successRate: number;
+    averageProcessingTime: number;
+    minProcessingTime: number;
+    maxProcessingTime: number;
+    totalMatches: number;
+    totalContextNodes: number;
+  };
+  metadata: {
+    testType: string;
+    timestamp: string;
+  };
+}
+
 // ==================== API调用函数 ====================
 
 /**
@@ -161,7 +246,7 @@ export async function uploadAndStoreMindMap(
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     proxyParams,
-    actualBody: formData as any,
+    actualBody: formData as unknown as Record<string, unknown>,
   });
 
   const resData = await res.json();
@@ -251,4 +336,69 @@ export function detectMindMapFormat(filename: string): string {
     default:
       return 'unknown';
   }
+}
+
+// ==================== G-RAG测试API函数 ====================
+
+/**
+ * G-RAG单次测试
+ */
+export async function testGraphRAG(request: GRAGTestRequest): Promise<GRAGTestResult> {
+  const proxyParams = {
+    targetPath: "parser/graphs/g-rag/test",
+    actualMethod: "POST",
+  };
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody: request as unknown as Record<string, unknown>,
+  });
+
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.message || "G-RAG测试失败");
+  return resData;
+}
+
+/**
+ * G-RAG批量测试
+ */
+export async function batchTestGraphRAG(request: GRAGBatchTestRequest): Promise<GRAGBatchTestResult> {
+  const proxyParams = {
+    targetPath: "parser/graphs/g-rag/batch-test",
+    actualMethod: "POST",
+  };
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody: request as unknown as Record<string, unknown>,
+  });
+
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.message || "G-RAG批量测试失败");
+  return resData;
+}
+
+/**
+ * G-RAG性能测试
+ */
+export async function performanceTestGraphRAG(iterations?: number): Promise<GRAGPerformanceTestResult> {
+  const queryParams = iterations ? `?iterations=${iterations}` : '';
+  const proxyParams = {
+    targetPath: `parser/graphs/g-rag/performance-test${queryParams}`,
+    actualMethod: "GET",
+  };
+
+  const res = await fetchWithAuth("/api/proxy-get", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+  });
+
+  const resData = await res.json();
+  if (!res.ok) throw new Error(resData.message || "G-RAG性能测试失败");
+  return resData;
 }

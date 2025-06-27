@@ -15,12 +15,18 @@ import {
   uploadAndStoreMindMap,
   searchNodes,
   getSubgraph,
+  testGraphRAG,
+  batchTestGraphRAG,
+  performanceTestGraphRAG,
   formatFileSize,
   detectMindMapFormat,
   type MindMapParseResponse,
   type GraphCreateResponse,
   type NodeSearchResult,
-  type SubgraphNode
+  type SubgraphNode,
+  type GRAGTestResult,
+  type GRAGBatchTestResult,
+  type GRAGPerformanceTestResult
 } from './mindmap-request';
 
 export default function MindMapTestPage() {
@@ -57,6 +63,14 @@ export default function MindMapTestPage() {
   const [graphId, setGraphId] = useState('');
   const [nodeId, setNodeId] = useState('');
   const [subgraphData, setSubgraphData] = useState<SubgraphNode[]>([]);
+
+  // G-RAG测试
+  const [gragQuery, setGragQuery] = useState('');
+  const [gragBatchQueries, setGragBatchQueries] = useState('');
+  const [gragPerformanceIterations, setGragPerformanceIterations] = useState(10);
+  const [gragTestResult, setGragTestResult] = useState<GRAGTestResult | null>(null);
+  const [gragBatchResult, setGragBatchResult] = useState<GRAGBatchTestResult | null>(null);
+  const [gragPerformanceResult, setGragPerformanceResult] = useState<GRAGPerformanceTestResult | null>(null);
 
   // 处理内容解析
   const handleContentParse = async () => {
@@ -156,6 +170,76 @@ export default function MindMapTestPage() {
     }
   };
 
+  // 处理G-RAG单次测试
+  const handleGRAGTest = async () => {
+    if (!gragQuery.trim()) {
+      showAlert('请输入G-RAG测试查询', 'error');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await testGraphRAG({ query: gragQuery.trim() });
+      setGragTestResult(result);
+      showAlert('G-RAG测试完成', 'success');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'G-RAG测试失败';
+      setError(errorMessage);
+      showAlert(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理G-RAG批量测试
+  const handleGRAGBatchTest = async () => {
+    const queries = gragBatchQueries.split('\n').filter(q => q.trim());
+    if (queries.length === 0) {
+      showAlert('请输入批量测试查询（每行一个）', 'error');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await batchTestGraphRAG({ queries });
+      setGragBatchResult(result);
+      showAlert(`G-RAG批量测试完成，测试了 ${queries.length} 个查询`, 'success');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'G-RAG批量测试失败';
+      setError(errorMessage);
+      showAlert(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理G-RAG性能测试
+  const handleGRAGPerformanceTest = async () => {
+    if (gragPerformanceIterations < 1 || gragPerformanceIterations > 100) {
+      showAlert('迭代次数应在1-100之间', 'error');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await performanceTestGraphRAG(gragPerformanceIterations);
+      setGragPerformanceResult(result);
+      showAlert(`G-RAG性能测试完成，执行了 ${gragPerformanceIterations} 次迭代`, 'success');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'G-RAG性能测试失败';
+      setError(errorMessage);
+      showAlert(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 清空结果
   const handleClear = () => {
     setMindMapContent('');
@@ -163,10 +247,16 @@ export default function MindMapTestPage() {
     setSearchKeyword('');
     setGraphId('');
     setNodeId('');
+    setGragQuery('');
+    setGragBatchQueries('');
+    setGragPerformanceIterations(10);
     setParseResult(null);
     setUploadResult(null);
     setSearchResults([]);
     setSubgraphData([]);
+    setGragTestResult(null);
+    setGragBatchResult(null);
+    setGragPerformanceResult(null);
     setError(null);
   };
 
@@ -187,11 +277,12 @@ export default function MindMapTestPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="content">内容解析</TabsTrigger>
           <TabsTrigger value="upload">文件上传</TabsTrigger>
           <TabsTrigger value="search">节点搜索</TabsTrigger>
           <TabsTrigger value="subgraph">子图查询</TabsTrigger>
+          <TabsTrigger value="g-rag">G-RAG测试</TabsTrigger>
         </TabsList>
 
         {/* 内容解析 */}
@@ -374,10 +465,123 @@ export default function MindMapTestPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* G-RAG测试 */}
+        <TabsContent value="g-rag">
+          <div className="space-y-6">
+            {/* 单次测试 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>G-RAG单次测试</CardTitle>
+                <CardDescription>
+                  测试单个查询的图数据RAG搜索效果
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gragQuery">测试查询</Label>
+                  <Input
+                    id="gragQuery"
+                    value={gragQuery}
+                    onChange={(e) => setGragQuery(e.target.value)}
+                    placeholder="输入要测试的查询..."
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleGRAGTest}
+                    disabled={loading || !gragQuery.trim()}
+                    className="flex-1"
+                  >
+                    {loading ? '测试中...' : '开始测试'}
+                  </Button>
+                  <Button variant="outline" onClick={handleClear}>
+                    清空
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 批量测试 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>G-RAG批量测试</CardTitle>
+                <CardDescription>
+                  批量测试多个查询的搜索效果
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gragBatchQueries">批量查询（每行一个）</Label>
+                  <Textarea
+                    id="gragBatchQueries"
+                    value={gragBatchQueries}
+                    onChange={(e) => setGragBatchQueries(e.target.value)}
+                    placeholder={`中心主题\n分支\n子分支\n节点\n测试`}
+                    className="min-h-[120px]"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleGRAGBatchTest}
+                    disabled={loading || !gragBatchQueries.trim()}
+                    className="flex-1"
+                  >
+                    {loading ? '批量测试中...' : '开始批量测试'}
+                  </Button>
+                  <Button variant="outline" onClick={handleClear}>
+                    清空
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 性能测试 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>G-RAG性能测试</CardTitle>
+                <CardDescription>
+                  测试图数据RAG搜索的性能指标
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gragIterations">迭代次数</Label>
+                  <Input
+                    id="gragIterations"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={gragPerformanceIterations}
+                    onChange={(e) => setGragPerformanceIterations(parseInt(e.target.value) || 10)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleGRAGPerformanceTest}
+                    disabled={loading}
+                    className="flex-1"
+                  >
+                    {loading ? '性能测试中...' : '开始性能测试'}
+                  </Button>
+                  <Button variant="outline" onClick={handleClear}>
+                    清空
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* 结果显示区域 */}
-      {(parseResult || uploadResult || searchResults.length > 0 || subgraphData.length > 0) && (
+      {(parseResult || uploadResult || searchResults.length > 0 || subgraphData.length > 0 || gragTestResult || gragBatchResult || gragPerformanceResult) && (
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>结果</CardTitle>
@@ -447,6 +651,116 @@ export default function MindMapTestPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {gragTestResult && (
+              <div className="space-y-4">
+                <h3 className="font-semibold">G-RAG单次测试结果</h3>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <Badge variant={gragTestResult.success ? "default" : "destructive"}>
+                      {gragTestResult.success ? "成功" : "失败"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">处理时间: {gragTestResult.processingTime}ms</Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">
+                      匹配数: {gragTestResult.results?.keywordMatches || 0}
+                    </Badge>
+                  </div>
+                </div>
+                {gragTestResult.success && gragTestResult.results && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">上下文结果 ({gragTestResult.results.contextResults.length})</h4>
+                    {gragTestResult.results.contextResults.map((result, index) => (
+                      <div key={index} className="p-3 border rounded-lg">
+                        <div className="font-medium">{result.text}</div>
+                        <div className="text-sm text-muted-foreground mb-2">
+                          图ID: {result.graphId} | 节点ID: {result.nodeId} | 上下文节点: {result.contextSize}
+                        </div>
+                        {result.error && (
+                          <div className="text-sm text-red-600">错误: {result.error}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {gragTestResult.error && (
+                  <div className="text-sm text-red-600">错误: {gragTestResult.error}</div>
+                )}
+              </div>
+            )}
+
+            {gragBatchResult && (
+              <div className="space-y-4">
+                <h3 className="font-semibold">G-RAG批量测试结果</h3>
+                <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <Badge variant="outline">总查询: {gragBatchResult.totalQueries}</Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">成功: {gragBatchResult.summary.successfulQueries}</Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">失败: {gragBatchResult.summary.failedQueries}</Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">平均时间: {Math.round(gragBatchResult.averageProcessingTime)}ms</Badge>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium">详细结果</h4>
+                  {gragBatchResult.results.map((result, index) => (
+                    <div key={index} className="p-3 border rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="font-medium">{result.query}</div>
+                        <Badge variant={result.success ? "default" : "destructive"}>
+                          {result.success ? "成功" : "失败"}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        处理时间: {result.processingTime}ms | 匹配数: {result.keywordMatches} | 上下文节点: {result.totalContextNodes}
+                      </div>
+                      {result.error && (
+                        <div className="text-sm text-red-600 mt-1">错误: {result.error}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {gragPerformanceResult && (
+              <div className="space-y-4">
+                <h3 className="font-semibold">G-RAG性能测试结果</h3>
+                <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <Badge variant="outline">成功率: {gragPerformanceResult.statistics.successRate.toFixed(1)}%</Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">平均时间: {Math.round(gragPerformanceResult.statistics.averageProcessingTime)}ms</Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">最小时间: {gragPerformanceResult.statistics.minProcessingTime}ms</Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">最大时间: {gragPerformanceResult.statistics.maxProcessingTime}ms</Badge>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Badge variant="outline">总匹配数: {gragPerformanceResult.statistics.totalMatches}</Badge>
+                  </div>
+                  <div>
+                    <Badge variant="outline">总上下文节点: {gragPerformanceResult.statistics.totalContextNodes}</Badge>
+                  </div>
+                </div>
+                <pre className="bg-muted p-4 rounded-lg text-sm overflow-auto max-h-96">
+                  {JSON.stringify(gragPerformanceResult.results, null, 2)}
+                </pre>
               </div>
             )}
           </CardContent>
