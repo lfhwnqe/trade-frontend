@@ -2,27 +2,29 @@
  * 脑图服务 - 处理脑图相关的API调用
  */
 
-import type { 
-  MindMapData, 
-  CreateMindMapRequest, 
+import type {
+  MindMapData,
+  CreateMindMapRequest,
   UpdateMindMapRequest,
   MindMapListResponse,
-  MindMapListParams 
+  MindMapListParams
 } from '@/types/mindmap'
+import { fetchWithAuth } from '@/utils/fetchWithAuth'
 
 export class MindMapService {
-  private static readonly BASE_URL = '/api/mindmap'
+  private static readonly BASE_URL = '/api/proxy-post'
 
   /**
    * 创建新脑图
    */
   static async create(data: CreateMindMapRequest): Promise<MindMapData> {
-    const response = await fetch(this.BASE_URL, {
+    const response = await fetchWithAuth(this.BASE_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+      proxyParams: {
+        targetPath: 'api/mindmap',
+        actualMethod: 'POST'
       },
-      body: JSON.stringify(data),
+      actualBody: data
     })
 
     const result = await response.json()
@@ -38,7 +40,14 @@ export class MindMapService {
    * 根据ID获取脑图
    */
   static async getById(id: string): Promise<MindMapData> {
-    const response = await fetch(`${this.BASE_URL}/${id}`)
+    const response = await fetchWithAuth(this.BASE_URL, {
+      method: 'POST',
+      proxyParams: {
+        targetPath: `api/mindmap/${id}`,
+        actualMethod: 'GET'
+      },
+      actualBody: {}
+    })
     const result = await response.json()
 
     if (!response.ok || !result.success) {
@@ -52,12 +61,13 @@ export class MindMapService {
    * 更新脑图
    */
   static async update(id: string, data: UpdateMindMapRequest): Promise<MindMapData> {
-    const response = await fetch(`${this.BASE_URL}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetchWithAuth(this.BASE_URL, {
+      method: 'POST',
+      proxyParams: {
+        targetPath: `api/mindmap/${id}`,
+        actualMethod: 'PUT'
       },
-      body: JSON.stringify(data),
+      actualBody: data
     })
 
     const result = await response.json()
@@ -73,8 +83,13 @@ export class MindMapService {
    * 删除脑图
    */
   static async delete(id: string): Promise<void> {
-    const response = await fetch(`${this.BASE_URL}/${id}`, {
-      method: 'DELETE',
+    const response = await fetchWithAuth(this.BASE_URL, {
+      method: 'POST',
+      proxyParams: {
+        targetPath: `api/mindmap/${id}`,
+        actualMethod: 'DELETE'
+      },
+      actualBody: {}
     })
 
     const result = await response.json()
@@ -118,7 +133,14 @@ export class MindMapService {
       searchParams.append('sortOrder', sortOrder)
     }
 
-    const response = await fetch(`${this.BASE_URL}?${searchParams.toString()}`)
+    const response = await fetchWithAuth(this.BASE_URL, {
+      method: 'POST',
+      proxyParams: {
+        targetPath: `api/mindmap?${searchParams.toString()}`,
+        actualMethod: 'GET'
+      },
+      actualBody: {}
+    })
     const result = await response.json()
 
     if (!response.ok || !result.success) {

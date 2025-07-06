@@ -26,25 +26,17 @@ export default function TestSimpleMindMapPage() {
         // 动态导入simple-mind-map
         const mindMapModule = await import('simple-mind-map');
         MindMap = mindMapModule.default;
-        
-        // 尝试导入主题
-        try {
-          const themeModule = await import('simple-mind-map/src/themes');
-          themes = themeModule;
-        } catch (themeError) {
-          console.warn('主题导入失败，将使用默认主题:', themeError);
-        }
 
         setImportStatus('success');
         console.log('simple-mind-map 导入成功:', MindMap);
-        
+
         // 检查MindMap构造函数是否可用
         if (typeof MindMap === 'function') {
           console.log('MindMap 构造函数可用');
         } else {
           throw new Error('MindMap 不是一个有效的构造函数');
         }
-        
+
       } catch (error) {
         console.error('simple-mind-map 导入失败:', error);
         setImportStatus('error');

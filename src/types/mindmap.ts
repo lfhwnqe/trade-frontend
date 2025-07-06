@@ -23,19 +23,39 @@ export type MindMapTheme =
 // 脑图节点数据结构
 export interface MindMapNodeData {
   text: string
+  richText?: boolean
+  expand?: boolean
+  isActive?: boolean
+  uid?: string
+  icon?: any[]
+  image?: string
+  imageTitle?: string
+  imageSize?: {
+    width: number
+    height: number
+    custom?: boolean
+  }
+  hyperlink?: string
+  hyperlinkTitle?: string
+  note?: string
+  tag?: any[]
+  generalization?: any[]
+  associativeLineTargets?: string[]
+  associativeLineText?: any
+  associativeLinePoint?: any[]
+  associativeLineTargetControlOffsets?: any[]
+  associativeLineStyle?: any
+  customLeft?: number
+  customTop?: number
+  customTextWidth?: number
+  dir?: string
   [key: string]: any
 }
 
-// 脑图节点结构
+// 脑图节点结构（兼容simple-mind-map格式）
 export interface MindMapNode {
   data: MindMapNodeData
   children?: MindMapNode[]
-  [key: string]: any
-}
-
-// 脑图数据结构
-export interface MindMapDataStructure {
-  root: MindMapNode
   [key: string]: any
 }
 
@@ -47,7 +67,7 @@ export interface MindMapData {
   layout: MindMapLayout
   theme: MindMapTheme
   tags: string[]
-  data: MindMapDataStructure
+  data: MindMapNode  // 直接是根节点数据，与后端保持一致
   createdAt: string
   updatedAt: string
 }
@@ -59,7 +79,7 @@ export interface CreateMindMapRequest {
   layout: MindMapLayout
   theme: MindMapTheme
   tags: string[]
-  data: MindMapDataStructure
+  data: MindMapNode  // 直接是根节点数据
 }
 
 // 更新脑图请求
@@ -69,7 +89,7 @@ export interface UpdateMindMapRequest {
   layout?: MindMapLayout
   theme?: MindMapTheme
   tags?: string[]
-  data?: MindMapDataStructure
+  data?: MindMapNode  // 直接是根节点数据
 }
 
 // 脑图列表查询参数

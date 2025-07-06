@@ -6,6 +6,24 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { MindMapData, MindMapNode } from '@/types/mindmap';
+
+// 尝试静态导入simple-mind-map
+let MindMapClass: any = null;
+try {
+  // 这里我们先尝试静态导入，如果失败再使用动态导入
+  if (typeof window !== 'undefined') {
+    // 只在客户端环境下导入
+    import('simple-mind-map').then(module => {
+      MindMapClass = module.default || module;
+      console.log('Static import successful:', MindMapClass);
+    }).catch(err => {
+      console.error('Static import failed:', err);
+    });
+  }
+} catch (err) {
+  console.error('Static import error:', err);
+}
 
 // 脑图数据接口
 export interface MindMapData {
@@ -75,7 +93,7 @@ export interface MindMapEditorRef {
 }
 
 // 默认脑图数据
-const defaultData: MindMapData = {
+const defaultData: MindMapNode = {
   data: {
     text: '中心主题'
   },
@@ -158,12 +176,27 @@ const MindMapEditor = forwardRef<MindMapEditorRef, MindMapEditorProps>(({
         setIsLoading(true);
         setError(null);
 
-        // 动态导入simple-mind-map
+        // 如果已经有静态导入的类，直接使用
+        if (MindMapClass) {
+          setMindMapClass(() => MindMapClass);
+          console.log('Using pre-loaded MindMap class');
+          return;
+        }
+
+        // 否则进行动态导入
+        console.log('Starting dynamic import of simple-mind-map...');
         const mindMapModule = await import('simple-mind-map');
-        const MindMap = mindMapModule.default;
+        console.log('MindMap module loaded:', mindMapModule);
+        console.log('Module keys:', Object.keys(mindMapModule));
+
+        // simple-mind-map 使用默认导出
+        let MindMap = mindMapModule.default;
+
+        console.log('MindMap constructor:', MindMap, typeof MindMap);
 
         if (typeof MindMap !== 'function') {
-          throw new Error('MindMap is not a valid constructor');
+          console.error('Available exports:', Object.keys(mindMapModule));
+          throw new Error(`MindMap is not a valid constructor. Got: ${typeof MindMap}. Available exports: ${Object.keys(mindMapModule).join(', ')}`);
         }
 
         setMindMapClass(() => MindMap);

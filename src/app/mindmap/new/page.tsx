@@ -51,7 +51,7 @@ export default function NewMindMapPage() {
   const router = useRouter();
 
   // 使用Hook管理脑图创建
-  const { createNew, isCreating, error, clearError } = useMindMap({ autoLoad: false });
+  const { create, isCreating, error, clearError } = useMindMap({ autoLoad: false });
 
   const [formData, setFormData] = useState({
     title: '',
@@ -104,20 +104,16 @@ export default function NewMindMapPage() {
     try {
       clearError();
 
-      // 创建基础脑图数据结构
+      // 创建基础脑图数据结构（直接是根节点数据）
       const initialData = {
         data: {
-          root: {
-            data: {
-              text: formData.title
-            },
-            children: []
-          }
-        }
+          text: formData.title
+        },
+        children: []
       };
 
       // 调用API创建脑图
-      const newMindMap = await createNew({
+      const newMindMap = await create({
         title: formData.title,
         description: formData.description,
         layout: formData.layout,
