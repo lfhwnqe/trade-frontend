@@ -10,42 +10,24 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowLeft, 
-  Edit, 
-  Share, 
-  Download, 
-  Trash2, 
-  Calendar, 
-  Tag, 
-  Layout, 
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  ArrowLeft,
+  Edit,
+  Share,
+  Download,
+  Trash2,
+  Calendar,
+  Tag,
+  Layout,
   Palette,
   Eye,
-  Brain
+  Brain,
+  AlertCircle
 } from 'lucide-react';
-
-// 模拟脑图数据
-const mockMindMapData = {
-  id: '1',
-  title: '项目规划脑图',
-  description: '2024年产品开发规划的详细思维导图',
-  tags: ['工作', '规划', '产品'],
-  layout: 'logicalStructure',
-  theme: 'default',
-  createdAt: '2024-01-15T10:30:00Z',
-  updatedAt: '2024-01-20T15:45:00Z',
-  userId: 'user-123',
-  data: {
-    // 这里将包含实际的脑图数据
-    nodes: [],
-    links: []
-  },
-  metadata: {
-    nodeCount: 15,
-    maxDepth: 4,
-    lastEditDuration: 45 // 分钟
-  }
-};
+import { MindMapData } from '@/types/mindmap';
+import { MindMapService } from '@/services/mindMapService';
+import MindMapEditor from '@/components/mindmap/MindMapEditor';
 
 const layoutNames: Record<string, string> = {
   'logicalStructure': '逻辑结构图',
@@ -68,25 +50,32 @@ const themeNames: Record<string, string> = {
 export default function MindMapDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [mindMapData, setMindMapData] = useState(mockMindMapData);
+  const [mindMapData, setMindMapData] = useState<MindMapData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: 从API获取脑图数据
     const fetchMindMapData = async () => {
       try {
         setIsLoading(true);
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setMindMapData(mockMindMapData);
+        setError(null);
+
+        // 从API获取脑图数据
+        const data = await MindMapService.getById(params.id as string);
+        setMindMapData(data);
+
       } catch (error) {
         console.error('获取脑图数据失败:', error);
+        const errorMessage = error instanceof Error ? error.message : '获取脑图数据失败';
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchMindMapData();
+    if (params.id) {
+      fetchMindMapData();
+    }
   }, [params.id]);
 
   const handleEdit = () => {
@@ -103,11 +92,17 @@ export default function MindMapDetailPage() {
     console.log('下载脑图');
   };
 
-  const handleDelete = () => {
-    // TODO: 实现删除功能
+  const handleDelete = async () => {
+    if (!mindMapData) return;
+
     if (confirm('确定要删除这个脑图吗？此操作不可恢复。')) {
-      console.log('删除脑图');
-      router.push('/mindmap/list');
+      try {
+        await MindMapService.delete(mindMapData.id);
+        router.push('/mindmap/list');
+      } catch (error) {
+        console.error('删除脑图失败:', error);
+        alert('删除失败，请稍后重试');
+      }
     }
   };
 
@@ -123,6 +118,40 @@ export default function MindMapDetailPage() {
             <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             <span className="text-gray-600">加载中...</span>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+        <div className="mt-4">
+          <Button onClick={() => router.back()}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            返回
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!mindMapData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <Brain className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-600">未找到脑图数据</p>
+          <Button className="mt-4" onClick={() => router.back()}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            返回
+          </Button>
         </div>
       </div>
     );
@@ -186,19 +215,23 @@ export default function MindMapDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* 这里将显示实际的脑图组件 */}
-              <div className="h-96 bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                <div className="text-center">
-                  <Brain className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-600 mb-2">脑图预览区域</p>
-                  <p className="text-sm text-gray-500">
-                    节点数量: {mindMapData.metadata.nodeCount} | 最大深度: {mindMapData.metadata.maxDepth}
-                  </p>
-                  <Button className="mt-4" onClick={handleEdit}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    开始编辑
-                  </Button>
-                </div>
+              {/* 脑图预览组件 - 只读模式 */}
+              <div className="h-96">
+                <MindMapEditor
+                  data={mindMapData.data}
+                  config={{
+                    layout: mindMapData.layout,
+                    theme: mindMapData.theme,
+                    readonly: true, // 只读模式
+                    enableFreeDrag: false
+                  }}
+                  width="100%"
+                  height="100%"
+                  onError={(error) => {
+                    console.error('脑图渲染错误:', error);
+                  }}
+                  className="border border-gray-200 rounded-lg"
+                />
               </div>
             </CardContent>
           </Card>
@@ -269,7 +302,7 @@ export default function MindMapDetailPage() {
                 <Edit className="w-4 h-4 mr-2" />
                 <div>
                   <div className="font-medium">编辑时长</div>
-                  <div>{mindMapData.metadata.lastEditDuration} 分钟</div>
+                  <div>{mindMapData.metadata?.lastEditDuration || mindMapData.metadata?.editDuration || 0} 分钟</div>
                 </div>
               </div>
             </CardContent>
@@ -283,15 +316,15 @@ export default function MindMapDetailPage() {
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">节点数量</span>
-                <span className="font-medium">{mindMapData.metadata.nodeCount}</span>
+                <span className="font-medium">{mindMapData.metadata?.nodeCount || 0}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">最大深度</span>
-                <span className="font-medium">{mindMapData.metadata.maxDepth}</span>
+                <span className="font-medium">{mindMapData.metadata?.maxDepth || 0}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">标签数量</span>
-                <span className="font-medium">{mindMapData.tags.length}</span>
+                <span className="font-medium">{mindMapData.tags?.length || 0}</span>
               </div>
             </CardContent>
           </Card>
