@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RefreshCw, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRagDocuments } from './useRagDocuments';
-import { DocumentTable, SimpleFilter, DocumentStats } from './components';
+import { DocumentTable, SimpleFilter, DocumentStats, DeleteConfirmDialog } from './components';
 import { DocumentDetailDialog } from '../manage/components';
 import { DocumentEntity } from '../types';
 
@@ -26,6 +26,7 @@ export default function RAGDocumentsPage() {
     updatePagination,
     refreshData,
     fetchDocumentDetail,
+    handleDeleteDocument,
   } = useRagDocuments();
 
   // 文档详情对话框状态
@@ -37,6 +38,15 @@ export default function RAGDocumentsPage() {
     open: false,
     document: null,
     loading: false,
+  });
+
+  // 删除确认对话框状态
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    document: DocumentEntity | null;
+  }>({
+    open: false,
+    document: null,
   });
 
   // 页面初始化
@@ -80,6 +90,23 @@ export default function RAGDocumentsPage() {
     updateFilters(newFilters);
     // 重置到第一页并触发筛选
     updatePagination(1, pagination.pageSize);
+  };
+
+  // 处理删除请求
+  const handleDeleteRequest = (document: DocumentEntity) => {
+    setDeleteDialog({
+      open: true,
+      document,
+    });
+  };
+
+  // 处理删除确认
+  const handleDeleteConfirm = async (document: DocumentEntity) => {
+    await handleDeleteDocument(document);
+    setDeleteDialog({
+      open: false,
+      document: null,
+    });
   };
 
   return (
@@ -137,6 +164,7 @@ export default function RAGDocumentsPage() {
           pagination={pagination}
           onPageChange={updatePagination}
           onViewDetail={handleViewDetail}
+          onDelete={handleDeleteRequest}
         />
       </div>
 
@@ -146,6 +174,14 @@ export default function RAGDocumentsPage() {
         onClose={() => setDetailDialog({ open: false, document: null, loading: false })}
         document={detailDialog.document}
         loading={detailDialog.loading}
+      />
+
+      {/* 删除确认对话框 */}
+      <DeleteConfirmDialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, document: null })}
+        document={deleteDialog.document}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

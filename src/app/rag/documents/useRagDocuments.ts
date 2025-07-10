@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { getDocuments, getDocument } from '../request';
+import { getDocuments, getDocument, deleteDocument } from '../request';
 import { isErrorWithMessage } from '@/utils';
 import { 
   DocumentEntity, 
@@ -197,6 +197,28 @@ export function useRagDocuments() {
     [showAlert]
   );
 
+  // 删除文档
+  const handleDeleteDocument = useCallback(
+    async (document: DocumentEntity) => {
+      try {
+        await deleteDocument(document.documentId);
+        showAlert(`文档 "${document.title}" 删除成功`, 'success');
+
+        // 删除成功后刷新列表
+        refreshData();
+      } catch (error) {
+        console.error('删除文档失败:', error);
+        if (isErrorWithMessage(error)) {
+          showAlert("删除文档失败: " + error.message, 'error');
+        } else {
+          showAlert("删除文档失败: 未知错误", 'error');
+        }
+        throw error; // 重新抛出错误，让调用方知道删除失败
+      }
+    },
+    [showAlert, refreshData]
+  );
+
   return {
     // 状态
     documents: state.documents,
@@ -212,5 +234,6 @@ export function useRagDocuments() {
     updatePagination,
     refreshData,
     fetchDocumentDetail,
+    handleDeleteDocument,
   };
 }

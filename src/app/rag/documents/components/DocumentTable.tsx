@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/common/DataTable';
 import { StatusBadge } from '@/components/rag';
-import { 
-  ArrowUpDown, 
-  Eye, 
+import {
+  ArrowUpDown,
+  Eye,
   FileText,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { DocumentEntity, DocumentStatus } from '../../types';
 import {
@@ -32,14 +33,16 @@ interface DocumentTableProps {
   pagination: PaginationState;
   onPageChange: (page: number, pageSize: number) => void;
   onViewDetail: (document: DocumentEntity) => void;
+  onDelete: (document: DocumentEntity) => void;
 }
 
-export function DocumentTable({ 
-  documents, 
-  loading, 
-  pagination, 
-  onPageChange, 
-  onViewDetail 
+export function DocumentTable({
+  documents,
+  loading,
+  pagination,
+  onPageChange,
+  onViewDetail,
+  onDelete
 }: DocumentTableProps) {
   
   // 状态图标组件
@@ -191,7 +194,7 @@ export function DocumentTable({
         cell: ({ row }) => {
           const document = row.original;
           return (
-            <div className="flex items-center justify-center min-w-[80px]">
+            <div className="flex items-center justify-center gap-1 min-w-[120px]">
               <Button
                 variant="ghost"
                 size="sm"
@@ -200,15 +203,24 @@ export function DocumentTable({
               >
                 <Eye className="h-4 w-4" />
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(document)}
+                title="删除文档"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           );
         },
         enableSorting: false,
         enableHiding: false,
-        size: 80,
+        size: 120,
       },
     ],
-    [onViewDetail]
+    [onViewDetail, onDelete]
   );
 
   // 本地状态管理（简化版，不需要持久化）

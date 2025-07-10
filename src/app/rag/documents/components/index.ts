@@ -2,3 +2,4 @@
 export { DocumentTable } from './DocumentTable';
 export { SimpleFilter } from './SimpleFilter';
 export { DocumentStats } from './DocumentStats';
+export { DeleteConfirmDialog } from './DeleteConfirmDialog';
