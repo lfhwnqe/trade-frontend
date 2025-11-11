@@ -57,6 +57,27 @@ export async function fetchTrades(params: {
 }
 
 /** 获取单条交易详情 */
+type TradeDetailResponse = Trade & {
+  entryPrice?: number | string | null;
+};
+
+function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
+  const { entryPrice, ...rest } = detail;
+  const normalizeEntry = (value: unknown) =>
+    value === undefined || value === null || value === ""
+      ? undefined
+      : `${value}`;
+
+  const entryFromPayload = normalizeEntry(rest.entry);
+  const entryFromPrice = normalizeEntry(entryPrice);
+
+  return {
+    ...rest,
+    // 详情接口返回 entryPrice，但表单字段使用 entry，缺省时回填 entryPrice
+    entry: entryFromPayload ?? entryFromPrice,
+  };
+}
+
 export async function fetchTradeDetail(transactionId: string): Promise<Trade> {
   const proxyParams = {
     targetPath: `trade/${transactionId}`,
@@ -71,7 +92,8 @@ export async function fetchTradeDetail(transactionId: string): Promise<Trade> {
   if (!res.ok) throw new Error("获取详情失败");
   // 兼容 response 结构
   const data = await res.json();
-  return data.data || data;
+  const detail = (data.data || data) as TradeDetailResponse;
+  return normalizeTradeDetail(detail);
 }
 /** 交易结果枚举，与后端同步 */
 export enum TradeResult {
