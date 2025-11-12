@@ -305,8 +305,21 @@ export default function TradeListPage() {
         header: () => <div className="text-center">操作</div>,
         cell: ({ row }) => {
           const trade = row.original;
+          const transactionId = trade.transactionId;
           return (
             <div className="flex space-x-2 justify-center min-w-[200px]">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (transactionId) {
+                    router.push(`/trade/detail?id=${transactionId}`);
+                  }
+                }}
+                disabled={!transactionId}
+              >
+                详情
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

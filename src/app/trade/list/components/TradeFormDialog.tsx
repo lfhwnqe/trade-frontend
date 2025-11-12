@@ -14,9 +14,9 @@ import {
   tradeStatusOptions,
   tradeTypeOptions,
 } from "../../config";
-import { Input } from "@/components/ui/input";
+import { Input as BaseInput } from "@/components/ui/input";
 import {
-  Select,
+  Select as BaseSelect,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 
 import { DateRange } from "react-day-picker";
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea as BaseTextarea } from "@/components/ui/textarea";
 import { useAlert } from "@/components/common/alert";
 
 export interface TradeFormProps {
@@ -38,6 +38,7 @@ export interface TradeFormProps {
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   updateForm: (patch: Partial<Trade>) => void;
   loading?: boolean;
+  readOnly?: boolean;
 }
 
 export interface TradeFormRef {
@@ -53,15 +54,18 @@ interface EntryPlan {
 function EntryPlanForm({
   value,
   onChange,
+  readOnly,
 }: {
   value?: EntryPlan;
   onChange: (v: EntryPlan) => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className="space-y-2">
       <div className="flex flex-col gap-1">
         <label className="block pb-1 text-sm font-medium text-muted-foreground">入场理由</label>
-        <Textarea
+        <BaseTextarea
+          readOnly={readOnly}
           value={value?.entryReason ?? ""}
           onChange={(e) => onChange({ ...value, entryReason: e.target.value })}
           placeholder="请输入入场理由"
@@ -70,7 +74,8 @@ function EntryPlanForm({
       </div>
       <div className="flex flex-col gap-1">
         <label className="block pb-1 text-sm font-medium text-muted-foreground">入场信号</label>
-        <Textarea
+        <BaseTextarea
+          readOnly={readOnly}
           value={value?.entrySignal ?? ""}
           onChange={(e) => onChange({ ...value, entrySignal: e.target.value })}
           placeholder="请输入入场信号"
@@ -79,7 +84,8 @@ function EntryPlanForm({
       </div>
       <div className="flex flex-col gap-1">
         <label className="block pb-1 text-sm font-medium text-muted-foreground">退出信号</label>
-        <Textarea
+        <BaseTextarea
+          readOnly={readOnly}
           value={value?.exitSignal ?? ""}
           onChange={(e) => onChange({ ...value, exitSignal: e.target.value })}
           placeholder="请输入退出信号"
@@ -100,15 +106,29 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       handlePlanChange,
       handleSubmit,
       updateForm, // 默认为false
+      readOnly = false,
     },
     ref
   ) => {
     const [, errorAlert] = useAlert();
+    const inputProps = React.useMemo(
+      () => (readOnly ? { readOnly: true } : {}),
+      [readOnly]
+    );
+    const textareaProps = React.useMemo(
+      () => (readOnly ? { readOnly: true } : {}),
+      [readOnly]
+    );
+    const selectProps = React.useMemo(
+      () => (readOnly ? { disabled: true } : {}),
+      [readOnly]
+    );
     // 错误信息状态
     const [errors, setErrors] = React.useState<Record<string, string>>({});
     // 创建自定义的表单更新处理函数，在更新表单数据的同时清除相应字段的错误
     const handleFormChange = React.useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (readOnly) return;
         // 清除当前字段的错误提示
         setErrors((prev) => {
           const newErrors = { ...prev };
@@ -118,12 +138,13 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         // 调用原始的handleChange函数
         handleChange(e);
       },
-      [handleChange]
+      [handleChange, readOnly]
     );
 
     // 创建自定义的选择更新处理函数
     const handleFormSelectChange = React.useCallback(
       (key: keyof Trade, value: string) => {
+        if (readOnly) return;
         // 清除当前字段的错误提示
         setErrors((prev) => {
           const newErrors = { ...prev };
@@ -133,12 +154,13 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         // 调用原始的handleSelectChange函数
         handleSelectChange(key, value);
       },
-      [handleSelectChange]
+      [handleSelectChange, readOnly]
     );
 
     // 创建自定义的表单更新函数
     const handleFormUpdate = React.useCallback(
       (patch: Partial<Trade>) => {
+        if (readOnly) return;
         // 清除更新字段的错误提示
         setErrors((prev) => {
           const newErrors = { ...prev };
@@ -150,11 +172,12 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         // 调用原始的updateForm函数
         updateForm(patch);
       },
-      [updateForm]
+      [updateForm, readOnly]
     );
 
     // 验证表单
     const validateForm = () => {
+      if (readOnly) return true;
       const newErrors: Record<string, string> = {};
 
       // 必填字段验证
@@ -231,6 +254,9 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     // 包装提交处理函数
     const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      if (readOnly) {
+        return;
+      }
 
       // 验证表单
       if (validateForm()) {
@@ -257,6 +283,9 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     // 暴露组件方法
     React.useImperativeHandle(ref, () => ({
       submit: () => {
+        if (readOnly) {
+          return;
+        }
         // 验证表单
         if (validateForm()) {
           // 验证通过，创建一个合成的表单提交事件
@@ -300,7 +329,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     行情分析时间
                     <span className="ml-0.5 text-destructive">*</span>:
                   </label>
-                  <DateCalendarPicker
+                  <DateCalendarPicker disabled={readOnly}
                     analysisTime={form.analysisTime}
                     updateForm={(patch) =>
                       handleFormUpdate({ analysisTime: patch.analysisTime })
@@ -317,7 +346,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     交易标的<span className="ml-0.5 text-destructive">*</span>:
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="tradeSubject"
                     name="tradeSubject"
                     value={(form.tradeSubject as string) ?? ""}
@@ -335,7 +364,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     交易类型<span className="ml-0.5 text-destructive">*</span>:
                   </label>
-                  <Select
+                  <BaseSelect {...selectProps}
                     name="tradeType"
                     value={form.tradeType ?? ""}
                     onValueChange={(value) =>
@@ -356,7 +385,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </BaseSelect>
                   {errors.tradeType && (
                     <p className="text-sm text-destructive mt-1">
                       {errors.tradeType}
@@ -368,7 +397,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     交易分级
                   </label>
-                  <Select
+                  <BaseSelect {...selectProps}
                     name="grade"
                     value={(form.grade as string) ?? ""}
                     onValueChange={(value) =>
@@ -385,7 +414,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </BaseSelect>
                 </div>
 
                 {/* 交易状态 */}
@@ -393,7 +422,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     交易状态<span className="ml-0.5 text-destructive">*</span>:
                   </label>
-                  <Select
+                  <BaseSelect {...selectProps}
                     name="status"
                     value={(form.status as string) ?? ""}
                     onValueChange={(value) =>
@@ -414,7 +443,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </BaseSelect>
                   {errors.status && (
                     <p className="text-sm text-destructive mt-1">
                       {errors.status}
@@ -427,7 +456,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     市场结构<span className="ml-0.5 text-destructive">*</span>:
                   </label>
-                  <Select
+                  <BaseSelect {...selectProps}
                     name="marketStructure"
                     value={(form.marketStructure as string) ?? ""}
                     onValueChange={(value) =>
@@ -451,7 +480,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </BaseSelect>
                   {errors.marketStructure && (
                     <p className="text-sm text-destructive mt-1">
                       {errors.marketStructure}
@@ -464,7 +493,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     POC价格:
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="poc"
                     name="poc"
                     type="number"
@@ -478,7 +507,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     价值区下沿:
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="val"
                     name="val"
                     type="number"
@@ -492,7 +521,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     价值区上沿:
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="vah"
                     name="vah"
                     type="number"
@@ -505,7 +534,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     结构分析:
                   </label>
-                  <Textarea
+                  <BaseTextarea {...textareaProps}
                     id="marketStructureAnalysis"
                     name="marketStructureAnalysis"
                     value={(form.marketStructureAnalysis as string) ?? ""}
@@ -522,7 +551,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     关键价位说明:
                   </label>
-                  <Textarea
+                  <BaseTextarea {...textareaProps}
                     id="keyPriceLevels"
                     name="keyPriceLevels"
                     value={(form.keyPriceLevels as string) ?? ""}
@@ -536,7 +565,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     成交量分布图：
                   </label>
-                  <ImageUploader
+                  <ImageUploader disabled={readOnly}
                     value={
                       Array.isArray(form.volumeProfileImages) &&
                       (form.volumeProfileImages as unknown[]).every(
@@ -556,7 +585,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     假设路径图：
                   </label>
-                  <ImageUploader
+                  <ImageUploader disabled={readOnly}
                     value={
                       Array.isArray(form.expectedPathImages) &&
                       (form.expectedPathImages as unknown[]).every(
@@ -586,6 +615,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <EntryPlanForm
                     value={form.entryPlanA as EntryPlan}
                     onChange={(v) => handlePlanChange("entryPlanA", v)}
+                    readOnly={readOnly}
                   />
                 </div>
                 {/* 入场计划B */}
@@ -596,6 +626,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <EntryPlanForm
                     value={form.entryPlanB as EntryPlan}
                     onChange={(v) => handlePlanChange("entryPlanB", v)}
+                    readOnly={readOnly}
                   />
                 </div>
                 {/* 入场计划C */}
@@ -606,6 +637,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <EntryPlanForm
                     value={form.entryPlanC as EntryPlan}
                     onChange={(v) => handlePlanChange("entryPlanC", v)}
+                    readOnly={readOnly}
                   />
                 </div>
               </div>
@@ -626,7 +658,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Select
+                  <BaseSelect {...selectProps}
                     name="entryDirection"
                     value={(form.entryDirection as string) ?? ""}
                     onValueChange={(value) =>
@@ -650,7 +682,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </BaseSelect>
                   {errors.entryDirection && (
                     <p className="text-sm text-destructive mt-1">
                       {errors.entryDirection}
@@ -667,7 +699,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="entry"
                     name="entry"
                     type="number"
@@ -691,7 +723,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <DateCalendarPicker
+                  <DateCalendarPicker disabled={readOnly}
                     analysisTime={form.entryTime}
                     updateForm={(patch) =>
                       handleFormUpdate({ entryTime: patch.analysisTime })
@@ -713,7 +745,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="stopLoss"
                     name="stopLoss"
                     type="number"
@@ -737,7 +769,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="takeProfit"
                     name="takeProfit"
                     type="number"
@@ -761,7 +793,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Textarea
+                  <BaseTextarea {...textareaProps}
                     id="entryReason"
                     name="entryReason"
                     value={(form.entryReason as string) ?? ""}
@@ -791,7 +823,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Textarea
+                  <BaseTextarea {...textareaProps}
                     id="exitReason"
                     name="exitReason"
                     value={(form.exitReason as string) ?? ""}
@@ -821,7 +853,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Textarea
+                  <BaseTextarea {...textareaProps}
                     id="mentalityNotes"
                     name="mentalityNotes"
                     value={(form.mentalityNotes as string) ?? ""}
@@ -859,7 +891,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="exitPrice"
                     name="exitPrice"
                     type="number"
@@ -882,7 +914,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <DateCalendarPicker
+                  <DateCalendarPicker disabled={readOnly}
                     analysisTime={form.exitTime}
                     updateForm={(patch) =>
                       handleFormUpdate({ exitTime: patch.analysisTime })
@@ -903,7 +935,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Select
+                  <BaseSelect {...selectProps}
                     name="tradeResult"
                     value={(form.tradeResult as string) ?? ""}
                     onValueChange={(value) =>
@@ -927,7 +959,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </BaseSelect>
                   {errors.tradeResult && (
                     <p className="text-sm text-destructive mt-1">
                       {errors.tradeResult}
@@ -943,7 +975,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     )}
                     :
                   </label>
-                  <Select
+                  <BaseSelect {...selectProps}
                     name="followedPlan"
                     value={
                       form.followedPlan === true
@@ -973,7 +1005,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                       <SelectItem value="true">是</SelectItem>
                       <SelectItem value="false">否</SelectItem>
                     </SelectContent>
-                  </Select>
+                  </BaseSelect>
                 </div>
                 {/* 计划ID */}
                 <div className="col-span-2">
@@ -985,7 +1017,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                       )}
                     :
                   </label>
-                  <Select
+                  <BaseSelect {...selectProps}
                     name="followedPlanId"
                     value={(form.followedPlanId as string) ?? ""}
                     onValueChange={(value) =>
@@ -1009,7 +1041,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </BaseSelect>
                   {errors.followedPlanId && (
                     <p className="text-sm text-destructive mt-1">
                       {errors.followedPlanId}
@@ -1021,7 +1053,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     盈亏%:
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="profitLossPercentage"
                     name="profitLossPercentage"
                     type="number"
@@ -1034,7 +1066,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     风险回报比:
                   </label>
-                  <Input
+                  <BaseInput {...inputProps}
                     id="riskRewardRatio"
                     name="riskRewardRatio"
                     type="text"
@@ -1049,6 +1081,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     type="checkbox"
                     className="mr-2"
                     checked={!!form.analysisExpired}
+                    disabled={readOnly}
                     onChange={(e) =>
                       handleFormUpdate({ analysisExpired: e.target.checked })
                     }
@@ -1065,7 +1098,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     实际路径图：
                   </label>
-                  <ImageUploader
+                  <ImageUploader disabled={readOnly}
                     value={
                       Array.isArray(form.actualPathImages) &&
                       (form.actualPathImages as unknown[]).every(
@@ -1085,7 +1118,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     实际路径复盘:
                   </label>
-                  <Textarea
+                  <BaseTextarea {...textareaProps}
                     id="actualPathAnalysis"
                     name="actualPathAnalysis"
                     value={(form.actualPathAnalysis as string) ?? ""}
@@ -1099,7 +1132,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     备注:
                   </label>
-                  <Textarea
+                  <BaseTextarea {...textareaProps}
                     id="remarks"
                     name="remarks"
                     value={(form.remarks as string) ?? ""}
@@ -1113,7 +1146,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     经验总结:
                   </label>
-                  <Textarea
+                  <BaseTextarea {...textareaProps}
                     id="lessonsLearned"
                     name="lessonsLearned"
                     value={(form.lessonsLearned as string) ?? ""}

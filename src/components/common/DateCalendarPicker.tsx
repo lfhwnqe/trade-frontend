@@ -24,6 +24,8 @@ interface DateCalendarPickerProps {
   placeholder?: string;
   /** 日期格式 */
   dateFormat?: string;
+  /** 是否禁用交互 */
+  disabled?: boolean;
 }
 
 function parseDateTime(datetime?: string) {
@@ -57,6 +59,7 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
   showSeconds = true,
   placeholder = "选择日期与时间",
   dateFormat = "yyyy-MM-dd",
+  disabled = false,
 }) => {
   const init = parseDateTime(analysisTime);
   const [date, setDate] = React.useState<Date | undefined>(init.date);
@@ -120,25 +123,28 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
     return timeStr ? `${format(date, dateFormat)} ${timeStr}` : format(date, dateFormat);
   };
 
+  const trigger = (
+    <Button
+      variant={"outline"}
+      className={cn(
+        "justify-start text-left font-normal w-full",
+        !date && "text-muted-foreground",
+        "bg-muted"
+      )}
+      disabled={disabled}
+    >
+      <CalendarIcon className="mr-2 h-4 w-4" />
+      {date ? <span>{formatDisplayTime()}</span> : <span>{placeholder}</span>}
+    </Button>
+  );
+
+  if (disabled) {
+    return trigger;
+  }
+
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "justify-start text-left font-normal w-full",
-            !date && "text-muted-foreground",
-            "bg-muted"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? (
-            <span>{formatDisplayTime()}</span>
-          ) : (
-            <span>{placeholder}</span>
-          )}
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <div className="flex flex-col gap-4 p-4">
           <Calendar
@@ -148,7 +154,7 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
             initialFocus
           />
           {showTimePicker && (
-            <TimePickerComponent 
+            <TimePickerComponent
               hour={hour}
               minute={minute}
               second={second}
@@ -166,9 +172,12 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
                 setHour(now.getHours().toString().padStart(2, "0"));
                 setMinute(now.getMinutes().toString().padStart(2, "0"));
                 setSecond(now.getSeconds().toString().padStart(2, "0"));
-                pushChange(now, now.getHours().toString().padStart(2, "0"), 
-                  now.getMinutes().toString().padStart(2, "0"), 
-                  now.getSeconds().toString().padStart(2, "0"));
+                pushChange(
+                  now,
+                  now.getHours().toString().padStart(2, "0"),
+                  now.getMinutes().toString().padStart(2, "0"),
+                  now.getSeconds().toString().padStart(2, "0")
+                );
               }}
             >
               重置为当前时间

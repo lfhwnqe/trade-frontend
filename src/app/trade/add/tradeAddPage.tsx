@@ -36,8 +36,10 @@ type EntryPlan = {
  */
 export default function TradeAddPage({
   className,
+  readOnly = false,
 }: {
   className?: string;
+  readOnly?: boolean;
 }) {
   const [success, errorAlert] = useAlert();
   const router = useRouter();
@@ -181,12 +183,19 @@ export default function TradeAddPage({
     });
   }, []);
 
+  const pageTitle = readOnly ? "交易详情" : "新增/编辑交易记录";
+
   return (
     <Suspense fallback={<div>加载中...</div>}>
-      <div className={  "w-full flex-1 flex flex-col  rounded-lg shadowborder h-full " + className}>
+      <div
+        className={
+          "w-full flex-1 flex flex-col rounded-lg shadowborder h-full " +
+          (className ?? "")
+        }
+      >
         {/* 固定顶部 */}
         <div className="h-16 bg-white shadow px-6 py-4 rounded-t-lg">
-          <h1 className="text-2xl font-bold">新增/编辑交易记录</h1>
+          <h1 className="text-2xl font-bold">{pageTitle}</h1>
         </div>
         {/* 滚动表单内容 */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -202,6 +211,7 @@ export default function TradeAddPage({
             handleSubmit={handleSubmit}
             updateForm={updateForm}
             loading={loading}
+            readOnly={readOnly}
           />
           {(loading || detailLoading) && (
             <div className="mt-4 text-center text-gray-500">
@@ -209,17 +219,19 @@ export default function TradeAddPage({
             </div>
           )}
         </div>
-        <div className="pt-4 flex justify-end shadow-gray-400 shadow-2xl">
-          <LoadingButton
-            loading={loading}
-            editTrade={form}
-            errors={{}}
-            onSubmit={() => {
-              // 直接调用表单组件的 submit 方法
-              formRef.current?.submit();
-            }}
-          />
-        </div>
+        {!readOnly && (
+          <div className="pt-4 flex justify-end shadow-gray-400 shadow-2xl">
+            <LoadingButton
+              loading={loading}
+              editTrade={form}
+              errors={{}}
+              onSubmit={() => {
+                // 直接调用表单组件的 submit 方法
+                formRef.current?.submit();
+              }}
+            />
+          </div>
+        )}
       </div>
     </Suspense>
   );

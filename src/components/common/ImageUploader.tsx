@@ -272,7 +272,7 @@ export function ImageUploader({
           </div>
         ))}
         {/* 添加按钮 */}
-        {!reachMax && (
+        {!reachMax && !disabled && (
           <div
             className="w-14 h-14 border border-dashed rounded-lg bg-background text-muted-foreground hover:bg-accent hover:border-primary hover:text-primary transition flex flex-col items-center justify-center gap-1 cursor-pointer select-none"
             tabIndex={-1}
