@@ -24,12 +24,15 @@ import {
 } from "../list/components/TradeFormDialog";
 import { useAlert } from "@/components/common/alert";
 import { LoadingButton } from "../components/LoadingButton";
+import { Button } from "@/components/ui/button";
 
 type EntryPlan = {
   entryReason?: string;
   entrySignal?: string;
   exitSignal?: string;
 };
+
+const LOCAL_DRAFT_STORAGE_KEY = "trade-add-draft";
 /**
  * 新增交易页面
  * 复用 TradeFormDialog，独立页逻辑
@@ -78,6 +81,24 @@ export default function TradeAddPage({
     };
   }, [resetForm]);
 
+  // 本地暂存恢复
+  useEffect(() => {
+    if (id || typeof window === "undefined") {
+      return;
+    }
+    try {
+      const draft = window.localStorage.getItem(LOCAL_DRAFT_STORAGE_KEY);
+      if (draft) {
+        const parsed = JSON.parse(draft) as Partial<Trade>;
+        setForm((draftState) => {
+          Object.assign(draftState, parsed);
+        });
+      }
+    } catch (err) {
+      console.error("Failed to restore local draft", err);
+    }
+  }, [id, setForm]);
+
   // 提交函数 - 添加节流控制避免重复提交
   const submittingRef = useRef(false);
   // 创建对表单组件的引用
@@ -103,6 +124,9 @@ export default function TradeAddPage({
         } else {
           await createTrade(toDto(form));
           success("新建成功");
+        }
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(LOCAL_DRAFT_STORAGE_KEY);
         }
         router.push("/trade/list");
       } catch (error: unknown) {
@@ -183,6 +207,22 @@ export default function TradeAddPage({
     });
   }, []);
 
+  const handleSaveDraft = useCallback(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        LOCAL_DRAFT_STORAGE_KEY,
+        JSON.stringify(form)
+      );
+      success("已暂存到本地");
+    } catch (err) {
+      console.error("Failed to save local draft", err);
+      errorAlert("暂存失败，请稍后重试");
+    }
+  }, [form, success, errorAlert]);
+
   const pageTitle = readOnly ? "交易详情" : "新增/编辑交易记录";
 
   return (
@@ -220,7 +260,15 @@ export default function TradeAddPage({
           )}
         </div>
         {!readOnly && (
-          <div className="pt-4 flex justify-end shadow-gray-400 shadow-2xl">
+          <div className="pt-4 flex justify-end gap-4 shadow-gray-400 shadow-2xl px-6 pb-6">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={handleSaveDraft}
+            >
+              暂存本地
+            </Button>
             <LoadingButton
               loading={loading}
               editTrade={form}
