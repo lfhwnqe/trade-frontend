@@ -8,6 +8,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/components/common/alert";
 
+const COPY_PROMPT_HEADER = [
+  "这是我最近的交易复盘总结，请帮我：",
+  "1. 按照出现频率从高到低梳理所有犯过的错误，并明确哪类错误最常出现；",
+  "2. 针对每一类错误给出可执行的改进或规避方案；",
+  "3. 输出时请先列出排序后的错误，再给出对应建议。",
+  "",
+  "以下是原始复盘总结：",
+  "",
+].join("\n");
+
 type TradeSummary = {
   transactionId: string;
   lessonsLearned: string;
@@ -133,12 +143,13 @@ export default function TradeSummariesPage() {
       errorAlert("暂无数据可复制");
       return;
     }
-    const content = summaries
+    const contentBody = summaries
       .map(
         (summary, index) =>
           `【第${index + 1}条】\n${summary.lessonsLearned || "暂无总结"}`
       )
       .join("\n\n----------------------------------------\n\n");
+    const content = `${COPY_PROMPT_HEADER}${contentBody}`;
 
     try {
       setCopying(true);
