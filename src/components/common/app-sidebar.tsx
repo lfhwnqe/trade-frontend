@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, Home, Inbox, User2 } from "lucide-react";
+import { ChevronUp, FileText, Home, Inbox, User2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,9 +35,9 @@ const tradeItems = [
     icon: Inbox,
   },
   {
-    title: "交易记录",
+    title: "交易总结",
     url: "/trade/summaries",
-    icon: Inbox,
+    icon: FileText,
   },
 ];
 
