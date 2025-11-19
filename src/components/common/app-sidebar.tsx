@@ -34,6 +34,11 @@ const tradeItems = [
     url: "/trade/list",
     icon: Inbox,
   },
+  {
+    title: "交易记录",
+    url: "/trade/summaries",
+    icon: Inbox,
+  },
 ];
 
 export function AppSidebar() {
