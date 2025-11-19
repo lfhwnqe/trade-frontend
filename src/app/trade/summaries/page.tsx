@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RotateCcw, Search } from "lucide-react";
+import { ClipboardCopy, RotateCcw, Search } from "lucide-react";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { useAlert } from "@/components/common/alert";
 
 type TradeSummary = {
   transactionId: string;
@@ -106,6 +107,8 @@ export default function TradeSummariesPage() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [success, errorAlert] = useAlert();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -124,6 +127,45 @@ export default function TradeSummariesPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleCopyAll = useCallback(async () => {
+    if (!summaries.length) {
+      errorAlert("暂无数据可复制");
+      return;
+    }
+    const content = summaries
+      .map(
+        (summary, index) =>
+          `【第${index + 1}条】\n${summary.lessonsLearned || "暂无总结"}`
+      )
+      .join("\n\n----------------------------------------\n\n");
+
+    try {
+      setCopying(true);
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        navigator.clipboard.writeText
+      ) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = content;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      success("已复制全部总结");
+    } catch (err) {
+      console.error(err);
+      errorAlert("复制失败，请重试");
+    } finally {
+      setCopying(false);
+    }
+  }, [summaries, success, errorAlert]);
 
   const filteredSummaries = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
@@ -151,6 +193,15 @@ export default function TradeSummariesPage() {
           >
             <RotateCcw className="size-4" />
             {loading ? "刷新中..." : "刷新"}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleCopyAll}
+            disabled={copying || !summaries.length}
+          >
+            <ClipboardCopy className="size-4" />
+            {copying ? "复制中..." : "复制全部"}
           </Button>
         </div>
       </div>
