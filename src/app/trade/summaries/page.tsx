@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { RotateCcw, Search } from "lucide-react";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 type TradeSummary = {
   transactionId: string;
@@ -129,17 +128,13 @@ export default function TradeSummariesPage() {
   const filteredSummaries = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
     if (!trimmed) return summaries;
-    return summaries.filter((summary) => {
-      const lessons = summary.lessonsLearned || "";
-      return (
-        summary.transactionId.toLowerCase().includes(trimmed) ||
-        lessons.toLowerCase().includes(trimmed)
-      );
-    });
+    return summaries.filter((summary) =>
+      (summary.lessonsLearned || "").toLowerCase().includes(trimmed)
+    );
   }, [keyword, summaries]);
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6">
+    <div className="flex h-full flex-1 flex-col gap-6 overflow-y-auto p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">交易总结</h1>
@@ -168,7 +163,7 @@ export default function TradeSummariesPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="根据交易编号或总结关键词过滤"
+            placeholder="输入关键词快速查找反思"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
           />
@@ -200,26 +195,7 @@ export default function TradeSummariesPage() {
                 key={summary.transactionId}
                 className="group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                      交易编号
-                    </p>
-                    <p className="text-lg font-semibold leading-tight">
-                      {summary.transactionId}
-                    </p>
-                  </div>
-                  <Button variant="link" size="sm" asChild className="px-0">
-                    <Link
-                      href={`/trade/detail?id=${encodeURIComponent(
-                        summary.transactionId
-                      )}`}
-                    >
-                      查看详情
-                    </Link>
-                  </Button>
-                </div>
-                <p className="mt-4 text-xs font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   总结
                 </p>
                 <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
