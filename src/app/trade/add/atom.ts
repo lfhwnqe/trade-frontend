@@ -16,6 +16,12 @@ export const formInitialState: FormState = {
   entryPlanA: { entryReason: "", entrySignal: "", exitSignal: "" },
   entryPlanB: { entryReason: "", entrySignal: "", exitSignal: "" },
   entryPlanC: { entryReason: "", entrySignal: "", exitSignal: "" },
+  checklist: {
+    phaseAnalysis: false,
+    rangeAnalysis: false,
+    trendAnalysis: false,
+    riskRewardCheck: false,
+  },
 };
 
 export const formAtom = createImmerAtom<FormState>(formInitialState);

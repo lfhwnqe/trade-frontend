@@ -78,15 +78,24 @@ export interface EntryPlan {
   exitSignal?: string;
 }
 
+export interface ChecklistState {
+  phaseAnalysis?: boolean;
+  rangeAnalysis?: boolean;
+  trendAnalysis?: boolean;
+  riskRewardCheck?: boolean;
+}
+
 // 交易记录状态枚举
 export enum TradeStatus {
   ANALYZED = "已分析",
+  WAITING = "待入场",
   ENTERED = "已入场",
   EXITED = "已离场",
 }
 // 交易状态选项
 export const tradeStatusOptions = [
   { label: "已分析", value: TradeStatus.ANALYZED },
+  { label: "待入场", value: TradeStatus.WAITING },
   { label: "已入场", value: TradeStatus.ENTERED },
   { label: "已离场", value: TradeStatus.EXITED },
 ];
@@ -122,6 +131,7 @@ export type Trade = {
   entryPlanA?: EntryPlan;
   entryPlanB?: EntryPlan;
   entryPlanC?: EntryPlan;
+  checklist?: ChecklistState;
 
   // 入场记录
   entry?: string;

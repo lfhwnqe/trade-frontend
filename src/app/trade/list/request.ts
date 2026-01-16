@@ -1,11 +1,12 @@
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
+import { TradeStatus } from "../config";
 import type {
   EntryDirection,
   EntryPlan,
+  ChecklistState,
   Trade,
   TradeListResponse,
   TradeQuery,
-  TradeStatus,
   MarketStructure,
   ImageResource,
 } from "../config";
@@ -126,6 +127,7 @@ export type CreateTradeDto = {
   entryPlanA: EntryPlan;
   entryPlanB?: EntryPlan;
   entryPlanC?: EntryPlan;
+  checklist?: ChecklistState;
 
   // ===== 入场记录 =====
   entryPrice?: number;
@@ -178,6 +180,17 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
           (x) => x && typeof x.url === "string" && typeof x.key === "string"
         )
       : [];
+  const normalizeChecklist = (value?: ChecklistState) => {
+    if (!value) {
+      return undefined;
+    }
+    return {
+      phaseAnalysis: !!value.phaseAnalysis,
+      rangeAnalysis: !!value.rangeAnalysis,
+      trendAnalysis: !!value.trendAnalysis,
+      riskRewardCheck: !!value.riskRewardCheck,
+    };
+  };
 
   return {
     analysisTime: form.analysisTime,
@@ -203,6 +216,11 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     },
     entryPlanB: form.entryPlanB,
     entryPlanC: form.entryPlanC,
+    // 仅待入场状态需要提交入场前检查清单
+    checklist:
+      form.status === TradeStatus.WAITING
+        ? normalizeChecklist(form.checklist)
+        : undefined,
 
     // ===== 入场记录 =====
     entryPrice: parseNum(form.entry),

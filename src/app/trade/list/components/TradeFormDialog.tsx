@@ -5,6 +5,7 @@ import { DateCalendarPicker } from "../../../../components/common/DateCalendarPi
 import { ImageUploader } from "../../../../components/common/ImageUploader";
 import type { ImageResource, Trade } from "../../config";
 import {
+  ChecklistState,
   TradeStatus,
   entryDirectionOptions,
   marketStructureOptions,
@@ -15,6 +16,7 @@ import {
   tradeTypeOptions,
 } from "../../config";
 import { Input as BaseInput } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select as BaseSelect,
   SelectContent,
@@ -39,6 +41,7 @@ export interface TradeFormProps {
   updateForm: (patch: Partial<Trade>) => void;
   loading?: boolean;
   readOnly?: boolean;
+  showChecklist?: boolean;
 }
 
 export interface TradeFormRef {
@@ -107,6 +110,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       handleSubmit,
       updateForm, // 默认为false
       readOnly = false,
+      showChecklist = true,
     },
     ref
   ) => {
@@ -173,6 +177,20 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         updateForm(patch);
       },
       [updateForm, readOnly]
+    );
+
+    const handleChecklistChange = React.useCallback(
+      (key: keyof ChecklistState, checked: boolean | "indeterminate") => {
+        if (readOnly) return;
+        // 入场前检查清单仅在待入场状态下填写
+        handleFormUpdate({
+          checklist: {
+            ...(form.checklist ?? {}),
+            [key]: checked === true,
+          },
+        });
+      },
+      [form.checklist, handleFormUpdate, readOnly]
     );
 
     // 验证表单
@@ -642,6 +660,54 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 </div>
               </div>
             </div>
+
+            {showChecklist && form.status === TradeStatus.WAITING && (
+              <div className="bg-muted/50 border rounded-lg p-4 pt-3">
+                <div className="font-semibold text-base pb-2">入场前检查</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Checkbox
+                      checked={!!form.checklist?.phaseAnalysis}
+                      onCheckedChange={(checked) =>
+                        handleChecklistChange("phaseAnalysis", checked)
+                      }
+                      disabled={readOnly}
+                    />
+                    阶段分析：判断当前行情所处阶段（震荡/趋势）
+                  </label>
+                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Checkbox
+                      checked={!!form.checklist?.rangeAnalysis}
+                      onCheckedChange={(checked) =>
+                        handleChecklistChange("rangeAnalysis", checked)
+                      }
+                      disabled={readOnly}
+                    />
+                    震荡阶段：关键阻力点、VWAP 位置、威科夫区间边缘与小溪测试行为
+                  </label>
+                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Checkbox
+                      checked={!!form.checklist?.trendAnalysis}
+                      onCheckedChange={(checked) =>
+                        handleChecklistChange("trendAnalysis", checked)
+                      }
+                      disabled={readOnly}
+                    />
+                    趋势阶段：最近高成交量节点（可能回调测试点/入场价格）
+                  </label>
+                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Checkbox
+                      checked={!!form.checklist?.riskRewardCheck}
+                      onCheckedChange={(checked) =>
+                        handleChecklistChange("riskRewardCheck", checked)
+                      }
+                      disabled={readOnly}
+                    />
+                    盈亏比计算是否完成
+                  </label>
+                </div>
+              </div>
+            )}
 
             {/* 3. 入场记录 */}
             <div className="bg-muted/50 border rounded-lg p-4 pt-3">

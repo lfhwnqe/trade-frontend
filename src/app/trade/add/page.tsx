@@ -5,7 +5,8 @@ import TradeAddPage from "./tradeAddPage";
 export default function PageWrapper() {
   return (
     <Suspense fallback={<div>页面加载中...</div>}>
-      <TradeAddPage className="flex-1" />
+      {/* 新增页默认启用待入场检查清单填写逻辑 */}
+      <TradeAddPage className="flex-1" enableChecklist />
       {/* <div className="flex-1 flex flex-col">
         <div className="bg-amber-700 h-16">asd</div>
         <div className="bg-amber-400 flex-grow overflow-y-auto">

@@ -40,9 +40,11 @@ const LOCAL_DRAFT_STORAGE_KEY = "trade-add-draft";
 export default function TradeAddPage({
   className,
   readOnly = false,
+  enableChecklist = true,
 }: {
   className?: string;
   readOnly?: boolean;
+  enableChecklist?: boolean;
 }) {
   const [success, errorAlert] = useAlert();
   const router = useRouter();
@@ -252,6 +254,7 @@ export default function TradeAddPage({
             updateForm={updateForm}
             loading={loading}
             readOnly={readOnly}
+            showChecklist={enableChecklist}
           />
           {(loading || detailLoading) && (
             <div className="mt-4 text-center text-gray-500">
