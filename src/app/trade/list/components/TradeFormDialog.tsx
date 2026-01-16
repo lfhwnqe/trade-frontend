@@ -295,31 +295,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
-          {/* 交易分级 */}
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              交易分级
-            </label>
-            <BaseSelect {...analyzedSection.selectProps}
-              name="grade"
-              value={(form.grade as string) ?? ""}
-              onValueChange={(value) =>
-                handleFormSelectChange("grade", value)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="请选择" />
-              </SelectTrigger>
-              <SelectContent>
-                {tradeGradeOptions.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </BaseSelect>
-          </div>
-
           {/* 交易状态 */}
           {!isDistributed && (
             <div className="col-span-2">
@@ -1007,6 +982,30 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               value={(form.riskRewardRatio as string) ?? ""}
               onChange={handleFormChange}
             />
+          </div>
+          {/* 交易分级 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              交易分级
+            </label>
+            <BaseSelect {...exitedSection.selectProps}
+              name="grade"
+              value={(form.grade as string) ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("grade", value)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {tradeGradeOptions.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
           </div>
           {/* 分析是否过期 */}
           <div className="col-span-2 flex items-center">
