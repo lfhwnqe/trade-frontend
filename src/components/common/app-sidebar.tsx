@@ -39,6 +39,11 @@ const tradeItems = [
     url: "/trade/summaries",
     icon: FileText,
   },
+  {
+    title: "交易执行",
+    url: "/trade/execution-flow/list",
+    icon: FileText,
+  },
 ];
 
 export function AppSidebar() {
