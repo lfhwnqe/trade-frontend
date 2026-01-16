@@ -42,6 +42,7 @@ export interface TradeFormProps {
   loading?: boolean;
   readOnly?: boolean;
   showChecklist?: boolean;
+  formMode?: "full" | "distributed";
 }
 
 export interface TradeFormRef {
@@ -111,6 +112,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       updateForm, // 默认为false
       readOnly = false,
       showChecklist = true,
+      formMode = "full",
     },
     ref
   ) => {
@@ -193,30 +195,932 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       [form.checklist, handleFormUpdate, readOnly]
     );
 
+    const isDistributed = formMode === "distributed";
+    const isStatusDisabled = readOnly;
+    const statusRank: Record<TradeStatus, number> = {
+      [TradeStatus.ANALYZED]: 1,
+      [TradeStatus.WAITING]: 2,
+      [TradeStatus.ENTERED]: 3,
+      [TradeStatus.EXITED]: 4,
+    };
+    const currentRank = form.status ? statusRank[form.status] : 0;
+    const shouldShowSection = (target: TradeStatus) =>
+      !isDistributed || currentRank >= statusRank[target];
+    const isSectionEditable = (target: TradeStatus) =>
+      !readOnly && (!isDistributed || currentRank === statusRank[target]);
+    const getSectionProps = (target: TradeStatus) => {
+      const editable = isSectionEditable(target);
+      return {
+        readOnly: !editable,
+        inputProps: editable ? inputProps : { readOnly: true },
+        textareaProps: editable ? textareaProps : { readOnly: true },
+        selectProps: editable ? selectProps : { disabled: true },
+      };
+    };
+    const analyzedSection = getSectionProps(TradeStatus.ANALYZED);
+    const waitingSection = getSectionProps(TradeStatus.WAITING);
+    const enteredSection = getSectionProps(TradeStatus.ENTERED);
+    const exitedSection = getSectionProps(TradeStatus.EXITED);
+
+    const analysisSectionBlock = shouldShowSection(TradeStatus.ANALYZED) ? (
+      <div className="bg-muted/50 border rounded-lg p-4 pt-3">
+        <div className="font-semibold text-base pb-2">入场前分析</div>
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4 mb-2">
+          {/* 行情分析时间 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              行情分析时间
+              <span className="ml-0.5 text-destructive">*</span>:
+            </label>
+            <DateCalendarPicker disabled={analyzedSection.readOnly}
+              analysisTime={form.analysisTime}
+              updateForm={(patch) =>
+                handleFormUpdate({ analysisTime: patch.analysisTime })
+              }
+            />
+            {errors.analysisTime && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.analysisTime}
+              </p>
+            )}
+          </div>
+          {/* 交易标的 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              交易标的<span className="ml-0.5 text-destructive">*</span>:
+            </label>
+            <BaseInput {...analyzedSection.inputProps}
+              id="tradeSubject"
+              name="tradeSubject"
+              value={(form.tradeSubject as string) ?? ""}
+              onChange={handleFormChange}
+              className={errors.tradeSubject ? "border-destructive" : ""}
+            />
+            {errors.tradeSubject && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.tradeSubject}
+              </p>
+            )}
+          </div>
+          {/* 交易类型 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              交易类型<span className="ml-0.5 text-destructive">*</span>:
+            </label>
+            <BaseSelect {...analyzedSection.selectProps}
+              name="tradeType"
+              value={form.tradeType ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("tradeType", value)
+              }
+            >
+              <SelectTrigger
+                className={`w-full ${
+                  errors.tradeType ? "border-destructive" : ""
+                }`}
+              >
+                <SelectValue placeholder="请选择交易类型" />
+              </SelectTrigger>
+              <SelectContent>
+                {tradeTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+            {errors.tradeType && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.tradeType}
+              </p>
+            )}
+          </div>
+          {/* 交易分级 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              交易分级
+            </label>
+            <BaseSelect {...analyzedSection.selectProps}
+              name="grade"
+              value={(form.grade as string) ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("grade", value)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {tradeGradeOptions.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+          </div>
+
+          {/* 交易状态 */}
+          {!isDistributed && (
+            <div className="col-span-2">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                交易状态<span className="ml-0.5 text-destructive">*</span>:
+              </label>
+              <BaseSelect {...analyzedSection.selectProps}
+                name="status"
+                value={(form.status as string) ?? ""}
+                onValueChange={(value) =>
+                  handleFormSelectChange("status" as keyof Trade, value)
+                }
+                disabled={isStatusDisabled}
+              >
+                <SelectTrigger
+                  className={`w-full ${
+                    errors.status ? "border-destructive" : ""
+                  }`}
+                >
+                  <SelectValue placeholder="选择 交易状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tradeStatusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </BaseSelect>
+              {errors.status && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.status}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 市场结构 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              市场结构<span className="ml-0.5 text-destructive">*</span>:
+            </label>
+            <BaseSelect {...analyzedSection.selectProps}
+              name="marketStructure"
+              value={(form.marketStructure as string) ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("marketStructure" as keyof Trade, value)
+              }
+            >
+              <SelectTrigger
+                className={`w-full ${
+                  errors.marketStructure ? "border-destructive" : ""
+                }`}
+              >
+                <SelectValue placeholder="选择 市场结构" />
+              </SelectTrigger>
+              <SelectContent>
+                {marketStructureOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+            {errors.marketStructure && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.marketStructure}
+              </p>
+            )}
+          </div>
+
+          {/* POC价格 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              POC价格:
+            </label>
+            <BaseInput {...analyzedSection.inputProps}
+              id="poc"
+              name="poc"
+              type="number"
+              value={(form.poc as string) ?? ""}
+              onChange={handleFormChange}
+            />
+          </div>
+
+          {/* 价值区下沿 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              价值区下沿:
+            </label>
+            <BaseInput {...analyzedSection.inputProps}
+              id="val"
+              name="val"
+              type="number"
+              value={(form.val as string) ?? ""}
+              onChange={handleFormChange}
+            />
+          </div>
+
+          {/* 价值区上沿 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              价值区上沿:
+            </label>
+            <BaseInput {...analyzedSection.inputProps}
+              id="vah"
+              name="vah"
+              type="number"
+              value={(form.vah as string) ?? ""}
+              onChange={handleFormChange}
+            />
+          </div>
+          {/* 结构分析 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              结构分析:
+            </label>
+            <BaseTextarea {...analyzedSection.textareaProps}
+              id="marketStructureAnalysis"
+              name="marketStructureAnalysis"
+              value={(form.marketStructureAnalysis as string) ?? ""}
+              onChange={(e) =>
+                handleSelectChange("marketStructureAnalysis", e.target.value)
+              }
+            />
+          </div>
+          {/* 关键价位说明 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              关键价位说明:
+            </label>
+            <BaseTextarea {...analyzedSection.textareaProps}
+              id="keyPriceLevels"
+              name="keyPriceLevels"
+              value={(form.keyPriceLevels as string) ?? ""}
+              onChange={(e) => handleSelectChange("keyPriceLevels", e.target.value)}
+            />
+          </div>
+          {/* 成交量分布图 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              成交量分布图：
+            </label>
+            <ImageUploader disabled={analyzedSection.readOnly}
+              value={
+                Array.isArray(form.volumeProfileImages) &&
+                (form.volumeProfileImages as unknown[]).every(
+                  (v) => typeof v === "object" && v !== null && "url" in v
+                )
+                  ? (form.volumeProfileImages as unknown as ImageResource[])
+                  : []
+              }
+              onChange={(imgs) => handleImageChange("volumeProfileImages", imgs)}
+              max={5}
+            />
+          </div>
+          {/* 假设路径图 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              假设路径图：
+            </label>
+            <ImageUploader disabled={analyzedSection.readOnly}
+              value={
+                Array.isArray(form.expectedPathImages) &&
+                (form.expectedPathImages as unknown[]).every(
+                  (v) => typeof v === "object" && v !== null && "url" in v
+                )
+                  ? (form.expectedPathImages as unknown as ImageResource[])
+                  : []
+              }
+              onChange={(imgs) => handleImageChange("expectedPathImages", imgs)}
+              max={5}
+            />
+          </div>
+        </div>
+      </div>
+    ) : null;
+
+    const waitingPlanBlock = shouldShowSection(TradeStatus.WAITING) ? (
+      <div className="bg-muted/50 border rounded-lg p-4 pt-3">
+        <div className="font-semibold text-base pb-2">入场计划</div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
+          {/* 入场计划A */}
+          <div>
+            <div className="font-semibold text-base mb-2 text-muted-foreground">
+              A 计划
+            </div>
+            <EntryPlanForm
+              value={form.entryPlanA as EntryPlan}
+              onChange={(v) => handlePlanChange("entryPlanA", v)}
+              readOnly={waitingSection.readOnly}
+            />
+          </div>
+          {/* 入场计划B */}
+          <div>
+            <div className="font-semibold text-base mb-2 text-muted-foreground">
+              B 计划
+            </div>
+            <EntryPlanForm
+              value={form.entryPlanB as EntryPlan}
+              onChange={(v) => handlePlanChange("entryPlanB", v)}
+              readOnly={waitingSection.readOnly}
+            />
+          </div>
+          {/* 入场计划C */}
+          <div>
+            <div className="font-semibold text-base mb-2 text-muted-foreground">
+              C 计划
+            </div>
+            <EntryPlanForm
+              value={form.entryPlanC as EntryPlan}
+              onChange={(v) => handlePlanChange("entryPlanC", v)}
+              readOnly={waitingSection.readOnly}
+            />
+          </div>
+        </div>
+      </div>
+    ) : null;
+
+    const waitingChecklistBlock =
+      showChecklist && shouldShowSection(TradeStatus.WAITING) ? (
+        <div className="bg-muted/50 border rounded-lg p-4 pt-3">
+          <div className="font-semibold text-base pb-2">入场前检查</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <label className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Checkbox
+                checked={!!form.checklist?.phaseAnalysis}
+                onCheckedChange={(checked) =>
+                  handleChecklistChange("phaseAnalysis", checked)
+                }
+                disabled={waitingSection.readOnly}
+              />
+              阶段分析：判断当前行情所处阶段（震荡/趋势）
+            </label>
+            <label className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Checkbox
+                checked={!!form.checklist?.rangeAnalysis}
+                onCheckedChange={(checked) =>
+                  handleChecklistChange("rangeAnalysis", checked)
+                }
+                disabled={waitingSection.readOnly}
+              />
+              震荡阶段：关键阻力点、VWAP 位置、威科夫区间边缘与小溪测试行为
+            </label>
+            <label className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Checkbox
+                checked={!!form.checklist?.trendAnalysis}
+                onCheckedChange={(checked) =>
+                  handleChecklistChange("trendAnalysis", checked)
+                }
+                disabled={waitingSection.readOnly}
+              />
+              趋势阶段：最近高成交量节点（可能回调测试点/入场价格）
+            </label>
+            <label className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Checkbox
+                checked={!!form.checklist?.riskRewardCheck}
+                onCheckedChange={(checked) =>
+                  handleChecklistChange("riskRewardCheck", checked)
+                }
+                disabled={waitingSection.readOnly}
+              />
+              盈亏比计算是否完成
+            </label>
+          </div>
+        </div>
+      ) : null;
+
+    const entrySectionBlock = shouldShowSection(TradeStatus.ENTERED) ? (
+      <div className="bg-muted/50 border rounded-lg p-4 pt-3">
+        <div className="font-semibold text-base pb-2">入场记录</div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
+          {/* 入场方向 - 只在已入场/已离场时必填 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场方向
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseSelect {...enteredSection.selectProps}
+              name="entryDirection"
+              value={(form.entryDirection as string) ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("entryDirection" as keyof Trade, value)
+              }
+            >
+              <SelectTrigger
+                className={`w-full ${
+                  errors.entryDirection ? "border-destructive" : ""
+                }`}
+              >
+                <SelectValue placeholder="选择 入场方向" />
+              </SelectTrigger>
+              <SelectContent>
+                {entryDirectionOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+            {errors.entryDirection && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.entryDirection}
+              </p>
+            )}
+          </div>
+          {/* 入场价格 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场价格
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseInput {...enteredSection.inputProps}
+              id="entry"
+              name="entry"
+              type="number"
+              value={(form.entry as string) ?? ""}
+              onChange={handleFormChange}
+              className={errors.entry ? "border-destructive" : ""}
+            />
+            {errors.entry && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.entry}
+              </p>
+            )}
+          </div>
+          {/* 入场时间 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场时间
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <DateCalendarPicker disabled={enteredSection.readOnly}
+              analysisTime={form.entryTime}
+              updateForm={(patch) =>
+                handleFormUpdate({ entryTime: patch.analysisTime })
+              }
+            />
+            {errors.entryTime && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.entryTime}
+              </p>
+            )}
+          </div>
+          {/* 止损点 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              止损点
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseInput {...enteredSection.inputProps}
+              id="stopLoss"
+              name="stopLoss"
+              type="number"
+              value={(form.stopLoss as string) ?? ""}
+              onChange={handleFormChange}
+              className={errors.stopLoss ? "border-destructive" : ""}
+            />
+            {errors.stopLoss && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.stopLoss}
+              </p>
+            )}
+          </div>
+          {/* 止盈点 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              止盈点
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseInput {...enteredSection.inputProps}
+              id="takeProfit"
+              name="takeProfit"
+              type="number"
+              value={(form.takeProfit as string) ?? ""}
+              onChange={handleFormChange}
+              className={errors.takeProfit ? "border-destructive" : ""}
+            />
+            {errors.takeProfit && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.takeProfit}
+              </p>
+            )}
+          </div>
+          {/* 入场理由 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场理由
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseTextarea {...enteredSection.textareaProps}
+              id="entryReason"
+              name="entryReason"
+              value={(form.entryReason as string) ?? ""}
+              onChange={(e) => {
+                setErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors["entryReason"];
+                  return newErrors;
+                });
+                handleSelectChange("entryReason", e.target.value);
+              }}
+              className={errors.entryReason ? "border-destructive" : ""}
+            />
+            {errors.entryReason && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.entryReason}
+              </p>
+            )}
+          </div>
+          {/* 离场理由 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              离场理由
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseTextarea {...enteredSection.textareaProps}
+              id="exitReason"
+              name="exitReason"
+              value={(form.exitReason as string) ?? ""}
+              onChange={(e) => {
+                setErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors["exitReason"];
+                  return newErrors;
+                });
+                handleSelectChange("exitReason", e.target.value);
+              }}
+              className={errors.exitReason ? "border-destructive" : ""}
+            />
+            {errors.exitReason && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.exitReason}
+              </p>
+            )}
+          </div>
+          {/* 心态记录 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              心态记录
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseTextarea {...enteredSection.textareaProps}
+              id="mentalityNotes"
+              name="mentalityNotes"
+              value={(form.mentalityNotes as string) ?? ""}
+              onChange={(e) => {
+                setErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors["mentalityNotes"];
+                  return newErrors;
+                });
+                handleSelectChange("mentalityNotes", e.target.value);
+              }}
+              className={errors.mentalityNotes ? "border-destructive" : ""}
+            />
+            {errors.mentalityNotes && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.mentalityNotes}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    ) : null;
+
+    const exitSectionBlock = shouldShowSection(TradeStatus.EXITED) ? (
+      <div className="bg-muted/50 border rounded-lg p-4 pt-3 space-y-2">
+        <div className="font-semibold text-base pb-2">离场后分析</div>
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
+          {/* 离场价格 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              离场价格
+              {form.status === TradeStatus.EXITED && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseInput {...exitedSection.inputProps}
+              id="exitPrice"
+              name="exitPrice"
+              type="number"
+              value={(form.exitPrice as string) ?? ""}
+              onChange={handleFormChange}
+              className={errors.exitPrice ? "border-destructive" : ""}
+            />
+            {errors.exitPrice && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.exitPrice}
+              </p>
+            )}
+          </div>
+          {/* 离场时间 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              离场时间
+              {form.status === TradeStatus.EXITED && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <DateCalendarPicker disabled={exitedSection.readOnly}
+              analysisTime={form.exitTime}
+              updateForm={(patch) =>
+                handleFormUpdate({ exitTime: patch.analysisTime })
+              }
+            />
+            {errors.exitTime && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.exitTime}
+              </p>
+            )}
+          </div>
+          {/* 交易结果 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              交易结果
+              {form.status === TradeStatus.EXITED && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseSelect {...exitedSection.selectProps}
+              name="tradeResult"
+              value={(form.tradeResult as string) ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("tradeResult" as keyof Trade, value)
+              }
+            >
+              <SelectTrigger
+                className={`w-full ${
+                  errors.tradeResult ? "border-destructive" : ""
+                }`}
+              >
+                <SelectValue placeholder="选择 交易结果" />
+              </SelectTrigger>
+              <SelectContent>
+                {tradeResultOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+            {errors.tradeResult && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.tradeResult}
+              </p>
+            )}
+          </div>
+          {/* 是否执行了计划 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              是否执行了计划
+              {form.status === TradeStatus.EXITED && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseSelect {...exitedSection.selectProps}
+              name="followedPlan"
+              value={
+                form.followedPlan === true
+                  ? "true"
+                  : form.followedPlan === false
+                  ? "false"
+                  : ""
+              }
+              onValueChange={(value) => {
+                const boolValue = value === "true";
+                handleFormUpdate({ followedPlan: boolValue });
+
+                // 如果选择了"否"，清除followedPlanId字段的错误
+                if (!boolValue) {
+                  setErrors((prev) => {
+                    const newErrors = { ...prev };
+                    delete newErrors["followedPlanId"];
+                    return newErrors;
+                  });
+                }
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="选择 是否执行计划" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">是</SelectItem>
+                <SelectItem value="false">否</SelectItem>
+              </SelectContent>
+            </BaseSelect>
+          </div>
+          {/* 计划ID */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              计划类型
+              {form.status === TradeStatus.EXITED && !!form.followedPlan && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseSelect {...exitedSection.selectProps}
+              name="followedPlanId"
+              value={(form.followedPlanId as string) ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("followedPlanId" as keyof Trade, value)
+              }
+            >
+              <SelectTrigger
+                className={`w-full ${
+                  errors.followedPlanId ? "border-destructive" : ""
+                }`}
+              >
+                <SelectValue placeholder="选择 计划" />
+              </SelectTrigger>
+              <SelectContent>
+                {planOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+            {errors.followedPlanId && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.followedPlanId}
+              </p>
+            )}
+          </div>
+          {/* 盈亏% */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              盈亏%:
+            </label>
+            <BaseInput {...exitedSection.inputProps}
+              id="profitLossPercentage"
+              name="profitLossPercentage"
+              type="number"
+              value={(form.profitLossPercentage as string) ?? ""}
+              onChange={handleFormChange}
+            />
+          </div>
+          {/* 风险回报比 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              风险回报比:
+            </label>
+            <BaseInput {...exitedSection.inputProps}
+              id="riskRewardRatio"
+              name="riskRewardRatio"
+              type="text"
+              value={(form.riskRewardRatio as string) ?? ""}
+              onChange={handleFormChange}
+            />
+          </div>
+          {/* 分析是否过期 */}
+          <div className="col-span-2 flex items-center">
+            <input
+              id="analysisExpired"
+              type="checkbox"
+              className="mr-2"
+              checked={!!form.analysisExpired}
+              disabled={exitedSection.readOnly}
+              onChange={(e) =>
+                handleFormUpdate({ analysisExpired: e.target.checked })
+              }
+            />
+            <label
+              htmlFor="analysisExpired"
+              className="text-sm font-medium text-muted-foreground select-none"
+            >
+              分析已过期
+            </label>
+          </div>
+          {/* 实际路径图 */}
+          <div className="col-span-full">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              实际路径图：
+            </label>
+            <ImageUploader disabled={exitedSection.readOnly}
+              value={
+                Array.isArray(form.actualPathImages) &&
+                (form.actualPathImages as unknown[]).every(
+                  (v) => typeof v === "object" && v !== null && "url" in v
+                )
+                  ? (form.actualPathImages as unknown as ImageResource[])
+                  : []
+              }
+              onChange={(imgs) => handleImageChange("actualPathImages", imgs)}
+              max={5}
+            />
+          </div>
+          {/* 实际路径复盘 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              实际路径复盘:
+            </label>
+            <BaseTextarea {...exitedSection.textareaProps}
+              id="actualPathAnalysis"
+              name="actualPathAnalysis"
+              value={(form.actualPathAnalysis as string) ?? ""}
+              onChange={(e) =>
+                handleSelectChange("actualPathAnalysis", e.target.value)
+              }
+            />
+          </div>
+          {/* 备注 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              备注:
+            </label>
+            <BaseTextarea {...exitedSection.textareaProps}
+              id="remarks"
+              name="remarks"
+              value={(form.remarks as string) ?? ""}
+              onChange={(e) => handleSelectChange("remarks", e.target.value)}
+            />
+          </div>
+          {/* 经验总结 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              经验总结:
+            </label>
+            <BaseTextarea {...exitedSection.textareaProps}
+              id="lessonsLearned"
+              name="lessonsLearned"
+              value={(form.lessonsLearned as string) ?? ""}
+              onChange={(e) => {
+                setErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors["lessonsLearned"];
+                  return newErrors;
+                });
+                handleSelectChange("lessonsLearned", e.target.value);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    ) : null;
+
     // 验证表单
     const validateForm = () => {
       if (readOnly) return true;
       const newErrors: Record<string, string> = {};
 
-      // 必填字段验证
-      if (!form.analysisTime) {
-        newErrors.analysisTime = "行情分析时间为必填项";
-      }
-
-      if (!form.tradeSubject) {
-        newErrors.tradeType = "交易标的为必填项";
-      }
-
-      if (!form.tradeType) {
-        newErrors.tradeType = "交易类型为必填项";
-      }
-
+      // 交易状态必填
       if (!form.status) {
         newErrors.status = "交易状态为必填项";
       }
 
-      if (!form.marketStructure) {
-        newErrors.marketStructure = "市场结构为必填项";
+      // 分布表单下，仅已分析状态要求填写入场前分析信息
+      if (!isDistributed || form.status === TradeStatus.ANALYZED) {
+        if (!form.analysisTime) {
+          newErrors.analysisTime = "行情分析时间为必填项";
+        }
+
+        if (!form.tradeSubject) {
+          newErrors.tradeType = "交易标的为必填项";
+        }
+
+        if (!form.tradeType) {
+          newErrors.tradeType = "交易类型为必填项";
+        }
+
+        if (!form.marketStructure) {
+          newErrors.marketStructure = "市场结构为必填项";
+        }
       }
 
       // 根据交易状态验证必填字段
@@ -337,897 +1241,51 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         {/* <div className="w-full flex-1 flex flex-col mx-auto  bg-muted/50"> */}
         <form onSubmit={handleFormSubmit} className="flex flex-col flex-1">
           <div className="flex flex-col flex-1 gap-y-6 ">
-            {/* 1. 入场前分析 */}
-            <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-              <div className="font-semibold text-base pb-2">入场前分析</div>
-              <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4 mb-2">
-                {/* 行情分析时间 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    行情分析时间
-                    <span className="ml-0.5 text-destructive">*</span>:
-                  </label>
-                  <DateCalendarPicker disabled={readOnly}
-                    analysisTime={form.analysisTime}
-                    updateForm={(patch) =>
-                      handleFormUpdate({ analysisTime: patch.analysisTime })
-                    }
-                  />
-                  {errors.analysisTime && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.analysisTime}
-                    </p>
-                  )}
-                </div>
-                {/* 交易标的 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    交易标的<span className="ml-0.5 text-destructive">*</span>:
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="tradeSubject"
-                    name="tradeSubject"
-                    value={(form.tradeSubject as string) ?? ""}
-                    onChange={handleFormChange}
-                    className={errors.tradeSubject ? "border-destructive" : ""}
-                  />
-                  {errors.tradeSubject && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.tradeSubject}
-                    </p>
-                  )}
-                </div>
-                {/* 交易类型 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    交易类型<span className="ml-0.5 text-destructive">*</span>:
-                  </label>
-                  <BaseSelect {...selectProps}
-                    name="tradeType"
-                    value={form.tradeType ?? ""}
-                    onValueChange={(value) =>
-                      handleFormSelectChange("tradeType", value)
-                    }
-                  >
-                    <SelectTrigger
-                      className={`w-full ${
-                        errors.tradeType ? "border-destructive" : ""
-                      }`}
-                    >
-                      <SelectValue placeholder="请选择交易类型" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tradeTypeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </BaseSelect>
-                  {errors.tradeType && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.tradeType}
-                    </p>
-                  )}
-                </div>
-                {/* 交易分级 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    交易分级
-                  </label>
-                  <BaseSelect {...selectProps}
-                    name="grade"
-                    value={(form.grade as string) ?? ""}
-                    onValueChange={(value) =>
-                      handleFormSelectChange("grade", value)
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="请选择" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tradeGradeOptions.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </BaseSelect>
-                </div>
-
-                {/* 交易状态 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    交易状态<span className="ml-0.5 text-destructive">*</span>:
-                  </label>
-                  <BaseSelect {...selectProps}
-                    name="status"
-                    value={(form.status as string) ?? ""}
-                    onValueChange={(value) =>
-                      handleFormSelectChange("status" as keyof Trade, value)
-                    }
-                  >
-                    <SelectTrigger
-                      className={`w-full ${
-                        errors.status ? "border-destructive" : ""
-                      }`}
-                    >
-                      <SelectValue placeholder="选择 交易状态" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tradeStatusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </BaseSelect>
-                  {errors.status && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.status}
-                    </p>
-                  )}
-                </div>
-
-                {/* 市场结构 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    市场结构<span className="ml-0.5 text-destructive">*</span>:
-                  </label>
-                  <BaseSelect {...selectProps}
-                    name="marketStructure"
-                    value={(form.marketStructure as string) ?? ""}
-                    onValueChange={(value) =>
-                      handleFormSelectChange(
-                        "marketStructure" as keyof Trade,
-                        value
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      className={`w-full ${
-                        errors.marketStructure ? "border-destructive" : ""
-                      }`}
-                    >
-                      <SelectValue placeholder="选择 市场结构" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {marketStructureOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </BaseSelect>
-                  {errors.marketStructure && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.marketStructure}
-                    </p>
-                  )}
-                </div>
-
-                {/* POC价格 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    POC价格:
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="poc"
-                    name="poc"
-                    type="number"
-                    value={(form.poc as string) ?? ""}
-                    onChange={handleFormChange}
-                  />
-                </div>
-
-                {/* 价值区下沿 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    价值区下沿:
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="val"
-                    name="val"
-                    type="number"
-                    value={(form.val as string) ?? ""}
-                    onChange={handleFormChange}
-                  />
-                </div>
-
-                {/* 价值区上沿 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    价值区上沿:
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="vah"
-                    name="vah"
-                    type="number"
-                    value={(form.vah as string) ?? ""}
-                    onChange={handleFormChange}
-                  />
-                </div>
-                {/* 结构分析 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    结构分析:
-                  </label>
-                  <BaseTextarea {...textareaProps}
-                    id="marketStructureAnalysis"
-                    name="marketStructureAnalysis"
-                    value={(form.marketStructureAnalysis as string) ?? ""}
-                    onChange={(e) =>
-                      handleSelectChange(
-                        "marketStructureAnalysis",
-                        e.target.value
-                      )
-                    }
-                  />
-                </div>
-                {/* 关键价位说明 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    关键价位说明:
-                  </label>
-                  <BaseTextarea {...textareaProps}
-                    id="keyPriceLevels"
-                    name="keyPriceLevels"
-                    value={(form.keyPriceLevels as string) ?? ""}
-                    onChange={(e) =>
-                      handleSelectChange("keyPriceLevels", e.target.value)
-                    }
-                  />
-                </div>
-                {/* 成交量分布图 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    成交量分布图：
-                  </label>
-                  <ImageUploader disabled={readOnly}
-                    value={
-                      Array.isArray(form.volumeProfileImages) &&
-                      (form.volumeProfileImages as unknown[]).every(
-                        (v) => typeof v === "object" && v !== null && "url" in v
-                      )
-                        ? (form.volumeProfileImages as unknown as ImageResource[])
-                        : []
-                    }
-                    onChange={(imgs) =>
-                      handleImageChange("volumeProfileImages", imgs)
-                    }
-                    max={5}
-                  />
-                </div>
-                {/* 假设路径图 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    假设路径图：
-                  </label>
-                  <ImageUploader disabled={readOnly}
-                    value={
-                      Array.isArray(form.expectedPathImages) &&
-                      (form.expectedPathImages as unknown[]).every(
-                        (v) => typeof v === "object" && v !== null && "url" in v
-                      )
-                        ? (form.expectedPathImages as unknown as ImageResource[])
-                        : []
-                    }
-                    onChange={(imgs) =>
-                      handleImageChange("expectedPathImages", imgs)
-                    }
-                    max={5}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 2. 入场计划 */}
-            <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-              <div className="font-semibold text-base pb-2">入场计划</div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
-                {/* 入场计划A */}
-                <div>
-                  <div className="font-semibold text-base mb-2 text-muted-foreground">
-                    A 计划
-                  </div>
-                  <EntryPlanForm
-                    value={form.entryPlanA as EntryPlan}
-                    onChange={(v) => handlePlanChange("entryPlanA", v)}
-                    readOnly={readOnly}
-                  />
-                </div>
-                {/* 入场计划B */}
-                <div>
-                  <div className="font-semibold text-base mb-2 text-muted-foreground">
-                    B 计划
-                  </div>
-                  <EntryPlanForm
-                    value={form.entryPlanB as EntryPlan}
-                    onChange={(v) => handlePlanChange("entryPlanB", v)}
-                    readOnly={readOnly}
-                  />
-                </div>
-                {/* 入场计划C */}
-                <div>
-                  <div className="font-semibold text-base mb-2 text-muted-foreground">
-                    C 计划
-                  </div>
-                  <EntryPlanForm
-                    value={form.entryPlanC as EntryPlan}
-                    onChange={(v) => handlePlanChange("entryPlanC", v)}
-                    readOnly={readOnly}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {showChecklist && form.status === TradeStatus.WAITING && (
+            {isDistributed && (
               <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-                <div className="font-semibold text-base pb-2">入场前检查</div>
+                <div className="font-semibold text-base pb-2">交易状态</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Checkbox
-                      checked={!!form.checklist?.phaseAnalysis}
-                      onCheckedChange={(checked) =>
-                        handleChecklistChange("phaseAnalysis", checked)
+                  <div className="col-span-1">
+                    <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                      交易状态<span className="ml-0.5 text-destructive">*</span>:
+                    </label>
+                    <BaseSelect
+                      name="status"
+                      value={(form.status as string) ?? ""}
+                      onValueChange={(value) =>
+                        handleFormSelectChange("status" as keyof Trade, value)
                       }
-                      disabled={readOnly}
-                    />
-                    阶段分析：判断当前行情所处阶段（震荡/趋势）
-                  </label>
-                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Checkbox
-                      checked={!!form.checklist?.rangeAnalysis}
-                      onCheckedChange={(checked) =>
-                        handleChecklistChange("rangeAnalysis", checked)
-                      }
-                      disabled={readOnly}
-                    />
-                    震荡阶段：关键阻力点、VWAP 位置、威科夫区间边缘与小溪测试行为
-                  </label>
-                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Checkbox
-                      checked={!!form.checklist?.trendAnalysis}
-                      onCheckedChange={(checked) =>
-                        handleChecklistChange("trendAnalysis", checked)
-                      }
-                      disabled={readOnly}
-                    />
-                    趋势阶段：最近高成交量节点（可能回调测试点/入场价格）
-                  </label>
-                  <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Checkbox
-                      checked={!!form.checklist?.riskRewardCheck}
-                      onCheckedChange={(checked) =>
-                        handleChecklistChange("riskRewardCheck", checked)
-                      }
-                      disabled={readOnly}
-                    />
-                    盈亏比计算是否完成
-                  </label>
+                      disabled={isStatusDisabled}
+                    >
+                      <SelectTrigger
+                        className={`w-full ${
+                          errors.status ? "border-destructive" : ""
+                        }`}
+                      >
+                        <SelectValue placeholder="选择 交易状态" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tradeStatusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </BaseSelect>
+                    {errors.status && (
+                      <p className="text-sm text-destructive mt-1">
+                        {errors.status}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
-
-            {/* 3. 入场记录 */}
-            <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-              <div className="font-semibold text-base pb-2">入场记录</div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
-                {/* 入场方向 - 只在已入场/已离场时必填 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    入场方向
-                    {(form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED) && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseSelect {...selectProps}
-                    name="entryDirection"
-                    value={(form.entryDirection as string) ?? ""}
-                    onValueChange={(value) =>
-                      handleFormSelectChange(
-                        "entryDirection" as keyof Trade,
-                        value
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      className={`w-full ${
-                        errors.entryDirection ? "border-destructive" : ""
-                      }`}
-                    >
-                      <SelectValue placeholder="选择 入场方向" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {entryDirectionOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </BaseSelect>
-                  {errors.entryDirection && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.entryDirection}
-                    </p>
-                  )}
-                </div>
-                {/* 入场价格 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    入场价格
-                    {(form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED) && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="entry"
-                    name="entry"
-                    type="number"
-                    value={(form.entry as string) ?? ""}
-                    onChange={handleFormChange}
-                    className={errors.entry ? "border-destructive" : ""}
-                  />
-                  {errors.entry && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.entry}
-                    </p>
-                  )}
-                </div>
-                {/* 入场时间 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    入场时间
-                    {(form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED) && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <DateCalendarPicker disabled={readOnly}
-                    analysisTime={form.entryTime}
-                    updateForm={(patch) =>
-                      handleFormUpdate({ entryTime: patch.analysisTime })
-                    }
-                  />
-                  {errors.entryTime && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.entryTime}
-                    </p>
-                  )}
-                </div>
-                {/* 止损点 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    止损点
-                    {(form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED) && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="stopLoss"
-                    name="stopLoss"
-                    type="number"
-                    value={(form.stopLoss as string) ?? ""}
-                    onChange={handleFormChange}
-                    className={errors.stopLoss ? "border-destructive" : ""}
-                  />
-                  {errors.stopLoss && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.stopLoss}
-                    </p>
-                  )}
-                </div>
-                {/* 止盈点 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    止盈点
-                    {(form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED) && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="takeProfit"
-                    name="takeProfit"
-                    type="number"
-                    value={(form.takeProfit as string) ?? ""}
-                    onChange={handleFormChange}
-                    className={errors.takeProfit ? "border-destructive" : ""}
-                  />
-                  {errors.takeProfit && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.takeProfit}
-                    </p>
-                  )}
-                </div>
-                {/* 入场理由 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    入场理由
-                    {(form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED) && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseTextarea {...textareaProps}
-                    id="entryReason"
-                    name="entryReason"
-                    value={(form.entryReason as string) ?? ""}
-                    onChange={(e) => {
-                      setErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors["entryReason"];
-                        return newErrors;
-                      });
-                      handleSelectChange("entryReason", e.target.value);
-                    }}
-                    className={errors.entryReason ? "border-destructive" : ""}
-                  />
-                  {errors.entryReason && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.entryReason}
-                    </p>
-                  )}
-                </div>
-                {/* 离场理由 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    离场理由
-                    {(form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED) && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseTextarea {...textareaProps}
-                    id="exitReason"
-                    name="exitReason"
-                    value={(form.exitReason as string) ?? ""}
-                    onChange={(e) => {
-                      setErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors["exitReason"];
-                        return newErrors;
-                      });
-                      handleSelectChange("exitReason", e.target.value);
-                    }}
-                    className={errors.exitReason ? "border-destructive" : ""}
-                  />
-                  {errors.exitReason && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.exitReason}
-                    </p>
-                  )}
-                </div>
-                {/* 心态记录 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    心态记录
-                    {(form.status === TradeStatus.ENTERED ||
-                      form.status === TradeStatus.EXITED) && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseTextarea {...textareaProps}
-                    id="mentalityNotes"
-                    name="mentalityNotes"
-                    value={(form.mentalityNotes as string) ?? ""}
-                    onChange={(e) => {
-                      setErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors["mentalityNotes"];
-                        return newErrors;
-                      });
-                      handleSelectChange("mentalityNotes", e.target.value);
-                    }}
-                    className={
-                      errors.mentalityNotes ? "border-destructive" : ""
-                    }
-                  />
-                  {errors.mentalityNotes && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.mentalityNotes}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* 4. 离场后分析 */}
-            <div className="bg-muted/50 border rounded-lg p-4 pt-3 space-y-2">
-              <div className="font-semibold text-base pb-2">离场后分析</div>
-              <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
-                {/* 离场价格 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    离场价格
-                    {form.status === TradeStatus.EXITED && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="exitPrice"
-                    name="exitPrice"
-                    type="number"
-                    value={(form.exitPrice as string) ?? ""}
-                    onChange={handleFormChange}
-                    className={errors.exitPrice ? "border-destructive" : ""}
-                  />
-                  {errors.exitPrice && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.exitPrice}
-                    </p>
-                  )}
-                </div>
-                {/* 离场时间 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    离场时间
-                    {form.status === TradeStatus.EXITED && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <DateCalendarPicker disabled={readOnly}
-                    analysisTime={form.exitTime}
-                    updateForm={(patch) =>
-                      handleFormUpdate({ exitTime: patch.analysisTime })
-                    }
-                  />
-                  {errors.exitTime && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.exitTime}
-                    </p>
-                  )}
-                </div>
-                {/* 交易结果 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    交易结果
-                    {form.status === TradeStatus.EXITED && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseSelect {...selectProps}
-                    name="tradeResult"
-                    value={(form.tradeResult as string) ?? ""}
-                    onValueChange={(value) =>
-                      handleFormSelectChange(
-                        "tradeResult" as keyof Trade,
-                        value
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      className={`w-full ${
-                        errors.tradeResult ? "border-destructive" : ""
-                      }`}
-                    >
-                      <SelectValue placeholder="选择 交易结果" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tradeResultOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </BaseSelect>
-                  {errors.tradeResult && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.tradeResult}
-                    </p>
-                  )}
-                </div>
-                {/* 是否执行了计划 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    是否执行了计划
-                    {form.status === TradeStatus.EXITED && (
-                      <span className="ml-0.5 text-destructive">*</span>
-                    )}
-                    :
-                  </label>
-                  <BaseSelect {...selectProps}
-                    name="followedPlan"
-                    value={
-                      form.followedPlan === true
-                        ? "true"
-                        : form.followedPlan === false
-                        ? "false"
-                        : ""
-                    }
-                    onValueChange={(value) => {
-                      const boolValue = value === "true";
-                      handleFormUpdate({ followedPlan: boolValue });
-
-                      // 如果选择了"否"，清除followedPlanId字段的错误
-                      if (!boolValue) {
-                        setErrors((prev) => {
-                          const newErrors = { ...prev };
-                          delete newErrors["followedPlanId"];
-                          return newErrors;
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="选择 是否执行计划" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">是</SelectItem>
-                      <SelectItem value="false">否</SelectItem>
-                    </SelectContent>
-                  </BaseSelect>
-                </div>
-                {/* 计划ID */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    计划类型
-                    {form.status === TradeStatus.EXITED &&
-                      !!form.followedPlan && (
-                        <span className="ml-0.5 text-destructive">*</span>
-                      )}
-                    :
-                  </label>
-                  <BaseSelect {...selectProps}
-                    name="followedPlanId"
-                    value={(form.followedPlanId as string) ?? ""}
-                    onValueChange={(value) =>
-                      handleFormSelectChange(
-                        "followedPlanId" as keyof Trade,
-                        value
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      className={`w-full ${
-                        errors.followedPlanId ? "border-destructive" : ""
-                      }`}
-                    >
-                      <SelectValue placeholder="选择 计划" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {planOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </BaseSelect>
-                  {errors.followedPlanId && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.followedPlanId}
-                    </p>
-                  )}
-                </div>
-                {/* 盈亏% */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    盈亏%:
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="profitLossPercentage"
-                    name="profitLossPercentage"
-                    type="number"
-                    value={(form.profitLossPercentage as string) ?? ""}
-                    onChange={handleFormChange}
-                  />
-                </div>
-                {/* 风险回报比 */}
-                <div className="col-span-2">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    风险回报比:
-                  </label>
-                  <BaseInput {...inputProps}
-                    id="riskRewardRatio"
-                    name="riskRewardRatio"
-                    type="text"
-                    value={(form.riskRewardRatio as string) ?? ""}
-                    onChange={handleFormChange}
-                  />
-                </div>
-                {/* 分析是否过期 */}
-                <div className="col-span-2 flex items-center">
-                  <input
-                    id="analysisExpired"
-                    type="checkbox"
-                    className="mr-2"
-                    checked={!!form.analysisExpired}
-                    disabled={readOnly}
-                    onChange={(e) =>
-                      handleFormUpdate({ analysisExpired: e.target.checked })
-                    }
-                  />
-                  <label
-                    htmlFor="analysisExpired"
-                    className="text-sm font-medium text-muted-foreground select-none"
-                  >
-                    分析已过期
-                  </label>
-                </div>
-                {/* 实际路径图 */}
-                <div className="col-span-full">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    实际路径图：
-                  </label>
-                  <ImageUploader disabled={readOnly}
-                    value={
-                      Array.isArray(form.actualPathImages) &&
-                      (form.actualPathImages as unknown[]).every(
-                        (v) => typeof v === "object" && v !== null && "url" in v
-                      )
-                        ? (form.actualPathImages as unknown as ImageResource[])
-                        : []
-                    }
-                    onChange={(imgs) =>
-                      handleImageChange("actualPathImages", imgs)
-                    }
-                    max={5}
-                  />
-                </div>
-                {/* 实际路径复盘 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    实际路径复盘:
-                  </label>
-                  <BaseTextarea {...textareaProps}
-                    id="actualPathAnalysis"
-                    name="actualPathAnalysis"
-                    value={(form.actualPathAnalysis as string) ?? ""}
-                    onChange={(e) =>
-                      handleSelectChange("actualPathAnalysis", e.target.value)
-                    }
-                  />
-                </div>
-                {/* 备注 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    备注:
-                  </label>
-                  <BaseTextarea {...textareaProps}
-                    id="remarks"
-                    name="remarks"
-                    value={(form.remarks as string) ?? ""}
-                    onChange={(e) =>
-                      handleSelectChange("remarks", e.target.value)
-                    }
-                  />
-                </div>
-                {/* 经验总结 */}
-                <div className="col-span-3">
-                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                    经验总结:
-                  </label>
-                  <BaseTextarea {...textareaProps}
-                    id="lessonsLearned"
-                    name="lessonsLearned"
-                    value={(form.lessonsLearned as string) ?? ""}
-                    onChange={(e) => {
-                      setErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors["lessonsLearned"];
-                        return newErrors;
-                      });
-                      handleSelectChange("lessonsLearned", e.target.value);
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
+            {exitSectionBlock}
+            {entrySectionBlock}
+            {waitingPlanBlock}
+            {waitingChecklistBlock}
+            {analysisSectionBlock}
           </div>
 
           {/* 提交按钮 */}

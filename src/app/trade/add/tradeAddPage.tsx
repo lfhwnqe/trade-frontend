@@ -16,7 +16,7 @@ import {
   fetchTradeDetail,
   updateTrade,
 } from "../list/request";
-import { Trade } from "../config";
+import { Trade, TradeStatus } from "../config";
 import type { ImageResource } from "../config";
 import {
   TradeFormDialog,
@@ -54,6 +54,19 @@ export default function TradeAddPage({
   const [detailLoading, setDetailLoading] = useAtomImmer(detailLoadingAtom);
   // 主体渲染，非弹窗模式而是全宽居中大表单
   const id = searchParams.get("id");
+  const isCreateMode = !id;
+
+  // 新增时固定为已分析状态，避免跨状态填写
+  useEffect(() => {
+    if (!isCreateMode) {
+      return;
+    }
+    setForm((draft) => {
+      if (!draft.status) {
+        draft.status = TradeStatus.ANALYZED;
+      }
+    });
+  }, [isCreateMode, setForm]);
 
   // 详情回填逻辑
   useEffect(() => {
@@ -255,6 +268,7 @@ export default function TradeAddPage({
             loading={loading}
             readOnly={readOnly}
             showChecklist={enableChecklist}
+            formMode="distributed"
           />
           {(loading || detailLoading) && (
             <div className="mt-4 text-center text-gray-500">
