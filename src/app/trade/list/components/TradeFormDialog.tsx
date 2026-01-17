@@ -28,6 +28,7 @@ import {
 import { DateRange } from "react-day-picker";
 import { Textarea as BaseTextarea } from "@/components/ui/textarea";
 import { useAlert } from "@/components/common/alert";
+import { Star } from "lucide-react";
 
 export interface TradeFormProps {
   editTrade: Trade | null;
@@ -96,6 +97,44 @@ function EntryPlanForm({
           className="min-h-[80px]"
         />
       </div>
+    </div>
+  );
+}
+
+function StarRating({
+  value = 0,
+  onChange,
+  readOnly,
+  id,
+}: {
+  value?: number;
+  onChange?: (value: number) => void;
+  readOnly?: boolean;
+  id?: string;
+}) {
+  return (
+    <div id={id} className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => {
+        const active = star <= value;
+        return (
+          <button
+            key={star}
+            type="button"
+            className="p-0.5 disabled:cursor-not-allowed"
+            onClick={() => onChange?.(star)}
+            disabled={readOnly}
+            aria-label={`评分 ${star} 星`}
+            aria-pressed={active}
+          >
+            <Star
+              className={`h-5 w-5 ${
+                active ? "text-amber-500" : "text-muted-foreground/40"
+              }`}
+              fill={active ? "currentColor" : "none"}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -206,21 +245,19 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const currentRank = form.status ? statusRank[form.status] : 0;
     const shouldShowSection = (target: TradeStatus) =>
       !isDistributed || currentRank >= statusRank[target];
-    const isSectionEditable = (target: TradeStatus) =>
-      !readOnly && (!isDistributed || currentRank === statusRank[target]);
-    const getSectionProps = (target: TradeStatus) => {
-      const editable = isSectionEditable(target);
-      return {
-        readOnly: !editable,
-        inputProps: editable ? inputProps : { readOnly: true },
-        textareaProps: editable ? textareaProps : { readOnly: true },
-        selectProps: editable ? selectProps : { disabled: true },
-      };
+    const sectionProps = {
+      readOnly,
+      inputProps,
+      textareaProps,
+      selectProps,
     };
-    const analyzedSection = getSectionProps(TradeStatus.ANALYZED);
-    const waitingSection = getSectionProps(TradeStatus.WAITING);
-    const enteredSection = getSectionProps(TradeStatus.ENTERED);
-    const exitedSection = getSectionProps(TradeStatus.EXITED);
+    const analyzedSection = sectionProps;
+    const waitingSection = sectionProps;
+    const enteredSection = sectionProps;
+    const exitedSection = sectionProps;
+    const shouldRequirePreEntryRating =
+      !!form.status &&
+      statusRank[form.status] >= statusRank[TradeStatus.WAITING];
 
     const analysisSectionBlock = shouldShowSection(TradeStatus.ANALYZED) ? (
       <div className="bg-muted/50 border rounded-lg p-4 pt-3">
@@ -432,6 +469,43 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               value={(form.keyPriceLevels as string) ?? ""}
               onChange={(e) => handleSelectChange("keyPriceLevels", e.target.value)}
             />
+          </div>
+          {/* 入场前分析总结 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场前分析总结:
+            </label>
+            <BaseTextarea {...analyzedSection.textareaProps}
+              id="preEntrySummary"
+              name="preEntrySummary"
+              value={(form.preEntrySummary as string) ?? ""}
+              onChange={(e) =>
+                handleSelectChange("preEntrySummary", e.target.value)
+              }
+            />
+          </div>
+          {/* 入场前分析评分 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场前分析评分
+              {shouldRequirePreEntryRating && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <StarRating
+              id="preEntrySummaryImportance"
+              value={form.preEntrySummaryImportance ?? 0}
+              readOnly={analyzedSection.readOnly}
+              onChange={(value) =>
+                handleFormUpdate({ preEntrySummaryImportance: value })
+              }
+            />
+            {errors.preEntrySummaryImportance && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.preEntrySummaryImportance}
+              </p>
+            )}
           </div>
           {/* 成交量分布图 */}
           <div className="col-span-3">
@@ -1089,6 +1163,29 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               }}
             />
           </div>
+          {/* 经验总结评分 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              经验总结评分
+              {form.status === TradeStatus.EXITED && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <StarRating
+              id="lessonsLearnedImportance"
+              value={form.lessonsLearnedImportance ?? 0}
+              readOnly={exitedSection.readOnly}
+              onChange={(value) =>
+                handleFormUpdate({ lessonsLearnedImportance: value })
+              }
+            />
+            {errors.lessonsLearnedImportance && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.lessonsLearnedImportance}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     ) : null;
@@ -1120,6 +1217,13 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         if (!form.marketStructure) {
           newErrors.marketStructure = "市场结构为必填项";
         }
+      }
+
+      const requiresPreEntryRating =
+        !!form.status &&
+        statusRank[form.status] >= statusRank[TradeStatus.WAITING];
+      if (requiresPreEntryRating && !form.preEntrySummaryImportance) {
+        newErrors.preEntrySummaryImportance = "入场前分析评分为必填项";
       }
 
       // 根据交易状态验证必填字段
@@ -1165,6 +1269,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         // 如果选择了执行计划，则计划类型必填
         if (form.followedPlan && !form.followedPlanId) {
           newErrors.followedPlanId = "计划类型为必填项";
+        }
+
+        if (!form.lessonsLearnedImportance) {
+          newErrors.lessonsLearnedImportance = "经验总结评分为必填项";
         }
       }
 

@@ -112,6 +112,8 @@ export type Trade = {
   dateTimeRange?: string;
   marketStructure?: MarketStructure;
   marketStructureAnalysis?: string;
+  preEntrySummary?: string;
+  preEntrySummaryImportance?: number;
   signalType?: string;
 
   // 图片相关（用数组类型）
@@ -152,6 +154,7 @@ export type Trade = {
   actualPathAnalysis?: string;
   remarks?: string;
   lessonsLearned?: string;
+  lessonsLearnedImportance?: number;
   profitLossPercentage?: string;
   riskRewardRatio?: string;
 

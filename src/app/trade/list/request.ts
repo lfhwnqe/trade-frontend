@@ -122,6 +122,8 @@ export type CreateTradeDto = {
   keyPriceLevels?: string;
   marketStructure: MarketStructure;
   marketStructureAnalysis: string;
+  preEntrySummary?: string;
+  preEntrySummaryImportance?: number;
   expectedPathImages?: ImageResource[];
   expectedPathAnalysis?: string;
   entryPlanA: EntryPlan;
@@ -149,6 +151,7 @@ export type CreateTradeDto = {
   actualPathAnalysis?: string;
   remarks?: string;
   lessonsLearned?: string;
+  lessonsLearnedImportance?: number;
   analysisImages?: ImageResource[];
 
   // ===== 基础字段 =====
@@ -207,6 +210,8 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     keyPriceLevels: form.keyPriceLevels,
     marketStructure: form.marketStructure!,
     marketStructureAnalysis: form.marketStructureAnalysis || "",
+    preEntrySummary: form.preEntrySummary,
+    preEntrySummaryImportance: parseNum(form.preEntrySummaryImportance),
     expectedPathImages: asImageArray(form.expectedPathImages),
     expectedPathAnalysis: form.expectedPathAnalysis,
     entryPlanA: form.entryPlanA ?? {
@@ -246,6 +251,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     actualPathAnalysis: form.actualPathAnalysis,
     remarks: form.remarks,
     lessonsLearned: form.lessonsLearned,
+    lessonsLearnedImportance: parseNum(form.lessonsLearnedImportance),
     analysisImages: asImageArray(form.analysisImages),
 
     // ===== 计算字段/可选 =====
