@@ -12,7 +12,6 @@ import {
   planOptions,
   tradeGradeOptions,
   tradeResultOptions,
-  tradeStatusOptions,
   tradeTypeOptions,
 } from "../../config";
 import { Input as BaseInput } from "@/components/ui/input";
@@ -235,7 +234,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     );
 
     const isDistributed = formMode === "distributed";
-    const isStatusDisabled = readOnly;
     const statusRank: Record<TradeStatus, number> = {
       [TradeStatus.ANALYZED]: 1,
       [TradeStatus.WAITING]: 2,
@@ -335,43 +333,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
-          {/* 交易状态 */}
-          {!isDistributed && (
-            <div className="col-span-2">
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                交易状态<span className="ml-0.5 text-destructive">*</span>:
-              </label>
-              <BaseSelect {...analyzedSection.selectProps}
-                name="status"
-                value={(form.status as string) ?? ""}
-                onValueChange={(value) =>
-                  handleFormSelectChange("status" as keyof Trade, value)
-                }
-                disabled={isStatusDisabled}
-              >
-                <SelectTrigger
-                  className={`w-full ${
-                    errors.status ? "border-destructive" : ""
-                  }`}
-                >
-                  <SelectValue placeholder="选择 交易状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tradeStatusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </BaseSelect>
-              {errors.status && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.status}
-                </p>
-              )}
-            </div>
-          )}
-
           {/* 市场结构 */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1359,47 +1320,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     }));
 
     const sectionBlocks = [
-      isDistributed ? (
-        <section key="status" className="space-y-2">
-          <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
-            <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
-            交易状态
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            <div className="col-span-1">
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                交易状态<span className="ml-0.5 text-destructive">*</span>:
-              </label>
-              <BaseSelect
-                name="status"
-                value={(form.status as string) ?? ""}
-                onValueChange={(value) =>
-                  handleFormSelectChange("status" as keyof Trade, value)
-                }
-                disabled={isStatusDisabled}
-              >
-                <SelectTrigger
-                  className={`w-full ${errors.status ? "border-destructive" : ""}`}
-                >
-                  <SelectValue placeholder="选择 交易状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tradeStatusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </BaseSelect>
-              {errors.status && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.status}
-                </p>
-              )}
-            </div>
-          </div>
-        </section>
-      ) : null,
       exitSectionBlock,
       entrySectionBlock,
       waitingPlanBlock,

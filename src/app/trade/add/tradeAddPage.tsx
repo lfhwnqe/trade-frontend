@@ -16,7 +16,7 @@ import {
   fetchTradeDetail,
   updateTrade,
 } from "../list/request";
-import { Trade, TradeStatus } from "../config";
+import { Trade, TradeStatus, tradeStatusOptions } from "../config";
 import type { ImageResource } from "../config";
 import {
   TradeFormDialog,
@@ -148,7 +148,7 @@ export default function TradeAddPage({
         if (typeof error === "object" && error && "message" in error) {
           errorAlert(
             (error as { message?: string }).message ||
-              (id ? "更新失败" : "创建失败")
+              (id ? "更新失败" : "创建失败"),
           );
         } else {
           errorAlert(id ? "更新失败" : "创建失败");
@@ -159,7 +159,7 @@ export default function TradeAddPage({
         submittingRef.current = false;
       }
     },
-    [form, router, searchParams, success, errorAlert, loading]
+    [form, router, searchParams, success, errorAlert, loading],
   );
 
   // 字段变化处理
@@ -192,7 +192,7 @@ export default function TradeAddPage({
           : undefined;
       });
     },
-    []
+    [],
   );
 
   // 图片
@@ -203,7 +203,7 @@ export default function TradeAddPage({
         draft[key] = value as any;
       });
     },
-    []
+    [],
   );
 
   // 计划字段
@@ -229,7 +229,7 @@ export default function TradeAddPage({
     try {
       window.localStorage.setItem(
         LOCAL_DRAFT_STORAGE_KEY,
-        JSON.stringify(form)
+        JSON.stringify(form),
       );
       success("已暂存到本地");
     } catch (err) {
@@ -272,18 +272,24 @@ export default function TradeAddPage({
               </div>
             </div> */}
             <div className="hidden items-center rounded-full border border-white/10 bg-black/40 p-1 md:flex">
-              <button className="rounded-full px-4 py-1.5 text-xs font-medium text-[#a1a1aa] transition-colors hover:text-white">
-                Wait for Entry
-              </button>
-              <button className="rounded-full bg-[#6366f1] px-4 py-1.5 text-xs font-medium text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all">
-                Analyzed
-              </button>
-              <button className="rounded-full px-4 py-1.5 text-xs font-medium text-[#a1a1aa] transition-colors hover:text-emerald-300">
-                Entered
-              </button>
-              <button className="rounded-full px-4 py-1.5 text-xs font-medium text-[#a1a1aa] transition-colors hover:text-purple-300">
-                Exited
-              </button>
+              {tradeStatusOptions.map((option) => {
+                const isActive = form.status === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleSelectChange("status", option.value)}
+                    className={
+                      "rounded-full px-4 py-1.5 text-xs font-medium transition-all " +
+                      (isActive
+                        ? "bg-[#6366f1] text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                        : "text-[#a1a1aa] hover:text-white")
+                    }
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
             {/* <div className="flex items-center space-x-4">
               <span className="rounded border border-[#6366f1]/30 bg-[#6366f1]/5 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-[#6366f1]">
@@ -302,11 +308,18 @@ export default function TradeAddPage({
               Trade Status
             </label>
             <div className="relative">
-              <select className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#6366f1] focus:ring-[#6366f1]">
-                <option>Wait for Entry</option>
-                <option>Analyzed</option>
-                <option>Entered</option>
-                <option>Exited</option>
+              <select
+                className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#6366f1] focus:ring-[#6366f1]"
+                value={(form.status as string) ?? ""}
+                onChange={(event) =>
+                  handleSelectChange("status", event.target.value)
+                }
+              >
+                {tradeStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#a1a1aa]">
                 <span className="text-sm">▾</span>
@@ -315,16 +328,12 @@ export default function TradeAddPage({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+            {/* <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl"> */}
             <div>
               <h2 className="text-lg font-semibold text-white">{pageTitle}</h2>
               <p className="mt-1 text-xs font-mono text-[#a1a1aa]">
-                SESSION ID: {id ? `#${id}` : "#NEW-ENTRY"}
+                交易 ID: {id ? `#${id}` : "新交易"}
               </p>
-            </div>
-            <div className="hidden sm:block">
-              <span className="rounded border border-white/10 bg-black/40 px-2 py-1 text-xs text-[#a1a1aa]">
-                Auto-saved 2m ago
-              </span>
             </div>
           </div>
 
