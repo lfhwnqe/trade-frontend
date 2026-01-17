@@ -27,6 +27,7 @@ import { Trade } from "../config";
 import { useTradeList } from "./useTradeList";
 import { format } from "date-fns";
 import { useAlert } from "@/components/common/alert";
+import TradePageShell from "../components/trade-page-shell";
 
 export default function TradeListPage() {
   const router = useRouter();
@@ -397,145 +398,141 @@ export default function TradeListPage() {
   };
 
   return (
-    <div className="flex flex-col h-full p-4">
-      {/* 页面标题 */}
-      {/* <div className="flex justify-between items-center mb-4 flex-shrink-0">
-        <h1 className="text-2xl font-bold">交易列表</h1>
-        <Button
-          onClick={() => {
-            router.push("/trade/add");
-          }}
-        >
-          新增交易
-        </Button>
-      </div> */}
+    <TradePageShell title="交易记录">
+      <div className="flex flex-col h-full">
+        {/* 查询表单 */}
+        <div className="flex-shrink-0">
+          <TradeQueryForm
+            queryForm={queryForm}
+            onQueryFormChange={(newQueryForm) => {
+              updateQueryForm(newQueryForm);
+              updatePagination(1, pagination.pageSize);
+              fetchAll(1, pagination.pageSize, newQueryForm, sorting);
+            }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              fetchAll(1, pagination.pageSize, queryForm, sorting);
+            }}
+            onReset={() => {
+              updateQueryForm({});
+              updatePagination(1, pagination.pageSize);
+              updateSorting([]);
+              fetchAll(1, pagination.pageSize, {}, []);
+            }}
+          />
+        </div>
 
-      {/* 查询表单 */}
-      <div className="flex-shrink-0">
-        <TradeQueryForm
-          queryForm={queryForm}
-          onQueryFormChange={(newQueryForm) => {
-            updateQueryForm(newQueryForm);
-            updatePagination(1, pagination.pageSize);
-            fetchAll(1, pagination.pageSize, newQueryForm, sorting);
-          }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            fetchAll(1, pagination.pageSize, queryForm, sorting);
-          }}
-          onReset={() => {
-            updateQueryForm({});
-            updatePagination(1, pagination.pageSize);
-            updateSorting([]);
-            fetchAll(1, pagination.pageSize, {}, []);
-          }}
-        />
+        {/* 表格容器 - 可滚动区域 */}
+        <div className="flex-1 min-h-0">
+          <DataTable<Trade, unknown>
+            columns={columns as ColumnDef<Trade, unknown>[]}
+            data={trades}
+            sorting={sorting}
+            rowSelection={rowSelection}
+            loading={loading}
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            totalItems={pagination.total}
+            totalPages={pagination.totalPages}
+            onPageChange={(page, pageSize) => updatePagination(page, pageSize)}
+            onPageSizeChange={(page, pageSize) =>
+              updatePagination(page, pageSize)
+            }
+            onSortingChange={(newSorting) =>
+              updateSorting(newSorting as SortingState)
+            }
+            onRowSelectionChange={(newSelection) =>
+              updateRowSelection(newSelection as RowSelectionState)
+            }
+            initialColumnPinning={{
+              right: ["actions"], // 将操作列固定在右侧
+            }}
+          />
+        </div>
+
+        {dialog.open && (
+          <TradeFormDialog
+            editTrade={dialog.editTrade}
+            form={dialog.form}
+            handleChange={(e) => {
+              const name = e.target.name as keyof Trade;
+              const value = e.target.value;
+              updateForm({ [name]: value });
+            }}
+            handleSelectChange={(name, value) => {
+              updateForm({ [name]: value });
+            }}
+            handleDateRangeChange={(dateRange) => {
+              updateForm({
+                dateTimeRange: dateRange?.from
+                  ? format(dateRange.from, "yyyy-MM-dd")
+                  : undefined,
+              });
+            }}
+            // 图片和计划类型需特殊处理，底层子组件需通过 updateForm 合并嵌套对象
+            handleImageChange={(key, v) => {
+              updateForm({ [key]: v });
+            }}
+            handlePlanChange={(key, v) => {
+              updateForm({ [key]: v });
+            }}
+            handleSubmit={handleSubmit}
+            updateForm={updateForm}
+          />
+        )}
+
+        {dialog.deleteId && (
+          <Dialog
+            open={!!dialog.deleteId}
+            onOpenChange={(open) => !open && setDeleteId(null)}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>确认删除</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                确定要删除这条交易记录吗？此操作无法撤销。
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteId(null)}>
+                  取消
+                </Button>
+                <Button variant="destructive" onClick={handleDelete}>
+                  删除
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {copyId && (
+          <Dialog
+            open={!!copyId}
+            onOpenChange={(open) => !open && setCopyId(null)}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>确认复制</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                确定要复制这条交易记录吗？将创建一个新的交易记录，并将分析已过期字段设置为未过期。
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setCopyId(null)}
+                  disabled={copyLoading}
+                >
+                  取消
+                </Button>
+                <Button onClick={handleCopy} disabled={copyLoading}>
+                  {copyLoading ? "复制中..." : "确认复制"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
-
-      {/* 表格容器 - 可滚动区域 */}
-      <div className="flex-1 min-h-0">
-        <DataTable<Trade, unknown>
-          columns={columns as ColumnDef<Trade, unknown>[]}
-          data={trades}
-          sorting={sorting}
-          rowSelection={rowSelection}
-          loading={loading}
-          page={pagination.page}
-          pageSize={pagination.pageSize}
-          totalItems={pagination.total}
-          totalPages={pagination.totalPages}
-          onPageChange={(page, pageSize) => updatePagination(page, pageSize)}
-          onPageSizeChange={(page, pageSize) => updatePagination(page, pageSize)}
-          onSortingChange={(newSorting) =>
-            updateSorting(newSorting as SortingState)
-          }
-          onRowSelectionChange={(newSelection) =>
-            updateRowSelection(newSelection as RowSelectionState)
-          }
-          initialColumnPinning={{
-            right: ['actions'], // 将操作列固定在右侧
-          }}
-        />
-      </div>
-
-      {dialog.open && (
-        <TradeFormDialog
-          editTrade={dialog.editTrade}
-          form={dialog.form}
-          handleChange={(e) => {
-            const name = e.target.name as keyof Trade;
-            const value = e.target.value;
-            updateForm({ [name]: value });
-          }}
-          handleSelectChange={(name, value) => {
-            updateForm({ [name]: value });
-          }}
-          handleDateRangeChange={(dateRange) => {
-            updateForm({
-              dateTimeRange: dateRange?.from
-                ? format(dateRange.from, "yyyy-MM-dd")
-                : undefined,
-            });
-          }}
-          // 图片和计划类型需特殊处理，底层子组件需通过 updateForm 合并嵌套对象
-          handleImageChange={(key, v) => {
-            updateForm({ [key]: v });
-          }}
-          handlePlanChange={(key, v) => {
-            updateForm({ [key]: v });
-          }}
-          handleSubmit={handleSubmit}
-          updateForm={updateForm}
-        />
-      )}
-
-      {dialog.deleteId && (
-        <Dialog
-          open={!!dialog.deleteId}
-          onOpenChange={(open) => !open && setDeleteId(null)}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>确认删除</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              确定要删除这条交易记录吗？此操作无法撤销。
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteId(null)}>
-                取消
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                删除
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {copyId && (
-        <Dialog
-          open={!!copyId}
-          onOpenChange={(open) => !open && setCopyId(null)}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>确认复制</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              确定要复制这条交易记录吗？将创建一个新的交易记录，并将分析已过期字段设置为未过期。
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCopyId(null)} disabled={copyLoading}>
-                取消
-              </Button>
-              <Button onClick={handleCopy} disabled={copyLoading}>
-                {copyLoading ? '复制中...' : '确认复制'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+    </TradePageShell>
   );
 }

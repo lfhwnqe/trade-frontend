@@ -3,15 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  ChevronDown,
-  FileText,
-  Home,
-  LineChart,
-  Menu,
-  Plus,
-  ReceiptText,
-} from "lucide-react";
+import { ChevronDown, FileText, Home, LineChart, ReceiptText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,18 +64,13 @@ export default function TradeShell({
     }
   };
 
-  const headerTitle =
-    tradeNavItems.find(
-      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
-    )?.title ?? "Dashboard Overview";
-
   return (
     <div className="dark min-h-screen bg-black text-[#e5e7eb] antialiased selection:bg-emerald-500 selection:text-white flex">
       <aside className="w-64 bg-[#121212] border-r border-[#27272a] flex-shrink-0 fixed h-full z-20 hidden lg:flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-[#27272a]">
           <Link
             className="text-lg font-bold text-white flex items-center gap-2"
-            href="/"
+            href="/trade"
           >
             <LineChart className="h-5 w-5 text-emerald-400" />
             Trading System
@@ -144,31 +131,8 @@ export default function TradeShell({
           </DropdownMenu>
         </div>
       </aside>
-      <div className="flex-1 lg:ml-64 min-h-screen flex flex-col bg-black min-w-0">
-        <header className="h-16 bg-[#121212] border-b border-[#27272a] flex items-center justify-between px-6 sticky top-0 z-30 shadow-lg shadow-black/20">
-          <div className="flex items-center gap-4">
-            <button className="lg:hidden p-1 text-[#9ca3af] hover:text-white focus:outline-none">
-              <Menu className="h-5 w-5" />
-            </button>
-            <h1 className="text-xl font-semibold text-white tracking-tight">
-              {headerTitle}
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-sm rounded-md transition-colors shadow shadow-emerald-900/20"
-              onClick={() => {
-                router.push("/trade/add");
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              新增交易
-            </button>
-          </div>
-        </header>
-        <div className="p-6 space-y-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0">
-          {children}
-        </div>
+      <div className="flex-1 lg:ml-64 min-h-screen bg-black min-w-0">
+        {children}
       </div>
     </div>
   );
