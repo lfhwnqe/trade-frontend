@@ -260,7 +260,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       statusRank[form.status] >= statusRank[TradeStatus.WAITING];
 
     const analysisSectionBlock = shouldShowSection(TradeStatus.ANALYZED) ? (
-      <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+      <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
           <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
           入场前分析
@@ -547,11 +547,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             />
           </div>
         </div>
-      </div>
+      </section>
     ) : null;
 
     const waitingPlanBlock = shouldShowSection(TradeStatus.WAITING) ? (
-      <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+      <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
           <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
           入场计划
@@ -591,12 +591,12 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             />
           </div>
         </div>
-      </div>
+      </section>
     ) : null;
 
     const waitingChecklistBlock =
       showChecklist && shouldShowSection(TradeStatus.WAITING) ? (
-        <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+        <section className="space-y-2">
           <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
             <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
             入场前检查
@@ -643,11 +643,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               盈亏比计算是否完成
             </label>
           </div>
-        </div>
+        </section>
       ) : null;
 
     const entrySectionBlock = shouldShowSection(TradeStatus.ENTERED) ? (
-      <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+      <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
           <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
           入场记录
@@ -877,11 +877,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             )}
           </div>
         </div>
-      </div>
+      </section>
     ) : null;
 
     const exitSectionBlock = shouldShowSection(TradeStatus.EXITED) ? (
-      <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl space-y-2">
+      <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
           <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
           离场后分析
@@ -1202,7 +1202,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             )}
           </div>
         </div>
-      </div>
+      </section>
     ) : null;
 
     // 验证表单
@@ -1358,59 +1358,70 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       },
     }));
 
+    const sectionBlocks = [
+      isDistributed ? (
+        <section key="status" className="space-y-2">
+          <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
+            <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+            交易状态
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="col-span-1">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                交易状态<span className="ml-0.5 text-destructive">*</span>:
+              </label>
+              <BaseSelect
+                name="status"
+                value={(form.status as string) ?? ""}
+                onValueChange={(value) =>
+                  handleFormSelectChange("status" as keyof Trade, value)
+                }
+                disabled={isStatusDisabled}
+              >
+                <SelectTrigger
+                  className={`w-full ${errors.status ? "border-destructive" : ""}`}
+                >
+                  <SelectValue placeholder="选择 交易状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tradeStatusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </BaseSelect>
+              {errors.status && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.status}
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      ) : null,
+      exitSectionBlock,
+      entrySectionBlock,
+      waitingPlanBlock,
+      waitingChecklistBlock,
+      analysisSectionBlock,
+    ].filter(Boolean) as React.ReactElement[];
+
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-1 flex-col">
         {/* <div className="w-full flex-1 flex flex-col mx-auto  bg-muted/50"> */}
         <form onSubmit={handleFormSubmit} className="flex flex-col flex-1">
-          <div className="flex flex-col flex-1 gap-y-6 ">
-            {isDistributed && (
-              <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
-                <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
-                  <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
-                  交易状态
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  <div className="col-span-1">
-                    <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                      交易状态<span className="ml-0.5 text-destructive">*</span>:
-                    </label>
-                    <BaseSelect
-                      name="status"
-                      value={(form.status as string) ?? ""}
-                      onValueChange={(value) =>
-                        handleFormSelectChange("status" as keyof Trade, value)
-                      }
-                      disabled={isStatusDisabled}
-                    >
-                      <SelectTrigger
-                        className={`w-full ${
-                          errors.status ? "border-destructive" : ""
-                        }`}
-                      >
-                        <SelectValue placeholder="选择 交易状态" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tradeStatusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </BaseSelect>
-                    {errors.status && (
-                      <p className="text-sm text-destructive mt-1">
-                        {errors.status}
-                      </p>
-                    )}
-                  </div>
+          <div className="flex flex-1 flex-col gap-y-6">
+            <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+              {sectionBlocks.map((block, index) => (
+                <div key={block.key ?? index}>
+                  {index > 0 && (
+                    <div className="my-8 h-px w-full bg-white/10" />
+                  )}
+                  {block}
                 </div>
-              </div>
-            )}
-            {exitSectionBlock}
-            {entrySectionBlock}
-            {waitingPlanBlock}
-            {waitingChecklistBlock}
-            {analysisSectionBlock}
+              ))}
+            </div>
           </div>
 
           {/* 提交按钮 */}
