@@ -67,13 +67,13 @@ export default function TradeQueryForm({
   };
 
   return (
-    <div className="bg-card border rounded-lg p-3 mb-3 shadow-sm">
+    <div className="bg-[#151B25] border border-[#2A3441] rounded-xl p-4 mb-4 shadow-lg">
       <form onSubmit={onSubmit} className="space-y-3">
         {/* 基础查询条件 - 始终显示 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {/* 日期范围 */}
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1">
+            <label className="block text-xs font-medium text-[#94A3B8] mb-1">
               创建时间
             </label>
             <Popover>
@@ -82,8 +82,8 @@ export default function TradeQueryForm({
                   id="date"
                   variant={"outline"}
                   className={cn(
-                    "w-full justify-start text-left font-normal h-9",
-                    !queryForm.dateTimeRange && "text-muted-foreground"
+                    "w-full justify-start text-left font-normal h-9 bg-[#0B0E14] border border-[#2A3441] text-[#E2E8F0] hover:bg-[#0F1420] focus-visible:ring-1 focus-visible:ring-[#3B82F6]",
+                    !queryForm.dateTimeRange && "text-[#94A3B8]"
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -101,7 +101,10 @@ export default function TradeQueryForm({
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent
+                className="w-auto p-0 bg-[#151B25] border border-[#2A3441]"
+                align="start"
+              >
                 <Calendar
                   initialFocus
                   mode="range"
@@ -130,7 +133,7 @@ export default function TradeQueryForm({
 
           {/* 交易状态 */}
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1">
+            <label className="block text-xs font-medium text-[#94A3B8] mb-1">
               交易状态
             </label>
             <Select
@@ -139,10 +142,10 @@ export default function TradeQueryForm({
                 onQueryFormChange({ ...queryForm, tradeStatus: value })
               }
             >
-              <SelectTrigger className="w-full h-9">
+              <SelectTrigger className="w-full h-9 bg-[#0B0E14] border border-[#2A3441] text-[#E2E8F0] focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6]">
                 <SelectValue placeholder="全部" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#151B25] border border-[#2A3441] text-[#E2E8F0]">
                 <SelectItem value="all">全部</SelectItem>
                 {tradeStatusOptions.map((opt: Option) => (
                   <SelectItem key={opt.value} value={opt.value}>
@@ -161,9 +164,9 @@ export default function TradeQueryForm({
             isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
           )}
         >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-border animate-in slide-in-from-top-1">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-[#2A3441] animate-in slide-in-from-top-1">
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1">
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">
                 交易类型
               </label>
               <Select
@@ -172,10 +175,10 @@ export default function TradeQueryForm({
                   onQueryFormChange({ ...queryForm, type: value })
                 }
               >
-                <SelectTrigger className="w-full h-9">
+                <SelectTrigger className="w-full h-9 bg-[#0B0E14] border border-[#2A3441] text-[#E2E8F0] focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6]">
                   <SelectValue placeholder="全部" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-[#151B25] border border-[#2A3441] text-[#E2E8F0]">
                   <SelectItem value="all">全部</SelectItem>
                   {tradeTypeOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
@@ -187,7 +190,7 @@ export default function TradeQueryForm({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1">
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">
                 交易分级
               </label>
               <Select
@@ -196,10 +199,10 @@ export default function TradeQueryForm({
                   onQueryFormChange({ ...queryForm, grade: value })
                 }
               >
-                <SelectTrigger className="w-full h-9">
+                <SelectTrigger className="w-full h-9 bg-[#0B0E14] border border-[#2A3441] text-[#E2E8F0] focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6]">
                   <SelectValue placeholder="全部" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-[#151B25] border border-[#2A3441] text-[#E2E8F0]">
                   <SelectItem value="all">全部</SelectItem>
                   {tradeGradeOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
@@ -211,7 +214,7 @@ export default function TradeQueryForm({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1">
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">
                 市场结构
               </label>
               <Select
@@ -220,10 +223,10 @@ export default function TradeQueryForm({
                   onQueryFormChange({ ...queryForm, marketStructure: value })
                 }
               >
-                <SelectTrigger className="w-full h-9">
+                <SelectTrigger className="w-full h-9 bg-[#0B0E14] border border-[#2A3441] text-[#E2E8F0] focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6]">
                   <SelectValue placeholder="全部" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-[#151B25] border border-[#2A3441] text-[#E2E8F0]">
                   <SelectItem value="all">全部</SelectItem>
                   {marketStructureOptions.map((opt: Option) => (
                     <SelectItem key={opt.value} value={opt.value}>
@@ -235,7 +238,7 @@ export default function TradeQueryForm({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1">
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">
                 交易方向
               </label>
               <Select
@@ -244,10 +247,10 @@ export default function TradeQueryForm({
                   onQueryFormChange({ ...queryForm, entryDirection: value })
                 }
               >
-                <SelectTrigger className="w-full h-9">
+                <SelectTrigger className="w-full h-9 bg-[#0B0E14] border border-[#2A3441] text-[#E2E8F0] focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6]">
                   <SelectValue placeholder="全部" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-[#151B25] border border-[#2A3441] text-[#E2E8F0]">
                   <SelectItem value="all">全部</SelectItem>
                   {entryDirectionOptions.map((opt: Option) => (
                     <SelectItem key={opt.value} value={opt.value}>
@@ -259,7 +262,7 @@ export default function TradeQueryForm({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1">
+              <label className="block text-xs font-medium text-[#94A3B8] mb-1">
                 交易结果
               </label>
               <Select
@@ -268,10 +271,10 @@ export default function TradeQueryForm({
                   onQueryFormChange({ ...queryForm, tradeResult: value })
                 }
               >
-                <SelectTrigger className="w-full h-9">
+                <SelectTrigger className="w-full h-9 bg-[#0B0E14] border border-[#2A3441] text-[#E2E8F0] focus:ring-1 focus:ring-[#3B82F6] focus:border-[#3B82F6]">
                   <SelectValue placeholder="全部" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-[#151B25] border border-[#2A3441] text-[#E2E8F0]">
                   {tradeResultOptions.map((opt: Option) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
@@ -284,7 +287,7 @@ export default function TradeQueryForm({
         </div>
 
         {/* 操作按钮区域 */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-border">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-[#2A3441]">
           {/* 左侧：展开/收起按钮 */}
           <Button
             type="button"
@@ -292,7 +295,7 @@ export default function TradeQueryForm({
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
             className={cn(
-              "flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all duration-200",
+              "flex items-center gap-2 text-[#94A3B8] hover:text-[#3B82F6] transition-all duration-200",
               "transform hover:scale-105"
             )}
           >
@@ -311,7 +314,7 @@ export default function TradeQueryForm({
           <div className="flex gap-2">
             <Button
               type="submit"
-              className="w-16 h-8 font-medium text-sm hover:scale-105 transition-transform duration-200"
+              className="w-16 h-8 font-medium text-sm bg-[#3B82F6] text-white hover:bg-blue-600 hover:scale-105 transition-transform duration-200 shadow-md shadow-blue-500/20"
               size="sm"
             >
               查询
@@ -319,7 +322,7 @@ export default function TradeQueryForm({
             <Button
               type="button"
               variant="outline"
-              className="w-16 h-8 text-sm hover:scale-105 transition-transform duration-200"
+              className="w-16 h-8 text-sm border-[#2A3441] bg-[#1A2230] text-[#E2E8F0] hover:bg-[#2A3441] hover:scale-105 transition-transform duration-200"
               size="sm"
               onClick={handleReset}
             >
