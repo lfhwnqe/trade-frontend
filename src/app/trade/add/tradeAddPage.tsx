@@ -244,45 +244,63 @@ export default function TradeAddPage({
     <Suspense fallback={<div>加载中...</div>}>
       <div
         className={
-          "w-full flex-1 flex flex-col rounded-lg shadowborder h-full " +
+          "relative w-full flex-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#050505] shadow-[0_30px_60px_-40px_rgba(0,0,0,0.9)] " +
           (className ?? "")
         }
       >
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 left-1/3 h-56 w-2/3 rounded-full bg-emerald-400/10 blur-[120px]" />
+          <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-sky-500/10 blur-[140px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.04),transparent_45%)]" />
+        </div>
         {/* 固定顶部 */}
-        <div className="h-16 bg-white shadow px-6 py-4 rounded-t-lg">
-          <h1 className="text-2xl font-bold">{pageTitle}</h1>
+        <div className="relative z-10 h-16 border-b border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-white">
+                {pageTitle}
+              </h1>
+              <p className="text-xs text-white/50">TradeOS / Analysis</p>
+            </div>
+            <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-mono text-white/60">
+              {isCreateMode ? "NEW-ENTRY" : "UPDATE"}
+            </div>
+          </div>
         </div>
         {/* 滚动表单内容 */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <TradeFormDialog
-            ref={formRef}
-            editTrade={id ? form : null}
-            form={form}
-            handleChange={handleChange}
-            handleSelectChange={handleSelectChange}
-            handleDateRangeChange={handleDateRangeChange}
-            handleImageChange={handleImageChange}
-            handlePlanChange={handlePlanChange}
-            handleSubmit={handleSubmit}
-            updateForm={updateForm}
-            loading={loading}
-            readOnly={readOnly}
-            showChecklist={enableChecklist}
-            formMode="distributed"
-          />
-          {(loading || detailLoading) && (
-            <div className="mt-4 text-center text-gray-500">
-              {loading ? "保存中..." : "加载详情中..."}
-            </div>
-          )}
+        <div className="relative z-10 flex-1 overflow-y-auto px-6 py-6">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_0_30px_-20px_rgba(16,185,129,0.45)] backdrop-blur">
+            <TradeFormDialog
+              ref={formRef}
+              editTrade={id ? form : null}
+              form={form}
+              handleChange={handleChange}
+              handleSelectChange={handleSelectChange}
+              handleDateRangeChange={handleDateRangeChange}
+              handleImageChange={handleImageChange}
+              handlePlanChange={handlePlanChange}
+              handleSubmit={handleSubmit}
+              updateForm={updateForm}
+              loading={loading}
+              readOnly={readOnly}
+              showChecklist={enableChecklist}
+              formMode="distributed"
+            />
+            {(loading || detailLoading) && (
+              <div className="mt-6 text-center text-sm text-white/50">
+                {loading ? "保存中..." : "加载详情中..."}
+              </div>
+            )}
+          </div>
         </div>
         {!readOnly && (
-          <div className="pt-4 flex justify-end gap-4 shadow-gray-400 shadow-2xl px-6 pb-6">
+          <div className="relative z-10 flex items-center justify-end gap-4 border-t border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl">
             <Button
               type="button"
               variant="outline"
               disabled={loading}
               onClick={handleSaveDraft}
+              className="border-white/20 bg-white/5 text-white hover:bg-white/10"
             >
               暂存本地
             </Button>
