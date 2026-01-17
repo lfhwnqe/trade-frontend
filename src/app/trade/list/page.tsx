@@ -399,7 +399,7 @@ export default function TradeListPage() {
   return (
     <div className="flex flex-col h-full p-4">
       {/* 页面标题 */}
-      <div className="flex justify-between items-center mb-4 flex-shrink-0">
+      {/* <div className="flex justify-between items-center mb-4 flex-shrink-0">
         <h1 className="text-2xl font-bold">交易列表</h1>
         <Button
           onClick={() => {
@@ -408,7 +408,7 @@ export default function TradeListPage() {
         >
           新增交易
         </Button>
-      </div>
+      </div> */}
 
       {/* 查询表单 */}
       <div className="flex-shrink-0">

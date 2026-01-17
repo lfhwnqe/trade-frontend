@@ -144,7 +144,7 @@ export default function TradeShell({
           </DropdownMenu>
         </div>
       </aside>
-      <div className="flex-1 lg:ml-64 min-h-screen flex flex-col bg-black">
+      <div className="flex-1 lg:ml-64 min-h-screen flex flex-col bg-black min-w-0">
         <header className="h-16 bg-[#121212] border-b border-[#27272a] flex items-center justify-between px-6 sticky top-0 z-30 shadow-lg shadow-black/20">
           <div className="flex items-center gap-4">
             <button className="lg:hidden p-1 text-[#9ca3af] hover:text-white focus:outline-none">
@@ -155,13 +155,18 @@ export default function TradeShell({
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-sm rounded-md transition-colors shadow shadow-emerald-900/20">
+            <button
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-sm rounded-md transition-colors shadow shadow-emerald-900/20"
+              onClick={() => {
+                router.push("/trade/add");
+              }}
+            >
               <Plus className="h-4 w-4" />
-              New Trade
+              新增交易
             </button>
           </div>
         </header>
-        <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
+        <div className="p-6 space-y-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0">
           {children}
         </div>
       </div>
