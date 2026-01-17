@@ -260,8 +260,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       statusRank[form.status] >= statusRank[TradeStatus.WAITING];
 
     const analysisSectionBlock = shouldShowSection(TradeStatus.ANALYZED) ? (
-      <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-        <div className="font-semibold text-base pb-2">入场前分析</div>
+      <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+        <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
+          <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+          入场前分析
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4 mb-2">
           {/* 行情分析时间 */}
           <div className="col-span-2">
@@ -548,8 +551,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     ) : null;
 
     const waitingPlanBlock = shouldShowSection(TradeStatus.WAITING) ? (
-      <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-        <div className="font-semibold text-base pb-2">入场计划</div>
+      <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+        <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
+          <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+          入场计划
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
           {/* 入场计划A */}
           <div>
@@ -590,8 +596,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
     const waitingChecklistBlock =
       showChecklist && shouldShowSection(TradeStatus.WAITING) ? (
-        <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-          <div className="font-semibold text-base pb-2">入场前检查</div>
+        <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+          <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
+            <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+            入场前检查
+          </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
             <label className="flex items-start gap-2 text-sm text-muted-foreground">
               <Checkbox
@@ -638,8 +647,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       ) : null;
 
     const entrySectionBlock = shouldShowSection(TradeStatus.ENTERED) ? (
-      <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-        <div className="font-semibold text-base pb-2">入场记录</div>
+      <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+        <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
+          <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+          入场记录
+        </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
           {/* 入场方向 - 只在已入场/已离场时必填 */}
@@ -869,8 +881,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     ) : null;
 
     const exitSectionBlock = shouldShowSection(TradeStatus.EXITED) ? (
-      <div className="bg-muted/50 border rounded-lg p-4 pt-3 space-y-2">
-        <div className="font-semibold text-base pb-2">离场后分析</div>
+      <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl space-y-2">
+        <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
+          <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+          离场后分析
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
           {/* 离场价格 */}
           <div className="col-span-2">
@@ -1349,8 +1364,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         <form onSubmit={handleFormSubmit} className="flex flex-col flex-1">
           <div className="flex flex-col flex-1 gap-y-6 ">
             {isDistributed && (
-              <div className="bg-muted/50 border rounded-lg p-4 pt-3">
-                <div className="font-semibold text-base pb-2">交易状态</div>
+              <div className="rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+                <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
+                  <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+                  交易状态
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                   <div className="col-span-1">
                     <label className="block pb-1 text-sm font-medium text-muted-foreground">
