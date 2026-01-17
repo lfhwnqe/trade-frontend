@@ -1,6 +1,20 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Space_Grotesk } from "next/font/google";
+import {
+  ArrowRight,
+  BarChart3,
+  Brain,
+  Coins,
+  Droplet,
+  Gem,
+  LineChart,
+  Mountain,
+  RefreshCw,
+  Share2,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -18,7 +32,6 @@ export default function Home() {
   return (
     <div className={`min-h-screen bg-[#0a0a0a] text-white ${spaceGrotesk.className}`}>
       <style>{`
-        @import url(\"https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&display=swap\");
         :root {
           color-scheme: dark;
         }
@@ -61,7 +74,7 @@ export default function Home() {
           <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-2">
               <div className="flex items-center justify-center text-[#00c2b2]">
-                <span className="material-symbols-outlined text-3xl">candlestick_chart</span>
+                <LineChart className="h-7 w-7" />
               </div>
               <span className="text-xl font-bold tracking-tight">TradeJournal</span>
             </div>
@@ -122,7 +135,7 @@ export default function Home() {
                 <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row">
                   <button className="flex h-12 items-center justify-center gap-2 rounded bg-[#00c2b2] px-8 text-lg font-bold text-black transition-all hover:bg-[#009e91]">
                     开始提升交易表现
-                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    <ArrowRight className="h-4 w-4" />
                   </button>
                   <button className="flex h-12 items-center justify-center rounded border border-white/20 px-8 font-medium transition-all hover:bg-white/5">
                     查看演示
@@ -164,7 +177,7 @@ export default function Home() {
                   style={{ animation: "bounce 3s infinite" }}
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20 text-green-500">
-                    <span className="material-symbols-outlined">trending_up</span>
+                    <TrendingUp className="h-5 w-5" />
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">效率评分</div>
@@ -222,7 +235,7 @@ export default function Home() {
                   </p>
                 </div>
                 <a className="flex items-center gap-2 font-bold text-[#00c2b2] hover:text-[#009e91]" href="#">
-                  查看全部功能 <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  查看全部功能 <ArrowRight className="h-4 w-4" />
                 </a>
               </div>
 
@@ -231,7 +244,7 @@ export default function Home() {
                   <div className="absolute right-0 top-0 h-full w-1/2 bg-gradient-to-l from-[#00c2b2]/5 to-transparent" />
                   <div className="relative z-10">
                     <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-[#00c2b2]/10 text-[#00c2b2]">
-                      <span className="material-symbols-outlined text-2xl">bar_chart</span>
+                      <BarChart3 className="h-6 w-6" />
                     </div>
                     <h3 className="mb-2 text-2xl font-bold">深度盈亏分析</h3>
                     <p className="max-w-sm text-gray-400">
@@ -251,7 +264,7 @@ export default function Home() {
 
                 <div className="group flex flex-col rounded-2xl border border-white/10 bg-[#121212] p-8 transition-colors hover:border-[#00c2b2]/50 md:row-span-2">
                   <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
-                    <span className="material-symbols-outlined text-2xl">psychology</span>
+                    <Brain className="h-6 w-6" />
                   </div>
                   <h3 className="mb-2 text-2xl font-bold">交易心理掌控</h3>
                   <p className="mb-8 text-gray-400">
@@ -284,7 +297,7 @@ export default function Home() {
 
                 <div className="group flex flex-col rounded-2xl border border-white/10 bg-[#121212] p-8 transition-colors hover:border-[#00c2b2]/50">
                   <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/10 text-orange-400">
-                    <span className="material-symbols-outlined text-2xl">sync</span>
+                    <RefreshCw className="h-6 w-6" />
                   </div>
                   <h3 className="mb-2 text-xl font-bold">自动同步</h3>
                   <p className="text-sm text-gray-400">
@@ -294,7 +307,7 @@ export default function Home() {
 
                 <div className="group flex flex-col rounded-2xl border border-white/10 bg-[#121212] p-8 transition-colors hover:border-[#00c2b2]/50">
                   <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-pink-500/10 text-pink-400">
-                    <span className="material-symbols-outlined text-2xl">share</span>
+                    <Share2 className="h-6 w-6" />
                   </div>
                   <h3 className="mb-2 text-xl font-bold">导师视图</h3>
                   <p className="text-sm text-gray-400">与导师或督促伙伴共享只读权限，获得持续反馈。</p>
@@ -310,19 +323,19 @@ export default function Home() {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-12 opacity-50 grayscale transition-all duration-500 hover:grayscale-0">
                 <div className="flex items-center gap-2 text-2xl font-bold">
-                  <span className="material-symbols-outlined">diamond</span> CapitalTrade
+                  <Gem className="h-6 w-6" /> CapitalTrade
                 </div>
                 <div className="flex items-center gap-2 text-2xl font-bold">
-                  <span className="material-symbols-outlined">bolt</span> SwiftExec
+                  <Zap className="h-6 w-6" /> SwiftExec
                 </div>
                 <div className="flex items-center gap-2 text-2xl font-bold">
-                  <span className="material-symbols-outlined">water_drop</span> AlphaFlow
+                  <Droplet className="h-6 w-6" /> AlphaFlow
                 </div>
                 <div className="flex items-center gap-2 text-2xl font-bold">
-                  <span className="material-symbols-outlined">landscape</span> PeakView
+                  <Mountain className="h-6 w-6" /> PeakView
                 </div>
                 <div className="flex items-center gap-2 text-2xl font-bold">
-                  <span className="material-symbols-outlined">token</span> TokenMetrics
+                  <Coins className="h-6 w-6" /> TokenMetrics
                 </div>
               </div>
             </div>
@@ -357,9 +370,7 @@ export default function Home() {
             <div className="mb-16 grid grid-cols-2 gap-10 md:grid-cols-4 lg:grid-cols-5">
               <div className="col-span-2 lg:col-span-2">
                 <div className="mb-6 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-3xl text-[#00c2b2]">
-                    candlestick_chart
-                  </span>
+                  <LineChart className="h-8 w-8 text-[#00c2b2]" />
                   <span className="text-xl font-bold">TradeJournal</span>
                 </div>
                 <p className="mb-6 max-w-sm text-gray-400">

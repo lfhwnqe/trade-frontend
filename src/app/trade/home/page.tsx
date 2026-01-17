@@ -1,17 +1,19 @@
 "use client";
 
 import React from "react";
+import { format } from "date-fns";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import TradePageShell from "../components/trade-page-shell";
 import {
   Eye,
   PiggyBank,
   PieChart,
-  Search,
   Sigma,
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import { fetchTrades } from "../list/request";
+import { Trade } from "../config";
 
 function fetchStats() {
   return fetchWithAuth("/api/proxy-post", {
@@ -34,6 +36,9 @@ export default function TradeHomePage() {
     thisMonthClosedTradeCount: number;
     thisMonthWinRate: number;
   }>({ thisMonthClosedTradeCount: 0, thisMonthWinRate: 0 });
+  const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
+  const [tradesLoading, setTradesLoading] = React.useState(true);
+  const [tradesError, setTradesError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -53,6 +58,76 @@ export default function TradeHomePage() {
         setLoading(false);
       });
   }, []);
+
+  React.useEffect(() => {
+    setTradesLoading(true);
+    fetchTrades({ page: 1, pageSize: 5 })
+      .then((data) => {
+        setRecentTrades(data.items || []);
+        setTradesError(null);
+      })
+      .catch((err) => {
+        setTradesError(err.message || "获取最近交易失败");
+      })
+      .finally(() => {
+        setTradesLoading(false);
+      });
+  }, []);
+
+  const formatDateTime = (value?: string) => {
+    if (!value) return { date: "-", time: "-" };
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return { date: "-", time: "-" };
+    return {
+      date: format(parsed, "yyyy-MM-dd"),
+      time: format(parsed, "HH:mm"),
+    };
+  };
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case "已分析":
+        return "bg-blue-500/10 text-blue-400 border border-blue-500/20";
+      case "待入场":
+        return "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20";
+      case "已入场":
+        return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+      case "已离场":
+        return "bg-white/10 text-[#9ca3af] border border-white/10";
+      default:
+        return "bg-white/5 text-[#9ca3af] border border-white/10";
+    }
+  };
+
+  const getDirectionBadge = (direction?: string) => {
+    if (direction === "多") {
+      return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+    }
+    if (direction === "空") {
+      return "bg-red-500/10 text-red-400 border border-red-500/20";
+    }
+    return "bg-white/5 text-[#9ca3af] border border-white/10";
+  };
+
+  const formatPercent = (value?: string) => {
+    if (value === undefined || value === null || value === "") return "-";
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return "-";
+    return `${parsed}%`;
+  };
+
+  const formatAmount = (trade: Trade) => {
+    const candidate =
+      (trade as { profitLoss?: string | number }).profitLoss ??
+      (trade as { profitLossAmount?: string | number }).profitLossAmount;
+    if (candidate === undefined || candidate === null || candidate === "") {
+      return "-";
+    }
+    const parsed = Number(candidate);
+    if (Number.isNaN(parsed)) return "-";
+    const sign = parsed > 0 ? "+" : "";
+    return `${sign}$${parsed.toFixed(2)}`;
+  };
 
   return (
     <TradePageShell title="主页">
@@ -201,21 +276,9 @@ export default function TradeHomePage() {
             <h3 className="text-lg font-semibold text-white">
               最近交易
             </h3>
-            <div className="flex gap-2">
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-[#9ca3af]" />
-                </span>
-                <input
-                  className="pl-9 pr-4 py-1.5 text-sm border border-[#27272a] bg-[#1e1e1e] text-white rounded-md focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400 w-full sm:w-48 placeholder:text-[#9ca3af] outline-none"
-                  placeholder="搜索标的..."
-                  type="text"
-                />
-              </div>
-              <button className="px-3 py-1.5 text-sm font-medium text-[#e5e7eb] bg-[#1e1e1e] border border-[#27272a] rounded-md hover:bg-white/5 transition-colors">
-                筛选
-              </button>
-            </div>
+            {tradesError ? (
+              <span className="text-sm text-red-300">{tradesError}</span>
+            ) : null}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -245,155 +308,99 @@ export default function TradeHomePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#27272a]">
-                <tr className="hover:bg-[#1e1e1e] transition-colors">
-                  <td className="px-6 py-4 text-white whitespace-nowrap">
-                    2026-01-16{" "}
-                    <span className="text-[#9ca3af] text-xs ml-1">16:23</span>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-white">BTC/USDC</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      多
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                      分析
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right text-[#9ca3af]">-</td>
-                  <td className="px-6 py-4 text-right text-[#9ca3af]">-</td>
-                  <td className="px-6 py-4 text-center">
-                    <button className="text-[#9ca3af] hover:text-white transition-colors">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-[#1e1e1e] transition-colors">
-                  <td className="px-6 py-4 text-white whitespace-nowrap">
-                    2026-01-16{" "}
-                    <span className="text-[#9ca3af] text-xs ml-1">14:05</span>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-white">ETH/USDC</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                      空
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-[#9ca3af] border border-white/10">
-                      已平仓
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-red-400">
-                    -8.9%
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-red-400">
-                    -$420.50
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button className="text-[#9ca3af] hover:text-white transition-colors">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-[#1e1e1e] transition-colors">
-                  <td className="px-6 py-4 text-white whitespace-nowrap">
-                    2026-01-15{" "}
-                    <span className="text-[#9ca3af] text-xs ml-1">09:30</span>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-white">SOL/USDC</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      多
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-[#9ca3af] border border-white/10">
-                      已平仓
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-emerald-400">
-                    +12.4%
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-emerald-400">
-                    +$1,240.00
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button className="text-[#9ca3af] hover:text-white transition-colors">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-[#1e1e1e] transition-colors">
-                  <td className="px-6 py-4 text-white whitespace-nowrap">
-                    2025-11-21{" "}
-                    <span className="text-[#9ca3af] text-xs ml-1">01:38</span>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-white">ETH</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/5 text-[#9ca3af] border border-white/10">
-                      -
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                      待处理
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right text-[#9ca3af]">-</td>
-                  <td className="px-6 py-4 text-right text-[#9ca3af]">-</td>
-                  <td className="px-6 py-4 text-center">
-                    <button className="text-[#9ca3af] hover:text-white transition-colors">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-[#1e1e1e] transition-colors">
-                  <td className="px-6 py-4 text-white whitespace-nowrap">
-                    2025-11-19{" "}
-                    <span className="text-[#9ca3af] text-xs ml-1">00:26</span>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-white">ETH</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                      空
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-[#9ca3af] border border-white/10">
-                      已平仓
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-red-400">
-                    -13.54%
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-red-400">
-                    -$850.20
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button className="text-[#9ca3af] hover:text-white transition-colors">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
+                {tradesLoading ? (
+                  <tr>
+                    <td className="px-6 py-6 text-center text-[#9ca3af]" colSpan={7}>
+                      加载中...
+                    </td>
+                  </tr>
+                ) : recentTrades.length === 0 ? (
+                  <tr>
+                    <td className="px-6 py-6 text-center text-[#9ca3af]" colSpan={7}>
+                      暂无交易记录
+                    </td>
+                  </tr>
+                ) : (
+                  recentTrades.map((trade) => {
+                    const dateTime = formatDateTime(
+                      trade.analysisTime ??
+                        trade.entryTime ??
+                        trade.exitTime ??
+                        trade.createdAt ??
+                        trade.updatedAt
+                    );
+                    const percent = formatPercent(trade.profitLossPercentage);
+                    const percentValue =
+                      percent !== "-" ? Number(trade.profitLossPercentage) : 0;
+                    const percentClass =
+                      percent === "-"
+                        ? "text-[#9ca3af]"
+                        : percentValue > 0
+                        ? "text-emerald-400 font-semibold"
+                        : percentValue < 0
+                        ? "text-red-400 font-semibold"
+                        : "text-[#9ca3af]";
+                    const amount = formatAmount(trade);
+                    const amountValue =
+                      amount !== "-" ? Number(amount.replace(/[^0-9.-]/g, "")) : 0;
+                    const amountClass =
+                      amount === "-"
+                        ? "text-[#9ca3af]"
+                        : amountValue > 0
+                        ? "text-emerald-400 font-semibold"
+                        : amountValue < 0
+                        ? "text-red-400 font-semibold"
+                        : "text-[#9ca3af]";
+
+                    return (
+                      <tr
+                        key={trade.transactionId ?? `${trade.tradeSubject}-${dateTime.date}-${dateTime.time}`}
+                        className="hover:bg-[#1e1e1e] transition-colors"
+                      >
+                        <td className="px-6 py-4 text-white whitespace-nowrap">
+                          {dateTime.date}{" "}
+                          <span className="text-[#9ca3af] text-xs ml-1">
+                            {dateTime.time}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-white">
+                          {trade.tradeSubject || "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDirectionBadge(
+                              trade.entryDirection
+                            )}`}
+                          >
+                            {trade.entryDirection || "-"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
+                              trade.status
+                            )}`}
+                          >
+                            {trade.status || "-"}
+                          </span>
+                        </td>
+                        <td className={`px-6 py-4 text-right ${percentClass}`}>
+                          {percent}
+                        </td>
+                        <td className={`px-6 py-4 text-right ${amountClass}`}>
+                          {amount}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button className="text-[#9ca3af] hover:text-white transition-colors">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
-          </div>
-          <div className="bg-[#121212] px-6 py-4 border-t border-[#27272a] flex items-center justify-between">
-            <span className="text-sm text-[#9ca3af]">
-              显示第 <span className="font-medium text-white">1</span> 到{" "}
-              <span className="font-medium text-white">5</span> 条，共{" "}
-              <span className="font-medium text-white">27</span> 条
-            </span>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 text-sm border border-[#27272a] rounded bg-[#1e1e1e] text-[#e5e7eb] hover:bg-white/5 disabled:opacity-50 transition-colors">
-                上一页
-              </button>
-              <button className="px-3 py-1 text-sm border border-[#27272a] rounded bg-[#1e1e1e] text-[#e5e7eb] hover:bg-white/5 transition-colors">
-                下一页
-              </button>
-            </div>
           </div>
         </div>
         <footer className="text-center text-xs text-[#9ca3af] mt-8 mb-4 opacity-50">
