@@ -66,7 +66,7 @@ export default function TradeHomePage() {
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-[#9ca3af]">
-                Trades This Month
+                本月交易数
               </h3>
               <div className="p-2 bg-blue-500/10 rounded-lg">
                 <Wallet className="h-4 w-4 text-blue-400" />
@@ -80,11 +80,11 @@ export default function TradeHomePage() {
                 +2.4% <TrendingUp className="ml-1 h-4 w-4" />
               </span>
             </div>
-            <p className="text-xs text-[#9ca3af] mt-1">vs. last month</p>
+            <p className="text-xs text-[#9ca3af] mt-1">较上月</p>
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-[#9ca3af]">Win Rate</h3>
+              <h3 className="text-sm font-medium text-[#9ca3af]">胜率</h3>
               <div className="p-2 bg-emerald-500/10 rounded-lg">
                 <PieChart className="h-4 w-4 text-emerald-400" />
               </div>
@@ -97,12 +97,12 @@ export default function TradeHomePage() {
                 +1.2%
               </span>
             </div>
-            <p className="text-xs text-[#9ca3af] mt-1">Last 30 trades</p>
+            <p className="text-xs text-[#9ca3af] mt-1">最近 30 笔交易</p>
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-[#9ca3af]">
-                Profit Factor
+                盈利因子
               </h3>
               <div className="p-2 bg-purple-500/10 rounded-lg">
                 <Sigma className="h-4 w-4 text-purple-400" />
@@ -110,18 +110,16 @@ export default function TradeHomePage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-white">2.45</span>
-              <span className="text-sm font-medium text-[#9ca3af]">
-                Excellent
-              </span>
+              <span className="text-sm font-medium text-[#9ca3af]">优秀</span>
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">
-              Gross Profit / Gross Loss
+              总盈利 / 总亏损
             </p>
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-[#9ca3af]">
-                Net P&amp;L (30d)
+                净盈亏（30天）
               </h3>
               <div className="p-2 bg-yellow-500/10 rounded-lg">
                 <PiggyBank className="h-4 w-4 text-yellow-400" />
@@ -131,7 +129,7 @@ export default function TradeHomePage() {
               <span className="text-2xl font-bold text-white">+$8,450.25</span>
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">
-              Based on closed positions
+              基于已平仓头寸
             </p>
           </div>
         </div>
@@ -139,13 +137,13 @@ export default function TradeHomePage() {
           <div className="lg:col-span-2 bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-white">
-                Equity Growth
+                净值增长
               </h3>
               <select className="bg-[#1e1e1e] border border-[#27272a] text-sm text-[#e5e7eb] rounded-md py-1 px-3 focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400 cursor-pointer outline-none">
-                <option>Last 30 Days</option>
-                <option>Last 3 Months</option>
-                <option>YTD</option>
-                <option>All Time</option>
+                <option>最近 30 天</option>
+                <option>最近 3 个月</option>
+                <option>年初至今</option>
+                <option>全部时间</option>
               </select>
             </div>
             <div className="relative h-72 w-full overflow-hidden rounded-lg border border-[#27272a]">
@@ -156,55 +154,52 @@ export default function TradeHomePage() {
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm flex flex-col">
             <h3 className="text-lg font-semibold text-white mb-6">
-              Journal Highlights
+              日志精选
             </h3>
             <div className="space-y-4 flex-1 overflow-y-auto pr-2">
               <div className="group p-4 rounded-lg bg-[#1e1e1e] hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-[#27272a]">
                 <div className="flex justify-between items-start mb-2">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/20">
-                    Reflection
+                    复盘
                   </span>
-                  <span className="text-xs text-[#9ca3af]">Today</span>
+                  <span className="text-xs text-[#9ca3af]">今天</span>
                 </div>
                 <p className="text-sm text-[#e5e7eb] line-clamp-2">
-                  Followed the plan perfectly on BTC long. Waited for the retest
-                  of the VWAP and confirmation on the 15m candle.
+                  BTC 多头严格按计划执行，等待 VWAP 回测并在 15 分钟K线确认后进场。
                 </p>
               </div>
               <div className="group p-4 rounded-lg bg-[#1e1e1e] hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-[#27272a]">
                 <div className="flex justify-between items-start mb-2">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/20">
-                    Mistake
+                    失误
                   </span>
-                  <span className="text-xs text-[#9ca3af]">Yesterday</span>
+                  <span className="text-xs text-[#9ca3af]">昨天</span>
                 </div>
                 <p className="text-sm text-[#e5e7eb] line-clamp-2">
-                  Exited ETH position too early due to fear. Need to trust the
-                  stop loss placement and let the trade breathe.
+                  因恐惧过早退出 ETH 仓位，需要信任止损设置，让交易有发挥空间。
                 </p>
               </div>
               <div className="group p-4 rounded-lg bg-[#1e1e1e] hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-[#27272a]">
                 <div className="flex justify-between items-start mb-2">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/20">
-                    Setup
+                    形态
                   </span>
-                  <span className="text-xs text-[#9ca3af]">2 days ago</span>
+                  <span className="text-xs text-[#9ca3af]">2 天前</span>
                 </div>
                 <p className="text-sm text-[#e5e7eb] line-clamp-2">
-                  Identifying a potential head and shoulders pattern on the 4H
-                  chart for SOL. Watching 102 level for breakdown.
+                  在 SOL 的 4H 图上识别到潜在头肩形态，关注 102 位置的跌破。
                 </p>
               </div>
             </div>
             <button className="mt-4 w-full py-2 text-sm text-center text-[#9ca3af] font-medium hover:text-white transition-colors border border-dashed border-[#27272a] rounded-lg hover:bg-[#1e1e1e] hover:border-[#9ca3af]">
-              + Add Journal Entry
+              + 添加日志
             </button>
           </div>
         </div>
         <div className="bg-[#121212] rounded-xl border border-[#27272a] shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-[#27272a] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h3 className="text-lg font-semibold text-white">
-              Recent Transactions
+              最近交易
             </h3>
             <div className="flex gap-2">
               <div className="relative">
@@ -213,12 +208,12 @@ export default function TradeHomePage() {
                 </span>
                 <input
                   className="pl-9 pr-4 py-1.5 text-sm border border-[#27272a] bg-[#1e1e1e] text-white rounded-md focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400 w-full sm:w-48 placeholder:text-[#9ca3af] outline-none"
-                  placeholder="Search symbol..."
+                  placeholder="搜索标的..."
                   type="text"
                 />
               </div>
               <button className="px-3 py-1.5 text-sm font-medium text-[#e5e7eb] bg-[#1e1e1e] border border-[#27272a] rounded-md hover:bg-white/5 transition-colors">
-                Filter
+                筛选
               </button>
             </div>
           </div>
@@ -227,25 +222,25 @@ export default function TradeHomePage() {
               <thead className="bg-black/20 text-[#9ca3af] font-medium border-b border-[#27272a]">
                 <tr>
                   <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
-                    Date Time
+                    日期时间
                   </th>
                   <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
-                    Symbol
+                    标的
                   </th>
                   <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
-                    Type
+                    类型
                   </th>
                   <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
-                    Status
+                    状态
                   </th>
                   <th className="px-6 py-3 whitespace-nowrap text-right uppercase text-xs tracking-wider">
-                    Return %
+                    收益率 %
                   </th>
                   <th className="px-6 py-3 whitespace-nowrap text-right uppercase text-xs tracking-wider">
-                    P&amp;L ($)
+                    盈亏（$）
                   </th>
                   <th className="px-6 py-3 whitespace-nowrap text-center uppercase text-xs tracking-wider">
-                    Actions
+                    操作
                   </th>
                 </tr>
               </thead>
@@ -258,12 +253,12 @@ export default function TradeHomePage() {
                   <td className="px-6 py-4 font-medium text-white">BTC/USDC</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      Long
+                      多
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                      Analysis
+                      分析
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right text-[#9ca3af]">-</td>
@@ -282,12 +277,12 @@ export default function TradeHomePage() {
                   <td className="px-6 py-4 font-medium text-white">ETH/USDC</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                      Short
+                      空
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-[#9ca3af] border border-white/10">
-                      Closed
+                      已平仓
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-semibold text-red-400">
@@ -310,12 +305,12 @@ export default function TradeHomePage() {
                   <td className="px-6 py-4 font-medium text-white">SOL/USDC</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      Long
+                      多
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-[#9ca3af] border border-white/10">
-                      Closed
+                      已平仓
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-semibold text-emerald-400">
@@ -343,7 +338,7 @@ export default function TradeHomePage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                      Pending
+                      待处理
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right text-[#9ca3af]">-</td>
@@ -362,12 +357,12 @@ export default function TradeHomePage() {
                   <td className="px-6 py-4 font-medium text-white">ETH</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                      Short
+                      空
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-[#9ca3af] border border-white/10">
-                      Closed
+                      已平仓
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-semibold text-red-400">
@@ -387,22 +382,22 @@ export default function TradeHomePage() {
           </div>
           <div className="bg-[#121212] px-6 py-4 border-t border-[#27272a] flex items-center justify-between">
             <span className="text-sm text-[#9ca3af]">
-              Showing <span className="font-medium text-white">1</span> to{" "}
-              <span className="font-medium text-white">5</span> of{" "}
-              <span className="font-medium text-white">27</span> results
+              显示第 <span className="font-medium text-white">1</span> 到{" "}
+              <span className="font-medium text-white">5</span> 条，共{" "}
+              <span className="font-medium text-white">27</span> 条
             </span>
             <div className="flex gap-2">
               <button className="px-3 py-1 text-sm border border-[#27272a] rounded bg-[#1e1e1e] text-[#e5e7eb] hover:bg-white/5 disabled:opacity-50 transition-colors">
-                Previous
+                上一页
               </button>
               <button className="px-3 py-1 text-sm border border-[#27272a] rounded bg-[#1e1e1e] text-[#e5e7eb] hover:bg-white/5 transition-colors">
-                Next
+                下一页
               </button>
             </div>
           </div>
         </div>
         <footer className="text-center text-xs text-[#9ca3af] mt-8 mb-4 opacity-50">
-          © 2026 MMC Trading System. All rights reserved.
+          © 2026 MMC Trading System. 保留所有权利。
         </footer>
       </div>
     </TradePageShell>

@@ -70,7 +70,7 @@ export default function TradeShell({
         <div className="h-16 flex items-center px-6 border-b border-[#27272a]">
           <Link
             className="text-lg font-bold text-white flex items-center gap-2"
-            href="/trade"
+            href="/"
           >
             <LineChart className="h-5 w-5 text-emerald-400" />
             Trading System
