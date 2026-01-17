@@ -72,6 +72,11 @@ export default function TradeShell({
     }
   };
 
+  const headerTitle =
+    tradeNavItems.find(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+    )?.title ?? "Dashboard Overview";
+
   return (
     <div className="dark min-h-screen bg-black text-[#e5e7eb] antialiased selection:bg-emerald-500 selection:text-white flex">
       <aside className="w-64 bg-[#121212] border-r border-[#27272a] flex-shrink-0 fixed h-full z-20 hidden lg:flex flex-col">
@@ -146,7 +151,7 @@ export default function TradeShell({
               <Menu className="h-5 w-5" />
             </button>
             <h1 className="text-xl font-semibold text-white tracking-tight">
-              Dashboard Overview
+              {headerTitle}
             </h1>
           </div>
           <div className="flex items-center gap-4">
