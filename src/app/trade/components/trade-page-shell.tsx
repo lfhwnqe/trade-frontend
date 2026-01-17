@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Menu, Plus } from "lucide-react";
+import Link from "next/link";
 
 type TradePageShellProps = {
   title: string;
@@ -29,15 +30,16 @@ export default function TradePageShell({
         </div>
         {showAddButton ? (
           <div className="flex items-center gap-4">
-            <button
+            <Link
               className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-sm rounded-md transition-colors shadow shadow-emerald-900/20"
-              onClick={() => {
-                router.push("/trade/add");
-              }}
+              // onClick={() => {
+              //   router.push("/trade/add");
+              // }}
+              href={`/trade/add`}
             >
               <Plus className="h-4 w-4" />
               新增交易
-            </button>
+            </Link>
           </div>
         ) : null}
       </header>

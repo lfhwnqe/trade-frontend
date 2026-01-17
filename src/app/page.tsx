@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { Space_Grotesk } from "next/font/google";
+import HomeAuthCta from "@/components/home-auth-cta";
 import {
   ArrowRight,
   BarChart3,
@@ -22,13 +21,6 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export default function Home() {
-  const token = cookies().get("token")?.value;
-  const isLoggedIn = Boolean(token);
-
-  if (!isLoggedIn) {
-    redirect("/auth/login");
-  }
-
   return (
     <div className={`min-h-screen bg-[#0a0a0a] text-white ${spaceGrotesk.className}`}>
       <style>{`
@@ -93,20 +85,7 @@ export default function Home() {
               </a>
             </nav>
             <div className="flex items-center gap-3">
-              {!isLoggedIn && (
-                <a
-                  className="hidden px-3 py-2 text-sm font-medium transition-colors hover:text-[#00c2b2] sm:flex"
-                  href="/auth/login"
-                >
-                  登录
-                </a>
-              )}
-              <a
-                className="group relative flex h-9 items-center justify-center overflow-hidden rounded bg-[#00c2b2] px-4 text-sm font-bold text-black transition-all hover:bg-[#009e91]"
-                href="http://localhost:3000/trade/home"
-              >
-                <span className="relative z-10">开始使用</span>
-              </a>
+              <HomeAuthCta />
             </div>
           </div>
         </header>

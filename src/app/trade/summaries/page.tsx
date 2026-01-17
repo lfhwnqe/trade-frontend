@@ -59,35 +59,33 @@ function extractList(payload: unknown): unknown[] {
 }
 
 function parseSummaries(payload: unknown): TradeSummary[] {
-  return extractList(payload)
-    .map((item) => {
-      if (!item || typeof item !== "object") return null;
+  return extractList(payload).reduce<TradeSummary[]>((acc, item) => {
+    if (!item || typeof item !== "object") return acc;
 
-      const entity = item as SummaryApiEntity;
-      const trade =
-        entity.trade && typeof entity.trade === "object"
-          ? entity.trade
-          : undefined;
+    const entity = item as SummaryApiEntity;
+    const trade =
+      entity.trade && typeof entity.trade === "object" ? entity.trade : undefined;
 
-      const transactionId =
-        toText(entity.transactionId)?.trim() ||
-        toText(trade?.transactionId)?.trim();
-      if (!transactionId) return null;
+    const transactionId =
+      toText(entity.transactionId)?.trim() ||
+      toText(trade?.transactionId)?.trim();
+    if (!transactionId) return acc;
 
-      const text = toText(entity.text) || toText(trade?.text);
+    const text = toText(entity.text) || toText(trade?.text);
 
-      return {
-        transactionId,
-        text: text || "暂无总结",
-        importance:
-          typeof entity.importance === "number"
-            ? entity.importance
-            : typeof trade?.importance === "number"
-            ? trade.importance
-            : undefined,
-      };
-    })
-    .filter((item): item is TradeSummary => Boolean(item));
+    acc.push({
+      transactionId,
+      text: text || "暂无总结",
+      importance:
+        typeof entity.importance === "number"
+          ? entity.importance
+          : typeof trade?.importance === "number"
+          ? trade.importance
+          : undefined,
+    });
+
+    return acc;
+  }, []);
 }
 
 async function fetchSummaries(
