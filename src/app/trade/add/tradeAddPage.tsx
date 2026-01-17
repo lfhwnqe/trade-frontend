@@ -244,77 +244,144 @@ export default function TradeAddPage({
     <Suspense fallback={<div>加载中...</div>}>
       <div
         className={
-          "relative w-full flex-1 flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#050505] shadow-[0_30px_60px_-40px_rgba(0,0,0,0.9)] " +
+          "relative min-h-screen bg-[#000000] text-[#ededed] antialiased " +
           (className ?? "")
         }
       >
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 left-1/3 h-56 w-2/3 rounded-full bg-emerald-400/10 blur-[120px]" />
-          <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-sky-500/10 blur-[140px]" />
+          <div className="absolute -top-24 left-1/4 h-72 w-2/3 rounded-full bg-emerald-400/10 blur-[140px]" />
+          <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-sky-500/10 blur-[150px]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.04),transparent_45%)]" />
         </div>
-        {/* 固定顶部 */}
-        <div className="relative z-10 h-16 border-b border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-white">
-                {pageTitle}
-              </h1>
-              <p className="text-xs text-white/50">TradeOS / Analysis</p>
+
+        <header className="sticky top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
+          <div className="mx-auto flex h-16 max-w-full items-center justify-between px-4 sm:px-6 lg:px-8">
+            {/* <div className="flex items-center space-x-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded bg-gradient-to-br from-[#18181b] to-black border border-white/10">
+                <span className="text-[11px] font-semibold text-[#6366f1]">
+                  T
+                </span>
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold uppercase tracking-wide text-white">
+                  TradeOS
+                </h1>
+                <span className="text-xs font-mono tracking-tight text-[#a1a1aa]">
+                  Pre-Trade Module
+                </span>
+              </div>
+            </div> */}
+            <div className="hidden items-center rounded-full border border-white/10 bg-black/40 p-1 md:flex">
+              <button className="rounded-full px-4 py-1.5 text-xs font-medium text-[#a1a1aa] transition-colors hover:text-white">
+                Wait for Entry
+              </button>
+              <button className="rounded-full bg-[#6366f1] px-4 py-1.5 text-xs font-medium text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all">
+                Analyzed
+              </button>
+              <button className="rounded-full px-4 py-1.5 text-xs font-medium text-[#a1a1aa] transition-colors hover:text-emerald-300">
+                Entered
+              </button>
+              <button className="rounded-full px-4 py-1.5 text-xs font-medium text-[#a1a1aa] transition-colors hover:text-purple-300">
+                Exited
+              </button>
             </div>
-            <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-mono text-white/60">
-              {isCreateMode ? "NEW-ENTRY" : "UPDATE"}
+            {/* <div className="flex items-center space-x-4">
+              <span className="rounded border border-[#6366f1]/30 bg-[#6366f1]/5 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-[#6366f1]">
+                {isCreateMode ? "Draft" : "Saved"}
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#0f0f10]">
+                <span className="text-xs text-[#a1a1aa]">ME</span>
+              </div>
+            </div> */}
+          </div>
+        </header>
+
+        <main className="relative z-10 mx-auto w-full max-w-full space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+          <div className="md:hidden">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#a1a1aa]">
+              Trade Status
+            </label>
+            <div className="relative">
+              <select className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#6366f1] focus:ring-[#6366f1]">
+                <option>Wait for Entry</option>
+                <option>Analyzed</option>
+                <option>Entered</option>
+                <option>Exited</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#a1a1aa]">
+                <span className="text-sm">▾</span>
+              </div>
             </div>
           </div>
-        </div>
-        {/* 滚动表单内容 */}
-        <div className="relative z-10 flex-1 overflow-y-auto px-6 py-6">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_0_30px_-20px_rgba(16,185,129,0.45)] backdrop-blur">
-            <TradeFormDialog
-              ref={formRef}
-              editTrade={id ? form : null}
-              form={form}
-              handleChange={handleChange}
-              handleSelectChange={handleSelectChange}
-              handleDateRangeChange={handleDateRangeChange}
-              handleImageChange={handleImageChange}
-              handlePlanChange={handlePlanChange}
-              handleSubmit={handleSubmit}
-              updateForm={updateForm}
-              loading={loading}
-              readOnly={readOnly}
-              showChecklist={enableChecklist}
-              formMode="distributed"
-            />
-            {(loading || detailLoading) && (
-              <div className="mt-6 text-center text-sm text-white/50">
-                {loading ? "保存中..." : "加载详情中..."}
+
+          <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+            <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-[#6366f1]/50 to-transparent" />
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 bg-black/30 px-6 py-5 sm:px-8">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+                  <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#6366f1]" />
+                  {pageTitle}
+                </h2>
+                <p className="mt-1 text-xs font-mono text-[#a1a1aa]">
+                  SESSION ID: {id ? `#${id}` : "#NEW-ENTRY"}
+                </p>
+              </div>
+              <div className="hidden sm:block">
+                <span className="rounded border border-white/10 bg-black/40 px-2 py-1 text-xs text-[#a1a1aa]">
+                  Auto-saved 2m ago
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-6 p-6 md:p-8">
+              <TradeFormDialog
+                ref={formRef}
+                editTrade={id ? form : null}
+                form={form}
+                handleChange={handleChange}
+                handleSelectChange={handleSelectChange}
+                handleDateRangeChange={handleDateRangeChange}
+                handleImageChange={handleImageChange}
+                handlePlanChange={handlePlanChange}
+                handleSubmit={handleSubmit}
+                updateForm={updateForm}
+                loading={loading}
+                readOnly={readOnly}
+                showChecklist={enableChecklist}
+                formMode="distributed"
+              />
+              {(loading || detailLoading) && (
+                <div className="text-center text-sm text-[#a1a1aa]">
+                  {loading ? "保存中..." : "加载详情中..."}
+                </div>
+              )}
+            </div>
+
+            {!readOnly && (
+              <div className="flex items-center justify-end gap-4 border-t border-white/10 bg-black/30 px-6 py-4 sm:px-8">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={loading}
+                  onClick={handleSaveDraft}
+                  className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  暂存本地
+                </Button>
+                <LoadingButton
+                  loading={loading}
+                  editTrade={form}
+                  errors={{}}
+                  className="bg-[#6366f1] text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#4f46e5] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)]"
+                  onSubmit={() => {
+                    // 直接调用表单组件的 submit 方法
+                    formRef.current?.submit();
+                  }}
+                />
               </div>
             )}
-          </div>
-        </div>
-        {!readOnly && (
-          <div className="relative z-10 flex items-center justify-end gap-4 border-t border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={loading}
-              onClick={handleSaveDraft}
-              className="border-white/20 bg-white/5 text-white hover:bg-white/10"
-            >
-              暂存本地
-            </Button>
-            <LoadingButton
-              loading={loading}
-              editTrade={form}
-              errors={{}}
-              onSubmit={() => {
-                // 直接调用表单组件的 submit 方法
-                formRef.current?.submit();
-              }}
-            />
-          </div>
-        )}
+          </section>
+        </main>
       </div>
     </Suspense>
   );
