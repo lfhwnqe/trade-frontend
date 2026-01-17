@@ -20,15 +20,18 @@ const COPY_PROMPT_HEADER = [
 
 type TradeSummary = {
   transactionId: string;
-  lessonsLearned: string;
+  text: string;
+  importance?: number;
 };
 
 type SummaryApiEntity = {
   transactionId?: string | number | null;
-  lessonsLearned?: string | null;
+  text?: string | null;
+  importance?: number | null;
   trade?: {
     transactionId?: string | number | null;
-    lessonsLearned?: string | null;
+    text?: string | null;
+    importance?: number | null;
   } | null;
 };
 
@@ -70,22 +73,30 @@ function parseSummaries(payload: unknown): TradeSummary[] {
         toText(trade?.transactionId)?.trim();
       if (!transactionId) return null;
 
-      const lessons = toText(entity.lessonsLearned) || toText(trade?.lessonsLearned);
+      const text = toText(entity.text) || toText(trade?.text);
 
       return {
         transactionId,
-        lessonsLearned: lessons || "暂无总结",
+        text: text || "暂无总结",
+        importance:
+          typeof entity.importance === "number"
+            ? entity.importance
+            : typeof trade?.importance === "number"
+            ? trade.importance
+            : undefined,
       };
     })
     .filter((item): item is TradeSummary => Boolean(item));
 }
 
-async function fetchSummaries(): Promise<TradeSummary[]> {
+async function fetchSummaries(
+  summaryType: "pre" | "post"
+): Promise<TradeSummary[]> {
   const response = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     proxyParams: {
-      targetPath: "trade/summaries",
+      targetPath: `trade/summaries/${summaryType}`,
       actualMethod: "POST",
     },
     actualBody: {},
@@ -113,22 +124,32 @@ async function fetchSummaries(): Promise<TradeSummary[]> {
 }
 
 export default function TradeSummariesPage() {
-  const [summaries, setSummaries] = useState<TradeSummary[]>([]);
+  const [preSummaries, setPreSummaries] = useState<TradeSummary[]>([]);
+  const [postSummaries, setPostSummaries] = useState<TradeSummary[]>([]);
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [copying, setCopying] = useState(false);
+  const [preError, setPreError] = useState<string | null>(null);
+  const [postError, setPostError] = useState<string | null>(null);
+  const [copying, setCopying] = useState<"pre" | "post" | null>(null);
   const [success, errorAlert] = useAlert();
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setPreError(null);
+    setPostError(null);
     try {
-      const result = await fetchSummaries();
-      setSummaries(result);
+      const [pre, post] = await Promise.all([
+        fetchSummaries("pre"),
+        fetchSummaries("post"),
+      ]);
+      setPreSummaries(pre);
+      setPostSummaries(post);
     } catch (err) {
-      setSummaries([]);
-      setError(err instanceof Error ? err.message : "获取交易总结失败");
+      setPreSummaries([]);
+      setPostSummaries([]);
+      const message = err instanceof Error ? err.message : "获取交易总结失败";
+      setPreError(message);
+      setPostError(message);
     } finally {
       setLoading(false);
     }
@@ -138,21 +159,21 @@ export default function TradeSummariesPage() {
     loadData();
   }, [loadData]);
 
-  const handleCopyAll = useCallback(async () => {
-    if (!summaries.length) {
+  const handleCopyAll = useCallback(async (summaryType: "pre" | "post") => {
+    const source = summaryType === "pre" ? preSummaries : postSummaries;
+    if (!source.length) {
       errorAlert("暂无数据可复制");
       return;
     }
-    const contentBody = summaries
+    const contentBody = source
       .map(
-        (summary, index) =>
-          `【第${index + 1}条】\n${summary.lessonsLearned || "暂无总结"}`
+        (summary, index) => `【第${index + 1}条】\n${summary.text || "暂无总结"}`
       )
       .join("\n\n----------------------------------------\n\n");
     const content = `${COPY_PROMPT_HEADER}${contentBody}`;
 
     try {
-      setCopying(true);
+      setCopying(summaryType);
       if (
         typeof navigator !== "undefined" &&
         navigator.clipboard &&
@@ -174,17 +195,25 @@ export default function TradeSummariesPage() {
       console.error(err);
       errorAlert("复制失败，请重试");
     } finally {
-      setCopying(false);
+      setCopying(null);
     }
-  }, [summaries, success, errorAlert]);
+  }, [preSummaries, postSummaries, success, errorAlert]);
 
-  const filteredSummaries = useMemo(() => {
+  const filteredPreSummaries = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
-    if (!trimmed) return summaries;
-    return summaries.filter((summary) =>
-      (summary.lessonsLearned || "").toLowerCase().includes(trimmed)
+    if (!trimmed) return preSummaries;
+    return preSummaries.filter((summary) =>
+      (summary.text || "").toLowerCase().includes(trimmed)
     );
-  }, [keyword, summaries]);
+  }, [keyword, preSummaries]);
+
+  const filteredPostSummaries = useMemo(() => {
+    const trimmed = keyword.trim().toLowerCase();
+    if (!trimmed) return postSummaries;
+    return postSummaries.filter((summary) =>
+      (summary.text || "").toLowerCase().includes(trimmed)
+    );
+  }, [keyword, postSummaries]);
 
   return (
     <div className="flex h-full flex-1 flex-col gap-6 overflow-y-auto p-6">
@@ -192,7 +221,7 @@ export default function TradeSummariesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">交易总结</h1>
           <p className="text-sm text-muted-foreground">
-            汇总每笔交易的反思，快速定位容易犯错的环节。
+            汇总交易前后总结，快速定位容易犯错的环节。
           </p>
         </div>
         <div className="flex gap-2">
@@ -204,15 +233,6 @@ export default function TradeSummariesPage() {
           >
             <RotateCcw className="size-4" />
             {loading ? "刷新中..." : "刷新"}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleCopyAll}
-            disabled={copying || !summaries.length}
-          >
-            <ClipboardCopy className="size-4" />
-            {copying ? "复制中..." : "复制全部"}
           </Button>
         </div>
       </div>
@@ -232,46 +252,124 @@ export default function TradeSummariesPage() {
         </div>
       </div>
 
-      {error && (
+      {preError && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
+          {preError}
+        </div>
+      )}
+      {postError && postError !== preError && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {postError}
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {loading
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={`summary-skeleton-${index}`}
-                className="rounded-xl border bg-background p-4 shadow-sm"
-              >
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="mt-3 h-6 w-3/4" />
-                <Skeleton className="mt-4 h-4 w-full" />
-                <Skeleton className="mt-2 h-4 w-5/6" />
-              </div>
-            ))
-          : filteredSummaries.length > 0
-          ? filteredSummaries.map((summary) => (
-              <article
-                key={summary.transactionId}
-                className="group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50"
-              >
-                <p className="text-xs font-medium text-muted-foreground">
-                  总结
-                </p>
-                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
-                  {summary.lessonsLearned || "暂无总结"}
-                </p>
-              </article>
-            ))
-          : (
-              <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-8 text-center text-sm text-muted-foreground">
-                {keyword
-                  ? "没有找到匹配的总结，请调整筛选条件试试。"
-                  : "暂无总结数据，稍后再试或点击上方刷新按钮。"}
-              </div>
-            )}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="flex flex-col gap-4 rounded-2xl border bg-background/40 p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">交易前总结</h2>
+              <p className="text-xs text-muted-foreground">
+                重点关注入场前的判断与逻辑。
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleCopyAll("pre")}
+              disabled={copying === "pre" || !preSummaries.length}
+            >
+              <ClipboardCopy className="size-4" />
+              {copying === "pre" ? "复制中..." : "复制全部"}
+            </Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {loading
+              ? Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={`pre-summary-skeleton-${index}`}
+                    className="rounded-xl border bg-background p-4 shadow-sm"
+                  >
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="mt-3 h-6 w-3/4" />
+                    <Skeleton className="mt-4 h-4 w-full" />
+                  </div>
+                ))
+              : filteredPreSummaries.length > 0
+              ? filteredPreSummaries.map((summary) => (
+                  <article
+                    key={summary.transactionId}
+                    className="group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50"
+                  >
+                    <p className="text-xs font-medium text-muted-foreground">
+                      交易前总结
+                    </p>
+                    <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                      {summary.text || "暂无总结"}
+                    </p>
+                  </article>
+                ))
+              : (
+                  <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+                    {keyword
+                      ? "没有找到匹配的交易前总结，请调整筛选条件试试。"
+                      : "暂无交易前总结，稍后再试或点击上方刷新按钮。"}
+                  </div>
+                )}
+          </div>
+        </section>
+        <section className="flex flex-col gap-4 rounded-2xl border bg-background/40 p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">交易后总结</h2>
+              <p className="text-xs text-muted-foreground">
+                聚焦交易执行与复盘复利。
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleCopyAll("post")}
+              disabled={copying === "post" || !postSummaries.length}
+            >
+              <ClipboardCopy className="size-4" />
+              {copying === "post" ? "复制中..." : "复制全部"}
+            </Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {loading
+              ? Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={`post-summary-skeleton-${index}`}
+                    className="rounded-xl border bg-background p-4 shadow-sm"
+                  >
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="mt-3 h-6 w-3/4" />
+                    <Skeleton className="mt-4 h-4 w-full" />
+                  </div>
+                ))
+              : filteredPostSummaries.length > 0
+              ? filteredPostSummaries.map((summary) => (
+                  <article
+                    key={summary.transactionId}
+                    className="group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50"
+                  >
+                    <p className="text-xs font-medium text-muted-foreground">
+                      交易后总结
+                    </p>
+                    <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                      {summary.text || "暂无总结"}
+                    </p>
+                  </article>
+                ))
+              : (
+                  <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+                    {keyword
+                      ? "没有找到匹配的交易后总结，请调整筛选条件试试。"
+                      : "暂无交易后总结，稍后再试或点击上方刷新按钮。"}
+                  </div>
+                )}
+          </div>
+        </section>
       </div>
     </div>
   );
