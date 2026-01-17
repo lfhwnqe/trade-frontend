@@ -128,7 +128,7 @@ function StarRating({
           <button
             key={star}
             type="button"
-            className="group p-0.5 transition-transform active:scale-95 disabled:cursor-not-allowed"
+            className="group p-0.5 transition-transform active:scale-95 disabled:cursor-not-allowed cursor-pointer"
             onClick={() => onChange?.(star)}
             disabled={readOnly}
             aria-label={`评分 ${star} 星`}

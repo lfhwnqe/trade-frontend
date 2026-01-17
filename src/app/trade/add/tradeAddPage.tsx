@@ -256,21 +256,6 @@ export default function TradeAddPage({
 
         <header className="sticky top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-full items-center justify-between px-4 sm:px-6 lg:px-8">
-            {/* <div className="flex items-center space-x-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded bg-gradient-to-br from-[#18181b] to-black border border-white/10">
-                <span className="text-[11px] font-semibold text-[#6366f1]">
-                  T
-                </span>
-              </div>
-              <div>
-                <h1 className="text-sm font-semibold uppercase tracking-wide text-white">
-                  TradeOS
-                </h1>
-                <span className="text-xs font-mono tracking-tight text-[#a1a1aa]">
-                  Pre-Trade Module
-                </span>
-              </div>
-            </div> */}
             <div className="hidden items-center rounded-full border border-white/10 bg-black/40 p-1 md:flex">
               {tradeStatusOptions.map((option) => {
                 const isActive = form.status === option.value;
@@ -280,7 +265,7 @@ export default function TradeAddPage({
                     type="button"
                     onClick={() => handleSelectChange("status", option.value)}
                     className={
-                      "rounded-full px-4 py-1.5 text-xs font-medium transition-all " +
+                      "rounded-full px-4 py-1.5 text-xs font-medium transition-all cursor-pointer " +
                       (isActive
                         ? "bg-[#6366f1] text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
                         : "text-[#a1a1aa] hover:text-white")
@@ -291,14 +276,6 @@ export default function TradeAddPage({
                 );
               })}
             </div>
-            {/* <div className="flex items-center space-x-4">
-              <span className="rounded border border-[#6366f1]/30 bg-[#6366f1]/5 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-[#6366f1]">
-                {isCreateMode ? "Draft" : "Saved"}
-              </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#0f0f10]">
-                <span className="text-xs text-[#a1a1aa]">ME</span>
-              </div>
-            </div> */}
           </div>
         </header>
 
