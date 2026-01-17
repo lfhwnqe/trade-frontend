@@ -126,7 +126,7 @@ export function DataTable<TData, TValue>({
       {/* Table Container - 可滚动区域 */}
       <div className="flex-1 min-h-0">
         <div
-          className={`rounded-t-xl border border-[#2A3441] bg-[#000000] shadow-lg relative h-full ${
+          className={`rounded-t-xl border border-[#27272a] bg-[#121212] shadow-sm relative h-full ${
             loading ? "opacity-50 pointer-events-none" : ""
           }`}
         >
@@ -142,16 +142,16 @@ export function DataTable<TData, TValue>({
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow
                     key={headerGroup.id}
-                    className="bg-[#151B25] border-b border-[#2A3441]"
+                    className="bg-black/20 border-b border-[#27272a]"
                   >
                     {headerGroup.headers.map((header) => {
                       const isPinned = header.column.getIsPinned();
                       return (
                         <TableHead
                           key={header.id}
-                          className={`whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-[#94A3B8] ${
+                          className={`whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-[#9ca3af] ${
                             isPinned === "right"
-                              ? "sticky right-0 bg-[#151B25] border-l border-[#2A3441] z-10"
+                              ? "sticky right-0 bg-black/20 border-l border-[#27272a] z-10"
                               : ""
                           }`}
                           style={{
@@ -177,7 +177,7 @@ export function DataTable<TData, TValue>({
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="h-24 text-center text-[#94A3B8]"
+                      className="h-24 text-center text-[#9ca3af]"
                     >
                       <div className="flex items-center justify-center space-x-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
@@ -190,16 +190,16 @@ export function DataTable<TData, TValue>({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className="border-b border-[#2A3441] hover:bg-white/5 transition-colors"
+                      className="border-b border-[#27272a] hover:bg-[#1e1e1e] transition-colors"
                     >
                       {row.getVisibleCells().map((cell) => {
                         const isPinned = cell.column.getIsPinned();
                         return (
                           <TableCell
                             key={cell.id}
-                            className={`whitespace-nowrap text-[#E2E8F0] ${
+                            className={`whitespace-nowrap text-[#e5e7eb] ${
                               isPinned === "right"
-                                ? "sticky right-0 bg-[#000000]/95 border-l border-[#2A3441] z-10"
+                                ? "sticky right-0 bg-[#121212]/95 border-l border-[#27272a] z-10"
                                 : ""
                             }`}
                             style={{
@@ -221,7 +221,7 @@ export function DataTable<TData, TValue>({
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="h-24 text-center text-[#94A3B8]"
+                      className="h-24 text-center text-[#9ca3af]"
                     >
                       暂无数据
                     </TableCell>
@@ -233,10 +233,10 @@ export function DataTable<TData, TValue>({
 
           {/* Loading overlay for existing data */}
           {loading && table.getRowModel().rows?.length > 0 && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <div className="flex items-center space-x-2 bg-[#151B25] border border-[#2A3441] px-4 py-2 rounded-md shadow-md">
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="flex items-center space-x-2 bg-[#121212] border border-[#27272a] px-4 py-2 rounded-md shadow-md">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                <span className="text-sm text-[#E2E8F0]">正在加载...</span>
+                <span className="text-sm text-[#e5e7eb]">正在加载...</span>
               </div>
             </div>
           )}
@@ -244,8 +244,8 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Pagination Controls - 固定在底部 */}
-      <div className="flex items-center justify-between space-x-2 py-4 flex-shrink-0 border-t border-[#2A3441] bg-[#151B25] pl-2 pr-2 rounded-b-xl">
-        <div className="flex-1 text-sm text-[#94A3B8]">
+      <div className="flex items-center justify-between space-x-2 py-4 flex-shrink-0 border-t border-[#27272a] bg-[#121212] pl-2 pr-2 rounded-b-xl">
+        <div className="flex-1 text-sm text-[#9ca3af]">
           {table.getFilteredSelectedRowModel().rows.length} /{" "}
           {table.getFilteredRowModel().rows.length} 行已选择。总共 {totalItems}{" "}
           条数据。
@@ -254,7 +254,7 @@ export function DataTable<TData, TValue>({
           <Button
             variant="outline"
             size="sm"
-            className="border-[#2A3441] bg-transparent text-[#E2E8F0] hover:bg-[#2A3441]"
+            className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
             onClick={() => {
               if (page > 1) {
                 onPageChange(page - 1, pageSize);
@@ -264,13 +264,13 @@ export function DataTable<TData, TValue>({
           >
             上一页
           </Button>
-          <span className="mx-2 text-sm text-[#94A3B8]">
+          <span className="mx-2 text-sm text-[#9ca3af]">
             第 {page} / {totalPages} 页
           </span>
           <Button
             variant="outline"
             size="sm"
-            className="border-[#2A3441] bg-transparent text-[#E2E8F0] hover:bg-[#2A3441]"
+            className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
             onClick={() => {
               if (page < totalPages) {
                 onPageChange(page + 1, pageSize);
@@ -281,7 +281,7 @@ export function DataTable<TData, TValue>({
             下一页
           </Button>
           <select
-            className="border border-[#2A3441] bg-[#0B0E14] text-[#E2E8F0] p-1 rounded ml-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] p-1 rounded ml-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             value={pageSize}
             disabled={loading}
             onChange={(e) => {

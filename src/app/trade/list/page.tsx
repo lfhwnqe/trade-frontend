@@ -84,6 +84,57 @@ export default function TradeListPage() {
     fetchAll(); // 页面加载时获取数据
   }, []);
 
+  const formatDateTime = (value?: string) => {
+    if (!value) return { date: "-", time: "-" };
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return {
+        date: format(parsed, "yyyy-MM-dd"),
+        time: format(parsed, "HH:mm"),
+      };
+    }
+    const [date, time] = value.split(" ");
+    return { date: date || "-", time: time ? time.slice(0, 5) : "-" };
+  };
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case "已分析":
+        return "bg-blue-500/10 text-blue-400 border border-blue-500/20";
+      case "待入场":
+        return "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20";
+      case "已入场":
+        return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+      case "已离场":
+        return "bg-white/10 text-[#9ca3af] border border-white/10";
+      default:
+        return "bg-white/5 text-[#9ca3af] border border-white/10";
+    }
+  };
+
+  const getDirectionBadge = (direction?: string) => {
+    if (direction === "多") {
+      return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+    }
+    if (direction === "空") {
+      return "bg-red-500/10 text-red-400 border border-red-500/20";
+    }
+    return "bg-white/5 text-[#9ca3af] border border-white/10";
+  };
+
+  const getGradeBadge = (grade?: string) => {
+    switch (grade) {
+      case "高":
+        return "bg-red-500/10 text-red-400 border border-red-500/20";
+      case "中":
+        return "bg-yellow-500/10 text-yellow-300 border border-yellow-500/20";
+      case "低":
+        return "bg-white/10 text-[#9ca3af] border border-white/10";
+      default:
+        return "bg-white/5 text-[#9ca3af] border border-white/10";
+    }
+  };
+
   const columns = useMemo<ColumnDef<Trade>[]>(
     () => [
       {
@@ -117,6 +168,7 @@ export default function TradeListPage() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto px-0 py-0 text-xs font-semibold uppercase tracking-wider text-[#9ca3af] hover:text-white"
           >
             盈亏% <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
@@ -130,11 +182,15 @@ export default function TradeListPage() {
           const isProfit = value && parseFloat(value) > 0;
           const isLoss = value && parseFloat(value) < 0;
           return (
-            <div className={`text-right font-bold min-w-[80px] ${
-              isProfit ? 'text-green-600 dark:text-green-400' :
-              isLoss ? 'text-red-600 dark:text-red-400' :
-              'text-gray-500 dark:text-gray-400'
-            }`}>
+            <div
+              className={`text-right font-semibold min-w-[80px] ${
+                isProfit
+                  ? "text-emerald-400"
+                  : isLoss
+                  ? "text-red-400"
+                  : "text-[#9ca3af]"
+              }`}
+            >
               {formatted}
             </div>
           );
@@ -147,17 +203,13 @@ export default function TradeListPage() {
         header: "交易状态",
         cell: ({ row }) => {
           const status = row.original.status;
-          const getStatusColor = (status: string) => {
-            switch (status) {
-              case "已分析": return "bg-blue-100 text-blue-800";
-              case "已入场": return "bg-yellow-100 text-yellow-800";
-              case "已离场": return "bg-green-100 text-green-800";
-              default: return "bg-gray-100 text-gray-800";
-            }
-          };
           return (
             <div className="min-w-[80px]">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status || "")}`}>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
+                  status
+                )}`}
+              >
                 {status ?? "-"}
               </span>
             </div>
@@ -171,17 +223,13 @@ export default function TradeListPage() {
         header: "分级",
         cell: ({ row }) => {
           const grade = row.original.grade;
-          const getGradeColor = (grade: string) => {
-            switch (grade) {
-              case "高": return "bg-red-100 text-red-800 border-red-200";
-              case "中": return "bg-orange-100 text-orange-800 border-orange-200";
-              case "低": return "bg-gray-100 text-gray-800 border-gray-200";
-              default: return "bg-gray-100 text-gray-800 border-gray-200";
-            }
-          };
           return (
             <div className="min-w-[60px]">
-              <span className={`px-2 py-1 rounded border text-xs font-medium ${getGradeColor(grade || "")}`}>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeBadge(
+                  grade
+                )}`}
+              >
                 {grade ?? "-"}
               </span>
             </div>
@@ -195,14 +243,13 @@ export default function TradeListPage() {
         header: "方向",
         cell: ({ row }) => {
           const direction = row.original.entryDirection;
-          const isLong = direction === "多";
           return (
             <div className="min-w-[60px]">
-              <span className={`px-2 py-1 rounded text-xs font-bold ${
-                isLong ? 'bg-green-100 text-green-800' :
-                direction === "空" ? 'bg-red-100 text-red-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDirectionBadge(
+                  direction
+                )}`}
+              >
                 {direction ?? "-"}
               </span>
             </div>
@@ -215,7 +262,10 @@ export default function TradeListPage() {
         accessorKey: "tradeSubject",
         header: "交易主题",
         cell: ({ row }) => (
-          <div className="min-w-[120px] max-w-[200px] truncate" title={row.original.tradeSubject}>
+          <div
+            className="min-w-[120px] max-w-[200px] truncate text-white font-medium"
+            title={row.original.tradeSubject}
+          >
             {row.original.tradeSubject ?? "-"}
           </div>
         ),
@@ -228,15 +278,17 @@ export default function TradeListPage() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto px-0 py-0 text-xs font-semibold uppercase tracking-wider text-[#9ca3af] hover:text-white"
           >
             分析时间 <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
-          const time = row.original.analysisTime;
+          const time = formatDateTime(row.original.analysisTime);
           return (
-            <div className="min-w-[100px] text-sm">
-              {time ? time.split(' ')[0] : "-"}
+            <div className="min-w-[120px] text-white">
+              {time.date}
+              <span className="text-[#9ca3af] text-xs ml-1">{time.time}</span>
             </div>
           );
         },
@@ -247,10 +299,11 @@ export default function TradeListPage() {
         accessorKey: "entryTime",
         header: "入场时间",
         cell: ({ row }) => {
-          const time = row.original.entryTime;
+          const time = formatDateTime(row.original.entryTime);
           return (
-            <div className="min-w-[100px] text-sm">
-              {time ? time.split(' ')[0] : "-"}
+            <div className="min-w-[120px] text-white">
+              {time.date}
+              <span className="text-[#9ca3af] text-xs ml-1">{time.time}</span>
             </div>
           );
         },
@@ -261,10 +314,11 @@ export default function TradeListPage() {
         accessorKey: "exitTime",
         header: "离场时间",
         cell: ({ row }) => {
-          const time = row.original.exitTime;
+          const time = formatDateTime(row.original.exitTime);
           return (
-            <div className="min-w-[100px] text-sm">
-              {time ? time.split(' ')[0] : "-"}
+            <div className="min-w-[120px] text-white">
+              {time.date}
+              <span className="text-[#9ca3af] text-xs ml-1">{time.time}</span>
             </div>
           );
         },
@@ -275,7 +329,7 @@ export default function TradeListPage() {
         accessorKey: "marketStructure",
         header: "市场结构",
         cell: ({ row }) => (
-          <div className="min-w-[80px] text-sm">
+          <div className="min-w-[80px] text-[#e5e7eb]">
             {row.original.marketStructure ?? "-"}
           </div>
         ),
@@ -286,7 +340,11 @@ export default function TradeListPage() {
         accessorKey: "tradeType",
         header: "类型",
         cell: ({ row }) => (
-          <div className="min-w-[80px] text-sm">{row.original.tradeType ?? "-"}</div>
+          <div className="min-w-[80px]">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/5 text-[#e5e7eb] border border-white/10">
+              {row.original.tradeType ?? "-"}
+            </span>
+          </div>
         ),
         enableHiding: true,
       },
@@ -295,7 +353,7 @@ export default function TradeListPage() {
         accessorKey: "riskRewardRatio",
         header: "风险收益比",
         cell: ({ row }) => (
-          <div className="min-w-[100px] text-sm text-right">
+          <div className="min-w-[100px] text-right text-[#e5e7eb]">
             {row.original.riskRewardRatio ?? "-"}
           </div>
         ),
@@ -399,7 +457,7 @@ export default function TradeListPage() {
 
   return (
     <TradePageShell title="交易记录">
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full space-y-6">
         {/* 查询表单 */}
         <div className="flex-shrink-0">
           <TradeQueryForm
