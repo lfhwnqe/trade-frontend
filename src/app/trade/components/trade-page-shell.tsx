@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Menu, Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -15,8 +14,6 @@ export default function TradePageShell({
   children,
   showAddButton = true,
 }: TradePageShellProps) {
-  const router = useRouter();
-
   return (
     <div className="flex min-h-screen flex-col bg-black min-w-0">
       <header className="h-16 bg-[#121212] border-b border-[#27272a] flex items-center justify-between px-6 sticky top-0 z-30 shadow-lg shadow-black/20">
@@ -32,9 +29,6 @@ export default function TradePageShell({
           <div className="flex items-center gap-4">
             <Link
               className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-sm rounded-md transition-colors shadow shadow-emerald-900/20"
-              // onClick={() => {
-              //   router.push("/trade/add");
-              // }}
               href={`/trade/add`}
             >
               <Plus className="h-4 w-4" />
