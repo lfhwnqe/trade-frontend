@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { formAtom } from "./atom";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const [form, setForm] = useAtomImmer(formAtom);
@@ -189,12 +190,12 @@ export default function RegisterPage() {
         </form>
         <div className="text-center text-sm text-muted-foreground mt-2">
           已有账号？{" "}
-          <a
+          <Link
             href="/auth/login"
             className="text-primary font-medium hover:underline"
           >
             去登录
-          </a>
+          </Link>
         </div>
       </div>
     </div>

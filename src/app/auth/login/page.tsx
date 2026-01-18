@@ -6,6 +6,7 @@ import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { loginFormAtom } from "./atom";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [form, setForm] = useAtomImmer(loginFormAtom);
@@ -118,12 +119,12 @@ export default function LoginPage() {
         </form>
         <div className="text-center text-sm text-muted-foreground mt-2">
           还没有账号？{" "}
-          <a
+          <Link
             href="/auth/register"
             className="text-primary font-medium hover:underline"
           >
             注册新账号
-          </a>
+          </Link>
         </div>
       </div>
     </div>

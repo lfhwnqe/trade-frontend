@@ -21,6 +21,7 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAlert } from "./alert";
+import Link from "next/link";
 
 // Menu items.
 const tradeItems = [
@@ -91,10 +92,10 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.title}>
                     {/* 重点：将 isActive 属性传给 SidebarMenuButton */}
                     <SidebarMenuButton asChild isActive={pathname === item.url}>
-                      <a href={item.url}>
+                      <Link href={item.url}>
                         <item.icon />
                         <span>{item.title}</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
