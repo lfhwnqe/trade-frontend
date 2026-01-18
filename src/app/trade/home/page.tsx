@@ -5,6 +5,9 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import TradePageShell from "../components/trade-page-shell";
+import Chart from "chart.js/auto";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import {
   PiggyBank,
   PieChart,
@@ -28,6 +31,33 @@ function fetchDashboard() {
     if (!res.ok) throw new Error(await res.text());
     const result = await res.json();
     return result.data || {};
+  });
+}
+
+type WinRatePoint = {
+  date: string;
+  winRate: number;
+};
+
+type WinRateResponse = {
+  range: "7d" | "30d" | "3m";
+  simulation: WinRatePoint[];
+  real: WinRatePoint[];
+};
+
+function fetchWinRate(range: "7d" | "30d" | "3m") {
+  return fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `trade/win-rate?range=${range}`,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(await res.text());
+    const result = await res.json();
+    return result.data as WinRateResponse;
   });
 }
 
@@ -90,11 +120,21 @@ export default function TradeHomePage() {
   const [tradesError, setTradesError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [winRateRange, setWinRateRange] = React.useState<"7d" | "30d" | "3m">(
+    "7d",
+  );
+  const [winRateData, setWinRateData] = React.useState<WinRateResponse | null>(
+    null,
+  );
+  const [winRateLoading, setWinRateLoading] = React.useState(true);
+  const [winRateError, setWinRateError] = React.useState<string | null>(null);
   const [featuredSummaries, setFeaturedSummaries] = React.useState<
     FeaturedSummary[]
   >([]);
   const [featuredLoading, setFeaturedLoading] = React.useState(true);
   const [featuredError, setFeaturedError] = React.useState<string | null>(null);
+  const chartRef = React.useRef<HTMLCanvasElement | null>(null);
+  const chartInstanceRef = React.useRef<Chart | null>(null);
 
   React.useEffect(() => {
     setLoading(true);
@@ -113,10 +153,12 @@ export default function TradeHomePage() {
           previous30WinRate: normalizeNumber(data.previous30WinRate),
         });
         setFeaturedSummaries(
-          parseFeaturedSummaries(data.summaryHighlights).slice(0, 5),
+          parseFeaturedSummaries(data.summaryHighlights).slice(0, 3),
         );
         setRecentTrades(
-          Array.isArray(data.recentTrades) ? (data.recentTrades as Trade[]) : [],
+          Array.isArray(data.recentTrades)
+            ? (data.recentTrades as Trade[])
+            : [],
         );
         setError(null);
         setFeaturedError(null);
@@ -136,6 +178,167 @@ export default function TradeHomePage() {
         setTradesLoading(false);
       });
   }, []);
+
+  React.useEffect(() => {
+    setWinRateLoading(true);
+    fetchWinRate(winRateRange)
+      .then((data) => {
+        setWinRateData(data);
+        setWinRateError(null);
+      })
+      .catch((err) => {
+        const message = err.message || "获取胜率趋势失败";
+        setWinRateError(message);
+        setWinRateData(null);
+      })
+      .finally(() => {
+        setWinRateLoading(false);
+      });
+  }, [winRateRange]);
+
+  React.useEffect(() => {
+    if (!chartRef.current) return;
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.destroy();
+      chartInstanceRef.current = null;
+    }
+    if (!winRateData || winRateLoading || winRateError) return;
+
+    const labelsSource =
+      winRateData.simulation.length > 0
+        ? winRateData.simulation
+        : winRateData.real;
+    const labels = labelsSource.map((point) => point.date);
+
+    const buildMap = (series: WinRatePoint[]) =>
+      new Map(series.map((point) => [point.date, point.winRate]));
+    const simulationMap = buildMap(winRateData.simulation);
+    const realMap = buildMap(winRateData.real);
+
+    const simulationRates = labels.map((date) => simulationMap.get(date) ?? 0);
+    const realRates = labels.map((date) => realMap.get(date) ?? 0);
+    const displayLabels = labels.map((date) =>
+      date.length >= 10 ? date.slice(5) : date,
+    );
+
+    const context = chartRef.current.getContext("2d");
+    if (!context) return;
+
+    chartInstanceRef.current = new Chart(context, {
+      type: "line",
+      data: {
+        labels: displayLabels,
+        datasets: [
+          {
+            label: "真实交易",
+            data: realRates,
+            borderColor: "#22c55e",
+            backgroundColor: "rgba(34, 197, 94, 0.12)",
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 4,
+            tension: 0.35,
+            fill: "origin",
+          },
+          {
+            label: "模拟交易",
+            data: simulationRates,
+            borderColor: "#60a5fa",
+            backgroundColor: "rgba(96, 165, 250, 0.2)",
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 4,
+            tension: 0.35,
+            fill: "origin",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        onClick: (event, _elements, chart) => {
+          const points = chart.getElementsAtEventForMode(
+            event as unknown as Event,
+            "index",
+            { intersect: false },
+            true,
+          );
+          chart.setActiveElements(points);
+          chart.tooltip?.setActiveElements(
+            points,
+            event as unknown as { x: number; y: number },
+          );
+          chart.update();
+        },
+        layout: {
+          padding: {
+            left: 20, // 左侧内边距
+            right: 20, // 右侧内边距
+            top: 30, // 上侧内边距
+            bottom: 20, // 下侧内边距
+          },
+        },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              color: "#9ca3af",
+              usePointStyle: true,
+              pointStyle: "circle",
+            },
+          },
+          tooltip: {
+            mode: "index",
+            intersect: false,
+            callbacks: {
+              label: (context) => {
+                const label = context.dataset.label || "";
+                const value =
+                  typeof context.parsed.y === "number"
+                    ? `${context.parsed.y}%`
+                    : "-";
+                return `${label}: ${value}`;
+              },
+            },
+          },
+        },
+        interaction: {
+          mode: "index",
+          intersect: false,
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#9ca3af",
+              maxTicksLimit: 8,
+            },
+            grid: {
+              color: "rgba(255,255,255,0.05)",
+            },
+          },
+          y: {
+            suggestedMin: 0,
+            suggestedMax: 100,
+            ticks: {
+              color: "#9ca3af",
+              callback: (value) => `${value}%`,
+              stepSize: 25,
+            },
+            grid: {
+              color: "rgba(255,255,255,0.06)",
+            },
+          },
+        },
+      },
+    });
+
+    return () => {
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.destroy();
+        chartInstanceRef.current = null;
+      }
+    };
+  }, [winRateData, winRateLoading, winRateError]);
 
   const formatDateTime = (value?: string) => {
     if (!value) return { date: "-", time: "-" };
@@ -319,30 +522,70 @@ export default function TradeHomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">净值增长</h3>
-              <select className="bg-[#1e1e1e] border border-[#27272a] text-sm text-[#e5e7eb] rounded-md py-1 px-3 focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400 cursor-pointer outline-none">
-                <option>最近 30 天</option>
-                <option>最近 3 个月</option>
-                <option>年初至今</option>
-                <option>全部时间</option>
+              <h3 className="text-lg font-semibold text-white">胜率曲线</h3>
+              <select
+                value={winRateRange}
+                onChange={(event) =>
+                  setWinRateRange(event.target.value as "7d" | "30d" | "3m")
+                }
+                className="bg-[#1e1e1e] border border-[#27272a] text-sm text-[#e5e7eb] rounded-md py-1 px-3 focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400 cursor-pointer outline-none"
+              >
+                <option value="7d">最近 7 天</option>
+                <option value="30d">最近 30 天</option>
+                <option value="3m">最近 3 个月</option>
               </select>
             </div>
             <div className="relative h-72 w-full overflow-hidden rounded-lg border border-[#27272a]">
-              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/20 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-transparent to-transparent" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1e1e1e,transparent_70%)]" />
               <div className="absolute inset-0 border border-white/5" />
+              <div className="relative z-10 h-full w-full">
+                {winRateError ? (
+                  <div className="flex h-full items-center justify-center text-sm text-red-300">
+                    {winRateError}
+                  </div>
+                ) : winRateLoading ? (
+                  <div className="flex h-full w-full items-center justify-center px-6">
+                    <div className="w-full space-y-4">
+                      <Skeleton className="h-40 w-full bg-white/5" />
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-3 w-20 bg-white/5" />
+                        <Skeleton className="h-3 w-12 bg-white/5" />
+                        <Skeleton className="h-3 w-16 bg-white/5" />
+                        <Skeleton className="h-3 w-10 bg-white/5" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <canvas ref={chartRef} className="h-full w-full" />
+                )}
+              </div>
             </div>
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm flex flex-col">
             <h3 className="text-lg font-semibold text-white mb-6">日志精选</h3>
-            <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+            <div className="space-y-4 flex-1 overflow-y-auto pr-2 min-h-[300px]">
               {featuredError ? (
                 <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                   {featuredError}
                 </div>
               ) : null}
               {featuredLoading ? (
-                <div className="text-sm text-[#9ca3af]">加载中...</div>
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={`featured-skeleton-${index}`}
+                      className="p-4 rounded-lg bg-[#1e1e1e] border border-[#27272a]"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <Skeleton className="h-4 w-16 bg-white/10" />
+                        <Skeleton className="h-3 w-10 bg-white/10" />
+                      </div>
+                      <Skeleton className="h-4 w-full bg-white/10" />
+                      <Skeleton className="mt-2 h-4 w-5/6 bg-white/10" />
+                    </div>
+                  ))}
+                </div>
               ) : featuredSummaries.length === 0 ? (
                 <div className="text-sm text-[#9ca3af]">暂无精选日志</div>
               ) : (
@@ -416,14 +659,28 @@ export default function TradeHomePage() {
               </thead>
               <tbody className="divide-y divide-[#27272a]">
                 {tradesLoading ? (
-                  <tr>
-                    <td
-                      className="px-6 py-6 text-center text-[#9ca3af]"
-                      colSpan={7}
-                    >
-                      加载中...
-                    </td>
-                  </tr>
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <tr key={`trade-skeleton-${index}`}>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-4 w-32 bg-white/10" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-4 w-24 bg-white/10" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-4 w-16 bg-white/10" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <Skeleton className="h-4 w-20 bg-white/10" />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Skeleton className="ml-auto h-4 w-16 bg-white/10" />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Skeleton className="ml-auto h-4 w-20 bg-white/10" />
+                      </td>
+                    </tr>
+                  ))
                 ) : recentTrades.length === 0 ? (
                   <tr>
                     <td
