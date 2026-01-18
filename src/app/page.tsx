@@ -402,7 +402,7 @@ export default function Home() {
               <div>
                 <h4 className="mb-4 font-bold">资源</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
-                  <li>
+                  {/* <li>
                     <a className="transition-colors hover:text-[#00c2b2]" href="#">
                       文档
                     </a>
@@ -411,7 +411,7 @@ export default function Home() {
                     <a className="transition-colors hover:text-[#00c2b2]" href="#">
                       API 参考
                     </a>
-                  </li>
+                  </li> */}
                   <li>
                     <a className="transition-colors hover:text-[#00c2b2]" href="#">
                       社区

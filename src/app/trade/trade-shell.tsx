@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ChevronDown, FileText, Home, LineChart, ReceiptText } from "lucide-react";
+import {
+  ChevronDown,
+  FileText,
+  Home,
+  LineChart,
+  ReceiptText,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAlert } from "@/components/common/alert";
+import { useAtomImmer } from "@/hooks/useAtomImmer";
+import { userAtom } from "@/store/user";
 
 const tradeNavItems = [
   {
@@ -39,6 +47,15 @@ export default function TradeShell({
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [errorAlert] = useAlert();
+  const [user] = useAtomImmer(userAtom);
+  const displayName = user.username || "User";
+  const initials =
+    displayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("") || "U";
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -73,7 +90,7 @@ export default function TradeShell({
             href="/"
           >
             <LineChart className="h-5 w-5 text-emerald-400" />
-            Trading System
+            MMC Trading
           </Link>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
@@ -108,10 +125,12 @@ export default function TradeShell({
                 type="button"
               >
                 <div className="w-8 h-8 rounded-full bg-[#1e1e1e] flex items-center justify-center text-xs font-bold text-white border border-[#27272a]">
-                  JD
+                  {initials}
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-white">John Doe</p>
+                  <p className="text-sm font-medium text-white">
+                    {displayName}
+                  </p>
                   <p className="text-xs text-[#9ca3af]">Pro Plan</p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-[#9ca3af] group-hover:text-white" />

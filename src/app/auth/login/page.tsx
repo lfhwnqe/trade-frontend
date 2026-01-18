@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { loginFormAtom } from "./atom";
 import Link from "next/link";
+import { userAtom } from "@/store/user";
 
 export default function LoginPage() {
   const [form, setForm] = useAtomImmer(loginFormAtom);
+  const [, setUser] = useAtomImmer(userAtom);
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,10 +43,16 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
+      console.log("🌹data：", data);
 
       if (!response.ok) {
         throw new Error(data.message || "登录失败");
       }
+
+      setUser((draft) => {
+        draft.username = data.username || "";
+        draft.email = data.email || form.email;
+      });
 
       // 登录成功后跳转回之前想访问的页面（如果有），否则首页
       if (typeof window !== "undefined") {
@@ -105,7 +113,10 @@ export default function LoginPage() {
                     <div
                       key={`bar-${value}-${index}`}
                       className="flex-1 rounded-t bg-[#00c2b2]"
-                      style={{ height: `${value}%`, opacity: 0.2 + index * 0.08 }}
+                      style={{
+                        height: `${value}%`,
+                        opacity: 0.2 + index * 0.08,
+                      }}
                     />
                   ))}
                 </div>
