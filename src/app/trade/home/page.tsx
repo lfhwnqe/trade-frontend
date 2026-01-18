@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import TradePageShell from "../components/trade-page-shell";
@@ -31,6 +32,79 @@ function fetchStats() {
   });
 }
 
+type FeaturedSummary = {
+  transactionId: string;
+  summary: string;
+  summaryType: "pre" | "post";
+};
+
+function extractSummaryItems(payload: unknown): unknown[] {
+  if (!payload || typeof payload !== "object") return [];
+  const candidate = payload as { data?: unknown; items?: unknown };
+  if (Array.isArray(candidate.items)) return candidate.items;
+  if (candidate.data && typeof candidate.data === "object") {
+    const nested = candidate.data as { items?: unknown };
+    if (Array.isArray(nested.items)) return nested.items;
+  }
+  return [];
+}
+
+function parseFeaturedSummaries(payload: unknown): FeaturedSummary[] {
+  return extractSummaryItems(payload).reduce<FeaturedSummary[]>((acc, item) => {
+    if (!item || typeof item !== "object") return acc;
+    const entity = item as {
+      transactionId?: string | number | null;
+      summary?: string | null;
+      summaryType?: string | null;
+    };
+    const transactionId = String(entity.transactionId ?? "").trim();
+    if (!transactionId) return acc;
+    const summaryType =
+      entity.summaryType === "pre" || entity.summaryType === "post"
+        ? entity.summaryType
+        : undefined;
+    if (!summaryType) return acc;
+    const summary =
+      typeof entity.summary === "string" && entity.summary.trim().length > 0
+        ? entity.summary
+        : "暂无总结";
+    acc.push({ transactionId, summary, summaryType });
+    return acc;
+  }, []);
+}
+
+async function fetchFeaturedSummaries(): Promise<FeaturedSummary[]> {
+  const response = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams: {
+      targetPath: "trade/summaries/random",
+      actualMethod: "POST",
+    },
+    actualBody: {},
+  });
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      payload &&
+      typeof payload === "object" &&
+      "message" in payload &&
+      typeof (payload as { message?: string }).message === "string"
+        ? (payload as { message?: string }).message
+        : "获取日志精选失败";
+    throw new Error(message);
+  }
+
+  return parseFeaturedSummaries(payload);
+}
+
 export default function TradeHomePage() {
   const [stats, setStats] = React.useState<{
     thisMonthClosedTradeCount: number;
@@ -41,6 +115,11 @@ export default function TradeHomePage() {
   const [tradesError, setTradesError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [featuredSummaries, setFeaturedSummaries] = React.useState<
+    FeaturedSummary[]
+  >([]);
+  const [featuredLoading, setFeaturedLoading] = React.useState(true);
+  const [featuredError, setFeaturedError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setLoading(true);
@@ -56,6 +135,22 @@ export default function TradeHomePage() {
       .catch((err) => {
         setError(err.message || "获取统计数据失败");
         setLoading(false);
+      });
+  }, []);
+
+  React.useEffect(() => {
+    setFeaturedLoading(true);
+    fetchFeaturedSummaries()
+      .then((data) => {
+        setFeaturedSummaries(data.slice(0, 5));
+        setFeaturedError(null);
+      })
+      .catch((err) => {
+        setFeaturedSummaries([]);
+        setFeaturedError(err.message || "获取日志精选失败");
+      })
+      .finally(() => {
+        setFeaturedLoading(false);
       });
   }, []);
 
@@ -140,9 +235,7 @@ export default function TradeHomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-[#9ca3af]">
-                本月交易数
-              </h3>
+              <h3 className="text-sm font-medium text-[#9ca3af]">本月交易数</h3>
               <div className="p-2 bg-blue-500/10 rounded-lg">
                 <Wallet className="h-4 w-4 text-blue-400" />
               </div>
@@ -176,9 +269,7 @@ export default function TradeHomePage() {
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-[#9ca3af]">
-                盈利因子
-              </h3>
+              <h3 className="text-sm font-medium text-[#9ca3af]">盈利因子</h3>
               <div className="p-2 bg-purple-500/10 rounded-lg">
                 <Sigma className="h-4 w-4 text-purple-400" />
               </div>
@@ -187,9 +278,7 @@ export default function TradeHomePage() {
               <span className="text-2xl font-bold text-white">2.45</span>
               <span className="text-sm font-medium text-[#9ca3af]">优秀</span>
             </div>
-            <p className="text-xs text-[#9ca3af] mt-1">
-              总盈利 / 总亏损
-            </p>
+            <p className="text-xs text-[#9ca3af] mt-1">总盈利 / 总亏损</p>
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
@@ -203,17 +292,13 @@ export default function TradeHomePage() {
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-white">+$8,450.25</span>
             </div>
-            <p className="text-xs text-[#9ca3af] mt-1">
-              基于已平仓头寸
-            </p>
+            <p className="text-xs text-[#9ca3af] mt-1">基于已平仓头寸</p>
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">
-                净值增长
-              </h3>
+              <h3 className="text-lg font-semibold text-white">净值增长</h3>
               <select className="bg-[#1e1e1e] border border-[#27272a] text-sm text-[#e5e7eb] rounded-md py-1 px-3 focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400 cursor-pointer outline-none">
                 <option>最近 30 天</option>
                 <option>最近 3 个月</option>
@@ -228,54 +313,58 @@ export default function TradeHomePage() {
             </div>
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm flex flex-col">
-            <h3 className="text-lg font-semibold text-white mb-6">
-              日志精选
-            </h3>
+            <h3 className="text-lg font-semibold text-white mb-6">日志精选</h3>
             <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-              <div className="group p-4 rounded-lg bg-[#1e1e1e] hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-[#27272a]">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/20">
-                    复盘
-                  </span>
-                  <span className="text-xs text-[#9ca3af]">今天</span>
+              {featuredError ? (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {featuredError}
                 </div>
-                <p className="text-sm text-[#e5e7eb] line-clamp-2">
-                  BTC 多头严格按计划执行，等待 VWAP 回测并在 15 分钟K线确认后进场。
-                </p>
-              </div>
-              <div className="group p-4 rounded-lg bg-[#1e1e1e] hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-[#27272a]">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/20">
-                    失误
-                  </span>
-                  <span className="text-xs text-[#9ca3af]">昨天</span>
-                </div>
-                <p className="text-sm text-[#e5e7eb] line-clamp-2">
-                  因恐惧过早退出 ETH 仓位，需要信任止损设置，让交易有发挥空间。
-                </p>
-              </div>
-              <div className="group p-4 rounded-lg bg-[#1e1e1e] hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-[#27272a]">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/20">
-                    形态
-                  </span>
-                  <span className="text-xs text-[#9ca3af]">2 天前</span>
-                </div>
-                <p className="text-sm text-[#e5e7eb] line-clamp-2">
-                  在 SOL 的 4H 图上识别到潜在头肩形态，关注 102 位置的跌破。
-                </p>
-              </div>
+              ) : null}
+              {featuredLoading ? (
+                <div className="text-sm text-[#9ca3af]">加载中...</div>
+              ) : featuredSummaries.length === 0 ? (
+                <div className="text-sm text-[#9ca3af]">暂无精选日志</div>
+              ) : (
+                featuredSummaries.map((summary) => {
+                  const badgeLabel =
+                    summary.summaryType === "pre" ? "事前分析" : "事后分析";
+                  const badgeClass =
+                    summary.summaryType === "pre"
+                      ? "bg-blue-500/20 text-blue-300 border border-blue-500/20"
+                      : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/20";
+
+                  return (
+                    <Link
+                      key={`${summary.transactionId}-${summary.summaryType}`}
+                      href={`/trade/detail?id=${summary.transactionId}`}
+                      className="group block p-4 rounded-lg bg-[#1e1e1e] cursor-pointer hover:bg-white/5 transition-colors border border-transparent hover:border-[#27272a]"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded ${badgeClass}`}
+                        >
+                          {badgeLabel}
+                        </span>
+                        <span className="text-xs text-[#9ca3af]">5 星</span>
+                      </div>
+                      <p className="text-sm text-[#e5e7eb] line-clamp-2">
+                        {summary.summary}
+                      </p>
+                    </Link>
+                  );
+                })
+              )}
             </div>
-            <button className="mt-4 w-full py-2 text-sm text-center text-[#9ca3af] font-medium hover:text-white transition-colors border border-dashed border-[#27272a] rounded-lg hover:bg-[#1e1e1e] hover:border-[#9ca3af]">
-              + 添加日志
-            </button>
+            <Link href={"/trade/add"}>
+              <button className="cursor-pointer mt-4 w-full py-2 text-sm text-center text-[#9ca3af] font-medium hover:text-white transition-colors border border-dashed border-[#27272a] rounded-lg hover:bg-[#1e1e1e] hover:border-[#9ca3af]">
+                + 添加日志
+              </button>
+            </Link>
           </div>
         </div>
         <div className="bg-[#121212] rounded-xl border border-[#27272a] shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-[#27272a] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h3 className="text-lg font-semibold text-white">
-              最近交易
-            </h3>
+            <h3 className="text-lg font-semibold text-white">最近交易</h3>
             {tradesError ? (
               <span className="text-sm text-red-300">{tradesError}</span>
             ) : null}
@@ -302,21 +391,24 @@ export default function TradeHomePage() {
                   <th className="px-6 py-3 whitespace-nowrap text-right uppercase text-xs tracking-wider">
                     盈亏（$）
                   </th>
-                  <th className="px-6 py-3 whitespace-nowrap text-center uppercase text-xs tracking-wider">
-                    操作
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#27272a]">
                 {tradesLoading ? (
                   <tr>
-                    <td className="px-6 py-6 text-center text-[#9ca3af]" colSpan={7}>
+                    <td
+                      className="px-6 py-6 text-center text-[#9ca3af]"
+                      colSpan={7}
+                    >
                       加载中...
                     </td>
                   </tr>
                 ) : recentTrades.length === 0 ? (
                   <tr>
-                    <td className="px-6 py-6 text-center text-[#9ca3af]" colSpan={7}>
+                    <td
+                      className="px-6 py-6 text-center text-[#9ca3af]"
+                      colSpan={7}
+                    >
                       暂无交易记录
                     </td>
                   </tr>
@@ -327,7 +419,7 @@ export default function TradeHomePage() {
                         trade.entryTime ??
                         trade.exitTime ??
                         trade.createdAt ??
-                        trade.updatedAt
+                        trade.updatedAt,
                     );
                     const percent = formatPercent(trade.profitLossPercentage);
                     const percentValue =
@@ -336,25 +428,30 @@ export default function TradeHomePage() {
                       percent === "-"
                         ? "text-[#9ca3af]"
                         : percentValue > 0
-                        ? "text-emerald-400 font-semibold"
-                        : percentValue < 0
-                        ? "text-red-400 font-semibold"
-                        : "text-[#9ca3af]";
+                          ? "text-emerald-400 font-semibold"
+                          : percentValue < 0
+                            ? "text-red-400 font-semibold"
+                            : "text-[#9ca3af]";
                     const amount = formatAmount(trade);
                     const amountValue =
-                      amount !== "-" ? Number(amount.replace(/[^0-9.-]/g, "")) : 0;
+                      amount !== "-"
+                        ? Number(amount.replace(/[^0-9.-]/g, ""))
+                        : 0;
                     const amountClass =
                       amount === "-"
                         ? "text-[#9ca3af]"
                         : amountValue > 0
-                        ? "text-emerald-400 font-semibold"
-                        : amountValue < 0
-                        ? "text-red-400 font-semibold"
-                        : "text-[#9ca3af]";
+                          ? "text-emerald-400 font-semibold"
+                          : amountValue < 0
+                            ? "text-red-400 font-semibold"
+                            : "text-[#9ca3af]";
 
                     return (
                       <tr
-                        key={trade.transactionId ?? `${trade.tradeSubject}-${dateTime.date}-${dateTime.time}`}
+                        key={
+                          trade.transactionId ??
+                          `${trade.tradeSubject}-${dateTime.date}-${dateTime.time}`
+                        }
                         className="hover:bg-[#1e1e1e] transition-colors"
                       >
                         <td className="px-6 py-4 text-white whitespace-nowrap">
@@ -369,7 +466,7 @@ export default function TradeHomePage() {
                         <td className="px-6 py-4">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDirectionBadge(
-                              trade.entryDirection
+                              trade.entryDirection,
                             )}`}
                           >
                             {trade.entryDirection || "-"}
@@ -378,7 +475,7 @@ export default function TradeHomePage() {
                         <td className="px-6 py-4">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
-                              trade.status
+                              trade.status,
                             )}`}
                           >
                             {trade.status || "-"}
@@ -389,11 +486,6 @@ export default function TradeHomePage() {
                         </td>
                         <td className={`px-6 py-4 text-right ${amountClass}`}>
                           {amount}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button className="text-[#9ca3af] hover:text-white transition-colors">
-                            <Eye className="h-4 w-4" />
-                          </button>
                         </td>
                       </tr>
                     );
