@@ -279,7 +279,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const analysisSectionBlock = shouldShowSection(TradeStatus.ANALYZED) ? (
       <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
-          <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+          <span className="h-4 w-1 rounded-full bg-emerald-500" />
           入场前分析
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4 mb-2">
@@ -550,7 +550,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const waitingPlanBlock = shouldShowSection(TradeStatus.WAITING) ? (
       <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
-          <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+          <span className="h-4 w-1 rounded-full bg-emerald-500" />
           入场计划
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
@@ -595,7 +595,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       showChecklist && shouldShowSection(TradeStatus.WAITING) ? (
         <section className="space-y-2">
           <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
-            <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+            <span className="h-4 w-1 rounded-full bg-emerald-500" />
             入场前检查
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
@@ -646,7 +646,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const entrySectionBlock = shouldShowSection(TradeStatus.ENTERED) ? (
       <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
-          <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+          <span className="h-4 w-1 rounded-full bg-emerald-500" />
           入场记录
         </h3>
 
@@ -884,7 +884,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const exitSectionBlock = shouldShowSection(TradeStatus.EXITED) ? (
       <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
-          <span className="h-4 w-1 rounded-full bg-[#6366f1]" />
+          <span className="h-4 w-1 rounded-full bg-emerald-500" />
           离场后分析
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
