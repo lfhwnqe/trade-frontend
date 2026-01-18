@@ -6,22 +6,21 @@ import { format } from "date-fns";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import TradePageShell from "../components/trade-page-shell";
 import {
-  Eye,
   PiggyBank,
   PieChart,
   Sigma,
+  TrendingDown,
   TrendingUp,
   Wallet,
 } from "lucide-react";
-import { fetchTrades } from "../list/request";
 import { Trade } from "../config";
 
-function fetchStats() {
+function fetchDashboard() {
   return fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
     proxyParams: {
-      targetPath: "trade/stats",
+      targetPath: "trade/dashboard",
       actualMethod: "GET",
     },
     actualBody: {},
@@ -40,6 +39,7 @@ type FeaturedSummary = {
 
 function extractSummaryItems(payload: unknown): unknown[] {
   if (!payload || typeof payload !== "object") return [];
+  if (Array.isArray(payload)) return payload;
   const candidate = payload as { data?: unknown; items?: unknown };
   if (Array.isArray(candidate.items)) return candidate.items;
   if (candidate.data && typeof candidate.data === "object") {
@@ -73,43 +73,18 @@ function parseFeaturedSummaries(payload: unknown): FeaturedSummary[] {
   }, []);
 }
 
-async function fetchFeaturedSummaries(): Promise<FeaturedSummary[]> {
-  const response = await fetchWithAuth("/api/proxy-post", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    proxyParams: {
-      targetPath: "trade/summaries/random",
-      actualMethod: "POST",
-    },
-    actualBody: {},
-  });
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
-
-  if (!response.ok) {
-    const message =
-      payload &&
-      typeof payload === "object" &&
-      "message" in payload &&
-      typeof (payload as { message?: string }).message === "string"
-        ? (payload as { message?: string }).message
-        : "获取日志精选失败";
-    throw new Error(message);
-  }
-
-  return parseFeaturedSummaries(payload);
-}
-
 export default function TradeHomePage() {
   const [stats, setStats] = React.useState<{
-    thisMonthClosedTradeCount: number;
-    thisMonthWinRate: number;
-  }>({ thisMonthClosedTradeCount: 0, thisMonthWinRate: 0 });
+    thisMonthTradeCount: number;
+    lastMonthTradeCount: number;
+    recent30WinRate: number;
+    previous30WinRate: number;
+  }>({
+    thisMonthTradeCount: 0,
+    lastMonthTradeCount: 0,
+    recent30WinRate: 0,
+    previous30WinRate: 0,
+  });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
   const [tradesLoading, setTradesLoading] = React.useState(true);
   const [tradesError, setTradesError] = React.useState<string | null>(null);
@@ -123,48 +98,41 @@ export default function TradeHomePage() {
 
   React.useEffect(() => {
     setLoading(true);
-    fetchStats()
-      .then((data) => {
-        setStats({
-          thisMonthClosedTradeCount: data.thisMonthClosedTradeCount ?? 0,
-          thisMonthWinRate: data.thisMonthWinRate ?? 0,
-        });
-        setLoading(false);
-        setError(null);
-      })
-      .catch((err) => {
-        setError(err.message || "获取统计数据失败");
-        setLoading(false);
-      });
-  }, []);
-
-  React.useEffect(() => {
     setFeaturedLoading(true);
-    fetchFeaturedSummaries()
-      .then((data) => {
-        setFeaturedSummaries(data.slice(0, 5));
-        setFeaturedError(null);
-      })
-      .catch((err) => {
-        setFeaturedSummaries([]);
-        setFeaturedError(err.message || "获取日志精选失败");
-      })
-      .finally(() => {
-        setFeaturedLoading(false);
-      });
-  }, []);
-
-  React.useEffect(() => {
     setTradesLoading(true);
-    fetchTrades({ page: 1, pageSize: 5 })
+    fetchDashboard()
       .then((data) => {
-        setRecentTrades(data.items || []);
+        const normalizeNumber = (value: unknown) => {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : 0;
+        };
+        setStats({
+          thisMonthTradeCount: normalizeNumber(data.thisMonthTradeCount),
+          lastMonthTradeCount: normalizeNumber(data.lastMonthTradeCount),
+          recent30WinRate: normalizeNumber(data.recent30WinRate),
+          previous30WinRate: normalizeNumber(data.previous30WinRate),
+        });
+        setFeaturedSummaries(
+          parseFeaturedSummaries(data.summaryHighlights).slice(0, 5),
+        );
+        setRecentTrades(
+          Array.isArray(data.recentTrades) ? (data.recentTrades as Trade[]) : [],
+        );
+        setError(null);
+        setFeaturedError(null);
         setTradesError(null);
       })
       .catch((err) => {
-        setTradesError(err.message || "获取最近交易失败");
+        const message = err.message || "获取仪表盘数据失败";
+        setError(message);
+        setFeaturedError(message);
+        setTradesError(message);
+        setFeaturedSummaries([]);
+        setRecentTrades([]);
       })
       .finally(() => {
+        setLoading(false);
+        setFeaturedLoading(false);
         setTradesLoading(false);
       });
   }, []);
@@ -224,6 +192,38 @@ export default function TradeHomePage() {
     return `${sign}$${parsed.toFixed(2)}`;
   };
 
+  const formatPercentChange = (
+    current: number,
+    previous: number,
+  ): { text: string; trend: "up" | "down" | "flat" } => {
+    if (previous === 0) {
+      if (current === 0) {
+        return { text: "0.0%", trend: "flat" };
+      }
+      return { text: "—", trend: "flat" };
+    }
+    const change = ((current - previous) / previous) * 100;
+    const text = `${change > 0 ? "+" : ""}${change.toFixed(1)}%`;
+    const trend = change > 0 ? "up" : change < 0 ? "down" : "flat";
+    return { text, trend };
+  };
+
+  const formatDelta = (current: number, previous: number) => {
+    const delta = current - previous;
+    const text = `${delta > 0 ? "+" : ""}${delta.toFixed(1)}%`;
+    const trend = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+    return { text, trend };
+  };
+
+  const tradeCountChange = formatPercentChange(
+    stats.thisMonthTradeCount,
+    stats.lastMonthTradeCount,
+  );
+  const winRateChange = formatDelta(
+    stats.recent30WinRate,
+    stats.previous30WinRate,
+  );
+
   return (
     <TradePageShell title="主页">
       <div className="space-y-6">
@@ -242,10 +242,23 @@ export default function TradeHomePage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-white">
-                {loading ? "..." : stats.thisMonthClosedTradeCount}
+                {loading ? "..." : stats.thisMonthTradeCount}
               </span>
-              <span className="text-sm font-medium text-emerald-400 flex items-center">
-                +2.4% <TrendingUp className="ml-1 h-4 w-4" />
+              <span
+                className={`text-sm font-medium flex items-center ${
+                  tradeCountChange.trend === "up"
+                    ? "text-emerald-400"
+                    : tradeCountChange.trend === "down"
+                      ? "text-red-400"
+                      : "text-[#9ca3af]"
+                }`}
+              >
+                {loading ? "..." : tradeCountChange.text}
+                {!loading && tradeCountChange.trend === "up" ? (
+                  <TrendingUp className="ml-1 h-4 w-4" />
+                ) : !loading && tradeCountChange.trend === "down" ? (
+                  <TrendingDown className="ml-1 h-4 w-4" />
+                ) : null}
               </span>
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">较上月</p>
@@ -259,10 +272,18 @@ export default function TradeHomePage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-white">
-                {loading ? "..." : `${stats.thisMonthWinRate}%`}
+                {loading ? "..." : `${stats.recent30WinRate}%`}
               </span>
-              <span className="text-sm font-medium text-emerald-400 flex items-center">
-                +1.2%
+              <span
+                className={`text-sm font-medium flex items-center ${
+                  winRateChange.trend === "up"
+                    ? "text-emerald-400"
+                    : winRateChange.trend === "down"
+                      ? "text-red-400"
+                      : "text-[#9ca3af]"
+                }`}
+              >
+                {loading ? "..." : winRateChange.text}
               </span>
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">最近 30 笔交易</p>
