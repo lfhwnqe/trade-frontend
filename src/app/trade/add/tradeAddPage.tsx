@@ -267,8 +267,11 @@ export default function TradeAddPage({
                     className={
                       "rounded-full px-4 py-1.5 text-xs font-medium transition-all cursor-pointer " +
                       (isActive
-                        ? "bg-[#6366f1] text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                        ? "bg-emerald-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
                         : "text-[#a1a1aa] hover:text-white")
+                      // (isActive
+                      //   ? "bg-emerald-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                      //   : "text-[#a1a1aa] hover:text-white")
                     }
                   >
                     {option.label}
@@ -351,7 +354,7 @@ export default function TradeAddPage({
                 loading={loading}
                 editTrade={form}
                 errors={{}}
-                className="bg-[#6366f1] text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#4f46e5] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)]"
+                className="bg-emerald-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#4f46e5] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)]"
                 onSubmit={() => {
                   // 直接调用表单组件的 submit 方法
                   formRef.current?.submit();
