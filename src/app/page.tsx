@@ -68,7 +68,7 @@ export default function Home() {
               <div className="flex items-center justify-center text-[#00c2b2]">
                 <LineChart className="h-7 w-7" />
               </div>
-              <span className="text-xl font-bold tracking-tight">TradeJournal</span>
+              <span className="text-xl font-bold tracking-tight">MMCTradeJournal</span>
             </div>
             <nav className="hidden items-center gap-8 md:flex">
               <a className="text-sm font-medium transition-colors hover:text-[#00c2b2]" href="#">
@@ -129,7 +129,7 @@ export default function Home() {
                     <div className="h-3 w-3 rounded-full bg-yellow-500/50" />
                     <div className="h-3 w-3 rounded-full bg-green-500/50" />
                     <div className="ml-4 flex h-6 w-96 items-center rounded bg-white/5 px-3 text-xs font-mono text-gray-500">
-                      app.tradejournal.com/dashboard
+                      https://trade.maomaocong.com/
                     </div>
                   </div>
                   <div className="relative aspect-video w-full bg-[#0a0a0a]">
@@ -350,7 +350,7 @@ export default function Home() {
               <div className="col-span-2 lg:col-span-2">
                 <div className="mb-6 flex items-center gap-2">
                   <LineChart className="h-8 w-8 text-[#00c2b2]" />
-                  <span className="text-xl font-bold">TradeJournal</span>
+                  <span className="text-xl font-bold">MMCTradeJournal</span>
                 </div>
                 <p className="mb-6 max-w-sm text-gray-400">
                   帮助交易者系统化管理交易业务，实现长期、可复制的稳定收益。
@@ -451,7 +451,7 @@ export default function Home() {
               </div>
             </div>
             <div className="flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 text-sm text-gray-500 md:flex-row">
-              <p>© {new Date().getFullYear()} TradeJournal Systems Inc. 保留所有权利。</p>
+              <p>© {new Date().getFullYear()} MMCTradeJournal Systems Inc. 保留所有权利。</p>
               <div className="flex gap-6">
                 <a className="transition-colors hover:text-white" href="#">
                   隐私政策

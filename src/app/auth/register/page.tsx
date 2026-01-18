@@ -127,7 +127,7 @@ export default function RegisterPage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-                  TradeJournal
+                  MMCTradeJournal
                 </p>
                 <p className="text-lg font-semibold">交易日志</p>
               </div>
