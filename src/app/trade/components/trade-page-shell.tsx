@@ -28,6 +28,7 @@ export default function TradePageShell({
         {showAddButton ? (
           <div className="flex items-center gap-4">
             <Link
+              prefetch
               className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-sm rounded-md transition-colors shadow shadow-emerald-900/20"
               href={`/trade/add`}
             >

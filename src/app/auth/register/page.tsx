@@ -37,13 +37,13 @@ export default function RegisterPage() {
         body: JSON.stringify({
           request: {
             targetPath: "user/register",
-            actualMethod: "POST"
+            actualMethod: "POST",
           },
           body: {
             username: form.username,
             email: form.email,
-            password: form.password
-          }
+            password: form.password,
+          },
         }),
       });
 
@@ -107,7 +107,10 @@ export default function RegisterPage() {
                     <div
                       key={`bar-${value}-${index}`}
                       className="flex-1 rounded-t bg-[#00c2b2]"
-                      style={{ height: `${value}%`, opacity: 0.2 + index * 0.08 }}
+                      style={{
+                        height: `${value}%`,
+                        opacity: 0.2 + index * 0.08,
+                      }}
                     />
                   ))}
                 </div>
@@ -138,7 +141,11 @@ export default function RegisterPage() {
                 填写信息以开启你的交易记录旅程。
               </p>
             </div>
-            <form className="space-y-5" onSubmit={handleSubmit} autoComplete="off">
+            <form
+              className="space-y-5"
+              onSubmit={handleSubmit}
+              autoComplete="off"
+            >
               <div className="space-y-2">
                 <label htmlFor="username" className="text-sm text-white/60">
                   用户名
@@ -249,6 +256,7 @@ export default function RegisterPage() {
             <div className="mt-6 text-center text-sm text-white/60">
               已有账号？
               <Link
+                prefetch
                 href="/auth/login"
                 className="ml-2 font-medium text-[#00c2b2] hover:text-[#00a89c]"
               >

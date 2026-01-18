@@ -88,6 +88,7 @@ export default function TradeShell({
           <Link
             className="text-lg font-bold text-white flex items-center gap-2"
             href="/"
+            prefetch
           >
             <LineChart className="h-5 w-5 text-emerald-400" />
             MMC Trading
@@ -99,6 +100,7 @@ export default function TradeShell({
               pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
+                prefetch
                 key={item.title}
                 className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive

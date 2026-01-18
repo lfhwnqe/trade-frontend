@@ -199,6 +199,7 @@ export default function LoginPage() {
             <div className="mt-6 text-center text-sm text-white/60">
               还没有账号？
               <Link
+                prefetch
                 href="/auth/register"
                 className="ml-2 font-medium text-[#00c2b2] hover:text-[#00a89c]"
               >

@@ -536,9 +536,9 @@ export default function TradeHomePage() {
               </select>
             </div>
             <div className="relative h-72 w-full overflow-hidden rounded-lg border border-[#27272a]">
-              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-transparent to-transparent" />
+              {/* <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-transparent to-transparent" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1e1e1e,transparent_70%)]" />
-              <div className="absolute inset-0 border border-white/5" />
+              <div className="absolute inset-0 border border-white/5" /> */}
               <div className="relative z-10 h-full w-full">
                 {winRateError ? (
                   <div className="flex h-full items-center justify-center text-sm text-red-300">
@@ -599,6 +599,7 @@ export default function TradeHomePage() {
 
                   return (
                     <Link
+                      prefetch
                       key={`${summary.transactionId}-${summary.summaryType}`}
                       href={`/trade/detail?id=${summary.transactionId}`}
                       className="group block p-4 rounded-lg bg-[#1e1e1e] cursor-pointer hover:bg-white/5 transition-colors border border-transparent hover:border-[#27272a]"
@@ -619,7 +620,7 @@ export default function TradeHomePage() {
                 })
               )}
             </div>
-            <Link href={"/trade/add"}>
+            <Link href={"/trade/add"} prefetch>
               <button className="cursor-pointer mt-4 w-full py-2 text-sm text-center text-[#9ca3af] font-medium hover:text-white transition-colors border border-dashed border-[#27272a] rounded-lg hover:bg-[#1e1e1e] hover:border-[#9ca3af]">
                 + 添加日志
               </button>
