@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  ChevronDown,
-  FileText,
-  Home,
-  LineChart,
-  ReceiptText,
-} from "lucide-react";
+import { ChevronDown, FileText, Home, ReceiptText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -125,12 +119,21 @@ export default function TradeShell({
             href="/"
             prefetch
           >
-            <Image
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#00c2b2] to-white text-black">
+              {/* <span className="text-sm font-bold">TJ</span> */}
+              <Image
+                src={`/favicon.ico`}
+                width={30}
+                height={30}
+                alt="Picture of the author"
+              />
+            </div>
+            {/* <Image
               src={`/favicon.ico`}
               width={30}
               height={30}
               alt="Picture of the author"
-            ></Image>
+            ></Image> */}
             MMC Trading
           </Link>
         </div>

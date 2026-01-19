@@ -7,7 +7,6 @@ import {
   Coins,
   Droplet,
   Gem,
-  LineChart,
   Mountain,
   RefreshCw,
   Share2,

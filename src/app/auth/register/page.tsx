@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { formAtom } from "./atom";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function RegisterPage() {
@@ -126,7 +127,13 @@ export default function RegisterPage() {
           <div className="w-full max-w-md">
             <div className="mb-10 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#00c2b2] to-white text-black">
-                <span className="text-sm font-bold">TJ</span>
+                {/* <span className="text-sm font-bold">TJ</span> */}
+                <Image
+                  src={`/favicon.ico`}
+                  width={30}
+                  height={30}
+                  alt="Picture of the author"
+                />
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-white/40">
