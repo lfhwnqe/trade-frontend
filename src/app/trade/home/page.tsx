@@ -732,6 +732,9 @@ export default function TradeHomePage() {
                   <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
                     状态
                   </th>
+                  <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
+                    类型
+                  </th>
                   <th className="px-6 py-3 whitespace-nowrap text-right uppercase text-xs tracking-wider">
                     收益率 %
                   </th>
@@ -840,6 +843,13 @@ export default function TradeHomePage() {
                             )}`}
                           >
                             {trade.status || "-"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-[#9ca3af] border border-white/10`}
+                          >
+                            {trade.tradeType || "-"}
                           </span>
                         </td>
                         <td className={`px-6 py-4 text-right ${percentClass}`}>
