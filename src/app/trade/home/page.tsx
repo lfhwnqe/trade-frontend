@@ -48,6 +48,17 @@ type WinRateResponse = {
   real: WinRatePoint[];
 };
 
+type WinRateTooltipState = {
+  x: number;
+  y: number;
+  label: string;
+  value: string;
+  title: string;
+  total?: number;
+  profit?: number;
+  loss?: number;
+};
+
 function fetchWinRate(range: "7d" | "30d" | "3m") {
   return fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -144,6 +155,9 @@ export default function TradeHomePage() {
   >([]);
   const [featuredLoading, setFeaturedLoading] = React.useState(true);
   const [featuredError, setFeaturedError] = React.useState<string | null>(null);
+  const [winRateTooltip, setWinRateTooltip] =
+    React.useState<WinRateTooltipState | null>(null);
+  const winRateContainerRef = React.useRef<HTMLDivElement | null>(null);
   const chartRef = React.useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = React.useRef<Chart | null>(null);
 
@@ -313,36 +327,53 @@ export default function TradeHomePage() {
           tooltip: {
             mode: "index",
             intersect: false,
-            backgroundColor: "rgba(10, 10, 12, 0.95)",
-            titleColor: "#e5e7eb",
-            bodyColor: "#d1d5db",
-            borderColor: "rgba(39, 39, 42, 0.9)",
-            borderWidth: 1,
-            padding: 12,
-            cornerRadius: 10,
-            displayColors: true,
-            boxPadding: 6,
-            caretSize: 6,
-            callbacks: {
-              label: (context) => {
-                const series =
-                  context.datasetIndex === 0
-                    ? winRateData.real
-                    : winRateData.simulation;
-                const detail = series[context.dataIndex];
-                const label = context.dataset.label || "";
-                const value =
-                  typeof context.parsed.y === "number"
-                    ? `${context.parsed.y}%`
-                    : "-";
-                if (!detail) return `${label}: ${value}`;
-                return [
-                  `${label}: ${value}`,
-                  `总数: ${detail.total ?? 0}`,
-                  `盈利: ${detail.profit ?? 0}`,
-                  `亏损: ${detail.loss ?? 0}`,
-                ];
-              },
+            enabled: false,
+            external: (context) => {
+              const { chart, tooltip } = context;
+              if (!tooltip || tooltip.opacity === 0) {
+                setWinRateTooltip(null);
+                return;
+              }
+              console.log("🌹context:", context);
+
+              const dataPoint = tooltip.dataPoints?.[0];
+              if (!dataPoint) {
+                setWinRateTooltip(null);
+                return;
+              }
+
+              const datasetIndex = dataPoint.datasetIndex ?? 0;
+              const dataIndex = dataPoint.dataIndex ?? 0;
+              const series =
+                datasetIndex === 0 ? winRateData.real : winRateData.simulation;
+              const detail = series[dataIndex];
+              console.log("🌹detail:", detail);
+
+              const label = dataPoint.dataset?.label ?? "";
+              const value =
+                typeof dataPoint.parsed?.y === "number"
+                  ? `${dataPoint.parsed.y}%`
+                  : "-";
+              const title = tooltip.title?.[0] ?? "";
+
+              const canvasRect = chart.canvas.getBoundingClientRect();
+              const containerRect =
+                winRateContainerRef.current?.getBoundingClientRect();
+              if (!containerRect) return;
+
+              const x = canvasRect.left - containerRect.left + tooltip.caretX;
+              const y = canvasRect.top - containerRect.top + tooltip.caretY;
+
+              setWinRateTooltip({
+                x,
+                y,
+                label,
+                value,
+                title,
+                total: detail?.total ?? 0,
+                profit: detail?.profit ?? 0,
+                loss: detail?.loss ?? 0,
+              });
             },
           },
         },
@@ -381,6 +412,7 @@ export default function TradeHomePage() {
         chartInstanceRef.current.destroy();
         chartInstanceRef.current = null;
       }
+      setWinRateTooltip(null);
     };
   }, [winRateData, winRateLoading, winRateError]);
 
@@ -426,18 +458,6 @@ export default function TradeHomePage() {
     return `${parsed}%`;
   };
 
-  const formatAmount = (trade: Trade) => {
-    const candidate =
-      (trade as { profitLoss?: string | number }).profitLoss ??
-      (trade as { profitLossAmount?: string | number }).profitLossAmount;
-    if (candidate === undefined || candidate === null || candidate === "") {
-      return "-";
-    }
-    const parsed = Number(candidate);
-    if (Number.isNaN(parsed)) return "-";
-    const sign = parsed > 0 ? "+" : "";
-    return `${sign}$${parsed.toFixed(2)}`;
-  };
 
   const formatPercentChange = (
     current: number,
@@ -617,11 +637,62 @@ export default function TradeHomePage() {
                 <option value="3m">最近 3 个月</option>
               </select>
             </div>
-            <div className="relative h-72 w-full overflow-hidden rounded-lg border border-[#27272a]">
+            <div
+              ref={winRateContainerRef}
+              className="relative h-72 w-full rounded-lg border border-[#27272a]"
+            >
               {/* <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-transparent to-transparent" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1e1e1e,transparent_70%)]" />
               <div className="absolute inset-0 border border-white/5" /> */}
-              <div className="relative z-10 h-full w-full">
+              {winRateTooltip ? (
+                <div
+                  className="pointer-events-none absolute z-20 min-w-[200px] -translate-x-1/2 -translate-y-3 rounded-lg border border-emerald-400/30 bg-[#0b0b0d]/95 px-3 py-2 text-xs text-[#e5e7eb] shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur"
+                  style={{ left: winRateTooltip.x, top: winRateTooltip.y }}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[11px] uppercase tracking-[0.2em] text-emerald-400">
+                      {winRateTooltip.title || "胜率"}
+                    </span>
+                    <span className="text-sm font-semibold text-white">
+                      {winRateTooltip.value}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-[#9ca3af]">
+                    <span>{winRateTooltip.label}</span>
+                    <span className="text-emerald-400">%</span>
+                  </div>
+                  <div className="mt-2 space-y-1 border-t border-white/5 pt-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="flex items-center gap-1 text-[#9ca3af]">
+                        <Sigma className="h-3 w-3 text-emerald-400" />
+                        总数
+                      </span>
+                      <span className="text-white">
+                        {winRateTooltip.total ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="flex items-center gap-1 text-[#9ca3af]">
+                        <TrendingUp className="h-3 w-3 text-emerald-400" />
+                        盈利
+                      </span>
+                      <span className="text-white">
+                        {winRateTooltip.profit ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="flex items-center gap-1 text-[#9ca3af]">
+                        <TrendingDown className="h-3 w-3 text-emerald-400" />
+                        亏损
+                      </span>
+                      <span className="text-white">
+                        {winRateTooltip.loss ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="relative z-10 h-full w-full overflow-hidden rounded-lg">
                 {winRateError ? (
                   <div className="flex h-full items-center justify-center text-sm text-red-300">
                     {winRateError}
@@ -791,19 +862,6 @@ export default function TradeHomePage() {
                         : percentValue > 0
                           ? "text-emerald-400 font-semibold"
                           : percentValue < 0
-                            ? "text-red-400 font-semibold"
-                            : "text-[#9ca3af]";
-                    const amount = formatAmount(trade);
-                    const amountValue =
-                      amount !== "-"
-                        ? Number(amount.replace(/[^0-9.-]/g, ""))
-                        : 0;
-                    const amountClass =
-                      amount === "-"
-                        ? "text-[#9ca3af]"
-                        : amountValue > 0
-                          ? "text-emerald-400 font-semibold"
-                          : amountValue < 0
                             ? "text-red-400 font-semibold"
                             : "text-[#9ca3af]";
 
