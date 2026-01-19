@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronDown,
   FileText,
@@ -20,6 +20,8 @@ import Image from "next/image";
 import { useAlert } from "@/components/common/alert";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { userAtom } from "@/store/user";
+
+const USER_STORAGE_KEY = "userProfile";
 
 const tradeNavItems = [
   {
@@ -48,7 +50,7 @@ export default function TradeShell({
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [errorAlert] = useAlert();
-  const [user] = useAtomImmer(userAtom);
+  const [user, setUser] = useAtomImmer(userAtom);
   const displayName = user.username || "User";
   const initials =
     displayName
@@ -63,6 +65,7 @@ export default function TradeShell({
 
     try {
       setIsLoggingOut(true);
+      localStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("idToken");
@@ -81,6 +84,37 @@ export default function TradeShell({
       setIsLoggingOut(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (!user.username && !user.email) {
+      const cachedUser = window.localStorage.getItem(USER_STORAGE_KEY);
+      if (!cachedUser) return;
+
+      try {
+        const parsed = JSON.parse(cachedUser) as {
+          username?: string;
+          email?: string;
+        };
+        if (parsed.username || parsed.email) {
+          setUser((draft) => {
+            draft.username = parsed.username || "";
+            draft.email = parsed.email || "";
+          });
+        }
+      } catch (error) {
+        console.warn("无法解析缓存的用户信息:", error);
+        window.localStorage.removeItem(USER_STORAGE_KEY);
+      }
+      return;
+    }
+
+    window.localStorage.setItem(
+      USER_STORAGE_KEY,
+      JSON.stringify({ username: user.username, email: user.email }),
+    );
+  }, [setUser, user.email, user.username]);
 
   return (
     <div className="dark min-h-screen bg-black text-[#e5e7eb] antialiased selection:bg-emerald-500 selection:text-white flex">
