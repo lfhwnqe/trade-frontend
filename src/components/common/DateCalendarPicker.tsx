@@ -150,6 +150,7 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
           <Calendar
             mode="single"
             selected={date}
+             captionLayout="dropdown"
             onSelect={onCalendarChange}
             initialFocus
           />
