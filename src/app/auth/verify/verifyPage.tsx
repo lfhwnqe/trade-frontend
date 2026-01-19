@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { formAtom } from "./atom";
-import Image from "next/Image";
+import Image from "next/image";
 
 export default function VerifyPage() {
   const [form, setForm] = useAtomImmer(formAtom);
