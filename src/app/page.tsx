@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -22,7 +23,9 @@ const spaceGrotesk = Space_Grotesk({
 
 export default function Home() {
   return (
-    <div className={`min-h-screen bg-[#0a0a0a] text-white ${spaceGrotesk.className}`}>
+    <div
+      className={`min-h-screen bg-[#0a0a0a] text-white ${spaceGrotesk.className}`}
+    >
       <style>{`
         :root {
           color-scheme: dark;
@@ -66,21 +69,41 @@ export default function Home() {
           <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-2">
               <div className="flex items-center justify-center text-[#00c2b2]">
-                <LineChart className="h-7 w-7" />
+                {/* <LineChart className="h-7 w-7" /> */}
+                <Image
+                  src={`/favicon.ico`}
+                  width={30}
+                  height={30}
+                  alt="Picture of the author"
+                ></Image>
               </div>
-              <span className="text-xl font-bold tracking-tight">MMCTradeJournal</span>
+              <span className="text-xl font-bold tracking-tight">
+                MMCTradeJournal
+              </span>
             </div>
             <nav className="hidden items-center gap-8 md:flex">
-              <a className="text-sm font-medium transition-colors hover:text-[#00c2b2]" href="#">
+              <a
+                className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
+                href="#"
+              >
                 功能
               </a>
-              <a className="text-sm font-medium transition-colors hover:text-[#00c2b2]" href="#">
+              <a
+                className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
+                href="#"
+              >
                 方法论
               </a>
-              <a className="text-sm font-medium transition-colors hover:text-[#00c2b2]" href="#">
+              <a
+                className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
+                href="#"
+              >
                 定价
               </a>
-              <a className="text-sm font-medium transition-colors hover:text-[#00c2b2]" href="#">
+              <a
+                className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
+                href="#"
+              >
                 资源
               </a>
             </nav>
@@ -103,7 +126,8 @@ export default function Home() {
                   v2.0 已上线：高级图表分析
                 </div>
                 <h1 className="text-5xl font-bold leading-tight tracking-tighter md:text-7xl">
-                  掌握你的优势。<br />
+                  掌握你的优势。
+                  <br />
                   <span className="bg-gradient-to-r from-[#00c2b2] to-white bg-clip-text text-transparent">
                     更聪明地分析。
                   </span>
@@ -140,7 +164,9 @@ export default function Home() {
                     />
                     <div className="absolute right-6 top-6 w-64 rounded-lg border border-white/10 bg-[#121212]/90 p-4 shadow-lg backdrop-blur">
                       <div className="mb-1 text-xs text-gray-400">今日盈亏</div>
-                      <div className="text-2xl font-bold text-[#00c2b2]">+¥8,640.50</div>
+                      <div className="text-2xl font-bold text-[#00c2b2]">
+                        +¥8,640.50
+                      </div>
                       <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
                         <div className="h-full w-[75%] bg-[#00c2b2]" />
                       </div>
@@ -208,12 +234,17 @@ export default function Home() {
             <div className="container mx-auto px-4 md:px-6">
               <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div className="max-w-xl">
-                  <h2 className="mb-4 text-3xl font-bold md:text-5xl">为什么专业交易员选择我们</h2>
+                  <h2 className="mb-4 text-3xl font-bold md:text-5xl">
+                    为什么专业交易员选择我们
+                  </h2>
                   <p className="text-gray-400">
                     由交易者打造，为交易者服务。我们把原始数据转化为可执行洞察，帮助你持续优化交易优势。
                   </p>
                 </div>
-                <a className="flex items-center gap-2 font-bold text-[#00c2b2] hover:text-[#009e91]" href="#">
+                <a
+                  className="flex items-center gap-2 font-bold text-[#00c2b2] hover:text-[#009e91]"
+                  href="#"
+                >
                   查看全部功能 <ArrowRight className="h-4 w-4" />
                 </a>
               </div>
@@ -253,20 +284,28 @@ export default function Home() {
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-green-500" />
                       <span className="text-sm">平静</span>
-                      <span className="ml-auto text-xs text-gray-500">均值 +¥1,680</span>
+                      <span className="ml-auto text-xs text-gray-500">
+                        均值 +¥1,680
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-yellow-500" />
                       <span className="text-sm">焦虑</span>
-                      <span className="ml-auto text-xs text-gray-500">均值 -¥350</span>
+                      <span className="ml-auto text-xs text-gray-500">
+                        均值 -¥350
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-red-500" />
                       <span className="text-sm">报复性交易</span>
-                      <span className="ml-auto text-xs text-gray-500">均值 -¥3,150</span>
+                      <span className="ml-auto text-xs text-gray-500">
+                        均值 -¥3,150
+                      </span>
                     </div>
                     <div className="mt-4 border-t border-white/5 pt-4">
-                      <div className="text-xs font-mono text-indigo-400">洞察触发：</div>
+                      <div className="text-xs font-mono text-indigo-400">
+                        洞察触发：
+                      </div>
                       <div className="mt-1 text-xs text-gray-400">
                         你在 9:30-10:30 进场时表现提升 3 倍。
                       </div>
@@ -289,7 +328,9 @@ export default function Home() {
                     <Share2 className="h-6 w-6" />
                   </div>
                   <h3 className="mb-2 text-xl font-bold">导师视图</h3>
-                  <p className="text-sm text-gray-400">与导师或督促伙伴共享只读权限，获得持续反馈。</p>
+                  <p className="text-sm text-gray-400">
+                    与导师或督促伙伴共享只读权限，获得持续反馈。
+                  </p>
                 </div>
               </div>
             </div>
@@ -326,7 +367,9 @@ export default function Home() {
             <div className="container mx-auto relative z-10 px-4">
               <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#121212] to-black p-12 text-center shadow-2xl md:p-20">
                 <div className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00c2b2]/20 blur-[100px]" />
-                <h2 className="relative z-10 mb-6 text-4xl font-bold md:text-6xl">准备找到你的优势？</h2>
+                <h2 className="relative z-10 mb-6 text-4xl font-bold md:text-6xl">
+                  准备找到你的优势？
+                </h2>
                 <p className="relative z-10 mx-auto mb-10 max-w-2xl text-xl text-gray-400">
                   别再在黑暗中交易。加入数千名交易者，用数据持续打磨策略。
                 </p>
@@ -338,7 +381,9 @@ export default function Home() {
                     查看定价
                   </button>
                 </div>
-                <p className="mt-6 text-sm text-gray-500">无需信用卡，14 天免费试用。</p>
+                <p className="mt-6 text-sm text-gray-500">
+                  无需信用卡，14 天免费试用。
+                </p>
               </div>
             </div>
           </section>
@@ -349,7 +394,13 @@ export default function Home() {
             <div className="mb-16 grid grid-cols-2 gap-10 md:grid-cols-4 lg:grid-cols-5">
               <div className="col-span-2 lg:col-span-2">
                 <div className="mb-6 flex items-center gap-2">
-                  <LineChart className="h-8 w-8 text-[#00c2b2]" />
+                  {/* <LineChart className="h-8 w-8 text-[#00c2b2]" /> */}
+                   <Image
+                  src={`/favicon.ico`}
+                  width={30}
+                  height={30}
+                  alt="Picture of the author"
+                ></Image>
                   <span className="text-xl font-bold">MMCTradeJournal</span>
                 </div>
                 <p className="mb-6 max-w-sm text-gray-400">
@@ -360,7 +411,11 @@ export default function Home() {
                     className="flex h-10 w-10 items-center justify-center rounded bg-white/5 transition-colors hover:bg-[#00c2b2] hover:text-black"
                     href="#"
                   >
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="h-5 w-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                     </svg>
                   </a>
@@ -368,7 +423,11 @@ export default function Home() {
                     className="flex h-10 w-10 items-center justify-center rounded bg-white/5 transition-colors hover:bg-[#00c2b2] hover:text-black"
                     href="#"
                   >
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="h-5 w-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
                     </svg>
                   </a>
@@ -378,22 +437,34 @@ export default function Home() {
                 <h4 className="mb-4 font-bold">产品</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       功能
                     </a>
                   </li>
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       定价
                     </a>
                   </li>
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       集成
                     </a>
                   </li>
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       更新日志
                     </a>
                   </li>
@@ -413,12 +484,18 @@ export default function Home() {
                     </a>
                   </li> */}
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       社区
                     </a>
                   </li>
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       博客
                     </a>
                   </li>
@@ -428,22 +505,34 @@ export default function Home() {
                 <h4 className="mb-4 font-bold">公司</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       关于我们
                     </a>
                   </li>
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       加入我们
                     </a>
                   </li>
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       法律条款
                     </a>
                   </li>
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
+                    <a
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="#"
+                    >
                       联系方式
                     </a>
                   </li>
@@ -451,7 +540,10 @@ export default function Home() {
               </div>
             </div>
             <div className="flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 text-sm text-gray-500 md:flex-row">
-              <p>© {new Date().getFullYear()} MMCTradeJournal Systems Inc. 保留所有权利。</p>
+              <p>
+                © {new Date().getFullYear()} MMCTradeJournal Systems Inc.
+                保留所有权利。
+              </p>
               <div className="flex gap-6">
                 <a className="transition-colors hover:text-white" href="#">
                   隐私政策

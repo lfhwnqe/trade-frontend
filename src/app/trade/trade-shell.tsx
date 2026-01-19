@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Image from "next/image";
 import { useAlert } from "@/components/common/alert";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { userAtom } from "@/store/user";
@@ -90,7 +91,12 @@ export default function TradeShell({
             href="/"
             prefetch
           >
-            <LineChart className="h-5 w-5 text-emerald-400" />
+            <Image
+              src={`/favicon.ico`}
+              width={30}
+              height={30}
+              alt="Picture of the author"
+            ></Image>
             MMC Trading
           </Link>
         </div>
