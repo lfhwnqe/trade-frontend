@@ -37,6 +37,9 @@ function fetchDashboard() {
 type WinRatePoint = {
   date: string;
   winRate: number;
+  total: number;
+  profit: number;
+  loss: number;
 };
 
 type WinRateResponse = {
@@ -310,14 +313,35 @@ export default function TradeHomePage() {
           tooltip: {
             mode: "index",
             intersect: false,
+            backgroundColor: "rgba(10, 10, 12, 0.95)",
+            titleColor: "#e5e7eb",
+            bodyColor: "#d1d5db",
+            borderColor: "rgba(39, 39, 42, 0.9)",
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 10,
+            displayColors: true,
+            boxPadding: 6,
+            caretSize: 6,
             callbacks: {
               label: (context) => {
+                const series =
+                  context.datasetIndex === 0
+                    ? winRateData.real
+                    : winRateData.simulation;
+                const detail = series[context.dataIndex];
                 const label = context.dataset.label || "";
                 const value =
                   typeof context.parsed.y === "number"
                     ? `${context.parsed.y}%`
                     : "-";
-                return `${label}: ${value}`;
+                if (!detail) return `${label}: ${value}`;
+                return [
+                  `${label}: ${value}`,
+                  `总数: ${detail.total ?? 0}`,
+                  `盈利: ${detail.profit ?? 0}`,
+                  `亏损: ${detail.loss ?? 0}`,
+                ];
               },
             },
           },
@@ -553,9 +577,7 @@ export default function TradeHomePage() {
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-[#9ca3af]">
-                模拟胜率
-              </h3>
+              <h3 className="text-sm font-medium text-[#9ca3af]">模拟胜率</h3>
               <div className="p-2 bg-yellow-500/10 rounded-lg">
                 <PiggyBank className="h-4 w-4 text-yellow-400" />
               </div>
