@@ -3,7 +3,13 @@
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createTrade, updateTrade, deleteTrade, copyTrade, toDto } from "./request";
+import {
+  createTrade,
+  updateTrade,
+  deleteTrade,
+  copyTrade,
+  toDto,
+} from "./request";
 import {
   ColumnDef,
   SortingState,
@@ -59,21 +65,19 @@ export default function TradeListPage() {
   // 处理复制交易记录
   const handleCopy = async () => {
     if (!copyId) return;
-    
+
     try {
       setCopyLoading(true);
       await copyTrade(copyId);
-      success('复制成功');
+      success("复制成功");
       // 关闭对话框
       setCopyId(null);
       // 刷新列表
       fetchAll();
     } catch (error) {
-      console.error('复制交易记录失败:', error);
+      console.error("复制交易记录失败:", error);
       errorAlert(
-        isErrorWithMessage(error)
-          ? error.message
-          : '复制交易记录失败'
+        isErrorWithMessage(error) ? error.message : "复制交易记录失败",
       );
     } finally {
       setCopyLoading(false);
@@ -164,15 +168,7 @@ export default function TradeListPage() {
       // 最高优先级：盈亏结果
       {
         accessorKey: "profitLossPercentage",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto px-0 py-0 text-xs font-semibold uppercase tracking-wider text-[#9ca3af] hover:text-white"
-          >
-            盈亏% <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        ),
+        header: "盈亏%",
         cell: ({ row }) => {
           const value = row.original.profitLossPercentage;
           const formatted =
@@ -187,8 +183,8 @@ export default function TradeListPage() {
                 isProfit
                   ? "text-emerald-400"
                   : isLoss
-                  ? "text-red-400"
-                  : "text-[#9ca3af]"
+                    ? "text-red-400"
+                    : "text-[#9ca3af]"
               }`}
             >
               {formatted}
@@ -207,7 +203,7 @@ export default function TradeListPage() {
             <div className="min-w-[80px]">
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
-                  status
+                  status,
                 )}`}
               >
                 {status ?? "-"}
@@ -227,7 +223,7 @@ export default function TradeListPage() {
             <div className="min-w-[60px]">
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeBadge(
-                  grade
+                  grade,
                 )}`}
               >
                 {grade ?? "-"}
@@ -247,7 +243,7 @@ export default function TradeListPage() {
             <div className="min-w-[60px]">
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDirectionBadge(
-                  direction
+                  direction,
                 )}`}
               >
                 {direction ?? "-"}
@@ -274,15 +270,7 @@ export default function TradeListPage() {
       // 中优先级：分析时间
       {
         accessorKey: "analysisTime",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto px-0 py-0 text-xs font-semibold uppercase tracking-wider text-[#9ca3af] hover:text-white"
-          >
-            分析时间 <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        ),
+        header: "分析时间",
         cell: ({ row }) => {
           const time = formatDateTime(row.original.analysisTime);
           return (
@@ -315,6 +303,20 @@ export default function TradeListPage() {
         header: "离场时间",
         cell: ({ row }) => {
           const time = formatDateTime(row.original.exitTime);
+          return (
+            <div className="min-w-[120px] text-white">
+              {time.date}
+              <span className="text-[#9ca3af] text-xs ml-1">{time.time}</span>
+            </div>
+          );
+        },
+        enableHiding: true,
+      },
+      {
+        accessorKey: "createdAt",
+        header: "创建时间",
+        cell: ({ row }) => {
+          const time = formatDateTime(row.original.createdAt);
           return (
             <div className="min-w-[120px] text-white">
               {time.date}
@@ -410,11 +412,11 @@ export default function TradeListPage() {
         size: 200, // 固定操作列宽度
         enablePinning: true, // 启用列固定
         meta: {
-          pinned: 'right', // 固定在右侧
+          pinned: "right", // 固定在右侧
         },
       },
     ],
-    []
+    [],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
