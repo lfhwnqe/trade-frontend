@@ -738,9 +738,6 @@ export default function TradeHomePage() {
                   <th className="px-6 py-3 whitespace-nowrap text-right uppercase text-xs tracking-wider">
                     收益率 %
                   </th>
-                  <th className="px-6 py-3 whitespace-nowrap text-right uppercase text-xs tracking-wider">
-                    盈亏（$）
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#27272a]">
@@ -854,9 +851,6 @@ export default function TradeHomePage() {
                         </td>
                         <td className={`px-6 py-4 text-right ${percentClass}`}>
                           {percent}
-                        </td>
-                        <td className={`px-6 py-4 text-right ${amountClass}`}>
-                          {amount}
                         </td>
                       </tr>
                     );
