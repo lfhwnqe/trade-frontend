@@ -109,11 +109,19 @@ export default function TradeHomePage() {
     lastMonthTradeCount: number;
     recent30WinRate: number;
     previous30WinRate: number;
+    thisMonthSimulationTradeCount: number;
+    lastMonthSimulationTradeCount: number;
+    recent30SimulationWinRate: number;
+    previous30SimulationWinRate: number;
   }>({
     thisMonthTradeCount: 0,
     lastMonthTradeCount: 0,
     recent30WinRate: 0,
     previous30WinRate: 0,
+    thisMonthSimulationTradeCount: 0,
+    lastMonthSimulationTradeCount: 0,
+    recent30SimulationWinRate: 0,
+    previous30SimulationWinRate: 0,
   });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
   const [tradesLoading, setTradesLoading] = React.useState(true);
@@ -151,6 +159,18 @@ export default function TradeHomePage() {
           lastMonthTradeCount: normalizeNumber(data.lastMonthTradeCount),
           recent30WinRate: normalizeNumber(data.recent30WinRate),
           previous30WinRate: normalizeNumber(data.previous30WinRate),
+          thisMonthSimulationTradeCount: normalizeNumber(
+            data.thisMonthSimulationTradeCount,
+          ),
+          lastMonthSimulationTradeCount: normalizeNumber(
+            data.lastMonthSimulationTradeCount,
+          ),
+          recent30SimulationWinRate: normalizeNumber(
+            data.recent30SimulationWinRate,
+          ),
+          previous30SimulationWinRate: normalizeNumber(
+            data.previous30SimulationWinRate,
+          ),
         });
         setFeaturedSummaries(
           parseFeaturedSummaries(data.summaryHighlights).slice(0, 3),
@@ -426,6 +446,14 @@ export default function TradeHomePage() {
     stats.recent30WinRate,
     stats.previous30WinRate,
   );
+  const simulationTradeCountChange = formatPercentChange(
+    stats.thisMonthSimulationTradeCount,
+    stats.lastMonthSimulationTradeCount,
+  );
+  const simulationWinRateChange = formatDelta(
+    stats.recent30SimulationWinRate,
+    stats.previous30SimulationWinRate,
+  );
 
   return (
     <TradePageShell title="主页">
@@ -493,30 +521,62 @@ export default function TradeHomePage() {
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-[#9ca3af]">盈利因子</h3>
+              <h3 className="text-sm font-medium text-[#9ca3af]">
+                本月模拟交易数
+              </h3>
               <div className="p-2 bg-purple-500/10 rounded-lg">
                 <Sigma className="h-4 w-4 text-purple-400" />
               </div>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-white">2.45</span>
-              <span className="text-sm font-medium text-[#9ca3af]">优秀</span>
+              <span className="text-2xl font-bold text-white">
+                {loading ? "..." : stats.thisMonthSimulationTradeCount}
+              </span>
+              <span
+                className={`text-sm font-medium flex items-center ${
+                  simulationTradeCountChange.trend === "up"
+                    ? "text-emerald-400"
+                    : simulationTradeCountChange.trend === "down"
+                      ? "text-red-400"
+                      : "text-[#9ca3af]"
+                }`}
+              >
+                {loading ? "..." : simulationTradeCountChange.text}
+                {!loading && simulationTradeCountChange.trend === "up" ? (
+                  <TrendingUp className="ml-1 h-4 w-4" />
+                ) : !loading && simulationTradeCountChange.trend === "down" ? (
+                  <TrendingDown className="ml-1 h-4 w-4" />
+                ) : null}
+              </span>
             </div>
-            <p className="text-xs text-[#9ca3af] mt-1">总盈利 / 总亏损</p>
+            <p className="text-xs text-[#9ca3af] mt-1">较上月</p>
           </div>
           <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-[#9ca3af]">
-                净盈亏（30天）
+                模拟胜率
               </h3>
               <div className="p-2 bg-yellow-500/10 rounded-lg">
                 <PiggyBank className="h-4 w-4 text-yellow-400" />
               </div>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-white">+$8,450.25</span>
+              <span className="text-2xl font-bold text-white">
+                {loading ? "..." : `${stats.recent30SimulationWinRate}%`}
+              </span>
+              <span
+                className={`text-sm font-medium flex items-center ${
+                  simulationWinRateChange.trend === "up"
+                    ? "text-emerald-400"
+                    : simulationWinRateChange.trend === "down"
+                      ? "text-red-400"
+                      : "text-[#9ca3af]"
+                }`}
+              >
+                {loading ? "..." : simulationWinRateChange.text}
+              </span>
             </div>
-            <p className="text-xs text-[#9ca3af] mt-1">基于已平仓头寸</p>
+            <p className="text-xs text-[#9ca3af] mt-1">最近 30 笔模拟交易</p>
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
