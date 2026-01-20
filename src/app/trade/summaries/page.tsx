@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/components/common/alert";
+import { cn } from "@/lib/utils";
 import TradePageShell from "../components/trade-page-shell";
+import Link from "next/link";
 
 const COPY_PROMPT_HEADER = [
   "这是我最近的交易复盘总结，请帮我：",
@@ -64,7 +66,9 @@ function parseSummaries(payload: unknown): TradeSummary[] {
 
     const entity = item as SummaryApiEntity;
     const trade =
-      entity.trade && typeof entity.trade === "object" ? entity.trade : undefined;
+      entity.trade && typeof entity.trade === "object"
+        ? entity.trade
+        : undefined;
 
     const transactionId =
       toText(entity.transactionId)?.trim() ||
@@ -80,8 +84,8 @@ function parseSummaries(payload: unknown): TradeSummary[] {
         typeof entity.importance === "number"
           ? entity.importance
           : typeof trade?.importance === "number"
-          ? trade.importance
-          : undefined,
+            ? trade.importance
+            : undefined,
     });
 
     return acc;
@@ -89,7 +93,7 @@ function parseSummaries(payload: unknown): TradeSummary[] {
 }
 
 async function fetchSummaries(
-  summaryType: "pre" | "post"
+  summaryType: "pre" | "post",
 ): Promise<TradeSummary[]> {
   const response = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -158,51 +162,55 @@ export default function TradeSummariesPage() {
     loadData();
   }, [loadData]);
 
-  const handleCopyAll = useCallback(async (summaryType: "pre" | "post") => {
-    const source = summaryType === "pre" ? preSummaries : postSummaries;
-    if (!source.length) {
-      errorAlert("暂无数据可复制");
-      return;
-    }
-    const contentBody = source
-      .map(
-        (summary, index) => `【第${index + 1}条】\n${summary.text || "暂无总结"}`
-      )
-      .join("\n\n----------------------------------------\n\n");
-    const content = `${COPY_PROMPT_HEADER}${contentBody}`;
-
-    try {
-      setCopying(summaryType);
-      if (
-        typeof navigator !== "undefined" &&
-        navigator.clipboard &&
-        navigator.clipboard.writeText
-      ) {
-        await navigator.clipboard.writeText(content);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = content;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
+  const handleCopyAll = useCallback(
+    async (summaryType: "pre" | "post") => {
+      const source = summaryType === "pre" ? preSummaries : postSummaries;
+      if (!source.length) {
+        errorAlert("暂无数据可复制");
+        return;
       }
-      success("已复制全部总结");
-    } catch (err) {
-      console.error(err);
-      errorAlert("复制失败，请重试");
-    } finally {
-      setCopying(null);
-    }
-  }, [preSummaries, postSummaries, success, errorAlert]);
+      const contentBody = source
+        .map(
+          (summary, index) =>
+            `【第${index + 1}条】\n${summary.text || "暂无总结"}`,
+        )
+        .join("\n\n----------------------------------------\n\n");
+      const content = `${COPY_PROMPT_HEADER}${contentBody}`;
+
+      try {
+        setCopying(summaryType);
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.clipboard &&
+          navigator.clipboard.writeText
+        ) {
+          await navigator.clipboard.writeText(content);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = content;
+          textarea.style.position = "fixed";
+          textarea.style.opacity = "0";
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+        }
+        success("已复制全部总结");
+      } catch (err) {
+        console.error(err);
+        errorAlert("复制失败，请重试");
+      } finally {
+        setCopying(null);
+      }
+    },
+    [preSummaries, postSummaries, success, errorAlert],
+  );
 
   const filteredPreSummaries = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
     if (!trimmed) return preSummaries;
     return preSummaries.filter((summary) =>
-      (summary.text || "").toLowerCase().includes(trimmed)
+      (summary.text || "").toLowerCase().includes(trimmed),
     );
   }, [keyword, preSummaries]);
 
@@ -210,7 +218,7 @@ export default function TradeSummariesPage() {
     const trimmed = keyword.trim().toLowerCase();
     if (!trimmed) return postSummaries;
     return postSummaries.filter((summary) =>
-      (summary.text || "").toLowerCase().includes(trimmed)
+      (summary.text || "").toLowerCase().includes(trimmed),
     );
   }, [keyword, postSummaries]);
 
@@ -282,38 +290,47 @@ export default function TradeSummariesPage() {
               </Button>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              {loading
-                ? Array.from({ length: 4 }).map((_, index) => (
-                    <div
-                      key={`pre-summary-skeleton-${index}`}
-                      className="rounded-xl border bg-background p-4 shadow-sm"
-                    >
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="mt-3 h-6 w-3/4" />
-                      <Skeleton className="mt-4 h-4 w-full" />
-                    </div>
-                  ))
-                : filteredPreSummaries.length > 0
-                ? filteredPreSummaries.map((summary) => (
-                    <article
-                      key={summary.transactionId}
-                      className="group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50"
-                    >
-                      <p className="text-xs font-medium text-muted-foreground">
-                        交易前总结
-                      </p>
-                      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
-                        {summary.text || "暂无总结"}
-                      </p>
-                    </article>
-                  ))
-                : (
-                    <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
-                      {keyword
-                        ? "没有找到匹配的交易前总结，请调整筛选条件试试。"
-                        : "暂无交易前总结，稍后再试或点击上方刷新按钮。"}
-                    </div>
-                  )}
+              {loading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={`pre-summary-skeleton-${index}`}
+                    className="rounded-xl border bg-background p-4 shadow-sm"
+                  >
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="mt-3 h-6 w-3/4" />
+                    <Skeleton className="mt-4 h-4 w-full" />
+                  </div>
+                ))
+              ) : filteredPreSummaries.length > 0 ? (
+                filteredPreSummaries.map((summary) => {
+                  const isImportant = (summary.importance ?? 0) >= 5;
+                  return (
+                    <Link href={`/trade/detail?id=${summary.transactionId}`}>
+                      <article
+                        key={summary.transactionId}
+                        className={cn(
+                          "cursor-pointer group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50",
+                          isImportant &&
+                            "border-[#00c2b2]/20 bg-gradient-to-br from-[#00c2b2]/20 via-background to-bg-[#009e91]",
+                        )}
+                      >
+                        <p className="text-xs font-medium text-muted-foreground">
+                          交易前总结
+                        </p>
+                        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                          {summary.text || "暂无总结"}
+                        </p>
+                      </article>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+                  {keyword
+                    ? "没有找到匹配的交易前总结，请调整筛选条件试试。"
+                    : "暂无交易前总结，稍后再试或点击上方刷新按钮。"}
+                </div>
+              )}
             </div>
           </section>
           <section className="flex flex-col gap-4 rounded-2xl border bg-background/40 p-4 shadow-sm">
@@ -335,38 +352,47 @@ export default function TradeSummariesPage() {
               </Button>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              {loading
-                ? Array.from({ length: 4 }).map((_, index) => (
-                    <div
-                      key={`post-summary-skeleton-${index}`}
-                      className="rounded-xl border bg-background p-4 shadow-sm"
-                    >
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="mt-3 h-6 w-3/4" />
-                      <Skeleton className="mt-4 h-4 w-full" />
-                    </div>
-                  ))
-                : filteredPostSummaries.length > 0
-                ? filteredPostSummaries.map((summary) => (
-                    <article
-                      key={summary.transactionId}
-                      className="group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50"
-                    >
-                      <p className="text-xs font-medium text-muted-foreground">
-                        交易后总结
-                      </p>
-                      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
-                        {summary.text || "暂无总结"}
-                      </p>
-                    </article>
-                  ))
-                : (
-                    <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
-                      {keyword
-                        ? "没有找到匹配的交易后总结，请调整筛选条件试试。"
-                        : "暂无交易后总结，稍后再试或点击上方刷新按钮。"}
-                    </div>
-                  )}
+              {loading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={`post-summary-skeleton-${index}`}
+                    className="rounded-xl border bg-background p-4 shadow-sm"
+                  >
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="mt-3 h-6 w-3/4" />
+                    <Skeleton className="mt-4 h-4 w-full" />
+                  </div>
+                ))
+              ) : filteredPostSummaries.length > 0 ? (
+                filteredPostSummaries.map((summary) => {
+                  const isImportant = (summary.importance ?? 0) >= 5;
+                  return (
+                    <Link href={`/trade/detail?id=${summary.transactionId}`}>
+                      <article
+                        key={summary.transactionId}
+                        className={cn(
+                          "group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 cursor-pointer",
+                          isImportant &&
+                            "border-[#00c2b2]/20 bg-gradient-to-br from-[#00c2b2]/20 via-background to-bg-[#009e91]",
+                        )}
+                      >
+                        <p className="text-xs font-medium text-muted-foreground">
+                          交易后总结
+                        </p>
+                        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                          {summary.text || "暂无总结"}
+                        </p>
+                      </article>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+                  {keyword
+                    ? "没有找到匹配的交易后总结，请调整筛选条件试试。"
+                    : "暂无交易后总结，稍后再试或点击上方刷新按钮。"}
+                </div>
+              )}
             </div>
           </section>
         </div>
