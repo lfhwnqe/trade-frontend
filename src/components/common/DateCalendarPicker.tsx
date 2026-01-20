@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
+import { format, isValid, parse, parseISO } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,13 +30,32 @@ interface DateCalendarPickerProps {
 
 function parseDateTime(datetime?: string) {
   if (!datetime) return { date: undefined, hour: "", minute: "", second: "" };
-  const dt = new Date(datetime);
-  if (isNaN(dt.getTime())) return { date: undefined, hour: "", minute: "", second: "" };
+  const trimmed = datetime.trim();
+  const hasTimePart = /\d{2}:\d{2}/.test(trimmed);
+  const hasSecondsPart = /\d{2}:\d{2}:\d{2}/.test(trimmed);
+
+  const tryParse = (value: string) => {
+    if (value.includes("T")) {
+      const iso = parseISO(value);
+      if (isValid(iso)) return iso;
+    }
+    const withSeconds = parse(value, "yyyy-MM-dd HH:mm:ss", new Date());
+    if (isValid(withSeconds)) return withSeconds;
+    const withMinutes = parse(value, "yyyy-MM-dd HH:mm", new Date());
+    if (isValid(withMinutes)) return withMinutes;
+    const dateOnly = parse(value, "yyyy-MM-dd", new Date());
+    if (isValid(dateOnly)) return dateOnly;
+    const fallback = new Date(value);
+    return isValid(fallback) ? fallback : undefined;
+  };
+
+  const dt = tryParse(trimmed);
+  if (!dt) return { date: undefined, hour: "", minute: "", second: "" };
   return {
     date: dt,
-    hour: dt.getHours().toString().padStart(2, "0"),
-    minute: dt.getMinutes().toString().padStart(2, "0"),
-    second: dt.getSeconds().toString().padStart(2, "0"),
+    hour: hasTimePart ? dt.getHours().toString().padStart(2, "0") : "00",
+    minute: hasTimePart ? dt.getMinutes().toString().padStart(2, "0") : "00",
+    second: hasSecondsPart ? dt.getSeconds().toString().padStart(2, "0") : "00",
   };
 }
 
@@ -63,6 +82,7 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
 }) => {
   const init = parseDateTime(analysisTime);
   const [date, setDate] = React.useState<Date | undefined>(init.date);
+  const [month, setMonth] = React.useState<Date>(init.date ?? new Date());
   const [hour, setHour] = React.useState(init.hour);
   const [minute, setMinute] = React.useState(init.minute);
   const [second, setSecond] = React.useState(init.second);
@@ -71,6 +91,7 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
   React.useEffect(() => {
     const parsed = parseDateTime(analysisTime);
     setDate(parsed.date);
+    setMonth(parsed.date ?? new Date());
     setHour(parsed.hour);
     setMinute(parsed.minute);
     setSecond(parsed.second);
@@ -90,6 +111,9 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
 
   const onCalendarChange = (val?: Date) => {
     setDate(val);
+    if (val) {
+      setMonth(val);
+    }
     pushChange(val, hour, minute, second);
   };
   
@@ -150,7 +174,9 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
           <Calendar
             mode="single"
             selected={date}
-             captionLayout="dropdown"
+            month={month}
+            onMonthChange={setMonth}
+            captionLayout="dropdown"
             onSelect={onCalendarChange}
             initialFocus
           />
