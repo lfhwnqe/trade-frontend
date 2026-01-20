@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Trade } from "../config";
 
 function fetchDashboard() {
@@ -755,7 +756,7 @@ export default function TradeHomePage() {
                       prefetch
                       key={`${summary.transactionId}-${summary.summaryType}`}
                       href={`/trade/detail?id=${summary.transactionId}`}
-                      className="group block p-4 rounded-lg bg-[#1e1e1e] cursor-pointer hover:bg-white/5 transition-colors border border-transparent hover:border-[#27272a]"
+                      className="block p-4 rounded-lg bg-[#1e1e1e] cursor-pointer hover:bg-white/5 transition-colors border border-transparent hover:border-[#27272a]"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span
@@ -765,9 +766,21 @@ export default function TradeHomePage() {
                         </span>
                         <span className="text-xs text-[#9ca3af]">5 星</span>
                       </div>
-                      <p className="text-sm text-[#e5e7eb] line-clamp-2">
-                        {summary.summary}
-                      </p>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-sm text-[#e5e7eb] line-clamp-2">
+                            {summary.summary}
+                          </p>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          sideOffset={8}
+                          className="max-w-[22rem] rounded-xl border border-[#27272a] bg-[#0b0b0b] px-3.5 py-3 text-sm leading-snug text-[#e5e7eb] shadow-[0_18px_40px_rgba(0,0,0,0.35)]"
+                          arrowClassName="bg-[#0b0b0b] fill-[#0b0b0b] border-l border-b border-[#27272a]"
+                        >
+                          {summary.summary}
+                        </TooltipContent>
+                      </Tooltip>
                     </Link>
                   );
                 })
