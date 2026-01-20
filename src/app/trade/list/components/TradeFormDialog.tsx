@@ -256,6 +256,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const statusRank: Record<TradeStatus, number> = {
       [TradeStatus.ANALYZED]: 1,
       [TradeStatus.WAITING]: 2,
+      [TradeStatus.ANALYZED_NOT_ENTERED]: 2,
       [TradeStatus.ENTERED]: 3,
       [TradeStatus.EXITED]: 4,
     };
@@ -639,6 +640,91 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               />
               盈亏比计算是否完成
             </label>
+          </div>
+        </section>
+      ) : null;
+
+    const analyzedNotEnteredSectionBlock =
+      form.status === TradeStatus.ANALYZED_NOT_ENTERED ? (
+        <section className="space-y-2">
+          <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
+            <span className="h-4 w-1 rounded-full bg-emerald-500" />
+            未入场
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
+            {/* 实际路径图 */}
+            <div className="col-span-full">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                实际路径图：
+              </label>
+              <ImageUploader
+                disabled={exitedSection.readOnly}
+                value={
+                  Array.isArray(form.actualPathImages) &&
+                  (form.actualPathImages as unknown[]).every(
+                    (v) => typeof v === "object" && v !== null && "url" in v,
+                  )
+                    ? (form.actualPathImages as unknown as ImageResource[])
+                    : []
+                }
+                onChange={(imgs) => handleImageChange("actualPathImages", imgs)}
+                max={5}
+              />
+            </div>
+            {/* 实际路径复盘 */}
+            <div className="col-span-3">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                实际路径复盘:
+              </label>
+              <BaseTextarea
+                {...exitedSection.textareaProps}
+                id="actualPathAnalysis"
+                name="actualPathAnalysis"
+                value={(form.actualPathAnalysis as string) ?? ""}
+                onChange={(e) =>
+                  handleSelectChange("actualPathAnalysis", e.target.value)
+                }
+              />
+            </div>
+            {/* 经验总结 */}
+            <div className="col-span-3">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                经验总结:
+              </label>
+              <BaseTextarea
+                {...exitedSection.textareaProps}
+                id="lessonsLearned"
+                name="lessonsLearned"
+                value={(form.lessonsLearned as string) ?? ""}
+                onChange={(e) => {
+                  setErrors((prev) => {
+                    const newErrors = { ...prev };
+                    delete newErrors["lessonsLearned"];
+                    return newErrors;
+                  });
+                  handleSelectChange("lessonsLearned", e.target.value);
+                }}
+              />
+            </div>
+            {/* 经验总结评分 */}
+            <div className="col-span-3">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                经验总结评分:
+              </label>
+              <StarRating
+                id="lessonsLearnedImportance"
+                value={form.lessonsLearnedImportance ?? 0}
+                readOnly={exitedSection.readOnly}
+                onChange={(value) =>
+                  handleFormUpdate({ lessonsLearnedImportance: value })
+                }
+              />
+              {errors.lessonsLearnedImportance && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.lessonsLearnedImportance}
+                </p>
+              )}
+            </div>
           </div>
         </section>
       ) : null;
@@ -1370,6 +1456,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const sectionBlocks = [
       exitSectionBlock,
       entrySectionBlock,
+      analyzedNotEnteredSectionBlock,
       waitingPlanBlock,
       waitingChecklistBlock,
       analysisSectionBlock,

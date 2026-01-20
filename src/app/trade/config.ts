@@ -91,6 +91,7 @@ export enum TradeStatus {
   WAITING = "待入场",
   ENTERED = "已入场",
   EXITED = "已离场",
+  ANALYZED_NOT_ENTERED = '未入场', // 新增的状态
 }
 // 交易状态选项
 export const tradeStatusOptions = [
@@ -98,6 +99,7 @@ export const tradeStatusOptions = [
   { label: "待入场", value: TradeStatus.WAITING },
   { label: "已入场", value: TradeStatus.ENTERED },
   { label: "已离场", value: TradeStatus.EXITED },
+  { label: "未入场", value: TradeStatus.ANALYZED_NOT_ENTERED },
 ];
 /**
  * Trade 前端完整类型定义，对齐后端 CreateTradeDto
