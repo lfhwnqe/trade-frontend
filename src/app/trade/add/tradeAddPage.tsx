@@ -279,7 +279,31 @@ export default function TradeAddPage({
                 );
               })}
             </div>
+            {!readOnly && (
+            <div className="flex items-center justify-end gap-4 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={handleSaveDraft}
+                className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+              >
+                暂存本地
+              </Button>
+              <LoadingButton
+                loading={loading}
+                editTrade={form}
+                errors={{}}
+                className="bg-emerald-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#4f46e5] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)]"
+                onSubmit={() => {
+                  // 直接调用表单组件的 submit 方法
+                  formRef.current?.submit();
+                }}
+              />
+            </div>
+          )}
           </div>
+          
         </header>
 
         <main className="relative z-10 mx-auto w-full max-w-full space-y-6 px-4 py-10 sm:px-6 lg:px-8">
@@ -339,7 +363,7 @@ export default function TradeAddPage({
             </div>
           )}
 
-          {!readOnly && (
+          {/* {!readOnly && (
             <div className="flex items-center justify-end gap-4 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
               <Button
                 type="button"
@@ -361,7 +385,7 @@ export default function TradeAddPage({
                 }}
               />
             </div>
-          )}
+          )} */}
         </main>
       </div>
     </Suspense>
