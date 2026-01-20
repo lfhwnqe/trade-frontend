@@ -309,9 +309,8 @@ export default function TradeSummariesPage() {
                       <article
                         key={summary.transactionId}
                         className={cn(
-                          "cursor-pointer group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50",
-                          isImportant &&
-                            "border-[#00c2b2]/20 bg-gradient-to-br from-[#00c2b2]/20 via-background to-bg-[#009e91]",
+                          "cursor-pointer group flex flex-col rounded-xl border bg-[#121212] p-4 shadow-sm transition hover:-translate-y-0.5 ",
+                          isImportant && "border-[#00c2b2]/20 ",
                         )}
                       >
                         <p className="text-xs font-medium text-muted-foreground">
@@ -371,9 +370,8 @@ export default function TradeSummariesPage() {
                       <article
                         key={summary.transactionId}
                         className={cn(
-                          "group flex flex-col rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 cursor-pointer",
-                          isImportant &&
-                            "border-[#00c2b2]/20 bg-gradient-to-br from-[#00c2b2]/20 via-background to-bg-[#009e91]",
+                          "group flex flex-col rounded-xl border bg-[#121212] p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 cursor-pointer",
+                          isImportant && "border-[#00c2b2]/20  ",
                         )}
                       >
                         <p className="text-xs font-medium text-muted-foreground">
