@@ -33,6 +33,25 @@ type EntryPlan = {
 };
 
 const LOCAL_DRAFT_STORAGE_KEY = "trade-add-draft";
+type SaveMode = "redirect" | "stay";
+
+function extractTransactionId(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const root = payload as Record<string, unknown>;
+  const rootId = root.transactionId ?? root.id;
+  if (typeof rootId === "string" || typeof rootId === "number") {
+    return String(rootId);
+  }
+  const data = root.data;
+  if (data && typeof data === "object") {
+    const dataObj = data as Record<string, unknown>;
+    const dataId = dataObj.transactionId ?? dataObj.id;
+    if (typeof dataId === "string" || typeof dataId === "number") {
+      return String(dataId);
+    }
+  }
+  return null;
+}
 /**
  * 新增交易页面
  * 复用 TradeFormDialog，独立页逻辑
@@ -116,6 +135,7 @@ export default function TradeAddPage({
 
   // 提交函数 - 添加节流控制避免重复提交
   const submittingRef = useRef(false);
+  const saveModeRef = useRef<SaveMode>("redirect");
   // 创建对表单组件的引用
   const formRef = useRef<TradeFormRef>(null);
   const handleSubmit = useCallback(
@@ -132,18 +152,25 @@ export default function TradeAddPage({
       setLoading(true);
 
       const id = searchParams.get("id");
+      const saveMode = saveModeRef.current;
       try {
         if (id) {
           await updateTrade(id, toDto(form));
           success("更新成功");
         } else {
-          await createTrade(toDto(form));
-          success("新建成功");
+          const response = await createTrade(toDto(form));
+          const createdId = extractTransactionId(response);
+          success(saveMode === "stay" ? "保存成功" : "新建成功");
+          if (saveMode === "stay" && createdId) {
+            router.replace(`/trade/add?id=${createdId}`);
+          }
         }
         if (typeof window !== "undefined") {
           window.localStorage.removeItem(LOCAL_DRAFT_STORAGE_KEY);
         }
-        router.push("/trade/list");
+        if (saveMode === "redirect") {
+          router.push("/trade/list");
+        }
       } catch (error: unknown) {
         if (typeof error === "object" && error && "message" in error) {
           errorAlert(
@@ -157,6 +184,7 @@ export default function TradeAddPage({
         setLoading(false);
         // 重置提交状态
         submittingRef.current = false;
+        saveModeRef.current = "redirect";
       }
     },
     [form, router, searchParams, success, errorAlert, loading],
@@ -222,21 +250,11 @@ export default function TradeAddPage({
     });
   }, []);
 
-  const handleSaveDraft = useCallback(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    try {
-      window.localStorage.setItem(
-        LOCAL_DRAFT_STORAGE_KEY,
-        JSON.stringify(form),
-      );
-      success("已暂存到本地");
-    } catch (err) {
-      console.error("Failed to save local draft", err);
-      errorAlert("暂存失败，请稍后重试");
-    }
-  }, [form, success, errorAlert]);
+  const handleSaveStay = useCallback(() => {
+    if (loading) return;
+    saveModeRef.current = "stay";
+    formRef.current?.submit();
+  }, [loading]);
 
   const pageTitle = readOnly ? "交易详情" : "新增/编辑交易记录";
 
@@ -285,18 +303,20 @@ export default function TradeAddPage({
                 type="button"
                 variant="outline"
                 disabled={loading}
-                onClick={handleSaveDraft}
+                onClick={handleSaveStay}
                 className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
               >
-                暂存本地
+                保存并留在此页
               </Button>
               <LoadingButton
                 loading={loading}
                 editTrade={form}
                 errors={{}}
                 className="bg-emerald-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#4f46e5] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)]"
+                label="保存并返回列表"
                 onSubmit={() => {
                   // 直接调用表单组件的 submit 方法
+                  saveModeRef.current = "redirect";
                   formRef.current?.submit();
                 }}
               />

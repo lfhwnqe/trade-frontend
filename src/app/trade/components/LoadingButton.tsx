@@ -9,6 +9,7 @@ interface LoadingButtonProps {
   editTrade?: Trade | null;
   errors?: Record<string, unknown>;
   className?: string;
+  label?: string;
   onSubmit?: () => void; // 添加 onSubmit 属性，用于接收外部传入的提交方法
 }
 
@@ -17,6 +18,7 @@ export function LoadingButton({
   editTrade,
   errors = {},
   className,
+  label,
   onSubmit,
 }: LoadingButtonProps) {
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -25,6 +27,8 @@ export function LoadingButton({
       onSubmit();
     }
   };
+  const actionLabel =
+    label ?? (editTrade?.transactionId ? "保存更改" : "创建记录");
 
   return (
     <Button 
@@ -62,10 +66,8 @@ export function LoadingButton({
           </svg>
           处理中...
         </>
-      ) : editTrade?.transactionId ? (
-        "保存更改"
       ) : (
-        "创建记录"
+        actionLabel
       )}
     </Button>
   );
