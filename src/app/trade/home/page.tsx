@@ -52,12 +52,9 @@ type WinRateResponse = {
 type WinRateTooltipState = {
   x: number;
   y: number;
-  label: string;
-  value: string;
   title: string;
-  total?: number;
-  profit?: number;
-  loss?: number;
+  real?: WinRatePoint;
+  simulation?: WinRatePoint;
 };
 
 function fetchWinRate(range: "7d" | "30d" | "3m") {
@@ -248,10 +245,14 @@ export default function TradeHomePage() {
         : winRateData.real;
     const labels = labelsSource.map((point) => point.date);
 
-    const buildMap = (series: WinRatePoint[]) =>
+    const buildRateMap = (series: WinRatePoint[]) =>
       new Map(series.map((point) => [point.date, point.winRate]));
-    const simulationMap = buildMap(winRateData.simulation);
-    const realMap = buildMap(winRateData.real);
+    const buildDetailMap = (series: WinRatePoint[]) =>
+      new Map(series.map((point) => [point.date, point]));
+    const simulationMap = buildRateMap(winRateData.simulation);
+    const realMap = buildRateMap(winRateData.real);
+    const simulationDetailMap = buildDetailMap(winRateData.simulation);
+    const realDetailMap = buildDetailMap(winRateData.real);
 
     const simulationRates = labels.map((date) => simulationMap.get(date) ?? 0);
     const realRates = labels.map((date) => realMap.get(date) ?? 0);
@@ -326,7 +327,7 @@ export default function TradeHomePage() {
             },
           },
           tooltip: {
-            mode: "index",
+            mode: "nearest",
             intersect: false,
             enabled: false,
             external: (context) => {
@@ -335,27 +336,18 @@ export default function TradeHomePage() {
                 setWinRateTooltip(null);
                 return;
               }
-              console.log("🌹context:", context);
 
+              const activeElement = tooltip._active?.[0];
               const dataPoint = tooltip.dataPoints?.[0];
               if (!dataPoint) {
                 setWinRateTooltip(null);
                 return;
               }
 
-              const datasetIndex = dataPoint.datasetIndex ?? 0;
-              const dataIndex = dataPoint.dataIndex ?? 0;
-              const series =
-                datasetIndex === 0 ? winRateData.real : winRateData.simulation;
-              const detail = series[dataIndex];
-              console.log("🌹detail:", detail);
-
-              const label = dataPoint.dataset?.label ?? "";
-              const value =
-                typeof dataPoint.parsed?.y === "number"
-                  ? `${dataPoint.parsed.y}%`
-                  : "-";
-              const title = tooltip.title?.[0] ?? "";
+              const dataIndex =
+                activeElement?.index ?? dataPoint.dataIndex ?? 0;
+              const date = labels[dataIndex];
+              const title = date ?? tooltip.title?.[0] ?? "";
 
               const canvasRect = chart.canvas.getBoundingClientRect();
               const containerRect =
@@ -368,18 +360,15 @@ export default function TradeHomePage() {
               setWinRateTooltip({
                 x,
                 y,
-                label,
-                value,
                 title,
-                total: detail?.total ?? 0,
-                profit: detail?.profit ?? 0,
-                loss: detail?.loss ?? 0,
+                real: realDetailMap.get(date),
+                simulation: simulationDetailMap.get(date),
               });
             },
           },
         },
         interaction: {
-          mode: "index",
+          mode: "nearest",
           intersect: false,
         },
         scales: {
@@ -654,43 +643,56 @@ export default function TradeHomePage() {
                     <span className="text-[11px] uppercase tracking-[0.2em] text-emerald-400">
                       {winRateTooltip.title || "胜率"}
                     </span>
-                    <span className="text-sm font-semibold text-white">
-                      {winRateTooltip.value}
-                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-[#9ca3af]">
-                    <span>{winRateTooltip.label}</span>
-                    <span className="text-emerald-400">%</span>
-                  </div>
-                  <div className="mt-2 space-y-1 border-t border-white/5 pt-2">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="flex items-center gap-1 text-[#9ca3af]">
-                        <Sigma className="h-3 w-3 text-emerald-400" />
-                        总数
-                      </span>
-                      <span className="text-white">
-                        {winRateTooltip.total ?? 0}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="flex items-center gap-1 text-[#9ca3af]">
-                        <TrendingUp className="h-3 w-3 text-emerald-400" />
-                        盈利
-                      </span>
-                      <span className="text-white">
-                        {winRateTooltip.profit ?? 0}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="flex items-center gap-1 text-[#9ca3af]">
-                        <TrendingDown className="h-3 w-3 text-emerald-400" />
-                        亏损
-                      </span>
-                      <span className="text-white">
-                        {winRateTooltip.loss ?? 0}
-                      </span>
-                    </div>
-                  </div>
+                  {(["real", "simulation"] as const).map((key) => {
+                    const detail =
+                      key === "real"
+                        ? winRateTooltip.real
+                        : winRateTooltip.simulation;
+                    const labelText = key === "real" ? "真实交易" : "模拟交易";
+                    const winRate =
+                      typeof detail?.winRate === "number"
+                        ? `${detail.winRate}%`
+                        : "-";
+                    return (
+                      <div
+                        key={key}
+                        className="mt-2 space-y-1 border-t border-white/5 pt-2"
+                      >
+                        <div className="flex items-center justify-between text-[11px] text-[#9ca3af]">
+                          <span>{labelText}</span>
+                          <span className="text-emerald-400">{winRate}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-1 text-[#9ca3af]">
+                            <Sigma className="h-3 w-3 text-emerald-400" />
+                            总数
+                          </span>
+                          <span className="text-white">
+                            {detail?.total ?? 0}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-1 text-[#9ca3af]">
+                            <TrendingUp className="h-3 w-3 text-emerald-400" />
+                            盈利
+                          </span>
+                          <span className="text-white">
+                            {detail?.profit ?? 0}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-1 text-[#9ca3af]">
+                            <TrendingDown className="h-3 w-3 text-emerald-400" />
+                            亏损
+                          </span>
+                          <span className="text-white">
+                            {detail?.loss ?? 0}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : null}
               <div className="relative z-10 h-full w-full overflow-hidden rounded-lg">
