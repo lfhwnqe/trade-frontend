@@ -51,6 +51,9 @@ interface DataTableProps<TData, TValue> {
 
   // Optional: Slot for table toolbar (e.g., global filter, additional actions)
   toolbarSlot?: React.ReactNode;
+
+  // Optional: Toggle pagination controls
+  showPagination?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -69,6 +72,7 @@ export function DataTable<TData, TValue>({
   onRowSelectionChange,
   initialColumnPinning,
   toolbarSlot,
+  showPagination = true,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -244,59 +248,61 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Pagination Controls - 固定在底部 */}
-      <div className="flex items-center justify-between space-x-2 py-4 flex-shrink-0 border-t border-[#27272a] bg-[#121212] pl-2 pr-2 rounded-b-xl">
-        <div className="flex-1 text-sm text-[#9ca3af]">
-          {table.getFilteredSelectedRowModel().rows.length} /{" "}
-          {table.getFilteredRowModel().rows.length} 行已选择。总共 {totalItems}{" "}
-          条数据。
+      {showPagination && (
+        <div className="flex items-center justify-between space-x-2 py-4 flex-shrink-0 border-t border-[#27272a] bg-[#121212] pl-2 pr-2 rounded-b-xl">
+          <div className="flex-1 text-sm text-[#9ca3af]">
+            {table.getFilteredSelectedRowModel().rows.length} /{" "}
+            {table.getFilteredRowModel().rows.length} 行已选择。总共 {totalItems}{" "}
+            条数据。
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+              onClick={() => {
+                if (page > 1) {
+                  onPageChange(page - 1, pageSize);
+                }
+              }}
+              disabled={page <= 1 || loading}
+            >
+              上一页
+            </Button>
+            <span className="mx-2 text-sm text-[#9ca3af]">
+              第 {page} / {totalPages} 页
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+              onClick={() => {
+                if (page < totalPages) {
+                  onPageChange(page + 1, pageSize);
+                }
+              }}
+              disabled={page >= totalPages || loading}
+            >
+              下一页
+            </Button>
+            <select
+              className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] p-1 rounded ml-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              value={pageSize}
+              disabled={loading}
+              onChange={(e) => {
+                const newSize = Number(e.target.value);
+                onPageSizeChange(1, newSize);
+              }}
+            >
+              {[10, 20, 50, 100].map((sz) => (
+                <option key={sz} value={sz}>
+                  {sz}条/页
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
-            onClick={() => {
-              if (page > 1) {
-                onPageChange(page - 1, pageSize);
-              }
-            }}
-            disabled={page <= 1 || loading}
-          >
-            上一页
-          </Button>
-          <span className="mx-2 text-sm text-[#9ca3af]">
-            第 {page} / {totalPages} 页
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
-            onClick={() => {
-              if (page < totalPages) {
-                onPageChange(page + 1, pageSize);
-              }
-            }}
-            disabled={page >= totalPages || loading}
-          >
-            下一页
-          </Button>
-          <select
-            className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] p-1 rounded ml-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            value={pageSize}
-            disabled={loading}
-            onChange={(e) => {
-              const newSize = Number(e.target.value);
-              onPageSizeChange(1, newSize);
-            }}
-          >
-            {[10, 20, 50, 100].map((sz) => (
-              <option key={sz} value={sz}>
-                {sz}条/页
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
