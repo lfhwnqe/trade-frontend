@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, FileText, Home, ReceiptText } from "lucide-react";
+import { ChevronDown, Home, ReceiptText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
