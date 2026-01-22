@@ -337,15 +337,13 @@ export default function TradeHomePage() {
                 return;
               }
 
-              const activeElement = tooltip._active?.[0];
               const dataPoint = tooltip.dataPoints?.[0];
               if (!dataPoint) {
                 setWinRateTooltip(null);
                 return;
               }
 
-              const dataIndex =
-                activeElement?.index ?? dataPoint.dataIndex ?? 0;
+              const dataIndex = dataPoint.dataIndex ?? 0;
               const date = labels[dataIndex];
               const title = date ?? tooltip.title?.[0] ?? "";
 

@@ -108,6 +108,14 @@ const getErrorMessage = (data: unknown, fallback: string) => {
   return fallback;
 };
 
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+const getArrayValue = (record: Record<string, unknown>, key: string) => {
+  const value = record[key];
+  return Array.isArray(value) ? value : [];
+};
+
 const formatDateTime = (value?: string) => {
   if (!value) return "-";
   const parsed = new Date(value);
@@ -127,7 +135,7 @@ export default function AdminRoleManagementPage() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  const [dialogMode] = useState<"create" | "edit">("create");
   const [form, setForm] = useState<RoleFormState>(emptyForm);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -159,11 +167,10 @@ export default function AdminRoleManagementPage() {
         (data && typeof data === "object" && "data" in data
           ? (data as Record<string, unknown>).data
           : data) ?? {};
-      const groups = Array.isArray((payload as any).groups)
-        ? (payload as any).groups
-        : [];
-      const normalized = groups.map((group: Record<string, unknown>) =>
-        normalizeRole(group),
+      const payloadRecord = toRecord(payload);
+      const groups = getArrayValue(payloadRecord, "groups");
+      const normalized = groups.map((group) =>
+        normalizeRole(toRecord(group)),
       );
 
       setRoles(normalized);
@@ -266,7 +273,7 @@ export default function AdminRoleManagementPage() {
         ),
       },
     ],
-    [setDialogMode, setForm, setFormErrors, setDialogOpen],
+    [],
   );
 
   const resetForm = () => {
