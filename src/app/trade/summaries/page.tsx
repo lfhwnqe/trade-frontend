@@ -366,7 +366,7 @@ export default function TradeSummariesPage() {
                 filteredPostSummaries.map((summary) => {
                   const isImportant = (summary.importance ?? 0) >= 5;
                   return (
-                    <Link href={`/trade/detail?id=${summary.transactionId}`}>
+                    <Link href={`/trade/detail?id=${summary.transactionId}`} key={`filteredPostSummaries_${summary.transactionId}`}>
                       <article
                         key={summary.transactionId}
                         className={cn(
