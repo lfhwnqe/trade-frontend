@@ -3,14 +3,13 @@
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, RefreshCw, Pencil, Trash2 } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import {
   ColumnDef,
   RowSelectionState,
   SortingState,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -355,40 +354,6 @@ export default function AdminRoleManagementPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget?.groupName) return;
-    setFormSubmitting(true);
-    try {
-      const res = await fetchWithAuth(
-        "/api/proxy-post",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          proxyParams: {
-            targetPath: `role/${encodeURIComponent(deleteTarget.groupName)}`,
-            actualMethod: "DELETE",
-          },
-          actualBody: {},
-        },
-        router,
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(getErrorMessage(data, "删除角色失败"));
-      }
-      success("角色删除成功");
-      setDeleteTarget(null);
-      fetchRoles();
-    } catch (err) {
-      if (isErrorWithMessage(err)) {
-        errorAlert(err.message);
-      } else {
-        errorAlert("删除角色失败");
-      }
-    } finally {
-      setFormSubmitting(false);
-    }
-  };
 
   const handleInitRoles = async () => {
     setInitSubmitting(true);

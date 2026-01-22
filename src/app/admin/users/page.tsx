@@ -99,6 +99,14 @@ const getErrorMessage = (data: unknown, fallback: string) => {
   return fallback;
 };
 
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+const getArrayValue = (record: Record<string, unknown>, key: string) => {
+  const value = record[key];
+  return Array.isArray(value) ? value : [];
+};
+
 const formatDateTime = (value?: string) => {
   if (!value) return "-";
   const parsed = new Date(value);
@@ -168,14 +176,15 @@ export default function AdminUserManagementPage() {
           (data && typeof data === "object" && "data" in data
             ? (data as Record<string, unknown>).data
             : data) ?? {};
-        const list = Array.isArray((payload as any).users)
-          ? (payload as any).users
-          : [];
-        const normalized = list.map((user: Record<string, unknown>) =>
-          normalizeUser(user),
+        const payloadRecord = toRecord(payload);
+        const list = getArrayValue(payloadRecord, "users");
+        const normalized = list.map((user) =>
+          normalizeUser(toRecord(user)),
         );
+        const nextTokenRaw =
+          payloadRecord.nextToken ?? payloadRecord.paginationToken;
         const nextToken =
-          (payload as any).nextToken ?? (payload as any).paginationToken;
+          typeof nextTokenRaw === "string" ? nextTokenRaw : undefined;
 
         pageCacheRef.current[targetPage] = normalized;
         nextTokenRef.current[targetPage] = nextToken;
@@ -224,13 +233,13 @@ export default function AdminUserManagementPage() {
         (data && typeof data === "object" && "data" in data
           ? (data as Record<string, unknown>).data
           : data) ?? {};
-      const groups = Array.isArray((payload as any).groups)
-        ? (payload as any).groups
-        : [];
+      const payloadRecord = toRecord(payload);
+      const groups = getArrayValue(payloadRecord, "groups");
       const names = groups
-        .map((group: Record<string, unknown>) =>
-          String(group.GroupName ?? group.groupName ?? ""),
-        )
+        .map((group) => {
+          const record = toRecord(group);
+          return String(record.GroupName ?? record.groupName ?? "");
+        })
         .filter(Boolean);
       setRoleOptions(names);
     } catch (err) {
