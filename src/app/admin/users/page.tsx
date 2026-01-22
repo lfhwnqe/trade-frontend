@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, RefreshCw, Pencil, Trash2 } from "lucide-react";
+import { Pencil, RefreshCw } from "lucide-react";
 import {
   ColumnDef,
   RowSelectionState,
@@ -18,9 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DataTable } from "@/components/common/DataTable";
 import { useAlert } from "@/components/common/alert";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
@@ -28,74 +33,59 @@ import { isErrorWithMessage } from "@/utils";
 import TradePageShell from "@/app/trade/components/trade-page-shell";
 import { format } from "date-fns";
 
-type RoleGroup = {
-  groupName: string;
-  description?: string;
-  precedence?: number;
-  roleArn?: string;
-  creationDate?: string;
-  lastModifiedDate?: string;
+type UserRecord = {
+  userId: string;
+  email?: string;
+  role?: string;
+  enabled?: boolean;
+  userStatus?: string;
+  createdAt?: string;
+  lastModifiedAt?: string;
 };
 
-type RoleFormState = {
-  groupName: string;
-  description: string;
-  precedence: string;
-  roleArn: string;
+const normalizeDate = (value: unknown) => {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") return value;
+  return undefined;
 };
 
-const emptyForm: RoleFormState = {
-  groupName: "",
-  description: "",
-  precedence: "",
-  roleArn: "",
+const getAttributeValue = (attributes: unknown, name: string) => {
+  if (!Array.isArray(attributes)) return undefined;
+  const match = attributes.find((attr) => {
+    if (!attr || typeof attr !== "object") return false;
+    const record = attr as Record<string, unknown>;
+    return record.Name === name || record.name === name;
+  }) as Record<string, unknown> | undefined;
+  const value = match?.Value ?? match?.value;
+  return typeof value === "string" ? value : undefined;
 };
 
-const normalizeRole = (raw: Record<string, unknown>): RoleGroup => ({
-  groupName: String(raw.GroupName ?? raw.groupName ?? ""),
-  description:
-    typeof raw.Description === "string"
-      ? raw.Description
-      : typeof raw.description === "string"
-        ? raw.description
-        : undefined,
-  precedence:
-    typeof raw.Precedence === "number"
-      ? raw.Precedence
-      : typeof raw.precedence === "number"
-        ? raw.precedence
-        : typeof raw.Precedence === "string"
-          ? Number(raw.Precedence)
-          : typeof raw.precedence === "string"
-            ? Number(raw.precedence)
-            : undefined,
-  roleArn:
-    typeof raw.RoleArn === "string"
-      ? raw.RoleArn
-      : typeof raw.roleArn === "string"
-        ? raw.roleArn
-        : undefined,
-  creationDate:
-    raw.CreationDate instanceof Date
-      ? raw.CreationDate.toISOString()
-      : raw.creationDate instanceof Date
-        ? raw.creationDate.toISOString()
-        : typeof raw.CreationDate === "string"
-          ? raw.CreationDate
-          : typeof raw.creationDate === "string"
-            ? raw.creationDate
-            : undefined,
-  lastModifiedDate:
-    raw.LastModifiedDate instanceof Date
-      ? raw.LastModifiedDate.toISOString()
-      : raw.lastModifiedDate instanceof Date
-        ? raw.lastModifiedDate.toISOString()
-        : typeof raw.LastModifiedDate === "string"
-          ? raw.LastModifiedDate
-          : typeof raw.lastModifiedDate === "string"
-            ? raw.lastModifiedDate
-            : undefined,
-});
+const normalizeUser = (raw: Record<string, unknown>): UserRecord => {
+  const attributes = raw.attributes ?? raw.Attributes ?? [];
+  return {
+    userId: String(raw.userId ?? raw.Username ?? raw.username ?? ""),
+    email: getAttributeValue(attributes, "email"),
+    role: typeof raw.role === "string" ? raw.role : undefined,
+    enabled:
+      typeof raw.enabled === "boolean"
+        ? raw.enabled
+        : typeof raw.Enabled === "boolean"
+          ? raw.Enabled
+          : undefined,
+    userStatus:
+      typeof raw.userStatus === "string"
+        ? raw.userStatus
+        : typeof raw.UserStatus === "string"
+          ? raw.UserStatus
+          : undefined,
+    createdAt: normalizeDate(
+      raw.createdAt ?? raw.userCreateDate ?? raw.UserCreateDate,
+    ),
+    lastModifiedAt: normalizeDate(
+      raw.lastModifiedAt ?? raw.userLastModifiedDate ?? raw.UserLastModifiedDate,
+    ),
+  };
+};
 
 const getErrorMessage = (data: unknown, fallback: string) => {
   if (!data || typeof data !== "object") return fallback;
@@ -118,33 +108,31 @@ const formatDateTime = (value?: string) => {
   return value;
 };
 
-export default function AdminRoleManagementPage() {
+export default function AdminUserManagementPage() {
   const router = useRouter();
   const [success, errorAlert] = useAlert();
 
-  const [roles, setRoles] = useState<RoleGroup[]>([]);
+  const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [roleOptions, setRoleOptions] = useState<string[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<UserRecord | null>(null);
+  const [selectedRole, setSelectedRole] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const pageCacheRef = useRef<Record<number, RoleGroup[]>>({});
+  const pageCacheRef = useRef<Record<number, UserRecord[]>>({});
   const nextTokenRef = useRef<Record<number, string | undefined>>({});
   const initialPageSizeRef = useRef(pageSize);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
-  const [form, setForm] = useState<RoleFormState>(emptyForm);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [formSubmitting, setFormSubmitting] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<RoleGroup | null>(null);
-
-  const fetchRoles = React.useCallback(
+  const fetchUsers = React.useCallback(
     async (targetPage: number, targetPageSize: number, force = false) => {
       if (!force && pageCacheRef.current[targetPage]) {
-        setRoles(pageCacheRef.current[targetPage]);
+        setUsers(pageCacheRef.current[targetPage]);
         setPage(targetPage);
         setPageSize(targetPageSize);
         return;
@@ -160,7 +148,7 @@ export default function AdminRoleManagementPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             proxyParams: {
-              targetPath: "role/list",
+              targetPath: "user/list",
               actualMethod: "GET",
             },
             actualBody: {
@@ -173,26 +161,26 @@ export default function AdminRoleManagementPage() {
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(getErrorMessage(data, "获取角色列表失败"));
+          throw new Error(getErrorMessage(data, "获取用户列表失败"));
         }
 
         const payload =
           (data && typeof data === "object" && "data" in data
             ? (data as Record<string, unknown>).data
             : data) ?? {};
-        const groups = Array.isArray((payload as any).groups)
-          ? (payload as any).groups
+        const list = Array.isArray((payload as any).users)
+          ? (payload as any).users
           : [];
-        const normalized = groups.map((group: Record<string, unknown>) =>
-          normalizeRole(group),
+        const normalized = list.map((user: Record<string, unknown>) =>
+          normalizeUser(user),
         );
         const nextToken =
-          (payload as any).paginationToken ?? (payload as any).nextToken;
+          (payload as any).nextToken ?? (payload as any).paginationToken;
 
         pageCacheRef.current[targetPage] = normalized;
         nextTokenRef.current[targetPage] = nextToken;
 
-        setRoles(normalized);
+        setUsers(normalized);
         setPage(targetPage);
         setPageSize(targetPageSize);
         if (nextToken) {
@@ -204,7 +192,7 @@ export default function AdminRoleManagementPage() {
         if (isErrorWithMessage(err)) {
           errorAlert(err.message);
         } else {
-          errorAlert("获取角色列表失败");
+          errorAlert("获取用户列表失败");
         }
       } finally {
         setLoading(false);
@@ -213,33 +201,78 @@ export default function AdminRoleManagementPage() {
     [router, errorAlert],
   );
 
+  const fetchRoleOptions = React.useCallback(async () => {
+    try {
+      const res = await fetchWithAuth(
+        "/api/proxy-post",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          proxyParams: {
+            targetPath: "role/list",
+            actualMethod: "GET",
+          },
+          actualBody: {},
+        },
+        router,
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(getErrorMessage(data, "获取角色列表失败"));
+      }
+      const payload =
+        (data && typeof data === "object" && "data" in data
+          ? (data as Record<string, unknown>).data
+          : data) ?? {};
+      const groups = Array.isArray((payload as any).groups)
+        ? (payload as any).groups
+        : [];
+      const names = groups
+        .map((group: Record<string, unknown>) =>
+          String(group.GroupName ?? group.groupName ?? ""),
+        )
+        .filter(Boolean);
+      setRoleOptions(names);
+    } catch (err) {
+      if (isErrorWithMessage(err)) {
+        errorAlert(err.message);
+      } else {
+        errorAlert("获取角色列表失败");
+      }
+    }
+  }, [router, errorAlert]);
+
   useEffect(() => {
-    fetchRoles(1, initialPageSizeRef.current, true);
-  }, [fetchRoles]);
+    fetchUsers(1, initialPageSizeRef.current, true);
+  }, [fetchUsers]);
 
-  const totalItems = Math.max((totalPages - 1) * pageSize + roles.length, 0);
+  useEffect(() => {
+    fetchRoleOptions();
+  }, [fetchRoleOptions]);
 
-  const sortedRoles = useMemo(() => {
-    if (!sorting.length) return roles;
+  const totalItems = Math.max((totalPages - 1) * pageSize + users.length, 0);
+
+  const sortedUsers = useMemo(() => {
+    if (!sorting.length) return users;
     const [{ id, desc }] = sorting;
-    const compare = (a: RoleGroup, b: RoleGroup) => {
-      const getValue = (role: RoleGroup) => {
+    const compare = (a: UserRecord, b: UserRecord) => {
+      const getValue = (user: UserRecord) => {
         switch (id) {
-          case "groupName":
-            return role.groupName || "";
-          case "description":
-            return role.description || "";
-          case "precedence":
-            return role.precedence ?? -1;
-          case "roleArn":
-            return role.roleArn || "";
-          case "creationDate":
-            return role.creationDate
-              ? new Date(role.creationDate).getTime()
-              : 0;
-          case "lastModifiedDate":
-            return role.lastModifiedDate
-              ? new Date(role.lastModifiedDate).getTime()
+          case "userId":
+            return user.userId || "";
+          case "email":
+            return user.email || "";
+          case "role":
+            return user.role || "";
+          case "userStatus":
+            return user.userStatus || "";
+          case "enabled":
+            return user.enabled ? 1 : 0;
+          case "createdAt":
+            return user.createdAt ? new Date(user.createdAt).getTime() : 0;
+          case "lastModifiedAt":
+            return user.lastModifiedAt
+              ? new Date(user.lastModifiedAt).getTime()
               : 0;
           default:
             return "";
@@ -255,11 +288,11 @@ export default function AdminRoleManagementPage() {
       return String(left).localeCompare(String(right));
     };
 
-    const sorted = [...roles].sort(compare);
+    const sorted = [...users].sort(compare);
     return desc ? sorted.reverse() : sorted;
-  }, [roles, sorting]);
+  }, [users, sorting]);
 
-  const columns = useMemo<ColumnDef<RoleGroup>[]>(
+  const columns = useMemo<ColumnDef<UserRecord>[]>(
     () => [
       {
         id: "select",
@@ -286,59 +319,69 @@ export default function AdminRoleManagementPage() {
         enableHiding: false,
       },
       {
-        accessorKey: "groupName",
-        header: "角色名称",
+        accessorKey: "userId",
+        header: "用户ID",
         cell: ({ row }) => (
-          <div className="text-sm font-semibold text-white min-w-[140px]">
-            {row.original.groupName || "-"}
+          <div className="text-sm font-semibold text-white min-w-[160px]">
+            {row.original.userId || "-"}
           </div>
         ),
       },
       {
-        accessorKey: "description",
-        header: "描述",
+        accessorKey: "email",
+        header: "邮箱",
         cell: ({ row }) => (
-          <div className="text-sm text-[#9ca3af] min-w-[220px]">
-            {row.original.description || "-"}
+          <div className="text-sm text-[#9ca3af] min-w-[200px]">
+            {row.original.email || "-"}
           </div>
         ),
       },
       {
-        accessorKey: "precedence",
-        header: "优先级",
-        cell: ({ row }) => {
-          const value = row.original.precedence;
-          return (
-            <div className="text-sm text-[#e5e7eb] min-w-[80px]">
-              {value ?? "-"}
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "roleArn",
-        header: "关联 ARN",
+        accessorKey: "role",
+        header: "角色",
         cell: ({ row }) => (
-          <div className="text-sm text-[#9ca3af] min-w-[200px] max-w-[320px] truncate">
-            {row.original.roleArn || "-"}
+          <div className="text-sm text-[#e5e7eb] min-w-[120px]">
+            {row.original.role || "-"}
           </div>
         ),
       },
       {
-        accessorKey: "creationDate",
+        accessorKey: "userStatus",
+        header: "状态",
+        cell: ({ row }) => (
+          <div className="text-sm text-[#9ca3af] min-w-[120px]">
+            {row.original.userStatus || "-"}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "enabled",
+        header: "启用",
+        cell: ({ row }) => (
+          <div className="text-sm text-[#9ca3af] min-w-[80px]">
+            {row.original.enabled === undefined
+              ? "-"
+              : row.original.enabled
+                ? "是"
+                : "否"}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
         header: "创建时间",
         cell: ({ row }) => (
           <div className="text-sm text-[#9ca3af] min-w-[140px]">
-            {formatDateTime(row.original.creationDate)}
+            {formatDateTime(row.original.createdAt)}
           </div>
         ),
       },
       {
-        accessorKey: "lastModifiedDate",
+        accessorKey: "lastModifiedAt",
         header: "更新时间",
         cell: ({ row }) => (
           <div className="text-sm text-[#9ca3af] min-w-[140px]">
-            {formatDateTime(row.original.lastModifiedDate)}
+            {formatDateTime(row.original.lastModifiedAt)}
           </div>
         ),
       },
@@ -352,104 +395,40 @@ export default function AdminRoleManagementPage() {
               size="sm"
               className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
               onClick={() => {
-                setDialogMode("edit");
-                setForm({
-                  groupName: row.original.groupName,
-                  description: row.original.description || "",
-                  precedence:
-                    row.original.precedence !== undefined
-                      ? String(row.original.precedence)
-                      : "",
-                  roleArn: row.original.roleArn || "",
-                });
-                setFormErrors({});
-                setDialogOpen(true);
+                setEditTarget(row.original);
+                setSelectedRole(row.original.role || "");
+                setEditOpen(true);
               }}
             >
               <Pencil className="h-4 w-4" />
               编辑
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[#27272a] bg-transparent text-red-400 hover:bg-red-500/10 hover:text-red-300"
-              onClick={() => setDeleteTarget(row.original)}
-            >
-              <Trash2 className="h-4 w-4" />
-              删除
             </Button>
           </div>
         ),
         enableSorting: false,
       },
     ],
-    [
-      setDialogMode,
-      setForm,
-      setFormErrors,
-      setDialogOpen,
-      setDeleteTarget,
-    ],
+    [setEditTarget, setEditOpen, setSelectedRole],
   );
 
   const handlePageChange = (nextPage: number, nextPageSize?: number) => {
-    fetchRoles(nextPage, nextPageSize ?? pageSize, true);
+    fetchUsers(nextPage, nextPageSize ?? pageSize, true);
   };
 
   const handlePageSizeChange = (nextPage: number, nextPageSize: number) => {
     pageCacheRef.current = {};
     nextTokenRef.current = {};
     setTotalPages(1);
-    fetchRoles(nextPage, nextPageSize, true);
+    fetchUsers(nextPage, nextPageSize, true);
   };
 
-  const resetForm = () => {
-    setForm(emptyForm);
-    setFormErrors({});
-  };
-
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    if (dialogMode === "create" && !form.groupName.trim()) {
-      errors.groupName = "角色名称不能为空";
-    }
-    if (form.precedence) {
-      const precedence = Number(form.precedence);
-      if (!Number.isInteger(precedence) || precedence < 0) {
-        errors.precedence = "优先级必须为非负整数";
-      }
-    }
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!validateForm()) return;
-    setFormSubmitting(true);
+  const handleUpdateRole = async () => {
+    if (!editTarget?.userId || !selectedRole) return;
+    setSaving(true);
     try {
-      const precedence = form.precedence ? Number(form.precedence) : undefined;
-      const body = {
-        groupName: form.groupName.trim(),
-        description: form.description.trim() || undefined,
-        precedence,
-        roleArn: form.roleArn.trim() || undefined,
-      };
-
-      const targetPath =
-        dialogMode === "create"
-          ? "role"
-          : `role/${encodeURIComponent(form.groupName.trim())}`;
-      const actualMethod = dialogMode === "create" ? "POST" : "PUT";
-      const actualBody =
-        dialogMode === "create"
-          ? body
-          : {
-              description: body.description,
-              precedence: body.precedence,
-              roleArn: body.roleArn,
-            };
-
+      const targetPath = `role/user/${encodeURIComponent(
+        editTarget.userId,
+      )}/role?role=${encodeURIComponent(selectedRole)}`;
       const res = await fetchWithAuth(
         "/api/proxy-post",
         {
@@ -457,55 +436,7 @@ export default function AdminRoleManagementPage() {
           headers: { "Content-Type": "application/json" },
           proxyParams: {
             targetPath,
-            actualMethod,
-          },
-          actualBody,
-        },
-        router,
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(
-          getErrorMessage(
-            data,
-            dialogMode === "create" ? "创建角色失败" : "更新角色失败",
-          ),
-        );
-      }
-
-      success(dialogMode === "create" ? "角色创建成功" : "角色更新成功");
-      setDialogOpen(false);
-      resetForm();
-      if (dialogMode === "create") {
-        fetchRoles(1, pageSize, true);
-      } else {
-        fetchRoles(page, pageSize, true);
-      }
-    } catch (err) {
-      if (isErrorWithMessage(err)) {
-        errorAlert(err.message);
-      } else {
-        errorAlert(
-          dialogMode === "create" ? "创建角色失败" : "更新角色失败",
-        );
-      }
-    } finally {
-      setFormSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget?.groupName) return;
-    setFormSubmitting(true);
-    try {
-      const res = await fetchWithAuth(
-        "/api/proxy-post",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          proxyParams: {
-            targetPath: `role/${encodeURIComponent(deleteTarget.groupName)}`,
-            actualMethod: "DELETE",
+            actualMethod: "PUT",
           },
           actualBody: {},
         },
@@ -513,29 +444,29 @@ export default function AdminRoleManagementPage() {
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(getErrorMessage(data, "删除角色失败"));
+        throw new Error(getErrorMessage(data, "更新用户角色失败"));
       }
-      success("角色删除成功");
-      setDeleteTarget(null);
-      fetchRoles(page, pageSize, true);
+      success("用户角色更新成功");
+      setEditOpen(false);
+      fetchUsers(page, pageSize, true);
     } catch (err) {
       if (isErrorWithMessage(err)) {
         errorAlert(err.message);
       } else {
-        errorAlert("删除角色失败");
+        errorAlert("更新用户角色失败");
       }
     } finally {
-      setFormSubmitting(false);
+      setSaving(false);
     }
   };
 
   return (
-    <TradePageShell title="角色管理" showAddButton={false}>
+    <TradePageShell title="用户管理" showAddButton={false}>
       <div className="flex flex-col h-full space-y-6">
         <div className="flex-1 min-h-0">
-          <DataTable<RoleGroup, unknown>
-            columns={columns as ColumnDef<RoleGroup, unknown>[]}
-            data={sortedRoles}
+          <DataTable<UserRecord, unknown>
+            columns={columns as ColumnDef<UserRecord, unknown>[]}
+            data={sortedUsers}
             sorting={sorting}
             rowSelection={rowSelection}
             loading={loading}
@@ -558,20 +489,9 @@ export default function AdminRoleManagementPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 w-full">
                 <div className="flex items-center gap-2">
                   <Button
-                    className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold"
-                    onClick={() => {
-                      setDialogMode("create");
-                      resetForm();
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    新增角色
-                  </Button>
-                  <Button
                     variant="outline"
                     className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
-                    onClick={() => fetchRoles(page, pageSize, true)}
+                    onClick={() => fetchUsers(page, pageSize, true)}
                     disabled={loading}
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -579,7 +499,7 @@ export default function AdminRoleManagementPage() {
                   </Button>
                 </div>
                 <div className="text-sm text-[#9ca3af]">
-                  当前显示 {roles.length} 条角色信息
+                  当前显示 {users.length} 条用户信息
                 </div>
               </div>
             }
@@ -588,150 +508,67 @@ export default function AdminRoleManagementPage() {
       </div>
 
       <Dialog
-        open={dialogOpen}
+        open={editOpen}
         onOpenChange={(open) => {
-          setDialogOpen(open);
+          setEditOpen(open);
           if (!open) {
-            resetForm();
+            setEditTarget(null);
+            setSelectedRole("");
           }
         }}
       >
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {dialogMode === "create" ? "新增角色" : "编辑角色"}
-            </DialogTitle>
+            <DialogTitle>编辑用户角色</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="groupName">角色名称</Label>
-              <Input
-                id="groupName"
-                value={form.groupName}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, groupName: e.target.value }))
-                }
-                placeholder="输入角色名称"
-                disabled={dialogMode === "edit"}
-              />
-              {formErrors.groupName && (
-                <div className="text-sm text-red-400">
-                  {formErrors.groupName}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">角色描述</Label>
-              <Textarea
-                id="description"
-                value={form.description}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="输入角色描述"
-                className="min-h-[80px]"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="precedence">优先级</Label>
-                <Input
-                  id="precedence"
-                  value={form.precedence}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      precedence: e.target.value,
-                    }))
-                  }
-                  placeholder="非负整数"
-                />
-                {formErrors.precedence && (
-                  <div className="text-sm text-red-400">
-                    {formErrors.precedence}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="roleArn">关联 ARN</Label>
-                <Input
-                  id="roleArn"
-                  value={form.roleArn}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      roleArn: e.target.value,
-                    }))
-                  }
-                  placeholder="ARN 资源标识"
-                />
+              <Label>用户ID</Label>
+              <div className="text-sm text-[#e5e7eb]">
+                {editTarget?.userId || "-"}
               </div>
             </div>
-
-            <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-                disabled={formSubmitting}
-              >
-                取消
-              </Button>
-              <Button type="submit" disabled={formSubmitting}>
-                {formSubmitting
-                  ? dialogMode === "create"
-                    ? "创建中..."
-                    : "更新中..."
-                  : dialogMode === "create"
-                    ? "确认创建"
-                    : "保存更改"}
-              </Button>
-            </DialogFooter>
-          </form>
+            <div className="space-y-2">
+              <Label>用户组</Label>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择角色" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.length ? (
+                    roleOptions.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="__empty" disabled>
+                      暂无可选角色
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditOpen(false)}
+              disabled={saving}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              onClick={handleUpdateRole}
+              disabled={saving || !selectedRole || !editTarget?.userId}
+            >
+              {saving ? "保存中..." : "保存"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {deleteTarget && (
-        <Dialog
-          open={!!deleteTarget}
-          onOpenChange={(open) => !open && setDeleteTarget(null)}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>确认删除角色</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              确定要删除角色{" "}
-              <span className="text-white font-semibold">
-                {deleteTarget.groupName}
-              </span>{" "}
-              吗？该操作无法撤销。
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDeleteTarget(null)}
-                disabled={formSubmitting}
-              >
-                取消
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={formSubmitting}
-              >
-                {formSubmitting ? "删除中..." : "确认删除"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </TradePageShell>
   );
 }
