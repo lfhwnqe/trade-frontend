@@ -208,6 +208,37 @@ export function ImageUploader({
     disabled: disabled || reachMax,
   });
 
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLDivElement>) => {
+      if (disabled || reachMax) return;
+      const items = event.clipboardData?.items;
+      if (!items || items.length === 0) return;
+
+      const files: File[] = [];
+      Array.from(items).forEach((item) => {
+        if (!item.type.startsWith("image/")) return;
+        const file = item.getAsFile();
+        if (!file) return;
+        if (file.name) {
+          files.push(file);
+          return;
+        }
+        const extension = item.type.split("/")[1] || "png";
+        files.push(
+          new File([file], `pasted-${Date.now()}.${extension}`, {
+            type: file.type,
+            lastModified: Date.now(),
+          })
+        );
+      });
+
+      if (files.length === 0) return;
+      event.preventDefault();
+      onDrop(files);
+    },
+    [disabled, reachMax, onDrop]
+  );
+
   // 删除图片
   const handleRemove = (idx: number) => {
     if (disabled) return;
@@ -223,8 +254,10 @@ export function ImageUploader({
         {...getRootProps({
           className:
             "flex gap-3 flex-wrap items-center outline-none transition bg-transparent",
+          onPaste: handlePaste,
         })}
-        tabIndex={-1}
+        tabIndex={0}
+        aria-label="图片上传区域"
       >
         {value.map((img, idx) => (
           <div
@@ -322,7 +355,9 @@ export function ImageUploader({
         <div className="mt-2 text-primary text-xs">松开即可上传图片</div>
       )}
       {!isDragActive && !disabled && !reachMax && (
-        <div className="mt-2 text-muted-foreground text-xs">点击上传按钮或拖拽图片到此处，可批量上传{max ? `（最多${max}张）` : ""}</div>
+        <div className="mt-2 text-muted-foreground text-xs">
+          点击上传按钮或拖拽图片到此处，可批量上传{max ? `（最多${max}张）` : ""}，支持 Ctrl/Cmd+V 粘贴截图
+        </div>
       )}
     </div>
   );
