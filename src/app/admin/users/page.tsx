@@ -178,6 +178,14 @@ export default function AdminUserManagementPage() {
   const [detailInfo, setDetailInfo] = useState<UserDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [registrationEnabled, setRegistrationEnabled] = useState<
+    boolean | null
+  >(null);
+  const [registrationLoading, setRegistrationLoading] = useState(false);
+  const [registrationSaving, setRegistrationSaving] = useState(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(
+    null,
+  );
 
   const pageCacheRef = useRef<Record<number, UserRecord[]>>({});
   const nextTokenRef = useRef<Record<number, string | undefined>>({});
@@ -297,6 +305,98 @@ export default function AdminUserManagementPage() {
     }
   }, [router, errorAlert]);
 
+  const fetchRegistrationStatus = React.useCallback(async () => {
+    setRegistrationLoading(true);
+    setRegistrationError(null);
+    try {
+      const res = await fetchWithAuth(
+        "/api/proxy-post",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          proxyParams: {
+            targetPath: "user/registration/status",
+            actualMethod: "GET",
+          },
+          actualBody: {},
+        },
+        router,
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(getErrorMessage(data, "获取注册状态失败"));
+      }
+      const payload =
+        (data && typeof data === "object" && "data" in data
+          ? (data as Record<string, unknown>).data
+          : data) ?? {};
+      const payloadRecord = toRecord(payload);
+      const enabledValue =
+        payloadRecord.enable ?? payloadRecord.enabled ?? payloadRecord.status;
+      if (typeof enabledValue === "boolean") {
+        setRegistrationEnabled(enabledValue);
+      } else {
+        setRegistrationEnabled(null);
+      }
+    } catch (err) {
+      const message = isErrorWithMessage(err)
+        ? err.message
+        : "获取注册状态失败";
+      setRegistrationError(message);
+      setRegistrationEnabled(null);
+      errorAlert(message);
+    } finally {
+      setRegistrationLoading(false);
+    }
+  }, [router, errorAlert]);
+
+  const handleToggleRegistration = async () => {
+    if (registrationEnabled === null) return;
+    const nextEnabled = !registrationEnabled;
+    setRegistrationSaving(true);
+    setRegistrationError(null);
+    try {
+      const res = await fetchWithAuth(
+        "/api/proxy-post",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          proxyParams: {
+            targetPath: "user/registration/status",
+            actualMethod: "PATCH",
+          },
+          actualBody: {
+            enable: nextEnabled,
+          },
+        },
+        router,
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(getErrorMessage(data, "更新注册状态失败"));
+      }
+      const payload =
+        (data && typeof data === "object" && "data" in data
+          ? (data as Record<string, unknown>).data
+          : data) ?? {};
+      const payloadRecord = toRecord(payload);
+      const enabledValue =
+        payloadRecord.enable ?? payloadRecord.enabled ?? payloadRecord.status;
+      setRegistrationEnabled(
+        typeof enabledValue === "boolean" ? enabledValue : nextEnabled,
+      );
+      success(nextEnabled ? "注册已开启" : "注册已关闭");
+    } catch (err) {
+      const message = isErrorWithMessage(err)
+        ? err.message
+        : "更新注册状态失败";
+      setRegistrationError(message);
+      errorAlert(message);
+    } finally {
+      setRegistrationSaving(false);
+    }
+  };
+
   const fetchUserDetail = React.useCallback(
     async (userId: string) => {
       if (!userId) return;
@@ -393,6 +493,10 @@ export default function AdminUserManagementPage() {
   useEffect(() => {
     fetchRoleOptions();
   }, [fetchRoleOptions]);
+
+  useEffect(() => {
+    fetchRegistrationStatus();
+  }, [fetchRegistrationStatus]);
 
   const totalItems = Math.max((totalPages - 1) * pageSize + users.length, 0);
 
@@ -650,6 +754,35 @@ export default function AdminUserManagementPage() {
                     <RefreshCw className="h-4 w-4 mr-2" />
                     刷新列表
                   </Button>
+                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-[#27272a] bg-[#111111] px-3 py-2">
+                    <div className="text-xs text-[#9ca3af]">注册功能</div>
+                    <div className="text-sm text-[#e5e7eb]">
+                      {registrationLoading
+                        ? "查询中..."
+                        : registrationEnabled === null
+                          ? "未知"
+                          : registrationEnabled
+                            ? "已开启"
+                            : "已关闭"}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+                      onClick={handleToggleRegistration}
+                      disabled={
+                        registrationLoading ||
+                        registrationSaving ||
+                        registrationEnabled === null
+                      }
+                    >
+                      {registrationSaving
+                        ? "更新中..."
+                        : registrationEnabled
+                          ? "关闭注册"
+                          : "开启注册"}
+                    </Button>
+                  </div>
                 </div>
                 <div className="text-sm text-[#9ca3af]">
                   当前显示 {users.length} 条用户信息
@@ -657,6 +790,11 @@ export default function AdminUserManagementPage() {
               </div>
             }
           />
+          {registrationError ? (
+            <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              {registrationError}
+            </div>
+          ) : null}
         </div>
       </div>
 
