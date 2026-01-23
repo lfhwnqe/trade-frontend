@@ -49,26 +49,32 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   );
 
   // 显示成功弹窗
-  const success = (title: string, description?: string) => {
-    setAlertState({
-      type: "success",
-      title,
-      description,
-      open: true,
-    });
-    setTimeout(close, AUTO_CLOSE_MS);
-  };
+  const success = useCallback(
+    (title: string, description?: string) => {
+      setAlertState({
+        type: "success",
+        title,
+        description,
+        open: true,
+      });
+      setTimeout(close, AUTO_CLOSE_MS);
+    },
+    [close]
+  );
 
   // 显示错误弹窗
-  const error = (title: string, description?: string) => {
-    setAlertState({
-      type: "error",
-      title,
-      description,
-      open: true,
-    });
-    setTimeout(close, AUTO_CLOSE_MS);
-  };
+  const error = useCallback(
+    (title: string, description?: string) => {
+      setAlertState({
+        type: "error",
+        title,
+        description,
+        open: true,
+      });
+      setTimeout(close, AUTO_CLOSE_MS);
+    },
+    [close]
+  );
 
   // 动画
   const animClass = clsx(
