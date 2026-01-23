@@ -10,7 +10,6 @@ import Link from "next/link";
 import { userAtom } from "@/store/user";
 import Image from "next/image";
 
-
 export default function LoginPage() {
   const [form, setForm] = useAtomImmer(loginFormAtom);
   const [, setUser] = useAtomImmer(userAtom);
@@ -54,6 +53,7 @@ export default function LoginPage() {
       setUser((draft) => {
         draft.username = data.username || "";
         draft.email = data.email || form.email;
+        draft.role = data.role;
       });
 
       // 登录成功后跳转回之前想访问的页面（如果有），否则首页

@@ -46,6 +46,7 @@ export default function TradeShell({
   const [errorAlert] = useAlert();
   const [user, setUser] = useAtomImmer(userAtom);
   const displayName = user.username || "User";
+  const userRole = user.role || "FreePlan";
   const initials =
     displayName
       .split(/\s+/)
@@ -90,11 +91,13 @@ export default function TradeShell({
         const parsed = JSON.parse(cachedUser) as {
           username?: string;
           email?: string;
+          role?: string;
         };
         if (parsed.username || parsed.email) {
           setUser((draft) => {
             draft.username = parsed.username || "";
             draft.email = parsed.email || "";
+            draft.role = parsed.role || "";
           });
         }
       } catch (error) {
@@ -106,7 +109,11 @@ export default function TradeShell({
 
     window.localStorage.setItem(
       USER_STORAGE_KEY,
-      JSON.stringify({ username: user.username, email: user.email }),
+      JSON.stringify({
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      }),
     );
   }, [setUser, user.email, user.username]);
 
@@ -176,7 +183,7 @@ export default function TradeShell({
                   <p className="text-sm font-medium text-white">
                     {displayName}
                   </p>
-                  <p className="text-xs text-[#9ca3af]">Pro Plan</p>
+                  <p className="text-xs text-[#9ca3af]">{userRole}</p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-[#9ca3af] group-hover:text-white" />
               </button>

@@ -32,8 +32,7 @@ export async function POST(request: NextRequest) {
     // 注意：这里只写 accessToken，如有需要 id/refresh token 可扩展
     const response = NextResponse.json({
       message: "登录成功",
-      username: data.username,
-      email: data.email,
+      ...data,
     });
     if (data.accessToken) {
       response.cookies.set("token", data.accessToken, {
