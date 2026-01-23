@@ -70,7 +70,7 @@ export default function Home() {
               <div className="flex items-center justify-center text-[#00c2b2]">
                 {/* <LineChart className="h-7 w-7" /> */}
                 <Image
-                  src={`/favicon.ico`}
+                  src={`/favicon.png`}
                   width={30}
                   height={30}
                   alt="Picture of the author"
@@ -395,7 +395,7 @@ export default function Home() {
                 <div className="mb-6 flex items-center gap-2">
                   {/* <LineChart className="h-8 w-8 text-[#00c2b2]" /> */}
                    <Image
-                  src={`/favicon.ico`}
+                  src={`/favicon.png`}
                   width={30}
                   height={30}
                   alt="Picture of the author"

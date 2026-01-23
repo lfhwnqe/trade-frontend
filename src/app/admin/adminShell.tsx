@@ -124,14 +124,14 @@ export default function AdminShell({
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#00c2b2] to-white text-black">
               {/* <span className="text-sm font-bold">TJ</span> */}
               <Image
-                src={`/favicon.ico`}
+                src={`/favicon.png`}
                 width={30}
                 height={30}
                 alt="Picture of the author"
               />
             </div>
             {/* <Image
-              src={`/favicon.ico`}
+              src={`/favicon.png`}
               width={30}
               height={30}
               alt="Picture of the author"
