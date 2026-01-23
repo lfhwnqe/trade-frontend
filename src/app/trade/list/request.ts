@@ -116,9 +116,6 @@ export type CreateTradeDto = {
   analysisTime?: string;
   volumeProfileImages: ImageResource[];
   tradeSubject: string;
-  poc: number;
-  val: number;
-  vah: number;
   keyPriceLevels?: string;
   marketStructure: MarketStructure;
   marketStructureAnalysis: string;
@@ -204,9 +201,6 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     // ===== 入场前分析 =====
     tradeSubject: form.tradeSubject!,
     volumeProfileImages: asImageArray(form.volumeProfileImages),
-    poc: parseNum(form.poc)!,
-    val: parseNum(form.val)!,
-    vah: parseNum(form.vah)!,
     keyPriceLevels: form.keyPriceLevels,
     marketStructure: form.marketStructure!,
     marketStructureAnalysis: form.marketStructureAnalysis || "",

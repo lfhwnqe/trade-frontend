@@ -391,50 +391,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             )}
           </div>
 
-          {/* POC价格 */}
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              POC价格:
-            </label>
-            <BaseInput
-              {...analyzedSection.inputProps}
-              id="poc"
-              name="poc"
-              type="number"
-              value={(form.poc as string) ?? ""}
-              onChange={handleFormChange}
-            />
-          </div>
-
-          {/* 价值区下沿 */}
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              价值区下沿:
-            </label>
-            <BaseInput
-              {...analyzedSection.inputProps}
-              id="val"
-              name="val"
-              type="number"
-              value={(form.val as string) ?? ""}
-              onChange={handleFormChange}
-            />
-          </div>
-
-          {/* 价值区上沿 */}
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              价值区上沿:
-            </label>
-            <BaseInput
-              {...analyzedSection.inputProps}
-              id="vah"
-              name="vah"
-              type="number"
-              value={(form.vah as string) ?? ""}
-              onChange={handleFormChange}
-            />
-          </div>
           <div className="col-span-full" />
           {/* 结构分析 */}
           <div className="col-span-3">

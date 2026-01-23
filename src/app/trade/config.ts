@@ -126,9 +126,6 @@ export type Trade = {
   analysisImages?: ImageResource[];
 
   // 价格/价值区等
-  vah?: string;
-  val?: string;
-  poc?: string;
   keyPriceLevels?: string;
 
   // 入场计划
