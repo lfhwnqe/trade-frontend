@@ -85,25 +85,25 @@ export default function Home() {
                 className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
                 href="#"
               >
-                功能
+                产品功能
               </a>
               <a
                 className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
                 href="#"
               >
-                方法论
+                复盘框架
               </a>
               <a
                 className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
                 href="#"
               >
-                定价
+                方案与价格
               </a>
               <a
                 className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
                 href="#"
               >
-                资源
+                学习中心
               </a>
             </nav>
             <div className="flex items-center gap-3">
@@ -122,25 +122,25 @@ export default function Home() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00c2b2] opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00c2b2]" />
                   </span>
-                  v2.0 已上线：高级图表分析
+                  v1.0 正式发布：可视化复盘与绩效归因
                 </div>
                 <h1 className="text-5xl font-bold leading-tight tracking-tighter md:text-7xl">
-                  掌握你的优势。
+                  把交易变成可复用的经验。
                   <br />
                   <span className="bg-gradient-to-r from-[#00c2b2] to-white bg-clip-text text-transparent">
-                    更聪明地分析。
+                    用数据复盘，持续提升盈利。
                   </span>
                 </h1>
                 <p className="max-w-2xl text-lg text-gray-400 md:text-xl">
-                  专业交易日志，为数据驱动型交易者而生。在一个统一的界面中记录交易、分析盈亏、打磨心理纪律。
+                  一站式交易复盘系统：自动记录订单与关键截图，量化执行与风险，定位亏损来源，形成可执行的改进清单。
                 </p>
                 <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row">
                   <button className="flex h-12 items-center justify-center gap-2 rounded bg-[#00c2b2] px-8 text-lg font-bold text-black transition-all hover:bg-[#009e91]">
-                    开始提升交易表现
+                    立即开始免费复盘
                     <ArrowRight className="h-4 w-4" />
                   </button>
                   <button className="flex h-12 items-center justify-center rounded border border-white/20 px-8 font-medium transition-all hover:bg-white/5">
-                    查看演示
+                    观看产品演示
                   </button>
                 </div>
               </div>
@@ -157,7 +157,7 @@ export default function Home() {
                   </div>
                   <div className="relative aspect-video w-full bg-[#0a0a0a]">
                     <img
-                      alt="暗色模式交易仪表盘，展示K线与绩效指标"
+                      alt="交易复盘仪表盘：K线回放、交易标注与核心绩效指标一屏呈现"
                       className="h-full w-full object-cover opacity-90"
                       src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBwgUGn6geldT9bVd_pzVfzYT0XTZDzKCOcxXRxNxLD-qUfDgVN7udoC6A4Crd1P7NBG2rX4-77rd4IkRc3chKNdi1fu91H2yQbi4oWQgzP1D3U7G_NGlkdx8vdsZBzjblAacM5kYKyAmqJHAQ_nvFxXCrc3PxazISAmEeIsM71-c15uagwyNhCN_tqX4-XxzsdQ4ijVQavf_tllakFq7i9diO8VI7FuleltmtdsNkLhptyqzcjxwdkJPyiUUM1Qnx4GErfvuj4g"
                     />
@@ -234,17 +234,17 @@ export default function Home() {
               <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div className="max-w-xl">
                   <h2 className="mb-4 text-3xl font-bold md:text-5xl">
-                    为什么专业交易员选择我们
+                    复盘不是记流水账，而是找到可复制的优势
                   </h2>
                   <p className="text-gray-400">
-                    由交易者打造，为交易者服务。我们把原始数据转化为可执行洞察，帮助你持续优化交易优势。
+                    把交易数据、执行行为与情绪记录整合在一起，自动生成绩效归因与训练重点，让你每天都知道该优化什么。
                   </p>
                 </div>
                 <a
                   className="flex items-center gap-2 font-bold text-[#00c2b2] hover:text-[#009e91]"
                   href="#"
                 >
-                  查看全部功能 <ArrowRight className="h-4 w-4" />
+                  查看功能清单 <ArrowRight className="h-4 w-4" />
                 </a>
               </div>
 
@@ -255,9 +255,9 @@ export default function Home() {
                     <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-[#00c2b2]/10 text-[#00c2b2]">
                       <BarChart3 className="h-6 w-6" />
                     </div>
-                    <h3 className="mb-2 text-2xl font-bold">深度盈亏分析</h3>
+                    <h3 className="mb-2 text-2xl font-bold">绩效归因分析</h3>
                     <p className="max-w-sm text-gray-400">
-                      不止盈亏数字。按日、按小时、按策略了解夏普比率、最大回撤与盈利因子。
+                      按策略 / 品种 / 方向 / 时段拆解收益，自动计算期望值、盈利因子、最大回撤、夏普比率与稳定性，明确你的优势来源。
                     </p>
                   </div>
                   <div className="mt-8 flex h-32 items-end gap-1 opacity-50">
@@ -275,38 +275,38 @@ export default function Home() {
                   <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
                     <Brain className="h-6 w-6" />
                   </div>
-                  <h3 className="mb-2 text-2xl font-bold">交易心理掌控</h3>
+                  <h3 className="mb-2 text-2xl font-bold">心态与纪律追踪</h3>
                   <p className="mb-8 text-gray-400">
-                    每笔交易前后标记情绪，识别恐惧、贪婪与冲动如何侵蚀你的利润。
+                    进出场前后记录情绪与触发因素，识别冲动交易、规则偏离与报复性操作如何影响最终收益。
                   </p>
                   <div className="flex-grow space-y-3 rounded-lg border border-white/5 bg-[#0a0a0a]/50 p-4">
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-green-500" />
-                      <span className="text-sm">平静</span>
+                      <span className="text-sm">冷静执行</span>
                       <span className="ml-auto text-xs text-gray-500">
-                        均值 +¥1,680
+                        平均收益 +¥1,680
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-yellow-500" />
-                      <span className="text-sm">焦虑</span>
+                      <span className="text-sm">犹豫观望</span>
                       <span className="ml-auto text-xs text-gray-500">
-                        均值 -¥350
+                        平均收益 -¥350
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-red-500" />
-                      <span className="text-sm">报复性交易</span>
+                      <span className="text-sm">报复性操作</span>
                       <span className="ml-auto text-xs text-gray-500">
-                        均值 -¥3,150
+                        平均收益 -¥3,150
                       </span>
                     </div>
                     <div className="mt-4 border-t border-white/5 pt-4">
                       <div className="text-xs font-mono text-indigo-400">
-                        洞察触发：
+                        行为洞察：
                       </div>
                       <div className="mt-1 text-xs text-gray-400">
-                        你在 9:30-10:30 进场时表现提升 3 倍。
+                        你在 9:30–10:30 的交易期望值显著更高，适合重点加大执行训练。
                       </div>
                     </div>
                   </div>
@@ -316,9 +316,9 @@ export default function Home() {
                   <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/10 text-orange-400">
                     <RefreshCw className="h-6 w-6" />
                   </div>
-                  <h3 className="mb-2 text-xl font-bold">自动同步</h3>
+                  <h3 className="mb-2 text-xl font-bold">交易数据自动导入</h3>
                   <p className="text-sm text-gray-400">
-                    与 MetaTrader、NinjaTrader、Binance 等 20+ 平台一键连接。
+                    连接主流交易平台与交易所，一键同步订单、成交、手续费与持仓变化，减少手动记录误差。
                   </p>
                 </div>
 
@@ -326,9 +326,9 @@ export default function Home() {
                   <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-pink-500/10 text-pink-400">
                     <Share2 className="h-6 w-6" />
                   </div>
-                  <h3 className="mb-2 text-xl font-bold">导师视图</h3>
+                  <h3 className="mb-2 text-xl font-bold">复盘共享与督导</h3>
                   <p className="text-sm text-gray-400">
-                    与导师或督促伙伴共享只读权限，获得持续反馈。
+                    向导师/同伴分享只读复盘链接，对关键交易添加标注与建议，形成可追踪的改进闭环。
                   </p>
                 </div>
               </div>
@@ -338,7 +338,7 @@ export default function Home() {
           <section className="border-y border-white/5 bg-[#121212] py-16">
             <div className="container mx-auto px-4 text-center">
               <p className="mb-8 text-sm font-bold uppercase tracking-widest text-gray-500">
-                超过 10,000+ 交易员信赖
+                为活跃交易者打造的专业复盘工具
               </p>
               <div className="flex flex-wrap items-center justify-center gap-12 opacity-50 grayscale transition-all duration-500 hover:grayscale-0">
                 <div className="flex items-center gap-2 text-2xl font-bold">
@@ -367,21 +367,21 @@ export default function Home() {
               <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#121212] to-black p-12 text-center shadow-2xl md:p-20">
                 <div className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00c2b2]/20 blur-[100px]" />
                 <h2 className="relative z-10 mb-6 text-4xl font-bold md:text-6xl">
-                  准备找到你的优势？
+                  准备把交易做成可持续进步的系统？
                 </h2>
                 <p className="relative z-10 mx-auto mb-10 max-w-2xl text-xl text-gray-400">
-                  别再在黑暗中交易。加入数千名交易者，用数据持续打磨策略。
+                  从下一笔交易开始，用数据验证策略，用复盘优化执行，让盈利来自系统，而不是运气。
                 </p>
                 <div className="relative z-10 flex flex-col justify-center gap-4 sm:flex-row">
                   <button className="h-14 rounded bg-[#00c2b2] px-10 text-lg font-bold text-black transition-all hover:scale-105 hover:bg-[#009e91]">
-                    开启免费试用
+                    开启 14 天免费试用
                   </button>
                   <button className="h-14 rounded border border-white/10 px-10 text-lg font-medium text-white transition-all hover:bg-white/5">
-                    查看定价
+                    查看方案与价格
                   </button>
                 </div>
                 <p className="mt-6 text-sm text-gray-500">
-                  无需信用卡，14 天免费试用。
+                  无需信用卡，14 天内可随时取消。
                 </p>
               </div>
             </div>
@@ -403,7 +403,7 @@ export default function Home() {
                   <span className="text-xl font-bold">MMCTradeJournal</span>
                 </div>
                 <p className="mb-6 max-w-sm text-gray-400">
-                  帮助交易者系统化管理交易业务，实现长期、可复制的稳定收益。
+                  以数据为核心的交易复盘系统：记录—分析—改进—验证，帮助你建立长期稳定的交易流程。
                 </p>
                 <div className="flex gap-4">
                   <a
@@ -433,14 +433,14 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h4 className="mb-4 font-bold">产品</h4>
+                <h4 className="mb-4 font-bold">产品中心</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
                   <li>
                     <a
                       className="transition-colors hover:text-[#00c2b2]"
                       href="#"
                     >
-                      功能
+                      功能清单
                     </a>
                   </li>
                   <li>
@@ -448,7 +448,7 @@ export default function Home() {
                       className="transition-colors hover:text-[#00c2b2]"
                       href="#"
                     >
-                      定价
+                      方案与价格
                     </a>
                   </li>
                   <li>
@@ -456,7 +456,7 @@ export default function Home() {
                       className="transition-colors hover:text-[#00c2b2]"
                       href="#"
                     >
-                      集成
+                      平台集成
                     </a>
                   </li>
                   <li>
@@ -470,7 +470,7 @@ export default function Home() {
                 </ul>
               </div>
               <div>
-                <h4 className="mb-4 font-bold">资源</h4>
+                <h4 className="mb-4 font-bold">学习资源</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
                   {/* <li>
                     <a className="transition-colors hover:text-[#00c2b2]" href="#">
@@ -501,14 +501,14 @@ export default function Home() {
                 </ul>
               </div>
               <div>
-                <h4 className="mb-4 font-bold">公司</h4>
+                <h4 className="mb-4 font-bold">关于</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
                   <li>
                     <a
                       className="transition-colors hover:text-[#00c2b2]"
                       href="#"
                     >
-                      关于我们
+                      团队与愿景
                     </a>
                   </li>
                   <li>
@@ -516,7 +516,7 @@ export default function Home() {
                       className="transition-colors hover:text-[#00c2b2]"
                       href="#"
                     >
-                      加入我们
+                      加入团队
                     </a>
                   </li>
                   <li>
@@ -524,7 +524,7 @@ export default function Home() {
                       className="transition-colors hover:text-[#00c2b2]"
                       href="#"
                     >
-                      法律条款
+                      法律与合规
                     </a>
                   </li>
                   <li>
@@ -532,7 +532,7 @@ export default function Home() {
                       className="transition-colors hover:text-[#00c2b2]"
                       href="#"
                     >
-                      联系方式
+                      联系我们
                     </a>
                   </li>
                 </ul>
@@ -545,10 +545,10 @@ export default function Home() {
               </p>
               <div className="flex gap-6">
                 <a className="transition-colors hover:text-white" href="#">
-                  隐私政策
+                  隐私与数据安全
                 </a>
                 <a className="transition-colors hover:text-white" href="#">
-                  服务条款
+                  服务协议
                 </a>
               </div>
             </div>
