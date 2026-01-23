@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, RefreshCw } from "lucide-react";
+import { Eye, Pencil, RefreshCw } from "lucide-react";
 import {
   ColumnDef,
   RowSelectionState,
@@ -41,6 +41,16 @@ type UserRecord = {
   userStatus?: string;
   createdAt?: string;
   lastModifiedAt?: string;
+};
+
+type UserDetail = {
+  userId: string;
+  email?: string;
+  enabled?: boolean;
+  userStatus?: string;
+  createdAt?: string;
+  lastModifiedAt?: string;
+  groups: string[];
 };
 
 const normalizeDate = (value: unknown) => {
@@ -84,6 +94,36 @@ const normalizeUser = (raw: Record<string, unknown>): UserRecord => {
     lastModifiedAt: normalizeDate(
       raw.lastModifiedAt ?? raw.userLastModifiedDate ?? raw.UserLastModifiedDate,
     ),
+  };
+};
+
+const normalizeUserDetail = (raw: Record<string, unknown>): UserDetail => {
+  const attributes = raw.attributes ?? raw.Attributes ?? [];
+  const groups = getArrayValue(raw, "groups")
+    .map((group) => String(group ?? "").trim())
+    .filter(Boolean);
+  return {
+    userId: String(raw.userId ?? raw.Username ?? raw.username ?? ""),
+    email: getAttributeValue(attributes, "email"),
+    enabled:
+      typeof raw.enabled === "boolean"
+        ? raw.enabled
+        : typeof raw.Enabled === "boolean"
+          ? raw.Enabled
+          : undefined,
+    userStatus:
+      typeof raw.userStatus === "string"
+        ? raw.userStatus
+        : typeof raw.UserStatus === "string"
+          ? raw.UserStatus
+          : undefined,
+    createdAt: normalizeDate(
+      raw.createdAt ?? raw.userCreateDate ?? raw.UserCreateDate,
+    ),
+    lastModifiedAt: normalizeDate(
+      raw.lastModifiedAt ?? raw.userLastModifiedDate ?? raw.UserLastModifiedDate,
+    ),
+    groups,
   };
 };
 
@@ -132,6 +172,12 @@ export default function AdminUserManagementPage() {
   const [editTarget, setEditTarget] = useState<UserRecord | null>(null);
   const [selectedRole, setSelectedRole] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailTarget, setDetailTarget] = useState<UserRecord | null>(null);
+  const [detailInfo, setDetailInfo] = useState<UserDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const pageCacheRef = useRef<Record<number, UserRecord[]>>({});
   const nextTokenRef = useRef<Record<number, string | undefined>>({});
@@ -251,6 +297,95 @@ export default function AdminUserManagementPage() {
     }
   }, [router, errorAlert]);
 
+  const fetchUserDetail = React.useCallback(
+    async (userId: string) => {
+      if (!userId) return;
+      setDetailLoading(true);
+      setDetailError(null);
+      try {
+        const res = await fetchWithAuth(
+          "/api/proxy-post",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            proxyParams: {
+              targetPath: `user/${encodeURIComponent(userId)}`,
+              actualMethod: "GET",
+            },
+            actualBody: {},
+          },
+          router,
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(getErrorMessage(data, "获取用户详情失败"));
+        }
+
+        const payload =
+          (data && typeof data === "object" && "data" in data
+            ? (data as Record<string, unknown>).data
+            : data) ?? {};
+        const payloadRecord = toRecord(payload);
+
+        setDetailInfo(normalizeUserDetail(payloadRecord));
+      } catch (err) {
+        const message = isErrorWithMessage(err)
+          ? err.message
+          : "获取用户详情失败";
+        setDetailError(message);
+        setDetailInfo(null);
+        errorAlert(message);
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [router, errorAlert],
+  );
+
+  const fetchUserDetailForEdit = React.useCallback(
+    async (userId: string) => {
+      if (!userId) return;
+      setEditLoading(true);
+      try {
+        const res = await fetchWithAuth(
+          "/api/proxy-post",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            proxyParams: {
+              targetPath: `user/${encodeURIComponent(userId)}`,
+              actualMethod: "GET",
+            },
+            actualBody: {},
+          },
+          router,
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(getErrorMessage(data, "获取用户详情失败"));
+        }
+
+        const payload =
+          (data && typeof data === "object" && "data" in data
+            ? (data as Record<string, unknown>).data
+            : data) ?? {};
+        const payloadRecord = toRecord(payload);
+        const detail = normalizeUserDetail(payloadRecord);
+        const nextRole = detail.groups?.[0] ?? "";
+        setSelectedRole(nextRole);
+      } catch (err) {
+        const message = isErrorWithMessage(err)
+          ? err.message
+          : "获取用户详情失败";
+        errorAlert(message);
+        setSelectedRole("");
+      } finally {
+        setEditLoading(false);
+      }
+    },
+    [router, errorAlert],
+  );
+
   useEffect(() => {
     fetchUsers(1, initialPageSizeRef.current, true);
   }, [fetchUsers]);
@@ -271,8 +406,6 @@ export default function AdminUserManagementPage() {
             return user.userId || "";
           case "email":
             return user.email || "";
-          case "role":
-            return user.role || "";
           case "userStatus":
             return user.userStatus || "";
           case "enabled":
@@ -346,15 +479,6 @@ export default function AdminUserManagementPage() {
         ),
       },
       {
-        accessorKey: "role",
-        header: "角色",
-        cell: ({ row }) => (
-          <div className="text-sm text-[#e5e7eb] min-w-[120px]">
-            {row.original.role || "-"}
-          </div>
-        ),
-      },
-      {
         accessorKey: "userStatus",
         header: "状态",
         cell: ({ row }) => (
@@ -404,9 +528,23 @@ export default function AdminUserManagementPage() {
               size="sm"
               className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
               onClick={() => {
+                setDetailTarget(row.original);
+                setDetailOpen(true);
+                fetchUserDetail(row.original.userId);
+              }}
+            >
+              <Eye className="h-4 w-4" />
+              详情
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+              onClick={() => {
                 setEditTarget(row.original);
-                setSelectedRole(row.original.role || "");
                 setEditOpen(true);
+                setSelectedRole("");
+                fetchUserDetailForEdit(row.original.userId);
               }}
             >
               <Pencil className="h-4 w-4" />
@@ -417,7 +555,13 @@ export default function AdminUserManagementPage() {
         enableSorting: false,
       },
     ],
-    [setEditTarget, setEditOpen, setSelectedRole],
+    [
+      setEditTarget,
+      setEditOpen,
+      setSelectedRole,
+      fetchUserDetail,
+      fetchUserDetailForEdit,
+    ],
   );
 
   const handlePageChange = (nextPage: number, nextPageSize?: number) => {
@@ -571,9 +715,104 @@ export default function AdminUserManagementPage() {
             <Button
               type="button"
               onClick={handleUpdateRole}
-              disabled={saving || !selectedRole || !editTarget?.userId}
+              disabled={
+                saving || editLoading || !selectedRole || !editTarget?.userId
+              }
             >
-              {saving ? "保存中..." : "保存"}
+              {saving || editLoading ? "保存中..." : "保存"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) {
+            setDetailTarget(null);
+            setDetailInfo(null);
+            setDetailError(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>用户详情</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>用户ID</Label>
+              <div className="text-sm text-[#e5e7eb]">
+                {detailTarget?.userId || "-"}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>邮箱</Label>
+              <div className="text-sm text-[#9ca3af]">
+                {detailInfo?.email || "-"}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>角色</Label>
+              <div className="flex flex-wrap gap-2 text-sm text-[#9ca3af]">
+                {detailLoading ? (
+                  <span>加载中...</span>
+                ) : detailInfo?.groups?.length ? (
+                  detailInfo.groups.map((group) => (
+                    <span
+                      key={group}
+                      className="rounded-md border border-[#27272a] bg-[#111111] px-2 py-1"
+                    >
+                      {group}
+                    </span>
+                  ))
+                ) : (
+                  <span>-</span>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>状态</Label>
+              <div className="text-sm text-[#9ca3af]">
+                {detailInfo?.userStatus || "-"}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>启用</Label>
+              <div className="text-sm text-[#9ca3af]">
+                {detailInfo?.enabled === undefined
+                  ? "-"
+                  : detailInfo.enabled
+                    ? "是"
+                    : "否"}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>创建时间</Label>
+              <div className="text-sm text-[#9ca3af]">
+                {formatDateTime(detailInfo?.createdAt)}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>更新时间</Label>
+              <div className="text-sm text-[#9ca3af]">
+                {formatDateTime(detailInfo?.lastModifiedAt)}
+              </div>
+            </div>
+            {detailError ? (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                {detailError}
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDetailOpen(false)}
+            >
+              关闭
             </Button>
           </DialogFooter>
         </DialogContent>
