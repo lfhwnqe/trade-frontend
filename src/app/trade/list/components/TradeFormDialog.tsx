@@ -464,7 +464,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           {/* 成交量分布图 */}
           <div className="col-span-3">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              成交量分布图：
+              市场结构分析图：
             </label>
             <ImageUploader
               disabled={analyzedSection.readOnly}
@@ -479,7 +479,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(imgs) =>
                 handleImageChange("volumeProfileImages", imgs)
               }
-              max={5}
+              max={10}
             />
           </div>
           {/* 假设路径图 */}
@@ -625,7 +625,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                     : []
                 }
                 onChange={(imgs) => handleImageChange("actualPathImages", imgs)}
-                max={5}
+                max={10}
               />
             </div>
             {/* 实际路径复盘 */}
@@ -1074,8 +1074,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               {(form.status === TradeStatus.EXITED ||
                 form.status === TradeStatus.EARLY_EXITED) &&
                 !!form.followedPlan && (
-                <span className="ml-0.5 text-destructive">*</span>
-              )}
+                  <span className="ml-0.5 text-destructive">*</span>
+                )}
               :
             </label>
             <BaseSelect
@@ -1193,7 +1193,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   : []
               }
               onChange={(imgs) => handleImageChange("actualPathImages", imgs)}
-              max={5}
+              max={10}
             />
           </div>
           {/* 实际路径复盘 */}
