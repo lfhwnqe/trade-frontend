@@ -259,6 +259,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       [TradeStatus.ANALYZED_NOT_ENTERED]: 2,
       [TradeStatus.ENTERED]: 3,
       [TradeStatus.EXITED]: 4,
+      [TradeStatus.EARLY_EXITED]: 4,
     };
     const currentRank = form.status ? statusRank[form.status] : 0;
     const shouldShowSection = (target: TradeStatus) =>
@@ -698,7 +699,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               入场方向
               {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED) && (
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -737,7 +739,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               入场价格
               {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED) && (
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -760,7 +763,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               入场时间
               {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED) && (
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -783,7 +787,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               止损点
               {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED) && (
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -806,7 +811,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               止盈点
               {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED) && (
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -831,7 +837,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               入场理由
               {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED) && (
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -862,7 +869,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               离场理由
               {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED) && (
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -893,7 +901,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               心态记录
               {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED) && (
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -934,7 +943,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               离场价格
-              {form.status === TradeStatus.EXITED && (
+              {(form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -958,7 +968,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               离场时间
-              {form.status === TradeStatus.EXITED && (
+              {(form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -978,7 +989,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               交易结果
-              {form.status === TradeStatus.EXITED && (
+              {(form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -1016,7 +1028,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               是否执行了计划
-              {form.status === TradeStatus.EXITED && (
+              {(form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -1058,7 +1071,9 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               计划类型
-              {form.status === TradeStatus.EXITED && !!form.followedPlan && (
+              {(form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) &&
+                !!form.followedPlan && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -1196,6 +1211,33 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               }
             />
           </div>
+          {form.status === TradeStatus.EARLY_EXITED && (
+            <div className="col-span-3">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                提前离场原因:
+              </label>
+              <BaseTextarea
+                {...exitedSection.textareaProps}
+                id="earlyExitReason"
+                name="earlyExitReason"
+                value={(form.earlyExitReason as string) ?? ""}
+                onChange={(e) => {
+                  setErrors((prev) => {
+                    const newErrors = { ...prev };
+                    delete newErrors["earlyExitReason"];
+                    return newErrors;
+                  });
+                  handleSelectChange("earlyExitReason", e.target.value);
+                }}
+                className={errors.earlyExitReason ? "border-destructive" : ""}
+              />
+              {errors.earlyExitReason && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.earlyExitReason}
+                </p>
+              )}
+            </div>
+          )}
           {/* 备注 */}
           <div className="col-span-3">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1233,7 +1275,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           <div className="col-span-3">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               经验总结评分
-              {form.status === TradeStatus.EXITED && (
+              {(form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
                 <span className="ml-0.5 text-destructive">*</span>
               )}
               :
@@ -1295,7 +1338,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       // 根据交易状态验证必填字段
       if (
         form.status === TradeStatus.ENTERED ||
-        form.status === TradeStatus.EXITED
+        form.status === TradeStatus.EXITED ||
+        form.status === TradeStatus.EARLY_EXITED
       ) {
         if (!form.entryDirection) {
           newErrors.entryDirection = "入场方向为必填项";
@@ -1319,7 +1363,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       }
 
       // 已离场状态的额外验证
-      if (form.status === TradeStatus.EXITED) {
+      if (
+        form.status === TradeStatus.EXITED ||
+        form.status === TradeStatus.EARLY_EXITED
+      ) {
         if (!form.exitPrice) {
           newErrors.exitPrice = "离场价格为必填项";
         }

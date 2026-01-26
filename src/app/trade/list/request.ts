@@ -136,6 +136,7 @@ export type CreateTradeDto = {
   takeProfit?: number;
   entryReason?: string;
   exitReason?: string;
+  earlyExitReason?: string;
   mentalityNotes?: string;
 
   // ===== 离场后分析 =====
@@ -229,6 +230,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     takeProfit: parseNum(form.takeProfit),
     entryReason: form.entryReason,
     exitReason: form.exitReason,
+    earlyExitReason: form.earlyExitReason,
     mentalityNotes: form.mentalityNotes,
 
     // ===== 离场后分析 =====
