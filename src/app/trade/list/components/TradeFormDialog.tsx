@@ -864,6 +864,25 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
+          {/* 入场分析图 */}
+          <div className="col-span-3">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场分析图:
+            </label>
+            <ImageUploader
+              disabled={enteredSection.readOnly}
+              value={
+                Array.isArray(form.entryAnalysisImages) &&
+                (form.entryAnalysisImages as unknown[]).every(
+                  (v) => typeof v === "object" && v !== null && "url" in v,
+                )
+                  ? (form.entryAnalysisImages as unknown as ImageResource[])
+                  : []
+              }
+              onChange={(imgs) => handleImageChange("entryAnalysisImages", imgs)}
+              max={10}
+            />
+          </div>
           {/* 离场理由 */}
           <div className="col-span-3">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">

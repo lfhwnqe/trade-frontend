@@ -13,6 +13,7 @@ export const formInitialState: FormState = {
   marketStructure: undefined,
   volumeProfileImages: [],
   expectedPathImages: [],
+  entryAnalysisImages: [],
   entryPlanA: { entryReason: "", entrySignal: "", exitSignal: "" },
   entryPlanB: { entryReason: "", entrySignal: "", exitSignal: "" },
   entryPlanC: { entryReason: "", entrySignal: "", exitSignal: "" },

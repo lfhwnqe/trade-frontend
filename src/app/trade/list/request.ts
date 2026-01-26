@@ -135,6 +135,7 @@ export type CreateTradeDto = {
   stopLoss?: number;
   takeProfit?: number;
   entryReason?: string;
+  entryAnalysisImages?: ImageResource[];
   exitReason?: string;
   earlyExitReason?: string;
   mentalityNotes?: string;
@@ -229,6 +230,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     stopLoss: parseNum(form.stopLoss),
     takeProfit: parseNum(form.takeProfit),
     entryReason: form.entryReason,
+    entryAnalysisImages: asImageArray(form.entryAnalysisImages),
     exitReason: form.exitReason,
     earlyExitReason: form.earlyExitReason,
     mentalityNotes: form.mentalityNotes,

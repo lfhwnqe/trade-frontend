@@ -143,6 +143,7 @@ export type Trade = {
   stopLoss?: string;
   takeProfit?: string;
   entryReason?: string;
+  entryAnalysisImages?: ImageResource[];
 
   // 离场分析及复盘
   exitPrice?: string;
