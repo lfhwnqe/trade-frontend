@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 import { DateRange } from "react-day-picker";
 import { Textarea as BaseTextarea } from "@/components/ui/textarea";
@@ -760,15 +761,30 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           </div>
           {/* 入场时间 */}
           <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              入场时间
-              {(form.status === TradeStatus.ENTERED ||
-                form.status === TradeStatus.EXITED ||
-                form.status === TradeStatus.EARLY_EXITED) && (
-                <span className="ml-0.5 text-destructive">*</span>
+            <div className="relative pb-1">
+              <label className="text-sm font-medium text-muted-foreground">
+                入场时间
+                {(form.status === TradeStatus.ENTERED ||
+                  form.status === TradeStatus.EXITED ||
+                  form.status === TradeStatus.EARLY_EXITED) && (
+                  <span className="ml-0.5 text-destructive">*</span>
+                )}
+                :
+              </label>
+              {!!form.analysisTime && !enteredSection.readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-7 px-2 text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
+                  onClick={() =>
+                    handleFormUpdate({ entryTime: form.analysisTime })
+                  }
+                >
+                  回填行情分析时间
+                </Button>
               )}
-              :
-            </label>
+            </div>
             <DateCalendarPicker
               disabled={enteredSection.readOnly}
               analysisTime={form.entryTime}
@@ -985,14 +1001,29 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           </div>
           {/* 离场时间 */}
           <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              离场时间
-              {(form.status === TradeStatus.EXITED ||
-                form.status === TradeStatus.EARLY_EXITED) && (
-                <span className="ml-0.5 text-destructive">*</span>
+            <div className="relative pb-1">
+              <label className="text-sm font-medium text-muted-foreground">
+                离场时间
+                {(form.status === TradeStatus.EXITED ||
+                  form.status === TradeStatus.EARLY_EXITED) && (
+                  <span className="ml-0.5 text-destructive">*</span>
+                )}
+                :
+              </label>
+              {!!form.analysisTime && !exitedSection.readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-7 px-2 text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
+                  onClick={() =>
+                    handleFormUpdate({ exitTime: form.analysisTime })
+                  }
+                >
+                  回填行情分析时间
+                </Button>
               )}
-              :
-            </label>
+            </div>
             <DateCalendarPicker
               disabled={exitedSection.readOnly}
               analysisTime={form.exitTime}

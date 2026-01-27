@@ -151,7 +151,7 @@ export const DateCalendarPicker: React.FC<DateCalendarPickerProps> = ({
     <Button
       variant={"outline"}
       className={cn(
-        "justify-start text-left font-normal w-full",
+        "h-9 justify-start text-left font-normal w-full",
         !date && "text-muted-foreground",
         "bg-muted"
       )}
