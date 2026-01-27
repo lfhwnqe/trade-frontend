@@ -103,11 +103,20 @@ export const tradeStatusOptions = [
   { label: "提前离场", value: TradeStatus.EARLY_EXITED },
   { label: "未入场", value: TradeStatus.ANALYZED_NOT_ENTERED },
 ];
+
+export const ANALYSIS_PERIOD_PRESETS = [
+  "15分钟",
+  "30分钟",
+  "1小时",
+  "4小时",
+  "1天",
+] as const;
 /**
  * Trade 前端完整类型定义，对齐后端 CreateTradeDto
  */
 export type Trade = {
   analysisTime?: string;
+  analysisPeriod?: string;
   transactionId?: string;
   tradeSubject?: string;
   // 状态与基础分析

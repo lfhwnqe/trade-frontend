@@ -114,6 +114,7 @@ export type CreateTradeDto = {
 
   // ===== 入场前分析 =====
   analysisTime?: string;
+  analysisPeriod?: string;
   volumeProfileImages: ImageResource[];
   tradeSubject: string;
   keyPriceLevels?: string;
@@ -196,6 +197,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
 
   return {
     analysisTime: form.analysisTime,
+    analysisPeriod: form.analysisPeriod,
     // ===== 交易类型 =====
     tradeType: form.tradeType!,
     // ===== 交易状态 =====

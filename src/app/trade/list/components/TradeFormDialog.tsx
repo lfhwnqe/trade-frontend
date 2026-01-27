@@ -5,6 +5,7 @@ import { DateCalendarPicker } from "../../../../components/common/DateCalendarPi
 import { ImageUploader } from "../../../../components/common/ImageUploader";
 import type { ImageResource, Trade } from "../../config";
 import {
+  ANALYSIS_PERIOD_PRESETS,
   ChecklistState,
   TradeStatus,
   entryDirectionOptions,
@@ -304,6 +305,28 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 {errors.analysisTime}
               </p>
             )}
+          </div>
+          {/* 分析周期 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              分析周期:
+            </label>
+            <BaseInput
+              {...analyzedSection.inputProps}
+              id="analysisPeriod"
+              name="analysisPeriod"
+              list="analysis-period-presets"
+              value={(form.analysisPeriod as string) ?? ""}
+              onChange={(e) =>
+                handleFormSelectChange("analysisPeriod", e.target.value)
+              }
+              placeholder="可选择或输入其他周期"
+            />
+            <datalist id="analysis-period-presets">
+              {ANALYSIS_PERIOD_PRESETS.map((preset) => (
+                <option key={preset} value={preset} />
+              ))}
+            </datalist>
           </div>
           {/* 交易标的 */}
           <div className="col-span-2">
