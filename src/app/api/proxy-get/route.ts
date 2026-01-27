@@ -54,10 +54,21 @@ export async function GET(request: NextRequest) {
     const responseHeaders = new Headers();
     backendResponse.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();
-      if (lowerKey !== 'content-encoding' && lowerKey !== 'transfer-encoding' && lowerKey !== 'connection') {
+      if (
+        lowerKey !== 'content-encoding' &&
+        lowerKey !== 'transfer-encoding' &&
+        lowerKey !== 'connection' &&
+        lowerKey !== 'set-cookie'
+      ) {
         responseHeaders.set(key, value);
       }
     });
+
+    // 透传后端下发的 Set-Cookie（例如 access token 自动刷新）
+    const setCookies = backendResponse.headers.getSetCookie?.() ?? [];
+    for (const cookie of setCookies) {
+      responseHeaders.append('set-cookie', cookie);
+    }
 
     return new NextResponse(backendResponse.body, {
       status: backendResponse.status,

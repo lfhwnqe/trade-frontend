@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 假设后端返回 accessToken 字段作为认证token
-    // 注意：这里只写 accessToken，如有需要 id/refresh token 可扩展
+    // 将后端返回的 token 写入 HTTP-only cookie，供后续代理请求透传给后端
     const response = NextResponse.json({
       message: "登录成功",
       ...data,
@@ -43,7 +42,23 @@ export async function POST(request: NextRequest) {
         // maxAge: 可定制
       });
     }
-    // 其它 token（如 refreshToken）可在此处继续写入cookie
+    if (data.refreshToken) {
+      response.cookies.set("refreshToken", data.refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        // maxAge: 可定制（通常 refresh token 生命周期更长）
+      });
+    }
+    if (data.idToken) {
+      response.cookies.set("idToken", data.idToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+      });
+    }
     return response;
   } catch (error) {
     console.error("登录接口服务异常:", error);
