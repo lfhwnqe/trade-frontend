@@ -217,6 +217,7 @@ export type TradeQuery = {
   // 新增筛选字段
   type?: string;
   grade?: string;
+  analysisPeriod?: string;
 };
 
 export interface ApiQueryParameters {
@@ -231,6 +232,7 @@ export interface ApiQueryParameters {
   sortOrder?: "ASC" | "DESC";
   tradeType?: string;
   grade?: string;
+  analysisPeriod?: string;
 }
 
 export interface TradeFieldConfig {

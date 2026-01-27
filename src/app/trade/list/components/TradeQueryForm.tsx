@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   TradeQuery,
+  ANALYSIS_PERIOD_PRESETS,
   marketStructureOptions,
   entryDirectionOptions,
   tradeStatusOptions,
@@ -61,6 +62,7 @@ export default function TradeQueryForm({
       entryDirection: "all",
       tradeStatus: "all",
       tradeResult: "all",
+      analysisPeriod: undefined,
     });
     // 调用外部重置函数
     onReset();
@@ -283,7 +285,34 @@ export default function TradeQueryForm({
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
+                分析周期
+              </label>
+              <input
+                name="analysisPeriod"
+                list="analysis-period-presets"
+                value={queryForm.analysisPeriod ?? ""}
+                onChange={(e) =>
+                  onQueryFormChange({
+                    ...queryForm,
+                    analysisPeriod: e.target.value,
+                  })
+                }
+                placeholder="可选择或输入周期"
+                className={cn(
+                  "flex h-9 w-full rounded-md border border-[#27272a] bg-[#1e1e1e] px-3 py-1 text-sm text-[#e5e7eb]",
+                  "placeholder:text-[#9ca3af] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400 focus-visible:border-emerald-400",
+                )}
+              />
+            </div>
           </div>
+          <datalist id="analysis-period-presets">
+            {ANALYSIS_PERIOD_PRESETS.map((preset) => (
+              <option key={preset} value={preset} />
+            ))}
+          </datalist>
         </div>
 
         {/* 操作按钮区域 */}

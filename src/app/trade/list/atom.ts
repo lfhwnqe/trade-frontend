@@ -92,7 +92,6 @@ export function processQueryParams(query: TradeQuery, sorting: SortingState): Ap
     // 日期范围
     dateFrom,
     dateTo,
-  // 新增: type/grade 过滤
   };
 
   // type（交易类型）
@@ -102,6 +101,10 @@ export function processQueryParams(query: TradeQuery, sorting: SortingState): Ap
   // grade（分级）
   if (query?.grade && query.grade !== "all") {
     processedQuery.grade = query.grade;
+  }
+  // analysisPeriod（分析周期）
+  if (query?.analysisPeriod && query.analysisPeriod !== "all") {
+    processedQuery.analysisPeriod = query.analysisPeriod;
   }
 
   if (sorting.length > 0) {
