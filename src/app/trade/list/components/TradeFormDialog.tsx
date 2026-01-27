@@ -7,6 +7,7 @@ import type { ImageResource, Trade } from "../../config";
 import {
   ANALYSIS_PERIOD_PRESETS,
   ChecklistState,
+  TRADE_PERIOD_PRESETS,
   TradeStatus,
   entryDirectionOptions,
   marketStructureOptions,
@@ -337,10 +338,16 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               {...analyzedSection.inputProps}
               id="tradeSubject"
               name="tradeSubject"
+                list="trade-subject-presets"
               value={(form.tradeSubject as string) ?? ""}
               onChange={handleFormChange}
               className={errors.tradeSubject ? "border-destructive" : ""}
             />
+            <datalist id="trade-subject-presets">
+              {TRADE_PERIOD_PRESETS.map((preset) => (
+                <option key={preset} value={preset} />
+              ))}
+            </datalist>
             {errors.tradeSubject && (
               <p className="text-sm text-destructive mt-1">
                 {errors.tradeSubject}

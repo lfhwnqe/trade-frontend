@@ -111,6 +111,12 @@ export const ANALYSIS_PERIOD_PRESETS = [
   "4小时",
   "1天",
 ] as const;
+export const TRADE_PERIOD_PRESETS = [
+  "BTC/USDC",
+  "ETH/USDC",
+  "BTC/USDT",
+  "ETH/USDT",
+] as const;
 /**
  * Trade 前端完整类型定义，对齐后端 CreateTradeDto
  */
