@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useCallback, useEffect, Suspense, useRef } from "react";
+import { useCallback, useEffect, Suspense, useRef, useState } from "react";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import {
   formAtom,
@@ -14,6 +14,9 @@ import {
   createTrade,
   toDto,
   fetchTradeDetail,
+  fetchSharedTradeDetail,
+  shareTrade,
+  updateTradeShareable,
   updateTrade,
 } from "../list/request";
 import { Trade, TradeStatus, tradeStatusOptions } from "../config";
@@ -161,10 +164,14 @@ export default function TradeAddPage({
   className,
   readOnly = false,
   enableChecklist = true,
+  detailMode = "transaction",
+  detailId: detailIdProp,
 }: {
   className?: string;
   readOnly?: boolean;
   enableChecklist?: boolean;
+  detailMode?: "transaction" | "share";
+  detailId?: string | null;
 }) {
   const [success, errorAlert] = useAlert();
   const router = useRouter();
@@ -172,9 +179,11 @@ export default function TradeAddPage({
   const [form, setForm, resetForm] = useAtomImmer(formAtom);
   const [loading, setLoading] = useAtomImmer(loadingAtom);
   const [detailLoading, setDetailLoading] = useAtomImmer(detailLoadingAtom);
+  const [shareLoading, setShareLoading] = useState(false);
   // 主体渲染，非弹窗模式而是全宽居中大表单
-  const id = searchParams.get("id");
-  const isCreateMode = !id;
+  const transactionId = searchParams.get("id");
+  const detailId = detailIdProp ?? transactionId;
+  const isCreateMode = !detailId && !readOnly;
 
   // 新增时固定为已分析状态，避免跨状态填写
   useEffect(() => {
@@ -190,9 +199,11 @@ export default function TradeAddPage({
 
   // 详情回填逻辑
   useEffect(() => {
-    if (id) {
+    if (detailId) {
       setDetailLoading(true);
-      fetchTradeDetail(id)
+      const fetchDetail =
+        detailMode === "share" ? fetchSharedTradeDetail : fetchTradeDetail;
+      fetchDetail(detailId)
         .then((data) => {
           // 合并已有字段，防止丢失自定义初值
           setForm((draft) => {
@@ -206,7 +217,7 @@ export default function TradeAddPage({
           setDetailLoading(false);
         });
     }
-  }, []);
+  }, [detailId, detailMode, errorAlert, setDetailLoading, setForm]);
   // }, [searchParams, errorAlert, setDetailLoading, setForm]);
 
   // 离开页面时自动重置表单，避免脏数据
@@ -218,7 +229,7 @@ export default function TradeAddPage({
 
   // 本地暂存恢复
   useEffect(() => {
-    if (id || typeof window === "undefined") {
+    if (transactionId || readOnly || typeof window === "undefined") {
       return;
     }
     try {
@@ -232,7 +243,7 @@ export default function TradeAddPage({
     } catch (err) {
       console.error("Failed to restore local draft", err);
     }
-  }, [id, setForm]);
+  }, [transactionId, readOnly, setForm]);
 
   // 提交函数 - 添加节流控制避免重复提交
   const submittingRef = useRef(false);
@@ -252,7 +263,7 @@ export default function TradeAddPage({
       submittingRef.current = true;
       setLoading(true);
 
-      const id = searchParams.get("id");
+      const id = transactionId;
       const saveMode = saveModeRef.current;
       try {
         if (id) {
@@ -288,7 +299,7 @@ export default function TradeAddPage({
         saveModeRef.current = "redirect";
       }
     },
-    [form, router, searchParams, success, errorAlert, loading],
+    [form, router, transactionId, success, errorAlert, loading],
   );
 
   // 字段变化处理
@@ -358,6 +369,69 @@ export default function TradeAddPage({
   }, [loading]);
 
   const pageTitle = readOnly ? "交易详情" : "新增/编辑交易记录";
+  const displayId = form.transactionId ?? detailId;
+  const shareId = form.shareId;
+  const isShareable = !!form.isShareable;
+  const showShareControls =
+    readOnly && !!transactionId && detailMode === "transaction";
+  const shareUrl =
+    shareId && typeof window !== "undefined"
+      ? `${window.location.origin}/trade/shared/${shareId}`
+      : "";
+
+  const handleShare = useCallback(async () => {
+    if (!transactionId || shareLoading) return;
+    setShareLoading(true);
+    try {
+      const data = await shareTrade(transactionId);
+      setForm((draft) => {
+        draft.isShareable = !!data.isShareable;
+        draft.shareId = data.shareId;
+      });
+      success("分享已开启");
+    } catch (error: unknown) {
+      if (typeof error === "object" && error && "message" in error) {
+        errorAlert((error as { message?: string }).message || "分享失败");
+      } else {
+        errorAlert("分享失败");
+      }
+    } finally {
+      setShareLoading(false);
+    }
+  }, [transactionId, shareLoading, setForm, success, errorAlert]);
+
+  const handleCloseShare = useCallback(async () => {
+    if (!transactionId || shareLoading) return;
+    setShareLoading(true);
+    try {
+      const data = await updateTradeShareable(transactionId, false);
+      setForm((draft) => {
+        draft.isShareable = !!data.isShareable;
+        draft.shareId = data.shareId;
+      });
+      success("已关闭分享");
+    } catch (error: unknown) {
+      if (typeof error === "object" && error && "message" in error) {
+        errorAlert((error as { message?: string }).message || "关闭分享失败");
+      } else {
+        errorAlert("关闭分享失败");
+      }
+    } finally {
+      setShareLoading(false);
+    }
+  }, [transactionId, shareLoading, setForm, success, errorAlert]);
+
+  const handleCopyShareUrl = useCallback(async () => {
+    if (!shareUrl || typeof navigator === "undefined") return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      success("分享链接已复制");
+    } catch (error) {
+      console.log("error:", error);
+
+      errorAlert("复制失败，请手动复制链接");
+    }
+  }, [shareUrl, success, errorAlert]);
 
   return (
     <Suspense fallback={<div>加载中...</div>}>
@@ -399,7 +473,7 @@ export default function TradeAddPage({
               })}
             </div>
             {!readOnly && (
-              <div className="flex items-center justify-end gap-4 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+              <div className="flex items-center justify-end gap-4 rounded-2xl  bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
                 <Button
                   type="button"
                   variant="outline"
@@ -456,66 +530,112 @@ export default function TradeAddPage({
             <div>
               <h2 className="text-lg font-semibold text-white">{pageTitle}</h2>
               <p className="mt-1 text-xs font-mono text-[#a1a1aa]">
-                交易 ID: {id ? `#${id}` : "新交易"}
+                交易 ID: {displayId ? `#${displayId}` : "新交易"}
               </p>
             </div>
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  查看 Checklist
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="border-white/10 bg-[#0b0b0c] text-[#ededed]"
-              >
-                <SheetHeader className="border-b border-white/10 px-6 py-5">
-                  <SheetTitle className="text-base text-white">
-                    交易执行 Checklist
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="space-y-6 overflow-y-auto px-6 pb-8 pt-4 text-sm">
-                  {checklistSections.map((section) => (
-                    <div key={section.title} className="space-y-3">
-                      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
-                        {section.title}
-                      </h3>
-                      <div className="space-y-3">
-                        {section.items.map((item) => (
-                          <div
-                            key={item.title}
-                            className="rounded-xl border border-white/10 bg-white/5 p-3"
-                          >
-                            <div className="text-sm font-semibold text-white">
-                              {item.title}
-                            </div>
-                            <ul className="mt-2 space-y-1 text-xs text-[#cbd5f5]">
-                              {item.bullets.map((bullet) => (
-                                <li key={bullet} className="flex gap-2">
-                                  <span className="mt-0.5 text-emerald-400">
-                                    ▸
-                                  </span>
-                                  <span>{bullet}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
+            <div className="flex flex-wrap items-center gap-3">
+              {showShareControls && (
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl  bg-black/40 px-3 py-2">
+                  {isShareable && shareId ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={shareLoading}
+                        onClick={handleCloseShare}
+                        className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        关闭分享
+                      </Button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#a1a1aa]">分享链接</span>
+                        <input
+                          readOnly
+                          value={shareUrl}
+                          className="w-[220px] truncate rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-xs text-white"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!shareUrl}
+                          onClick={handleCopyShareUrl}
+                          className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+                        >
+                          复制
+                        </Button>
                       </div>
-                    </div>
-                  ))}
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={shareLoading}
+                      onClick={handleShare}
+                      className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                      生成分享链接
+                    </Button>
+                  )}
                 </div>
-              </SheetContent>
-            </Sheet>
+              )}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    查看 Checklist
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="right"
+                  className="border-white/10 bg-[#0b0b0c] text-[#ededed]"
+                >
+                  <SheetHeader className="border-b border-white/10 px-6 py-5">
+                    <SheetTitle className="text-base text-white">
+                      交易执行 Checklist
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-6 overflow-y-auto px-6 pb-8 pt-4 text-sm">
+                    {checklistSections.map((section) => (
+                      <div key={section.title} className="space-y-3">
+                        <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
+                          {section.title}
+                        </h3>
+                        <div className="space-y-3">
+                          {section.items.map((item) => (
+                            <div
+                              key={item.title}
+                              className="rounded-xl border border-white/10 bg-white/5 p-3"
+                            >
+                              <div className="text-sm font-semibold text-white">
+                                {item.title}
+                              </div>
+                              <ul className="mt-2 space-y-1 text-xs text-[#cbd5f5]">
+                                {item.bullets.map((bullet) => (
+                                  <li key={bullet} className="flex gap-2">
+                                    <span className="mt-0.5 text-emerald-400">
+                                      ▸
+                                    </span>
+                                    <span>{bullet}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
 
           <TradeFormDialog
             ref={formRef}
-            editTrade={id ? form : null}
+            editTrade={transactionId ? form : null}
             form={form}
             handleChange={handleChange}
             handleSelectChange={handleSelectChange}

@@ -184,6 +184,8 @@ export type Trade = {
   // 新增扩展字段
   grade?: string;
   analysisExpired?: boolean;
+  isShareable?: boolean;
+  shareId?: string;
 };
 
 // 交易重要性分级枚举

@@ -96,6 +96,64 @@ export async function fetchTradeDetail(transactionId: string): Promise<Trade> {
   const detail = (data.data || data) as TradeDetailResponse;
   return normalizeTradeDetail(detail);
 }
+
+export async function fetchSharedTradeDetail(shareId: string): Promise<Trade> {
+  const proxyParams = {
+    targetPath: `trade/shared/${shareId}`,
+    actualMethod: "GET",
+  };
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody: {},
+  });
+  if (!res.ok) throw new Error("获取分享详情失败");
+  const data = await res.json();
+  const detail = (data.data || data) as TradeDetailResponse;
+  return normalizeTradeDetail(detail);
+}
+
+type ShareInfo = {
+  transactionId?: string;
+  isShareable?: boolean;
+  shareId?: string;
+};
+
+export async function shareTrade(transactionId: string): Promise<ShareInfo> {
+  const proxyParams = {
+    targetPath: `trade/${transactionId}/share`,
+    actualMethod: "POST",
+  };
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody: {},
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "分享失败");
+  return (data.data || data) as ShareInfo;
+}
+
+export async function updateTradeShareable(
+  transactionId: string,
+  isShareable: boolean,
+): Promise<ShareInfo> {
+  const proxyParams = {
+    targetPath: `trade/${transactionId}/shareable`,
+    actualMethod: "PATCH",
+  };
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    proxyParams,
+    actualBody: { isShareable },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "更新分享状态失败");
+  return (data.data || data) as ShareInfo;
+}
 /** 交易结果枚举，与后端同步 */
 export enum TradeResult {
   PROFIT = "盈利",
