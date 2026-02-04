@@ -15,8 +15,8 @@ export default function TradePageShell({
   showAddButton = true,
 }: TradePageShellProps) {
   return (
-    <div className="flex min-h-screen flex-col bg-black min-w-0">
-      <header className="h-16 bg-[#121212] border-b border-[#27272a] flex items-center justify-between px-6 sticky top-0 z-30 shadow-lg shadow-black/20">
+    <div className="flex h-screen flex-col bg-black min-w-0 overflow-hidden">
+      <header className="h-16 bg-[#121212] border-b border-[#27272a] flex items-center justify-between px-6 shrink-0 z-30 shadow-lg shadow-black/20">
         <div className="flex items-center gap-4">
           <button className="lg:hidden p-1 text-[#9ca3af] hover:text-white focus:outline-none">
             <Menu className="h-5 w-5" />
@@ -38,7 +38,7 @@ export default function TradePageShell({
           </div>
         ) : null}
       </header>
-      <div className="p-6 space-y-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0">
+      <div className="p-6 space-y-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0 emerald-scrollbar">
         {children}
       </div>
     </div>

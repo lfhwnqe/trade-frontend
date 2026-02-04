@@ -634,7 +634,7 @@ export default function TradeAddPage({
             <div className="min-w-0 h-full min-h-0">
               <div
                 ref={contentScrollRef}
-                className="h-full min-h-0 overflow-y-auto pr-2 space-y-6"
+                className="h-full min-h-0 overflow-y-auto pr-2 space-y-6 emerald-scrollbar"
               >
               <div className="md:hidden">
                 <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#a1a1aa]">
