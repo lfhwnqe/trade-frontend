@@ -18,6 +18,7 @@ export default function TradeSharedDetailPage() {
       <TradeAddPage
         className="flex-1"
         readOnly
+        disableStatusChange
         detailMode="share"
         detailId={shareId}
       />

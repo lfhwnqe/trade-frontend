@@ -166,12 +166,14 @@ export default function TradeAddPage({
   enableChecklist = true,
   detailMode = "transaction",
   detailId: detailIdProp,
+  disableStatusChange = false,
 }: {
   className?: string;
   readOnly?: boolean;
   enableChecklist?: boolean;
   detailMode?: "transaction" | "share";
   detailId?: string | null;
+  disableStatusChange?: boolean;
 }) {
   const [success, errorAlert] = useAlert();
   const router = useRouter();
@@ -312,12 +314,18 @@ export default function TradeAddPage({
   }, [setForm]);
 
   // Select 类型变化
-  const handleSelectChange = useCallback((key: keyof Trade, value: string) => {
-    setForm((draft) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      draft[key] = value as any;
-    });
-  }, [setForm]);
+  const handleSelectChange = useCallback(
+    (key: keyof Trade, value: string) => {
+      if (disableStatusChange && key === "status") {
+        return;
+      }
+      setForm((draft) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        draft[key] = value as any;
+      });
+    },
+    [setForm, disableStatusChange],
+  );
 
   // 时间区间/日期变化
   const handleDateRangeChange = useCallback(
