@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import TagSelectInput from "@/components/common/TagSelectInput";
 import {
   TradeQuery,
   ANALYSIS_PERIOD_PRESETS,
@@ -37,90 +38,6 @@ const tradeResultOptions = [
   { label: "亏损", value: "亏损" },
   { label: "保本", value: "保本" },
 ];
-
-function TagInput({
-  value,
-  onChange,
-  presets,
-  placeholder,
-}: {
-  value?: string[];
-  onChange: (value: string[]) => void;
-  presets: readonly string[];
-  placeholder?: string;
-}) {
-  const listId = React.useId();
-  const [inputValue, setInputValue] = React.useState("");
-  const tags = value ?? [];
-  const maxTags = 3;
-
-  const addTags = React.useCallback(
-    (raw: string) => {
-      const items = raw
-        .split(/[,，]/)
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0);
-      if (items.length === 0) return;
-      const next = [...tags];
-      items.forEach((item) => {
-        if (next.length >= maxTags) return;
-        if (!next.includes(item)) {
-          next.push(item);
-        }
-      });
-      if (next.length === tags.length) {
-        setInputValue("");
-        return;
-      }
-      onChange(next);
-      setInputValue("");
-    },
-    [onChange, tags],
-  );
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#27272a] bg-[#1e1e1e] px-3 py-2">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-[#e5e7eb]"
-          >
-            {tag}
-            <button
-              type="button"
-              className="text-[#9ca3af] hover:text-[#e5e7eb]"
-              onClick={() => onChange(tags.filter((item) => item !== tag))}
-              aria-label={`移除标签 ${tag}`}
-            >
-              ×
-            </button>
-          </span>
-        ))}
-        <input
-          readOnly={tags.length >= maxTags}
-          list={listId}
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === ",") {
-              e.preventDefault();
-              addTags(inputValue);
-            }
-          }}
-          onBlur={() => addTags(inputValue)}
-          placeholder={tags.length >= maxTags ? "最多 3 个标签" : placeholder}
-          className="min-w-[120px] flex-1 bg-transparent text-sm text-[#e5e7eb] outline-none placeholder:text-[#9ca3af]"
-        />
-      </div>
-      <datalist id={listId}>
-        {presets.map((preset) => (
-          <option key={preset} value={preset} />
-        ))}
-      </datalist>
-    </div>
-  );
-}
 
 interface TradeQueryFormProps {
   queryForm: TradeQuery;
@@ -427,13 +344,18 @@ export default function TradeQueryForm({
               <label className="block text-xs font-medium text-[#9ca3af] mb-1">
                 交易标签
               </label>
-              <TagInput
+              <TagSelectInput
                 value={queryForm.tradeTags}
                 onChange={(tags) =>
                   onQueryFormChange({ ...queryForm, tradeTags: tags })
                 }
                 presets={TRADE_TAG_PRESETS}
                 placeholder="输入后回车添加，或从建议中选择"
+                containerClassName="border-[#27272a] bg-[#1e1e1e]"
+                chipClassName="border-white/10 bg-white/5 text-[#e5e7eb]"
+                inputClassName="text-[#e5e7eb] placeholder:text-[#9ca3af]"
+                popoverClassName="border-[#27272a] bg-[#121212] text-[#e5e7eb]"
+                suggestionClassName="border-white/10 bg-white/5 text-[#e5e7eb]"
               />
             </div>
           </div>
