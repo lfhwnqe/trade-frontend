@@ -106,6 +106,24 @@ export function processQueryParams(query: TradeQuery, sorting: SortingState): Ap
   if (query?.analysisPeriod && query.analysisPeriod !== "all") {
     processedQuery.analysisPeriod = query.analysisPeriod;
   }
+  // followedSystemStrictly（是否严格遵守交易系统）
+  if (
+    query?.followedSystemStrictly !== undefined &&
+    query.followedSystemStrictly !== "all" &&
+    query.followedSystemStrictly !== ""
+  ) {
+    if (typeof query.followedSystemStrictly === "boolean") {
+      processedQuery.followedSystemStrictly = query.followedSystemStrictly;
+    } else if (query.followedSystemStrictly === "true") {
+      processedQuery.followedSystemStrictly = true;
+    } else if (query.followedSystemStrictly === "false") {
+      processedQuery.followedSystemStrictly = false;
+    }
+  }
+  // tradeTags（交易标签）
+  if (Array.isArray(query?.tradeTags) && query.tradeTags.length > 0) {
+    processedQuery.tradeTags = query.tradeTags;
+  }
 
   if (sorting.length > 0) {
     processedQuery.sortBy = sorting[0].id;

@@ -235,6 +235,8 @@ export type TradeQuery = {
   type?: string;
   grade?: string;
   analysisPeriod?: string;
+  followedSystemStrictly?: boolean | string;
+  tradeTags?: string[];
 };
 
 export interface ApiQueryParameters {
@@ -250,6 +252,8 @@ export interface ApiQueryParameters {
   tradeType?: string;
   grade?: string;
   analysisPeriod?: string;
+  followedSystemStrictly?: boolean;
+  tradeTags?: string[];
 }
 
 export interface TradeFieldConfig {

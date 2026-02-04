@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import {
   TradeQuery,
   ANALYSIS_PERIOD_PRESETS,
+  TRADE_TAG_PRESETS,
   marketStructureOptions,
   entryDirectionOptions,
   tradeStatusOptions,
@@ -36,6 +37,90 @@ const tradeResultOptions = [
   { label: "亏损", value: "亏损" },
   { label: "保本", value: "保本" },
 ];
+
+function TagInput({
+  value,
+  onChange,
+  presets,
+  placeholder,
+}: {
+  value?: string[];
+  onChange: (value: string[]) => void;
+  presets: readonly string[];
+  placeholder?: string;
+}) {
+  const listId = React.useId();
+  const [inputValue, setInputValue] = React.useState("");
+  const tags = value ?? [];
+  const maxTags = 3;
+
+  const addTags = React.useCallback(
+    (raw: string) => {
+      const items = raw
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+      if (items.length === 0) return;
+      const next = [...tags];
+      items.forEach((item) => {
+        if (next.length >= maxTags) return;
+        if (!next.includes(item)) {
+          next.push(item);
+        }
+      });
+      if (next.length === tags.length) {
+        setInputValue("");
+        return;
+      }
+      onChange(next);
+      setInputValue("");
+    },
+    [onChange, tags],
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#27272a] bg-[#1e1e1e] px-3 py-2">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-[#e5e7eb]"
+          >
+            {tag}
+            <button
+              type="button"
+              className="text-[#9ca3af] hover:text-[#e5e7eb]"
+              onClick={() => onChange(tags.filter((item) => item !== tag))}
+              aria-label={`移除标签 ${tag}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <input
+          readOnly={tags.length >= maxTags}
+          list={listId}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              addTags(inputValue);
+            }
+          }}
+          onBlur={() => addTags(inputValue)}
+          placeholder={tags.length >= maxTags ? "最多 3 个标签" : placeholder}
+          className="min-w-[120px] flex-1 bg-transparent text-sm text-[#e5e7eb] outline-none placeholder:text-[#9ca3af]"
+        />
+      </div>
+      <datalist id={listId}>
+        {presets.map((preset) => (
+          <option key={preset} value={preset} />
+        ))}
+      </datalist>
+    </div>
+  );
+}
 
 interface TradeQueryFormProps {
   queryForm: TradeQuery;
@@ -63,6 +148,8 @@ export default function TradeQueryForm({
       tradeStatus: "all",
       tradeResult: "all",
       analysisPeriod: undefined,
+      followedSystemStrictly: "all",
+      tradeTags: [],
     });
     // 调用外部重置函数
     onReset();
@@ -163,7 +250,7 @@ export default function TradeQueryForm({
         <div
           className={cn(
             "overflow-hidden transition-all duration-300 ease-in-out",
-            isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            isExpanded ? "max-h-[560px] opacity-100" : "max-h-0 opacity-0"
           )}
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-[#27272a] animate-in slide-in-from-top-1">
@@ -305,6 +392,48 @@ export default function TradeQueryForm({
                   "flex h-9 w-full rounded-md border border-[#27272a] bg-[#1e1e1e] px-3 py-1 text-sm text-[#e5e7eb]",
                   "placeholder:text-[#9ca3af] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400 focus-visible:border-emerald-400",
                 )}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
+                是否遵守交易系统
+              </label>
+              <Select
+                value={
+                  queryForm.followedSystemStrictly !== undefined
+                    ? String(queryForm.followedSystemStrictly)
+                    : ""
+                }
+                onValueChange={(value: string) =>
+                  onQueryFormChange({
+                    ...queryForm,
+                    followedSystemStrictly: value,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="true">是</SelectItem>
+                  <SelectItem value="false">否</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
+                交易标签
+              </label>
+              <TagInput
+                value={queryForm.tradeTags}
+                onChange={(tags) =>
+                  onQueryFormChange({ ...queryForm, tradeTags: tags })
+                }
+                presets={TRADE_TAG_PRESETS}
+                placeholder="输入后回车添加，或从建议中选择"
               />
             </div>
           </div>
