@@ -69,6 +69,23 @@ function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
     value === undefined || value === null || value === ""
       ? undefined
       : `${value}`;
+  const normalizeTags = (value: unknown) => {
+    if (!value) return undefined;
+    if (Array.isArray(value)) {
+      const tags = value
+        .map((item) => `${item}`.trim())
+        .filter((item) => item.length > 0);
+      return tags.length > 0 ? Array.from(new Set(tags)) : undefined;
+    }
+    if (typeof value === "string") {
+      const tags = value
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+      return tags.length > 0 ? Array.from(new Set(tags)) : undefined;
+    }
+    return undefined;
+  };
 
   const entryFromPayload = normalizeEntry(rest.entry);
   const entryFromPrice = normalizeEntry(entryPrice);
@@ -77,6 +94,7 @@ function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
     ...rest,
     // 详情接口返回 entryPrice，但表单字段使用 entry，缺省时回填 entryPrice
     entry: entryFromPayload ?? entryFromPrice,
+    tradeTags: normalizeTags(rest.tradeTags),
   };
 }
 
@@ -183,6 +201,7 @@ export type CreateTradeDto = {
   marketStructureAnalysis: string;
   preEntrySummary?: string;
   preEntrySummaryImportance?: number;
+  tradeTags?: string[];
   expectedPathImages?: ImageResource[];
   expectedPathImagesDetailed?: MarketStructureAnalysisImage[];
   expectedPathAnalysis?: string;
@@ -200,6 +219,7 @@ export type CreateTradeDto = {
   entryReason?: string;
   entryAnalysisImages?: ImageResource[];
   entryAnalysisImagesDetailed?: MarketStructureAnalysisImage[];
+  followedSystemStrictly?: boolean;
   exitReason?: string;
   earlyExitReason?: string;
   mentalityNotes?: string;
@@ -301,6 +321,20 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
       riskRewardCheck: !!value.riskRewardCheck,
     };
   };
+  const normalizeTags = (value?: unknown): string[] | undefined => {
+    if (!value) return undefined;
+    const raw =
+      typeof value === "string"
+        ? value.split(/[,，]/)
+        : Array.isArray(value)
+          ? value
+          : [];
+    const tags = raw
+      .map((item) => `${item}`.trim())
+      .filter((item) => item.length > 0);
+    if (tags.length === 0) return undefined;
+    return Array.from(new Set(tags));
+  };
 
   return {
     analysisTime: form.analysisTime,
@@ -321,6 +355,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     marketStructureAnalysis: form.marketStructureAnalysis || "",
     preEntrySummary: form.preEntrySummary,
     preEntrySummaryImportance: parseNum(form.preEntrySummaryImportance),
+    tradeTags: normalizeTags(form.tradeTags),
     expectedPathImages: asImageArray(form.expectedPathImages),
     expectedPathImagesDetailed: asMarketStructureImages(
       form.expectedPathImagesDetailed,
@@ -350,6 +385,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     entryAnalysisImagesDetailed: asMarketStructureImages(
       form.entryAnalysisImagesDetailed,
     ),
+    followedSystemStrictly: form.followedSystemStrictly,
     exitReason: form.exitReason,
     earlyExitReason: form.earlyExitReason,
     mentalityNotes: form.mentalityNotes,

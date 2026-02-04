@@ -12,6 +12,7 @@ import {
   ANALYSIS_PERIOD_PRESETS,
   ChecklistState,
   TRADE_PERIOD_PRESETS,
+  TRADE_TAG_PRESETS,
   TradeStatus,
   entryDirectionOptions,
   marketStructureOptions,
@@ -60,6 +61,107 @@ interface EntryPlan {
   entryReason?: string;
   entrySignal?: string;
   exitSignal?: string;
+}
+
+function TagInput({
+  value,
+  onChange,
+  presets,
+  readOnly,
+  placeholder,
+}: {
+  value?: string[];
+  onChange: (value: string[]) => void;
+  presets: readonly string[];
+  readOnly?: boolean;
+  placeholder?: string;
+}) {
+  const listId = React.useId();
+  const [inputValue, setInputValue] = React.useState("");
+  const tags = value ?? [];
+  const maxTags = 3;
+
+  const addTags = React.useCallback(
+    (raw: string) => {
+      if (readOnly) return;
+      const items = raw
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+      if (items.length === 0) return;
+      const next = [...tags];
+      items.forEach((item) => {
+        if (next.length >= maxTags) return;
+        if (!next.includes(item)) {
+          next.push(item);
+        }
+      });
+      if (next.length === tags.length) {
+        setInputValue("");
+        return;
+      }
+      onChange(next);
+      setInputValue("");
+    },
+    [onChange, readOnly, tags],
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-white/10 bg-transparent px-3 py-2">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-foreground"
+          >
+            {tag}
+            {!readOnly && (
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => onChange(tags.filter((item) => item !== tag))}
+                aria-label={`移除标签 ${tag}`}
+              >
+                ×
+              </button>
+            )}
+          </span>
+        ))}
+        <input
+          readOnly={readOnly || tags.length >= maxTags}
+          list={listId}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              addTags(inputValue);
+            }
+          }}
+          onBlur={() => addTags(inputValue)}
+          placeholder={tags.length >= maxTags ? "最多 3 个标签" : placeholder}
+          className="min-w-[120px] flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+      {!readOnly && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => addTags(inputValue)}
+          disabled={tags.length >= maxTags}
+          className="w-fit border-white/10"
+        >
+          添加
+        </Button>
+      )}
+      <datalist id={listId}>
+        {presets.map((preset) => (
+          <option key={preset} value={preset} />
+        ))}
+      </datalist>
+    </div>
+  );
 }
 
 function EntryPlanForm({
@@ -451,6 +553,19 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 {errors.tradeSubject}
               </p>
             )}
+          </div>
+          {/* 交易标签 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              交易标签:
+            </label>
+            <TagInput
+              value={form.tradeTags}
+              onChange={(tags) => handleFormUpdate({ tradeTags: tags })}
+              presets={TRADE_TAG_PRESETS}
+              readOnly={analyzedSection.readOnly}
+              placeholder="输入后回车添加，或从建议中选择"
+            />
           </div>
           {/* 交易类型 */}
           <div className="col-span-2">
@@ -965,6 +1080,55 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
+          {/* 是否遵守交易系统 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              是否遵守交易系统
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseSelect
+              {...enteredSection.selectProps}
+              name="followedSystemStrictly"
+              value={
+                form.followedSystemStrictly === true
+                  ? "true"
+                  : form.followedSystemStrictly === false
+                    ? "false"
+                    : ""
+              }
+              onValueChange={(value) => {
+                const boolValue = value === "true";
+                handleFormUpdate({ followedSystemStrictly: boolValue });
+                setErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors["followedSystemStrictly"];
+                  return newErrors;
+                });
+              }}
+            >
+              <SelectTrigger
+                className={`w-full ${
+                  errors.followedSystemStrictly ? "border-destructive" : ""
+                }`}
+              >
+                <SelectValue placeholder="选择 是否遵守交易系统" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">是</SelectItem>
+                <SelectItem value="false">否</SelectItem>
+              </SelectContent>
+            </BaseSelect>
+            {errors.followedSystemStrictly && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.followedSystemStrictly}
+              </p>
+            )}
+          </div>
           {/* 入场理由 */}
           <div className="col-span-3">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1062,6 +1226,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
+
           {/* 入场分析图 */}
           <div className="col-span-full">
             <MarketStructureAnalysisImages
@@ -1513,6 +1678,13 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
         if (!form.takeProfit) {
           newErrors.takeProfit = "止盈点为必填项";
+        }
+
+        if (
+          form.followedSystemStrictly !== true &&
+          form.followedSystemStrictly !== false
+        ) {
+          newErrors.followedSystemStrictly = "是否遵守交易系统为必填项";
         }
       }
 

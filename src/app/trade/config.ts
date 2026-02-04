@@ -123,6 +123,7 @@ export const TRADE_PERIOD_PRESETS = [
   "BTC/USDT",
   "ETH/USDT",
 ] as const;
+export const TRADE_TAG_PRESETS = ["头脑发热", "严谨", "交易系统v1"] as const;
 /**
  * Trade 前端完整类型定义，对齐后端 CreateTradeDto
  */
@@ -140,6 +141,7 @@ export type Trade = {
   preEntrySummary?: string;
   preEntrySummaryImportance?: number;
   signalType?: string;
+  tradeTags?: string[];
 
   // 图片相关（用数组类型）
   volumeProfileImages?: ImageResource[]; // 旧字段
@@ -171,6 +173,7 @@ export type Trade = {
   entryReason?: string;
   entryAnalysisImages?: ImageResource[]; // 旧字段
   entryAnalysisImagesDetailed?: MarketStructureAnalysisImage[]; // 新字段
+  followedSystemStrictly?: boolean;
 
   // 离场分析及复盘
   exitPrice?: string;
