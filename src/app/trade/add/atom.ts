@@ -11,7 +11,7 @@ export const formInitialState: FormState = {
   analysisTime: new Date().toISOString(), // 默认设置当前时间
   status: undefined,
   marketStructure: undefined,
-  volumeProfileImages: [],
+  trendAnalysisImages: [],
   expectedPathImages: [],
   entryAnalysisImages: [],
   entryPlanA: { entryReason: "", entrySignal: "", exitSignal: "" },

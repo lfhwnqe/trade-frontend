@@ -3,7 +3,12 @@
 import * as React from "react";
 import { DateCalendarPicker } from "../../../../components/common/DateCalendarPicker";
 import { ImageUploader } from "../../../../components/common/ImageUploader";
-import type { ImageResource, Trade } from "../../config";
+import { MarketStructureAnalysisImages } from "./MarketStructureAnalysisImages";
+import type {
+  ImageResource,
+  MarketStructureAnalysisImage,
+  Trade,
+} from "../../config";
 import {
   ANALYSIS_PERIOD_PRESETS,
   ChecklistState,
@@ -281,6 +286,50 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       !!form.status &&
       statusRank[form.status] >= statusRank[TradeStatus.WAITING];
 
+    const marketStructureImages = React.useMemo(() => {
+      const raw = form.trendAnalysisImages;
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .map((item) => {
+          if (!item || typeof item !== "object") return null;
+          if ("image" in item) {
+            const image = (item as { image?: ImageResource }).image;
+            if (
+              !image ||
+              typeof image.url !== "string" ||
+              typeof image.key !== "string"
+            ) {
+              return null;
+            }
+            const title =
+              "title" in item && typeof item.title === "string"
+                ? item.title
+                : "";
+            const analysis =
+              "analysis" in item && typeof item.analysis === "string"
+                ? item.analysis
+                : "";
+            return { image, title, analysis };
+          }
+          if ("url" in item && "key" in item) {
+            const url =
+              typeof (item as { url?: unknown }).url === "string"
+                ? (item as { url: string }).url
+                : "";
+            const key =
+              typeof (item as { key?: unknown }).key === "string"
+                ? (item as { key: string }).key
+                : "";
+            if (!url || !key) return null;
+            return { image: { url, key }, title: "", analysis: "" };
+          }
+          return null;
+        })
+        .filter(
+          (item): item is MarketStructureAnalysisImage => item !== null,
+        );
+    }, [form.trendAnalysisImages]);
+
     const analysisSectionBlock = shouldShowSection(TradeStatus.ANALYZED) ? (
       <section className="space-y-2">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
@@ -494,21 +543,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           </div>
           {/* 成交量分布图 */}
           <div className="col-span-3">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              市场结构分析图：
-            </label>
-            <ImageUploader
-              disabled={analyzedSection.readOnly}
-              value={
-                Array.isArray(form.volumeProfileImages) &&
-                (form.volumeProfileImages as unknown[]).every(
-                  (v) => typeof v === "object" && v !== null && "url" in v,
-                )
-                  ? (form.volumeProfileImages as unknown as ImageResource[])
-                  : []
-              }
-              onChange={(imgs) =>
-                handleImageChange("volumeProfileImages", imgs)
+            <MarketStructureAnalysisImages
+              readOnly={analyzedSection.readOnly}
+              value={marketStructureImages}
+              onChange={(items) =>
+                handleFormUpdate({ trendAnalysisImages: items })
               }
               max={10}
             />

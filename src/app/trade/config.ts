@@ -72,6 +72,12 @@ export interface ImageResource {
   url: string;
 }
 
+export interface MarketStructureAnalysisImage {
+  image: ImageResource;
+  title: string;
+  analysis: string;
+}
+
 export interface EntryPlan {
   entryReason?: string;
   entrySignal?: string;
@@ -136,7 +142,7 @@ export type Trade = {
   signalType?: string;
 
   // 图片相关（用数组类型）
-  volumeProfileImages?: ImageResource[];
+  trendAnalysisImages?: MarketStructureAnalysisImage[];
   expectedPathImages?: ImageResource[];
   expectedPathAnalysis?: string;
   actualPathImages?: ImageResource[];

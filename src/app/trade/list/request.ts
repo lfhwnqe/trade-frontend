@@ -9,6 +9,7 @@ import type {
   TradeQuery,
   MarketStructure,
   ImageResource,
+  MarketStructureAnalysisImage,
 } from "../config";
 
 // 允许的图片类型
@@ -173,7 +174,7 @@ export type CreateTradeDto = {
   // ===== 入场前分析 =====
   analysisTime?: string;
   analysisPeriod?: string;
-  volumeProfileImages: ImageResource[];
+  trendAnalysisImages: MarketStructureAnalysisImage[];
   tradeSubject: string;
   keyPriceLevels?: string;
   marketStructure: MarketStructure;
@@ -241,6 +242,48 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
           (x) => x && typeof x.url === "string" && typeof x.key === "string"
         )
       : [];
+  const asMarketStructureImages = (
+    val?: unknown,
+  ): MarketStructureAnalysisImage[] =>
+    Array.isArray(val)
+      ? val
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            if ("image" in item) {
+              const image = (item as { image?: ImageResource }).image;
+              if (
+                !image ||
+                typeof image.url !== "string" ||
+                typeof image.key !== "string"
+              ) {
+                return null;
+              }
+              const title =
+                "title" in item && typeof item.title === "string"
+                  ? item.title
+                  : "";
+              const analysis =
+                "analysis" in item && typeof item.analysis === "string"
+                  ? item.analysis
+                  : "";
+              return { image, title, analysis };
+            }
+            if ("url" in item && "key" in item) {
+              const url =
+                typeof (item as { url?: unknown }).url === "string"
+                  ? (item as { url: string }).url
+                  : "";
+              const key =
+                typeof (item as { key?: unknown }).key === "string"
+                  ? (item as { key: string }).key
+                  : "";
+              if (!url || !key) return null;
+              return { image: { url, key }, title: "", analysis: "" };
+            }
+            return null;
+          })
+          .filter((item): item is MarketStructureAnalysisImage => !!item)
+      : [];
   const normalizeChecklist = (value?: ChecklistState) => {
     if (!value) {
       return undefined;
@@ -262,7 +305,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     status: form.status!,
     // ===== 入场前分析 =====
     tradeSubject: form.tradeSubject!,
-    volumeProfileImages: asImageArray(form.volumeProfileImages),
+    trendAnalysisImages: asMarketStructureImages(form.trendAnalysisImages),
     keyPriceLevels: form.keyPriceLevels,
     marketStructure: form.marketStructure!,
     marketStructureAnalysis: form.marketStructureAnalysis || "",

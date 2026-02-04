@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@200..700&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -33,6 +34,14 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-obsidian: #000000;
+  --color-charcoal: #0f0f10;
+  --color-charcoal-lighter: #18181b;
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-surface: rgba(20, 20, 20, 0.6);
+  --color-text-main: #ededed;
+  --color-text-muted: #a1a1aa;
+  --color-input-bg: #09090b;
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -139,5 +148,36 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  .material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .input-recessed {
+    background-color: #050505;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #e5e5e5;
+    transition: all 0.2s ease;
+  }
+  .input-recessed:focus {
+    background-color: #0a0a0a;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
   }
 }
