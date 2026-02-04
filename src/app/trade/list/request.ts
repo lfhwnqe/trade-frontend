@@ -174,7 +174,9 @@ export type CreateTradeDto = {
   // ===== 入场前分析 =====
   analysisTime?: string;
   analysisPeriod?: string;
-  trendAnalysisImages: MarketStructureAnalysisImage[];
+  volumeProfileImages?: ImageResource[];
+  marketStructureAnalysisImages?: MarketStructureAnalysisImage[];
+  trendAnalysisImages?: MarketStructureAnalysisImage[];
   tradeSubject: string;
   keyPriceLevels?: string;
   marketStructure: MarketStructure;
@@ -182,6 +184,7 @@ export type CreateTradeDto = {
   preEntrySummary?: string;
   preEntrySummaryImportance?: number;
   expectedPathImages?: ImageResource[];
+  expectedPathImagesDetailed?: MarketStructureAnalysisImage[];
   expectedPathAnalysis?: string;
   entryPlanA: EntryPlan;
   entryPlanB?: EntryPlan;
@@ -196,6 +199,7 @@ export type CreateTradeDto = {
   takeProfit?: number;
   entryReason?: string;
   entryAnalysisImages?: ImageResource[];
+  entryAnalysisImagesDetailed?: MarketStructureAnalysisImage[];
   exitReason?: string;
   earlyExitReason?: string;
   mentalityNotes?: string;
@@ -207,11 +211,13 @@ export type CreateTradeDto = {
   followedPlan?: boolean;
   followedPlanId?: string;
   actualPathImages?: ImageResource[];
+  actualPathImagesDetailed?: MarketStructureAnalysisImage[];
   actualPathAnalysis?: string;
   remarks?: string;
   lessonsLearned?: string;
   lessonsLearnedImportance?: number;
   analysisImages?: ImageResource[];
+  analysisImagesDetailed?: MarketStructureAnalysisImage[];
 
   // ===== 基础字段 =====
   profitLossPercentage?: number;
@@ -305,6 +311,10 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     status: form.status!,
     // ===== 入场前分析 =====
     tradeSubject: form.tradeSubject!,
+    volumeProfileImages: asImageArray(form.volumeProfileImages),
+    marketStructureAnalysisImages: asMarketStructureImages(
+      form.marketStructureAnalysisImages,
+    ),
     trendAnalysisImages: asMarketStructureImages(form.trendAnalysisImages),
     keyPriceLevels: form.keyPriceLevels,
     marketStructure: form.marketStructure!,
@@ -312,6 +322,9 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     preEntrySummary: form.preEntrySummary,
     preEntrySummaryImportance: parseNum(form.preEntrySummaryImportance),
     expectedPathImages: asImageArray(form.expectedPathImages),
+    expectedPathImagesDetailed: asMarketStructureImages(
+      form.expectedPathImagesDetailed,
+    ),
     expectedPathAnalysis: form.expectedPathAnalysis,
     entryPlanA: form.entryPlanA ?? {
       entryReason: "",
@@ -334,6 +347,9 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     takeProfit: parseNum(form.takeProfit),
     entryReason: form.entryReason,
     entryAnalysisImages: asImageArray(form.entryAnalysisImages),
+    entryAnalysisImagesDetailed: asMarketStructureImages(
+      form.entryAnalysisImagesDetailed,
+    ),
     exitReason: form.exitReason,
     earlyExitReason: form.earlyExitReason,
     mentalityNotes: form.mentalityNotes,
@@ -349,11 +365,17 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     analysisExpired: !!form.analysisExpired,
     followedPlanId: form.followedPlanId,
     actualPathImages: asImageArray(form.actualPathImages),
+    actualPathImagesDetailed: asMarketStructureImages(
+      form.actualPathImagesDetailed,
+    ),
     actualPathAnalysis: form.actualPathAnalysis,
     remarks: form.remarks,
     lessonsLearned: form.lessonsLearned,
     lessonsLearnedImportance: parseNum(form.lessonsLearnedImportance),
     analysisImages: asImageArray(form.analysisImages),
+    analysisImagesDetailed: asMarketStructureImages(
+      form.analysisImagesDetailed,
+    ),
 
     // ===== 计算字段/可选 =====
     profitLossPercentage: parseNum(form.profitLossPercentage),

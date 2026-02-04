@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { DateCalendarPicker } from "../../../../components/common/DateCalendarPicker";
-import { ImageUploader } from "../../../../components/common/ImageUploader";
 import { MarketStructureAnalysisImages } from "./MarketStructureAnalysisImages";
 import type {
   ImageResource,
@@ -286,49 +285,100 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       !!form.status &&
       statusRank[form.status] >= statusRank[TradeStatus.WAITING];
 
-    const marketStructureImages = React.useMemo(() => {
-      const raw = form.trendAnalysisImages;
-      if (!Array.isArray(raw)) return [];
-      return raw
-        .map((item) => {
-          if (!item || typeof item !== "object") return null;
-          if ("image" in item) {
-            const image = (item as { image?: ImageResource }).image;
-            if (
-              !image ||
-              typeof image.url !== "string" ||
-              typeof image.key !== "string"
-            ) {
-              return null;
+    const normalizeMarketStructureImages = React.useCallback(
+      (raw?: unknown): MarketStructureAnalysisImage[] => {
+        if (!Array.isArray(raw)) return [];
+        return raw
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            if ("image" in item) {
+              const image = (item as { image?: ImageResource }).image;
+              if (
+                !image ||
+                typeof image.url !== "string" ||
+                typeof image.key !== "string"
+              ) {
+                return null;
+              }
+              const title =
+                "title" in item && typeof item.title === "string"
+                  ? item.title
+                  : "";
+              const analysis =
+                "analysis" in item && typeof item.analysis === "string"
+                  ? item.analysis
+                  : "";
+              return { image, title, analysis };
             }
-            const title =
-              "title" in item && typeof item.title === "string"
-                ? item.title
-                : "";
-            const analysis =
-              "analysis" in item && typeof item.analysis === "string"
-                ? item.analysis
-                : "";
-            return { image, title, analysis };
-          }
-          if ("url" in item && "key" in item) {
-            const url =
-              typeof (item as { url?: unknown }).url === "string"
-                ? (item as { url: string }).url
-                : "";
-            const key =
-              typeof (item as { key?: unknown }).key === "string"
-                ? (item as { key: string }).key
-                : "";
-            if (!url || !key) return null;
-            return { image: { url, key }, title: "", analysis: "" };
-          }
-          return null;
-        })
-        .filter(
-          (item): item is MarketStructureAnalysisImage => item !== null,
-        );
-    }, [form.trendAnalysisImages]);
+            if ("url" in item && "key" in item) {
+              const url =
+                typeof (item as { url?: unknown }).url === "string"
+                  ? (item as { url: string }).url
+                  : "";
+              const key =
+                typeof (item as { key?: unknown }).key === "string"
+                  ? (item as { key: string }).key
+                  : "";
+              if (!url || !key) return null;
+              return { image: { url, key }, title: "", analysis: "" };
+            }
+            return null;
+          })
+          .filter(
+            (item): item is MarketStructureAnalysisImage => item !== null,
+          );
+      },
+      [],
+    );
+
+    const marketStructureImages = React.useMemo(
+      () =>
+        normalizeMarketStructureImages(
+          form.marketStructureAnalysisImages ?? form.volumeProfileImages,
+        ),
+      [
+        form.marketStructureAnalysisImages,
+        form.volumeProfileImages,
+        normalizeMarketStructureImages,
+      ],
+    );
+    const trendAnalysisImages = React.useMemo(
+      () => normalizeMarketStructureImages(form.trendAnalysisImages),
+      [form.trendAnalysisImages, normalizeMarketStructureImages],
+    );
+    const expectedPathImages = React.useMemo(
+      () =>
+        normalizeMarketStructureImages(
+          form.expectedPathImagesDetailed ?? form.expectedPathImages,
+        ),
+      [
+        form.expectedPathImagesDetailed,
+        form.expectedPathImages,
+        normalizeMarketStructureImages,
+      ],
+    );
+    const actualPathImages = React.useMemo(
+      () =>
+        normalizeMarketStructureImages(
+          form.actualPathImagesDetailed ?? form.actualPathImages,
+        ),
+      [
+        form.actualPathImagesDetailed,
+        form.actualPathImages,
+        normalizeMarketStructureImages,
+      ],
+    );
+    const entryAnalysisImages = React.useMemo(
+      () =>
+        normalizeMarketStructureImages(
+          form.entryAnalysisImagesDetailed ?? form.entryAnalysisImages,
+        ),
+      [
+        form.entryAnalysisImagesDetailed,
+        form.entryAnalysisImages,
+        normalizeMarketStructureImages,
+      ],
+    );
 
     const analysisSectionBlock = shouldShowSection(TradeStatus.ANALYZED) ? (
       <section className="space-y-2">
@@ -546,29 +596,35 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <MarketStructureAnalysisImages
               readOnly={analyzedSection.readOnly}
               value={marketStructureImages}
+              label="市场结构分析图："
               onChange={(items) =>
-                handleFormUpdate({ trendAnalysisImages: items })
+                handleFormUpdate({ marketStructureAnalysisImages: items })
               }
               max={10}
             />
           </div>
           {/* 假设路径图 */}
           <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              假设路径图：
-            </label>
-            <ImageUploader
-              disabled={analyzedSection.readOnly}
-              value={
-                Array.isArray(form.expectedPathImages) &&
-                (form.expectedPathImages as unknown[]).every(
-                  (v) => typeof v === "object" && v !== null && "url" in v,
-                )
-                  ? (form.expectedPathImages as unknown as ImageResource[])
-                  : []
+            <MarketStructureAnalysisImages
+              readOnly={analyzedSection.readOnly}
+              value={expectedPathImages}
+              label="假设路径图："
+              onChange={(items) =>
+                handleFormUpdate({ expectedPathImagesDetailed: items })
               }
-              onChange={(imgs) => handleImageChange("expectedPathImages", imgs)}
               max={5}
+            />
+          </div>
+          {/* 走势分析图 */}
+          <div className="col-span-3">
+            <MarketStructureAnalysisImages
+              readOnly={analyzedSection.readOnly}
+              value={trendAnalysisImages}
+              label="走势分析图："
+              onChange={(items) =>
+                handleFormUpdate({ trendAnalysisImages: items })
+              }
+              max={10}
             />
           </div>
         </div>
@@ -681,22 +737,15 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
             {/* 实际路径图 */}
             <div className="col-span-full">
-              <label className="block pb-1 text-sm font-medium text-muted-foreground">
-                实际路径图：
-              </label>
-              <ImageUploader
-                disabled={exitedSection.readOnly}
-                value={
-                  Array.isArray(form.actualPathImages) &&
-                  (form.actualPathImages as unknown[]).every(
-                    (v) => typeof v === "object" && v !== null && "url" in v,
-                  )
-                    ? (form.actualPathImages as unknown as ImageResource[])
-                    : []
-                }
-                onChange={(imgs) => handleImageChange("actualPathImages", imgs)}
-                max={10}
-              />
+            <MarketStructureAnalysisImages
+              readOnly={exitedSection.readOnly}
+              value={actualPathImages}
+              label="实际路径图："
+              onChange={(items) =>
+                handleFormUpdate({ actualPathImagesDetailed: items })
+              }
+              max={10}
+            />
             </div>
             {/* 实际路径复盘 */}
             <div className="col-span-3">
@@ -951,20 +1000,13 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           </div>
           {/* 入场分析图 */}
           <div className="col-span-3">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              入场分析图:
-            </label>
-            <ImageUploader
-              disabled={enteredSection.readOnly}
-              value={
-                Array.isArray(form.entryAnalysisImages) &&
-                (form.entryAnalysisImages as unknown[]).every(
-                  (v) => typeof v === "object" && v !== null && "url" in v,
-                )
-                  ? (form.entryAnalysisImages as unknown as ImageResource[])
-                  : []
+            <MarketStructureAnalysisImages
+              readOnly={enteredSection.readOnly}
+              value={entryAnalysisImages}
+              label="入场分析图："
+              onChange={(items) =>
+                handleFormUpdate({ entryAnalysisImagesDetailed: items })
               }
-              onChange={(imgs) => handleImageChange("entryAnalysisImages", imgs)}
               max={10}
             />
           </div>
@@ -1298,20 +1340,13 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           </div>
           {/* 实际路径图 */}
           <div className="col-span-full">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              实际路径图：
-            </label>
-            <ImageUploader
-              disabled={exitedSection.readOnly}
-              value={
-                Array.isArray(form.actualPathImages) &&
-                (form.actualPathImages as unknown[]).every(
-                  (v) => typeof v === "object" && v !== null && "url" in v,
-                )
-                  ? (form.actualPathImages as unknown as ImageResource[])
-                  : []
+            <MarketStructureAnalysisImages
+              readOnly={exitedSection.readOnly}
+              value={actualPathImages}
+              label="实际路径图："
+              onChange={(items) =>
+                handleFormUpdate({ actualPathImagesDetailed: items })
               }
-              onChange={(imgs) => handleImageChange("actualPathImages", imgs)}
               max={10}
             />
           </div>

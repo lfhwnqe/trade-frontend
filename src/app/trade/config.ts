@@ -142,11 +142,16 @@ export type Trade = {
   signalType?: string;
 
   // 图片相关（用数组类型）
-  trendAnalysisImages?: MarketStructureAnalysisImage[];
-  expectedPathImages?: ImageResource[];
+  volumeProfileImages?: ImageResource[]; // 旧字段
+  marketStructureAnalysisImages?: MarketStructureAnalysisImage[]; // 新字段
+  trendAnalysisImages?: MarketStructureAnalysisImage[]; // 新增字段
+  expectedPathImages?: ImageResource[]; // 旧字段
+  expectedPathImagesDetailed?: MarketStructureAnalysisImage[]; // 新字段
   expectedPathAnalysis?: string;
-  actualPathImages?: ImageResource[];
-  analysisImages?: ImageResource[];
+  actualPathImages?: ImageResource[]; // 旧字段
+  actualPathImagesDetailed?: MarketStructureAnalysisImage[]; // 新字段
+  analysisImages?: ImageResource[]; // 旧字段
+  analysisImagesDetailed?: MarketStructureAnalysisImage[]; // 新字段
 
   // 价格/价值区等
   keyPriceLevels?: string;
@@ -164,7 +169,8 @@ export type Trade = {
   stopLoss?: string;
   takeProfit?: string;
   entryReason?: string;
-  entryAnalysisImages?: ImageResource[];
+  entryAnalysisImages?: ImageResource[]; // 旧字段
+  entryAnalysisImagesDetailed?: MarketStructureAnalysisImage[]; // 新字段
 
   // 离场分析及复盘
   exitPrice?: string;

@@ -56,16 +56,21 @@ export function MarketStructureAnalysisImages({
   onChange,
   readOnly,
   max = 10,
+  label = "市场结构分析图：",
+  uploadTitle = "上传图片",
 }: {
   value: MarketStructureAnalysisImage[];
   onChange: (value: MarketStructureAnalysisImage[]) => void;
   readOnly?: boolean;
   max?: number;
+  label?: string;
+  uploadTitle?: string;
 }) {
   const [, errorAlert] = useAlert();
   const reachMax = !!max && value.length >= max;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const altText = label.replace(/[:：]\s*$/, "");
 
   const compressImage = useCallback(async (file: File): Promise<File> => {
     try {
@@ -246,7 +251,7 @@ export function MarketStructureAnalysisImages({
     >
       <div className="flex justify-between items-center mb-4">
         <label className="block pb-1 text-sm font-medium text-muted-foreground">
-          市场结构分析图：
+          {label}
         </label>
         <button
           type="button"
@@ -256,7 +261,7 @@ export function MarketStructureAnalysisImages({
           onClick={() => containerRef.current?.focus()}
           disabled={readOnly}
         >
-          <span className="material-symbols-outlined text-sm">add</span>
+          <CirclePlus className="h-4 w-4" />
           选择图片
         </button>
       </div>
@@ -280,16 +285,14 @@ export function MarketStructureAnalysisImages({
                   }}
                 >
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-text-muted group-hover:text-accent transition-colors z-10">
-                    <span className="material-symbols-outlined text-3xl mb-1">
-                      <ImageIcon className="h-6 w-6" />
-                    </span>
+                    <ImageIcon className="h-7 w-7 mb-1" />
                     <span className="text-[9px] uppercase tracking-wide opacity-60">
                       {loading ? "上传中" : "预览"}
                     </span>
                   </div>
                   {hasImage && (
                     <img
-                      alt="市场结构分析图"
+                      alt={altText}
                       className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
                       src={item.image.url}
                     />
@@ -348,27 +351,23 @@ export function MarketStructureAnalysisImages({
           } ${readOnly || reachMax ? "opacity-60 cursor-not-allowed" : ""}`}
         >
           <div className="h-10 w-10 rounded-full bg-black border border-glass-border flex items-center justify-center mb-2 group-hover:scale-110 transition-transform group-hover:border-accent/50">
-            <span className="material-symbols-outlined text-text-muted group-hover:text-accent transition-colors">
-              <ImageIcon className="h-6 w-6" />
-            </span>
+            <ImageIcon className="h-6 w-6 text-text-muted group-hover:text-accent transition-colors" />
           </div>
           <h4 className="text-xm font-medium text-white group-hover:text-accent transition-colors">
-            上传图片
+            {uploadTitle}
           </h4>
           <p className="text-[14px] text-text-muted mt-1">
             可拖拽图片到此处，或点击中间按钮选择（最多 {max} 张）
           </p>
           <button
             type="button"
-            className={`mt-3 text-[12px]  transition-colors uppercase tracking-wider font-semibold flex items-center gap-1 ${
+            className={`mt-3 text-[12px] transition-colors uppercase tracking-wider font-semibold flex items-center gap-1 ${
               readOnly || reachMax ? "opacity-50 cursor-not-allowed" : ""
             }`}
             onClick={() => !readOnly && !reachMax && open()}
             disabled={readOnly || reachMax}
           >
-            <span className="material-symbols-outlined">
-              <CirclePlus className="h-6 w-6" />
-            </span>
+            <CirclePlus className="h-6 w-6" />
             选择图片
           </button>
         </div>
