@@ -382,7 +382,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     );
 
     const analysisSectionBlock = shouldShowSection(TradeStatus.ANALYZED) ? (
-      <section className="space-y-2">
+      <section id="section-pre-entry-analysis" className="space-y-2 scroll-mt-24">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
           <span className="h-4 w-1 rounded-full bg-emerald-500" />
           入场前分析
@@ -652,7 +652,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     ) : null;
 
     const waitingPlanBlock = shouldShowSection(TradeStatus.WAITING) ? (
-      <section className="space-y-2">
+      <section id="section-entry-plan" className="space-y-2 scroll-mt-24">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
           <span className="h-4 w-1 rounded-full bg-emerald-500" />
           入场计划
@@ -697,7 +697,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
     const waitingChecklistBlock =
       showChecklist && shouldShowSection(TradeStatus.WAITING) ? (
-        <section className="space-y-2">
+        <section
+          id="section-pre-entry-checklist"
+          className="space-y-2 scroll-mt-24"
+        >
           <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
             <span className="h-4 w-1 rounded-full bg-emerald-500" />
             入场前检查
@@ -749,7 +752,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
     const analyzedNotEnteredSectionBlock =
       form.status === TradeStatus.ANALYZED_NOT_ENTERED ? (
-        <section className="space-y-2">
+        <section id="section-not-entered" className="space-y-2 scroll-mt-24">
           <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
             <span className="h-4 w-1 rounded-full bg-emerald-500" />
             未入场
@@ -826,7 +829,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       ) : null;
 
     const entrySectionBlock = shouldShowSection(TradeStatus.ENTERED) ? (
-      <section className="space-y-2">
+      <section id="section-entry-record" className="space-y-2 scroll-mt-24">
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
           <span className="h-4 w-1 rounded-full bg-emerald-500" />
           入场记录
@@ -1150,7 +1153,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     ) : null;
 
     const exitSectionBlock = shouldShowSection(TradeStatus.EXITED) ? (
-      <section className="space-y-2">
+      <section
+        id="section-post-exit-analysis"
+        className="space-y-2 scroll-mt-24"
+      >
         <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
           <span className="h-4 w-1 rounded-full bg-emerald-500" />
           离场后分析

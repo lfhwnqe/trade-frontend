@@ -182,6 +182,9 @@ export default function TradeAddPage({
   const [loading, setLoading] = useAtomImmer(loadingAtom);
   const [detailLoading, setDetailLoading] = useAtomImmer(detailLoadingAtom);
   const [shareLoading, setShareLoading] = useState(false);
+  const mainScrollRef = useRef<HTMLDivElement | null>(null);
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
+  const [activeTocId, setActiveTocId] = useState<string | null>(null);
   // 主体渲染，非弹窗模式而是全宽居中大表单
   const transactionId = searchParams.get("id");
   const detailId = detailIdProp ?? transactionId;
@@ -375,6 +378,108 @@ export default function TradeAddPage({
     formRef.current?.submit();
   }, [loading]);
 
+  const statusRank: Record<TradeStatus, number> = {
+    [TradeStatus.ANALYZED]: 1,
+    [TradeStatus.WAITING]: 2,
+    [TradeStatus.ANALYZED_NOT_ENTERED]: 2,
+    [TradeStatus.ENTERED]: 3,
+    [TradeStatus.EXITED]: 4,
+    [TradeStatus.EARLY_EXITED]: 4,
+  };
+  const currentRank = form.status ? statusRank[form.status] : 0;
+  const shouldShowSection = useCallback(
+    (target: TradeStatus) => currentRank >= statusRank[target],
+    [currentRank],
+  );
+  const tocSections = [
+    {
+      id: "section-pre-entry-analysis",
+      label: "入场前分析",
+      visible: shouldShowSection(TradeStatus.ANALYZED),
+    },
+    {
+      id: "section-entry-plan",
+      label: "入场计划",
+      visible: shouldShowSection(TradeStatus.WAITING),
+    },
+    {
+      id: "section-pre-entry-checklist",
+      label: "入场前检查",
+      visible: enableChecklist && shouldShowSection(TradeStatus.WAITING),
+    },
+    {
+      id: "section-not-entered",
+      label: "未入场",
+      visible: form.status === TradeStatus.ANALYZED_NOT_ENTERED,
+    },
+    {
+      id: "section-entry-record",
+      label: "入场记录",
+      visible: shouldShowSection(TradeStatus.ENTERED),
+    },
+    {
+      id: "section-post-exit-analysis",
+      label: "离场后分析",
+      visible: shouldShowSection(TradeStatus.EXITED),
+    },
+  ].filter((section) => section.visible);
+
+  useEffect(() => {
+    if (tocSections.length === 0) {
+      setActiveTocId(null);
+      return;
+    }
+
+    const container = contentScrollRef.current;
+    if (!container) return;
+
+    const targets = tocSections
+      .map((item) => document.getElementById(item.id))
+      .filter(Boolean) as HTMLElement[];
+
+    if (targets.length === 0) return;
+
+    const getTargetTop = (target: HTMLElement) => {
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      return targetRect.top - containerRect.top + container.scrollTop;
+    };
+
+    let rafId = 0;
+    const updateActive = () => {
+      const scrollTop = container.scrollTop;
+      const offset = 120;
+      const orderedTargets = [...targets].sort(
+        (a, b) => getTargetTop(a) - getTargetTop(b),
+      );
+      let currentId = orderedTargets[0].id;
+      for (const target of orderedTargets) {
+        if (getTargetTop(target) <= scrollTop + offset) {
+          currentId = target.id;
+        } else {
+          break;
+        }
+      }
+      setActiveTocId(currentId);
+      rafId = 0;
+    };
+
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(updateActive);
+    };
+
+    updateActive();
+    container.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      if (rafId) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [tocSections]);
+
   const pageTitle = readOnly ? "交易详情" : "新增/编辑交易记录";
   const displayId = form.transactionId ?? detailId;
   const shareId = form.shareId;
@@ -440,11 +545,25 @@ export default function TradeAddPage({
     }
   }, [shareUrl, success, errorAlert]);
 
+  const handleTocClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+      event.preventDefault();
+      const container = contentScrollRef.current;
+      const target = document.getElementById(id);
+      if (!container || !target) return;
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const offsetTop = targetRect.top - containerRect.top + container.scrollTop;
+      container.scrollTo({ top: Math.max(offsetTop - 16, 0), behavior: "smooth" });
+    },
+    [],
+  );
+
   return (
     <Suspense fallback={<div>加载中...</div>}>
       <div
         className={
-          "relative min-h-screen bg-[#000000] text-[#ededed] antialiased " +
+          "relative min-h-screen h-screen flex flex-col overflow-hidden bg-[#000000] text-[#ededed] antialiased " +
           (className ?? "")
         }
       >
@@ -454,7 +573,7 @@ export default function TradeAddPage({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.04),transparent_45%)]" />
         </div>
 
-        <header className="sticky top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
+        <header className="shrink-0 border-b border-white/10 bg-black/80 backdrop-blur-xl">
           <div className="mx-auto flex h-16 max-w-full items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="hidden items-center rounded-full border border-white/10 bg-black/40 p-1 md:flex">
               {tradeStatusOptions.map((option) => {
@@ -507,160 +626,226 @@ export default function TradeAddPage({
           </div>
         </header>
 
-        <main className="relative z-10 mx-auto w-full max-w-full space-y-6 px-4 py-10 sm:px-6 lg:px-8">
-          <div className="md:hidden">
-            <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#a1a1aa]">
-              Trade Status
-            </label>
-            <div className="relative">
-              <select
-                className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#6366f1] focus:ring-[#6366f1]"
-                value={(form.status as string) ?? ""}
-                onChange={(event) =>
-                  handleSelectChange("status", event.target.value)
-                }
+        <main
+          ref={mainScrollRef}
+          className="relative z-10 mx-auto w-full max-w-full flex-1 min-h-0 overflow-hidden px-4 py-10 sm:px-6 lg:px-8"
+        >
+          <div className="relative h-full min-h-0 xl:grid xl:grid-cols-[minmax(0,1fr)_16rem] xl:gap-6">
+            <div className="min-w-0 h-full min-h-0">
+              <div
+                ref={contentScrollRef}
+                className="h-full min-h-0 overflow-y-auto pr-2 space-y-6"
               >
-                {tradeStatusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#a1a1aa]">
-                <span className="text-sm">▾</span>
+              <div className="md:hidden">
+                <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#a1a1aa]">
+                  Trade Status
+                </label>
+                <div className="relative">
+                  <select
+                    className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#6366f1] focus:ring-[#6366f1]"
+                    value={(form.status as string) ?? ""}
+                    onChange={(event) =>
+                      handleSelectChange("status", event.target.value)
+                    }
+                  >
+                    {tradeStatusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#a1a1aa]">
+                    <span className="text-sm">▾</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
-            {/* <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl"> */}
-            <div>
-              <h2 className="text-lg font-semibold text-white">{pageTitle}</h2>
-              <p className="mt-1 text-xs font-mono text-[#a1a1aa]">
-                交易 ID: {displayId ? `#${displayId}` : "新交易"}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              {showShareControls && (
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl  bg-black/40 px-3 py-2">
-                  {isShareable && shareId ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={shareLoading}
-                        onClick={handleCloseShare}
-                        className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
-                      >
-                        关闭分享
-                      </Button>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#a1a1aa]">分享链接</span>
-                        <input
-                          readOnly
-                          value={shareUrl}
-                          className="w-[220px] truncate rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-xs text-white"
-                        />
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+                {/* <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl"> */}
+                <div>
+                  <h2 className="text-lg font-semibold text-white">
+                    {pageTitle}
+                  </h2>
+                  <p className="mt-1 text-xs font-mono text-[#a1a1aa]">
+                    交易 ID: {displayId ? `#${displayId}` : "新交易"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {showShareControls && (
+                    <div className="flex flex-wrap items-center gap-2 rounded-2xl  bg-black/40 px-3 py-2">
+                      {isShareable && shareId ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={shareLoading}
+                            onClick={handleCloseShare}
+                            className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+                          >
+                            关闭分享
+                          </Button>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-[#a1a1aa]">
+                              分享链接
+                            </span>
+                            <input
+                              readOnly
+                              value={shareUrl}
+                              className="w-[220px] truncate rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-xs text-white"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={!shareUrl}
+                              onClick={handleCopyShareUrl}
+                              className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+                            >
+                              复制
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
                         <Button
                           type="button"
                           variant="outline"
-                          disabled={!shareUrl}
-                          onClick={handleCopyShareUrl}
+                          disabled={shareLoading}
+                          onClick={handleShare}
                           className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
                         >
-                          复制
+                          生成分享链接
                         </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={shareLoading}
-                      onClick={handleShare}
-                      className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
-                    >
-                      生成分享链接
-                    </Button>
+                      )}
+                    </div>
                   )}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        查看 Checklist
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent
+                      side="right"
+                      className="border-white/10 bg-[#0b0b0c] text-[#ededed]"
+                    >
+                      <SheetHeader className="border-b border-white/10 px-6 py-5">
+                        <SheetTitle className="text-base text-white">
+                          交易执行 Checklist
+                        </SheetTitle>
+                      </SheetHeader>
+                      <div className="space-y-6 overflow-y-auto px-6 pb-8 pt-4 text-sm">
+                        {checklistSections.map((section) => (
+                          <div key={section.title} className="space-y-3">
+                            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
+                              {section.title}
+                            </h3>
+                            <div className="space-y-3">
+                              {section.items.map((item) => (
+                                <div
+                                  key={item.title}
+                                  className="rounded-xl border border-white/10 bg-white/5 p-3"
+                                >
+                                  <div className="text-sm font-semibold text-white">
+                                    {item.title}
+                                  </div>
+                                  <ul className="mt-2 space-y-1 text-xs text-[#cbd5f5]">
+                                    {item.bullets.map((bullet) => (
+                                      <li key={bullet} className="flex gap-2">
+                                        <span className="mt-0.5 text-emerald-400">
+                                          ▸
+                                        </span>
+                                        <span>{bullet}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </div>
+
+              <TradeFormDialog
+                ref={formRef}
+                editTrade={transactionId ? form : null}
+                form={form}
+                handleChange={handleChange}
+                handleSelectChange={handleSelectChange}
+                handleDateRangeChange={handleDateRangeChange}
+                handleImageChange={handleImageChange}
+                handlePlanChange={handlePlanChange}
+                handleSubmit={handleSubmit}
+                updateForm={updateForm}
+                loading={loading}
+                readOnly={readOnly}
+                showChecklist={enableChecklist}
+                formMode="distributed"
+              />
+              {(loading || detailLoading) && (
+                <div className="text-center text-sm text-[#a1a1aa]">
+                  {loading ? "保存中..." : "加载详情中..."}
                 </div>
               )}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
-                  >
-                    查看 Checklist
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  side="right"
-                  className="border-white/10 bg-[#0b0b0c] text-[#ededed]"
-                >
-                  <SheetHeader className="border-b border-white/10 px-6 py-5">
-                    <SheetTitle className="text-base text-white">
-                      交易执行 Checklist
-                    </SheetTitle>
-                  </SheetHeader>
-                  <div className="space-y-6 overflow-y-auto px-6 pb-8 pt-4 text-sm">
-                    {checklistSections.map((section) => (
-                      <div key={section.title} className="space-y-3">
-                        <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
-                          {section.title}
-                        </h3>
-                        <div className="space-y-3">
-                          {section.items.map((item) => (
-                            <div
-                              key={item.title}
-                              className="rounded-xl border border-white/10 bg-white/5 p-3"
-                            >
-                              <div className="text-sm font-semibold text-white">
-                                {item.title}
-                              </div>
-                              <ul className="mt-2 space-y-1 text-xs text-[#cbd5f5]">
-                                {item.bullets.map((bullet) => (
-                                  <li key={bullet} className="flex gap-2">
-                                    <span className="mt-0.5 text-emerald-400">
-                                      ▸
-                                    </span>
-                                    <span>{bullet}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
+              </div>
             </div>
-          </div>
 
-          <TradeFormDialog
-            ref={formRef}
-            editTrade={transactionId ? form : null}
-            form={form}
-            handleChange={handleChange}
-            handleSelectChange={handleSelectChange}
-            handleDateRangeChange={handleDateRangeChange}
-            handleImageChange={handleImageChange}
-            handlePlanChange={handlePlanChange}
-            handleSubmit={handleSubmit}
-            updateForm={updateForm}
-            loading={loading}
-            readOnly={readOnly}
-            showChecklist={enableChecklist}
-            formMode="distributed"
-          />
-          {(loading || detailLoading) && (
-            <div className="text-center text-sm text-[#a1a1aa]">
-              {loading ? "保存中..." : "加载详情中..."}
-            </div>
-          )}
+            {tocSections.length > 0 && (
+              <aside
+                className="hidden xl:block w-64 shrink-0 relative"
+                data-purpose="table-of-contents"
+              >
+                <div className="sticky top-6 h-[calc(100vh-8rem)]">
+                  <div className="bg-black/40 backdrop-blur-sm border-l border-white/10 pl-6 py-2 h-full overflow-y-auto">
+                    <h4 className="text-xs font-bold text-[#a1a1aa] uppercase tracking-widest mb-4">
+                      Table of Contents
+                    </h4>
+                    <ul className="space-y-4">
+                      {tocSections.map((section, index) => {
+                        const isActive = activeTocId
+                          ? activeTocId === section.id
+                          : index === 0;
+                        return (
+                          <li key={section.id}>
+                            <a
+                              className={
+                                "flex items-center gap-3 text-xs font-medium uppercase tracking-widest group transition-colors " +
+                                (isActive
+                                  ? "text-emerald-300"
+                                  : "text-[#a1a1aa] hover:text-white")
+                              }
+                              href={`#${section.id}`}
+                              onClick={(event) =>
+                                handleTocClick(event, section.id)
+                              }
+                            >
+                              <span
+                                className={
+                                  "w-1.5 h-1.5 rounded-full transition-colors " +
+                                  (isActive
+                                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                                    : "bg-white/20 group-hover:bg-emerald-300")
+                                }
+                              />
+                              <span className="group-hover:translate-x-1 transition-transform">
+                                {section.label}
+                              </span>
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              </aside>
+            )}
+          </div>
 
           {/* {!readOnly && (
             <div className="flex items-center justify-end gap-4 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
