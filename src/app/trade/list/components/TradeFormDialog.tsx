@@ -437,7 +437,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               {...analyzedSection.inputProps}
               id="tradeSubject"
               name="tradeSubject"
-                list="trade-subject-presets"
+              list="trade-subject-presets"
               value={(form.tradeSubject as string) ?? ""}
               onChange={handleFormChange}
               className={errors.tradeSubject ? "border-destructive" : ""}
@@ -604,7 +604,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             />
           </div>
           {/* 假设路径图 */}
-          <div className="col-span-2">
+          <div className="col-span-3">
             <MarketStructureAnalysisImages
               readOnly={analyzedSection.readOnly}
               value={expectedPathImages}
@@ -737,15 +737,15 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-6 gap-y-4">
             {/* 实际路径图 */}
             <div className="col-span-full">
-            <MarketStructureAnalysisImages
-              readOnly={exitedSection.readOnly}
-              value={actualPathImages}
-              label="实际路径图："
-              onChange={(items) =>
-                handleFormUpdate({ actualPathImagesDetailed: items })
-              }
-              max={10}
-            />
+              <MarketStructureAnalysisImages
+                readOnly={exitedSection.readOnly}
+                value={actualPathImages}
+                label="实际路径图："
+                onChange={(items) =>
+                  handleFormUpdate({ actualPathImagesDetailed: items })
+                }
+                max={10}
+              />
             </div>
             {/* 实际路径复盘 */}
             <div className="col-span-3">
@@ -998,18 +998,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
-          {/* 入场分析图 */}
-          <div className="col-span-3">
-            <MarketStructureAnalysisImages
-              readOnly={enteredSection.readOnly}
-              value={entryAnalysisImages}
-              label="入场分析图："
-              onChange={(items) =>
-                handleFormUpdate({ entryAnalysisImagesDetailed: items })
-              }
-              max={10}
-            />
-          </div>
+
           {/* 离场理由 */}
           <div className="col-span-3">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1073,6 +1062,18 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 {errors.mentalityNotes}
               </p>
             )}
+          </div>
+          {/* 入场分析图 */}
+          <div className="col-span-full">
+            <MarketStructureAnalysisImages
+              readOnly={enteredSection.readOnly}
+              value={entryAnalysisImages}
+              label="入场分析图："
+              onChange={(items) =>
+                handleFormUpdate({ entryAnalysisImagesDetailed: items })
+              }
+              max={10}
+            />
           </div>
         </div>
       </section>
