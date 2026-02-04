@@ -299,18 +299,17 @@ export default function TradeAddPage({
         saveModeRef.current = "redirect";
       }
     },
-    [form, router, transactionId, success, errorAlert, loading],
+    [form, router, transactionId, success, errorAlert, loading, setLoading],
   );
 
   // 字段变化处理
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
     setForm((draft) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       draft[name] =
         type === "number" ? (value === "" ? "" : Number(value)) : value;
     });
-  }, []);
+  }, [setForm]);
 
   // Select 类型变化
   const handleSelectChange = useCallback((key: keyof Trade, value: string) => {
@@ -318,7 +317,7 @@ export default function TradeAddPage({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       draft[key] = value as any;
     });
-  }, []);
+  }, [setForm]);
 
   // 时间区间/日期变化
   const handleDateRangeChange = useCallback(
@@ -332,7 +331,7 @@ export default function TradeAddPage({
           : undefined;
       });
     },
-    [],
+    [setForm],
   );
 
   // 图片
@@ -343,7 +342,7 @@ export default function TradeAddPage({
         draft[key] = value as any;
       });
     },
-    [],
+    [setForm],
   );
 
   // 计划字段
@@ -352,7 +351,7 @@ export default function TradeAddPage({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       draft[key] = value as any;
     });
-  }, []);
+  }, [setForm]);
 
   // 支持底层 updateForm 合并对象
   const updateForm = useCallback((patch: Partial<Trade>) => {
@@ -360,7 +359,7 @@ export default function TradeAddPage({
     setForm((draft) => {
       Object.assign(draft, patch);
     });
-  }, []);
+  }, [setForm]);
 
   const handleSaveStay = useCallback(() => {
     if (loading) return;

@@ -115,7 +115,7 @@ export default function TradeShell({
         role: user.role,
       }),
     );
-  }, [setUser, user.email, user.username]);
+  }, [setUser, user.email, user.username, user.role]);
 
   return (
     <div className="dark min-h-screen bg-black text-[#e5e7eb] antialiased selection:bg-emerald-500 selection:text-white flex">

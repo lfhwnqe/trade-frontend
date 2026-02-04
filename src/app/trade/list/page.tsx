@@ -85,7 +85,7 @@ export default function TradeListPage() {
 
   useEffect(() => {
     fetchAll(); // 页面加载时获取数据
-  }, []);
+  }, [fetchAll]);
 
   const formatDateTime = (value?: string) => {
     if (!value) return { date: "-", time: "-" };
@@ -415,7 +415,7 @@ export default function TradeListPage() {
         },
       },
     ],
-    [],
+    [router, setCopyId, setDeleteId],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {

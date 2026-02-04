@@ -170,7 +170,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       form,
       handleChange,
       handleSelectChange,
-      handleImageChange,
       handlePlanChange,
       handleSubmit,
       updateForm, // 默认为false

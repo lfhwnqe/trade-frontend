@@ -81,7 +81,7 @@ export function MarketStructureAnalysisImages({
         fileType: file.type,
       };
       return await imageCompression(file, options);
-    } catch (error) {
+    } catch {
       return file;
     }
   }, []);
