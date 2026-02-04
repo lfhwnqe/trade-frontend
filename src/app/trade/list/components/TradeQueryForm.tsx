@@ -375,7 +375,7 @@ export default function TradeQueryForm({
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
             className={cn(
-              "flex items-center gap-2 text-[#9ca3af] hover:text-emerald-300 transition-all duration-200",
+              "flex items-center gap-2 text-[#9ca3af] hover:text-[#00c2b2] transition-all duration-200",
               "transform hover:scale-105"
             )}
           >
@@ -394,7 +394,7 @@ export default function TradeQueryForm({
           <div className="flex gap-2">
             <Button
               type="submit"
-              className="w-16 h-8 font-medium text-sm bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 hover:scale-105 transition-transform duration-200"
+              className="w-16 h-8 font-medium text-sm bg-[#00c2b2]/20 text-[#00c2b2] border border-[#00c2b2]/30 hover:bg-[#00c2b2]/30 hover:scale-105 transition-transform duration-200"
               size="sm"
             >
               查询

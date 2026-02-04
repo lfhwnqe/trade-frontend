@@ -586,8 +586,8 @@ export default function TradeAddPage({
                     className={
                       "rounded-full px-4 py-1.5 text-xs font-medium transition-all cursor-pointer " +
                       (isActive
-                        ? "bg-emerald-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
-                        : "text-[#a1a1aa] hover:text-white")
+                        ? "bg-[#00c2b2] text-black shadow-[0_0_15px_rgba(0,194,178,0.45)]"
+                        : "text-[#a1a1aa] hover:text-[#00c2b2]")
                       // (isActive
                       //   ? "bg-emerald-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
                       //   : "text-[#a1a1aa] hover:text-white")
@@ -613,7 +613,7 @@ export default function TradeAddPage({
                   loading={loading}
                   editTrade={form}
                   errors={{}}
-                  className="bg-emerald-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#4f46e5] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)]"
+                  className="bg-[#00c2b2] text-black shadow-[0_0_20px_rgba(0,194,178,0.35)] transition-all hover:-translate-y-0.5 hover:bg-[#009e91] hover:shadow-[0_0_25px_rgba(0,194,178,0.5)]"
                   label="保存并返回列表"
                   onSubmit={() => {
                     // 直接调用表单组件的 submit 方法
@@ -642,7 +642,7 @@ export default function TradeAddPage({
                 </label>
                 <div className="relative">
                   <select
-                    className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#6366f1] focus:ring-[#6366f1]"
+                    className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#00c2b2] focus:ring-[#00c2b2]"
                     value={(form.status as string) ?? ""}
                     onChange={(event) =>
                       handleSelectChange("status", event.target.value)
@@ -817,8 +817,8 @@ export default function TradeAddPage({
                               className={
                                 "flex items-center gap-3 text-xs font-medium uppercase tracking-widest group transition-colors " +
                                 (isActive
-                                  ? "text-emerald-300"
-                                  : "text-[#a1a1aa] hover:text-white")
+                                  ? "text-[#00c2b2]"
+                                  : "text-[#a1a1aa] hover:text-[#00c2b2]")
                               }
                               href={`#${section.id}`}
                               onClick={(event) =>
@@ -829,8 +829,8 @@ export default function TradeAddPage({
                                 className={
                                   "w-1.5 h-1.5 rounded-full transition-colors " +
                                   (isActive
-                                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                                    : "bg-white/20 group-hover:bg-emerald-300")
+                                    ? "bg-[#00c2b2] shadow-[0_0_8px_rgba(0,194,178,0.8)]"
+                                    : "bg-white/20 group-hover:bg-[#00c2b2]")
                                 }
                               />
                               <span className="group-hover:translate-x-1 transition-transform">

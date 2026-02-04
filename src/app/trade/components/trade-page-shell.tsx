@@ -29,7 +29,7 @@ export default function TradePageShell({
           <div className="flex items-center gap-4">
             <Link
               prefetch
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-sm rounded-md transition-colors shadow shadow-emerald-900/20"
+              className="flex items-center gap-2 px-4 py-2 bg-[#00c2b2] hover:bg-[#009e91] text-black font-semibold text-sm rounded-md transition-colors shadow shadow-black/40"
               href={`/trade/add`}
             >
               <Plus className="h-4 w-4" />

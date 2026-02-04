@@ -118,7 +118,7 @@ export default function TradeShell({
   }, [setUser, user.email, user.username, user.role]);
 
   return (
-    <div className="dark min-h-screen bg-black text-[#e5e7eb] antialiased selection:bg-emerald-500 selection:text-white flex">
+    <div className="dark min-h-screen bg-black text-[#e5e7eb] antialiased selection:bg-[#00c2b2] selection:text-black flex">
       <aside className="w-64 bg-[#121212] border-r border-[#27272a] flex-shrink-0 fixed h-full z-20 hidden lg:flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-[#27272a]">
           <Link
@@ -154,14 +154,14 @@ export default function TradeShell({
                 key={item.title}
                 className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive
-                    ? "bg-emerald-500/10 text-emerald-400"
-                    : "text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-white"
+                    ? "bg-[#00c2b2]/15 text-[#00c2b2]"
+                    : "text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-[#00c2b2]"
                 }`}
                 href={item.href}
               >
                 <item.icon
                   className={`h-4 w-4 ${
-                    isActive ? "text-emerald-400" : "text-[#9ca3af]"
+                    isActive ? "text-[#00c2b2]" : "text-[#9ca3af]"
                   }`}
                 />
                 {item.title}
