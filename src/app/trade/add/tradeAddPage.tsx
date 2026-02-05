@@ -450,9 +450,9 @@ export default function TradeAddPage({
     const updateActive = () => {
       const scrollTop = container.scrollTop;
       const offset = 120;
-      const orderedTargets = [...targets].sort(
-        (a, b) => getTargetTop(a) - getTargetTop(b),
-      );
+      const orderedTargets = readOnly
+        ? targets
+        : [...targets].sort((a, b) => getTargetTop(a) - getTargetTop(b));
       let currentId = orderedTargets[0].id;
       for (const target of orderedTargets) {
         if (getTargetTop(target) <= scrollTop + offset) {
@@ -479,7 +479,7 @@ export default function TradeAddPage({
         window.cancelAnimationFrame(rafId);
       }
     };
-  }, [tocSections]);
+  }, [tocSections, readOnly]);
 
   const pageTitle = readOnly ? "交易详情" : "新增/编辑交易记录";
   const displayId = form.transactionId ?? detailId;

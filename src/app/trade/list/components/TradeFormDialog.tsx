@@ -1694,14 +1694,25 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       },
     }));
 
-    const sectionBlocks = [
-      exitSectionBlock,
-      entrySectionBlock,
-      analyzedNotEnteredSectionBlock,
-      waitingPlanBlock,
-      waitingChecklistBlock,
-      analysisSectionBlock,
-    ].filter(Boolean) as React.ReactElement[];
+    const sectionBlocks = (
+      readOnly
+        ? [
+            analysisSectionBlock,
+            waitingPlanBlock,
+            waitingChecklistBlock,
+            analyzedNotEnteredSectionBlock,
+            entrySectionBlock,
+            exitSectionBlock,
+          ]
+        : [
+            exitSectionBlock,
+            entrySectionBlock,
+            analyzedNotEnteredSectionBlock,
+            waitingPlanBlock,
+            waitingChecklistBlock,
+            analysisSectionBlock,
+          ]
+    ).filter(Boolean) as React.ReactElement[];
 
     return (
       <div className="flex flex-1 flex-col">
