@@ -279,12 +279,15 @@ export function ImageUploader({
                 </span>
               </div>
             ) : (
-              <img
-                className="object-contain w-full h-full rounded-lg transition-transform duration-200 group-hover:scale-105"
-                src={img.url}
-                alt=""
-                draggable={false}
-              />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="object-contain w-full h-full rounded-lg transition-transform duration-200 group-hover:scale-105"
+                  src={img.url}
+                  alt=""
+                  draggable={false}
+                />
+              </>
             )}
             {!disabled && (
               <Button
@@ -343,11 +346,14 @@ export function ImageUploader({
             aria-label="关闭"
           />
           {previewUrl && (
-            <img
-              src={previewUrl}
-              alt="预览图片"
-              className="max-h-[80vh] max-w-[90vw] rounded-md shadow-2xl border bg-white"
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewUrl}
+                alt="预览图片"
+                className="max-h-[80vh] max-w-[90vw] rounded-md shadow-2xl border bg-white"
+              />
+            </>
           )}
         </DialogContent>
       </Dialog>

@@ -42,6 +42,15 @@ type EntryPlan = {
   exitSignal?: string;
 };
 
+const STATUS_RANK: Record<TradeStatus, number> = {
+  [TradeStatus.ANALYZED]: 1,
+  [TradeStatus.WAITING]: 2,
+  [TradeStatus.ANALYZED_NOT_ENTERED]: 2,
+  [TradeStatus.ENTERED]: 3,
+  [TradeStatus.EXITED]: 4,
+  [TradeStatus.EARLY_EXITED]: 4,
+};
+
 const checklistSections = [
   {
     title: "第一阶段：结构识别",
@@ -378,17 +387,9 @@ export default function TradeAddPage({
     formRef.current?.submit();
   }, [loading]);
 
-  const statusRank: Record<TradeStatus, number> = {
-    [TradeStatus.ANALYZED]: 1,
-    [TradeStatus.WAITING]: 2,
-    [TradeStatus.ANALYZED_NOT_ENTERED]: 2,
-    [TradeStatus.ENTERED]: 3,
-    [TradeStatus.EXITED]: 4,
-    [TradeStatus.EARLY_EXITED]: 4,
-  };
-  const currentRank = form.status ? statusRank[form.status] : 0;
+  const currentRank = form.status ? STATUS_RANK[form.status] : 0;
   const shouldShowSection = useCallback(
-    (target: TradeStatus) => currentRank >= statusRank[target],
+    (target: TradeStatus) => currentRank >= STATUS_RANK[target],
     [currentRank],
   );
   const tocSections = [

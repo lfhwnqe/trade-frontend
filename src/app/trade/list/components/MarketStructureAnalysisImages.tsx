@@ -291,11 +291,14 @@ export function MarketStructureAnalysisImages({
                     </span>
                   </div>
                   {hasImage && (
-                    <img
-                      alt={altText}
-                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
-                      src={item.image.url}
-                    />
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        alt={altText}
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                        src={item.image.url}
+                      />
+                    </>
                   )}
                   {!readOnly && !loading && (
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
@@ -389,11 +392,14 @@ export function MarketStructureAnalysisImages({
             aria-label="关闭"
           />
           {previewUrl && (
-            <img
-              src={previewUrl}
-              alt="预览图片"
-              className="max-h-[80vh] max-w-[90vw] rounded-md shadow-2xl border bg-white"
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewUrl}
+                alt="预览图片"
+                className="max-h-[80vh] max-w-[90vw] rounded-md shadow-2xl border bg-white"
+              />
+            </>
           )}
         </DialogContent>
       </Dialog>

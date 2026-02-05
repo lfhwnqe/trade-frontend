@@ -40,7 +40,7 @@ export default function TagSelectInput({
   const [customTags, setCustomTags] = React.useState<string[]>([]);
   const [open, setOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLDivElement>(null);
-  const tags = value ?? [];
+  const tags = React.useMemo(() => value ?? [], [value]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -115,7 +115,15 @@ export default function TagSelectInput({
       setCustomTags(mergedSuggestions);
       persistSuggestions(mergedSuggestions);
     },
-    [readOnly, tags, maxTags, onChange, customTags, persistSuggestions],
+    [
+      readOnly,
+      tags,
+      maxTags,
+      onChange,
+      customTags,
+      presets,
+      persistSuggestions,
+    ],
   );
 
   return (

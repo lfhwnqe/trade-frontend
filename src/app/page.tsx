@@ -156,6 +156,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="relative aspect-video w-full bg-[#0a0a0a]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       alt="交易复盘仪表盘：K线回放、交易标注与核心绩效指标一屏呈现"
                       className="h-full w-full object-cover opacity-90"
