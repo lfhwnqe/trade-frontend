@@ -53,93 +53,120 @@ const STATUS_RANK: Record<TradeStatus, number> = {
 
 const checklistSections = [
   {
-    title: "第一阶段：结构识别",
+    id: "check-4h-context",
+    title: "4h 周期：定义战场与规则",
     items: [
       {
-        title: "1. 识别市场状态（Identify Market State）",
-        bullets: [
-          "判断当前是上涨趋势（HH/HL）、下跌趋势（LH/LL）、区间震荡（Range）还是混乱状态（Choppy）。",
-          "特别注意：避开“混乱（Choppy）”的市场，因为其结构不可预测，容易触发止损。",
+        title: "市场状态识别",
+        checks: [
+          "趋势：HH/HL 或 LH/LL，动能未衰竭。",
+          "震荡：价格在大区间内上下扫荡。",
+          "突破：价格收盘有效站上/站下区间。",
+          "混乱：结构反复、不可预测，避免交易。",
         ],
       },
       {
-        title: "2. 标记主要波段高低点（Mark Major Swings）",
-        bullets: ["找出图表上最明显的波段顶点和谷底。"],
-      },
-      {
-        title: "3. 记录结构信号（BOS 与 CHoCH）",
-        bullets: [
-          "标记 BOS（结构突破）以确认趋势延续。",
-          "记录 CHoCH（性质改变）作为趋势可能反转的早期警示。",
-        ],
-      },
-      {
-        title: "4. 识别强弱水平（Strong vs. Weak Levels）",
-        bullets: [
-          "强水平：导致了成功 BOS 的点位，回测时更有可能提供支撑/阻力。",
-          "弱水平：未能创出新高或导致 CHoCH 的点位，通常会被价格突破。",
+        title: "基调与交易规则",
+        checks: [
+          "趋势：只做顺势回调，不逆势。",
+          "震荡：溢价区做空、折价区做多，EQ 禁止交易。",
+          "混乱：只观察，等待结构稳定。",
+          "标注大级别支撑/阻力，等待价格到关键位。",
         ],
       },
     ],
   },
   {
-    title: "第二阶段：质量评估与模型筛选",
+    id: "check-structure",
+    title: "绘制波浪与关键结构",
     items: [
       {
-        title: "5. 评估回调质量（Evaluate Pullback Quality）",
-        bullets: [
-          "观察脉冲移动（Impulse）是否强劲（大实体、同色 K 线多）。",
-          "观察回调（Pullback）是否虚弱（混合颜色、小实体、多影线、低波动性）。",
-        ],
-      },
-      {
-        title: "6. 选择入场模型（Choose an Entry Model）",
-        bullets: [
-          "模型 A（回调/突破）：在支撑位寻找反弹或等待回调结构突破。",
-          "模型 B（失效测试/2B 形态）：寻找价格短暂突破水平后迅速收回的“陷阱”信号。",
+        title: "结构标记",
+        checks: [
+          "标记 Swing High / Swing Low。",
+          "震荡：标记 RH / RL 与中轴 EQ。",
+          "记录 BOS / CHOCH 作为结构确认或预警。",
         ],
       },
     ],
   },
   {
-    title: "第三阶段：微观确认（寻找“何时”入场）",
+    id: "check-entry-modes",
+    title: "1h + 15min：选择作战模式",
     items: [
       {
-        title: "7. 低周期精炼（Refine with Lower Time Frames）",
-        bullets: [
-          "切换到更小的时间周期（如从日线切到 1 小时），观察大级别关键区内部的小级别趋势变化。",
+        title: "模式 A：顺势（4h 趋势强）",
+        checks: [
+          "背景：4h 趋势清晰，未出现失效信号。",
+          "位置：回撤进入关键结构/阻力支撑带。",
+          "结构：1h/15min 出现 BOS / CHOCH / 趋势线突破。",
+          "节奏：回撤速度变慢，出现拒绝影线。",
+          "K 线：关键位出现 Pinbar / 吞没等触发信号。",
+          "加分项：隐藏背离或动能回升。",
+          "核心：Footprint 出现续航/主动性回归。",
         ],
       },
       {
-        title: "8. 价格行为确认（Price Action Detail）",
-        bullets: [
-          "在关键位置寻找动量 K 线（实体是前一根的 2 倍以上）。",
-          "识别特定 K 线形态，如锤子线、吞没形态或长影线反应。",
+        title: "模式 B：震荡（4h 区间）",
+        checks: [
+          "位置：仅在 RH/RL 边界交易，EQ 禁止。",
+          "形态：SFP / Liquidity Sweep 假突破回收。",
+          "K 线：Pinbar / 锤子线 / 吞没（长影拒绝）。",
+          "回测确认：回到区间内后回踩不破。",
+          "核心：Stopping Volume（努力大但结果弱）。",
+          "核心：订单流吸收，Delta 很大但价格不动。",
+          "加分项：RSI/MACD 或 Delta 背离。",
         ],
       },
       {
-        title: "9. 订单流确认（Order Flow Confirmation）",
-        bullets: [
-          "成交量（Volume）：确认突破时伴随高成交量，证明有大量资金支持。",
-          "足迹图（Footprint）：寻找吸收（Absorption）（反转信号）或启动（Initiation）（延续信号）。",
-          "CVD 背离：观察价格与累计成交量 Delta 是否存在背离，以发现潜在的动竭或隐藏吸收。",
+        title: "模式 B+：区间突破",
+        checks: [
+          "强力引发：1h/4h 实体饱满，收盘站稳区间外。",
+          "价值接受：区间外盘整而非快速回归。",
+          "阻力互换：回踩区间边缘缩量且形态干净。",
+          "核心：Footprint 出现失衡链或激进引发。",
+          "核心：回踩出现支撑/Delta 翻转。",
         ],
       },
     ],
   },
   {
-    title: "第四阶段：执行与风险管理（Survival 技能）",
+    id: "check-order-flow",
+    title: "订单流（Footprint）最终滤网",
     items: [
       {
-        title: "10. 设置止损（Set Stop-Loss）",
-        bullets: ["通常设置在波段低点/高点之外，或者失败测试形态的影线末端。"],
+        title: "顺势场景（宽容度高）",
+        checks: [
+          "确认持续失衡堆叠推动价格。",
+          "没有明显的反向吸收即可考虑入场。",
+        ],
       },
       {
-        title: "11. 设定目标位（Set Targets）",
-        bullets: [
-          "使用测算移动（Measured Move，即下一次脉冲长度等于前一次）。",
-          "或使用固定风险回报比（建议 2:1 或 3:1）。",
+        title: "震荡/突破场景（必须严苛）",
+        checks: [
+          "吸收：Buy/Sell Delta 很大但价格不推进。",
+          "Delta 背离：价格创新高/低但 Delta 下降。",
+          "失衡反转：先有失衡后被反向吞没。",
         ],
+      },
+    ],
+  },
+  {
+    id: "check-execution",
+    title: "执行与风控",
+    items: [
+      {
+        title: "开仓与止损止盈",
+        checks: [
+          "总分 ≥ 3 且至少包含 1 个核心项。",
+          "止损：放在结构失效点或针尖外侧。",
+          "止盈：前高/前低或结构位，趋势延续分批。",
+          "震荡突破失败：跌回区间即止损。",
+        ],
+      },
+      {
+        title: "记录与复盘",
+        checks: ["用计分卡记录入场理由与证据。"],
       },
     ],
   },
@@ -194,6 +221,10 @@ export default function TradeAddPage({
   const mainScrollRef = useRef<HTMLDivElement | null>(null);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const [activeTocId, setActiveTocId] = useState<string | null>(null);
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const checklistScrollRef = useRef<HTMLDivElement | null>(null);
+  const checklistScrollTopRef = useRef(0);
+  const [activeChecklistId, setActiveChecklistId] = useState<string | null>(null);
   // 主体渲染，非弹窗模式而是全宽居中大表单
   const transactionId = searchParams.get("id");
   const detailId = detailIdProp ?? transactionId;
@@ -387,6 +418,34 @@ export default function TradeAddPage({
     formRef.current?.submit();
   }, [loading]);
 
+  const handleChecklistOpenChange = useCallback((open: boolean) => {
+    setChecklistOpen(open);
+    if (!open) {
+      if (checklistScrollRef.current) {
+        checklistScrollTopRef.current = checklistScrollRef.current.scrollTop;
+      }
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      if (checklistScrollRef.current) {
+        checklistScrollRef.current.scrollTop = checklistScrollTopRef.current;
+      }
+    });
+  }, []);
+
+  const handleChecklistJump = useCallback((id: string) => {
+    const container = checklistScrollRef.current;
+    const target = document.getElementById(id);
+    if (!container || !target) return;
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const offset = 12;
+    container.scrollTo({
+      top: container.scrollTop + (targetRect.top - containerRect.top) - offset,
+      behavior: "smooth",
+    });
+  }, []);
+
   const currentRank = form.status ? STATUS_RANK[form.status] : 0;
   const shouldShowSection = useCallback(
     (target: TradeStatus) => currentRank >= STATUS_RANK[target],
@@ -480,6 +539,56 @@ export default function TradeAddPage({
       }
     };
   }, [tocSections, readOnly]);
+
+  useEffect(() => {
+    if (!checklistOpen) {
+      setActiveChecklistId(null);
+      return;
+    }
+    const container = checklistScrollRef.current;
+    if (!container) return;
+
+    const targets = checklistSections
+      .map((section) => document.getElementById(section.id))
+      .filter(Boolean) as HTMLElement[];
+
+    if (targets.length === 0) return;
+
+    const getTargetTop = (target: HTMLElement) => {
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      return targetRect.top - containerRect.top + container.scrollTop;
+    };
+
+    let rafId = 0;
+    const updateActive = () => {
+      const scrollTop = container.scrollTop;
+      const offset = 120;
+      let currentId = targets[0].id;
+      for (const target of targets) {
+        if (getTargetTop(target) <= scrollTop + offset) {
+          currentId = target.id;
+        } else {
+          break;
+        }
+      }
+      setActiveChecklistId(currentId);
+      rafId = 0;
+    };
+
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(updateActive);
+    };
+
+    updateActive();
+    container.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, [checklistOpen]);
 
   const pageTitle = readOnly ? "交易详情" : "新增/编辑交易记录";
   const displayId = form.transactionId ?? detailId;
@@ -718,7 +827,7 @@ export default function TradeAddPage({
                       )}
                     </div>
                   )}
-                  <Sheet>
+                  <Sheet open={checklistOpen} onOpenChange={handleChecklistOpenChange}>
                     <SheetTrigger asChild>
                       <Button
                         type="button"
@@ -730,43 +839,84 @@ export default function TradeAddPage({
                     </SheetTrigger>
                     <SheetContent
                       side="right"
-                      className="border-white/10 bg-[#0b0b0c] text-[#ededed]"
+                      className="w-[90vw] max-w-[980px] sm:max-w-[980px] border-white/10 bg-[#0b0b0c] text-[#ededed]"
                     >
-                      <SheetHeader className="border-b border-white/10 px-6 py-5">
-                        <SheetTitle className="text-base text-white">
-                          交易执行 Checklist
-                        </SheetTitle>
-                      </SheetHeader>
-                      <div className="space-y-6 overflow-y-auto px-6 pb-8 pt-4 text-sm">
-                        {checklistSections.map((section) => (
-                          <div key={section.title} className="space-y-3">
-                            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300/80">
-                              {section.title}
-                            </h3>
-                            <div className="space-y-3">
-                              {section.items.map((item) => (
-                                <div
-                                  key={item.title}
-                                  className="rounded-xl border border-white/10 bg-white/5 p-3"
-                                >
-                                  <div className="text-sm font-semibold text-white">
-                                    {item.title}
-                                  </div>
-                                  <ul className="mt-2 space-y-1 text-xs text-[#cbd5f5]">
-                                    {item.bullets.map((bullet) => (
-                                      <li key={bullet} className="flex gap-2">
-                                        <span className="mt-0.5 text-emerald-400">
-                                          ▸
-                                        </span>
-                                        <span>{bullet}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
+                      <div className="flex h-full flex-col">
+                        <SheetHeader className="border-b border-white/10 px-6 py-5">
+                          <SheetTitle className="text-base text-white">
+                            交易执行 Checklist
+                          </SheetTitle>
+                        </SheetHeader>
+                        <div className="flex min-h-0 flex-1">
+                          <div
+                            ref={checklistScrollRef}
+                            className="flex-1 space-y-6 overflow-y-auto emerald-scrollbar px-6 pb-8 pt-4 text-sm"
+                          >
+                            {checklistSections.map((section) => (
+                              <div
+                                key={section.id}
+                                id={section.id}
+                                className="space-y-3 scroll-mt-6"
+                              >
+                                <h3 className="text-xs font-semibold uppercase tracking-[0.2em] ">
+                                  {section.title}
+                                </h3>
+                                <div className="space-y-3">
+                                  {section.items.map((item) => (
+                                    <div
+                                      key={item.title}
+                                      className="rounded-xl border border-white/10 bg-white/5 p-3"
+                                    >
+                                      <div className="text-sm font-semibold text-white">
+                                        {item.title}
+                                      </div>
+                                      <ul className="mt-2 space-y-1 text-xs text-[#cbd5f5]">
+                                        {item.checks.map((check) => (
+                                          <li
+                                            key={check}
+                                            className="flex items-start gap-2"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              className="mt-0.5 h-3 w-3 rounded border border-white/30 bg-transparent text-emerald-400"
+                                            />
+                                            <span>{check}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="w-48 shrink-0 border-l border-white/10 px-4 py-4">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9ca3af]">
+                              Anchor
+                            </div>
+                            <div className="mt-4 space-y-2">
+                              {checklistSections.map((section) => {
+                                const isActive =
+                                  activeChecklistId === section.id;
+                                return (
+                                  <button
+                                    key={section.id}
+                                    type="button"
+                                    onClick={() => handleChecklistJump(section.id)}
+                                    className={
+                                      "w-full rounded-lg border px-3 py-2 text-left text-xs transition-colors " +
+                                      (isActive
+                                        ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-200"
+                                        : "border-white/10 text-[#cbd5f5] hover:border-white/30 hover:text-white")
+                                    }
+                                  >
+                                    {section.title}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
-                        ))}
+                        </div>
                       </div>
                     </SheetContent>
                   </Sheet>
