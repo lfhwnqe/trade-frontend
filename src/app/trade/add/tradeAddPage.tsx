@@ -221,6 +221,7 @@ const checklistSections = [
 ] as const;
 
 const LOCAL_DRAFT_STORAGE_KEY = "trade-add-draft";
+const CHECKLIST_STATE_KEY = "trade-checklist-state";
 type SaveMode = "redirect" | "stay";
 
 function extractTransactionId(payload: unknown): string | null {
@@ -273,6 +274,9 @@ export default function TradeAddPage({
   const checklistScrollRef = useRef<HTMLDivElement | null>(null);
   const checklistScrollTopRef = useRef(0);
   const [activeChecklistId, setActiveChecklistId] = useState<string | null>(null);
+  const [checklistState, setChecklistState] = useState<Record<string, boolean>>(
+    {},
+  );
   // 主体渲染，非弹窗模式而是全宽居中大表单
   const transactionId = searchParams.get("id");
   const detailId = detailIdProp ?? transactionId;
@@ -337,6 +341,31 @@ export default function TradeAddPage({
       console.error("Failed to restore local draft", err);
     }
   }, [transactionId, readOnly, setForm]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem(CHECKLIST_STATE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Record<string, boolean>;
+        setChecklistState(parsed);
+      }
+    } catch (err) {
+      console.error("Failed to restore checklist state", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        CHECKLIST_STATE_KEY,
+        JSON.stringify(checklistState),
+      );
+    } catch (err) {
+      console.error("Failed to persist checklist state", err);
+    }
+  }, [checklistState]);
 
   // 提交函数 - 添加节流控制避免重复提交
   const submittingRef = useRef(false);
@@ -465,6 +494,19 @@ export default function TradeAddPage({
     saveModeRef.current = "stay";
     formRef.current?.submit();
   }, [loading]);
+
+  const getChecklistKey = useCallback(
+    (sectionId: string, itemTitle: string, checkText: string) =>
+      `${sectionId}::${itemTitle}::${checkText}`,
+    [],
+  );
+
+  const handleChecklistToggle = useCallback((key: string) => {
+    setChecklistState((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  }, []);
 
   const handleChecklistOpenChange = useCallback((open: boolean) => {
     setChecklistOpen(open);
@@ -789,36 +831,33 @@ export default function TradeAddPage({
           className="relative z-10 mx-auto w-full max-w-full flex-1 min-h-0 overflow-hidden px-4 py-10 sm:px-6 lg:px-8"
         >
           <div className="relative h-full min-h-0 xl:grid xl:grid-cols-[minmax(0,1fr)_16rem] xl:gap-6">
-            <div className="min-w-0 h-full min-h-0">
-              <div
-                ref={contentScrollRef}
-                className="h-full min-h-0 overflow-y-auto pr-2 space-y-6 emerald-scrollbar"
-              >
-              <div className="md:hidden">
-                <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#a1a1aa]">
-                  Trade Status
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#00c2b2] focus:ring-[#00c2b2]"
-                    value={(form.status as string) ?? ""}
-                    onChange={(event) =>
-                      handleSelectChange("status", event.target.value)
-                    }
-                  >
-                    {tradeStatusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#a1a1aa]">
-                    <span className="text-sm">▾</span>
+            <div className="min-w-0 h-full min-h-0 flex flex-col">
+              <div className="space-y-6 pr-2">
+                <div className="md:hidden">
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#a1a1aa]">
+                    Trade Status
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none rounded-lg border border-white/10 bg-[#0f0f10] px-4 py-3 text-sm text-white focus:border-[#00c2b2] focus:ring-[#00c2b2]"
+                      value={(form.status as string) ?? ""}
+                      onChange={(event) =>
+                        handleSelectChange("status", event.target.value)
+                      }
+                    >
+                      {tradeStatusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#a1a1aa]">
+                      <span className="text-sm">▾</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[rgba(15,15,16,0.7)] px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl mb-2">
                 {/* <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-6 py-4 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl"> */}
                 <div>
                   <h2 className="text-lg font-semibold text-white">
@@ -919,18 +958,29 @@ export default function TradeAddPage({
                                         {item.title}
                                       </div>
                                       <ul className="mt-2 space-y-1 text-xs text-[#cbd5f5]">
-                                        {item.checks.map((check) => (
-                                          <li
-                                            key={check}
-                                            className="flex items-start gap-2"
-                                          >
-                                            <input
-                                              type="checkbox"
-                                              className="mt-0.5 h-3 w-3 rounded border border-white/30 bg-transparent text-emerald-400"
-                                            />
-                                            <span>{check}</span>
-                                          </li>
-                                        ))}
+                                        {item.checks.map((check) => {
+                                          const key = getChecklistKey(
+                                            section.id,
+                                            item.title,
+                                            check,
+                                          );
+                                          const checked = !!checklistState[key];
+                                          return (
+                                            <li key={check}>
+                                              <label className="flex cursor-pointer items-start gap-2">
+                                                <input
+                                                  type="checkbox"
+                                                  checked={checked}
+                                                  onChange={() =>
+                                                    handleChecklistToggle(key)
+                                                  }
+                                                  className="mt-0.5 h-3 w-3 rounded border border-white/30 bg-transparent text-emerald-400"
+                                                />
+                                                <span>{check}</span>
+                                              </label>
+                                            </li>
+                                          );
+                                        })}
                                       </ul>
                                     </div>
                                   ))}
@@ -970,6 +1020,12 @@ export default function TradeAddPage({
                   </Sheet>
                 </div>
               </div>
+              </div>
+
+              <div
+                ref={contentScrollRef}
+                className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-6 emerald-scrollbar rounded-xs"
+              >
 
               <TradeFormDialog
                 ref={formRef}
