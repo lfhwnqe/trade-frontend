@@ -212,12 +212,32 @@ export default function TradeWebhookPage() {
         <div className="bg-[#121212] rounded-xl border border-[#27272a] shadow-sm p-6">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
             <Info className="h-5 w-5 text-[#00c2b2]" />
-            说明
+            闭环说明（Webhook → Telegram 群）
           </h3>
-          <p className="mt-2 text-sm text-[#9ca3af]">
-            你可以为每个用户创建多个 webhook（URL 唯一：/webhook/trade-alert/&lt;hookId&gt;）。
-            每个 hook 有自己的 secret（仅展示一次）。
-          </p>
+          <ol className="mt-3 space-y-2 text-sm text-[#9ca3af] list-decimal pl-5">
+            <li>
+              在本页创建一个 Hook（得到 URL + secret + /bind 命令，secret 仅展示一次）。
+            </li>
+            <li>
+              把系统通知机器人（clawbot）拉进目标 Telegram 群（需要管理员把 bot 加进群）。
+            </li>
+            <li>
+              在群里发送上面生成的：<span className="text-white font-mono">/bind &lt;bindCode&gt;</span>
+              ，即可把“这个 hook”绑定到“这个群”。
+            </li>
+            <li>
+              外部系统触发 webhook：对 Hook URL 发 POST，并带 header
+              <span className="text-white font-mono"> x-webhook-secret</span>，body 里带 message。
+            </li>
+            <li>
+              群里会收到消息；你放在群里的 clawbot 看到消息后就可以执行后续自动任务。
+            </li>
+          </ol>
+
+          <div className="mt-4 text-xs text-[#9ca3af]">
+            说明：Telegram 的 <span className="text-white font-mono">/start</span> 深链只能在私聊里用，
+            所以群绑定必须通过 <span className="text-white font-mono">/bind</span> 命令完成。
+          </div>
 
           <div className="mt-4">
             <div className="text-sm text-[#9ca3af] mb-2">API Base URL</div>
