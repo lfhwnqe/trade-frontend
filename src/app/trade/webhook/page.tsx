@@ -34,9 +34,13 @@ type CreateHookResponse = {
     name?: string;
     createdAt: string;
     revokedAt?: string;
+    chatId?: number;
+    chatTitle?: string;
+    boundAt?: string;
   };
   secret: string;
   url: string;
+  bindCode: string;
 };
 
 type ListHooksResponse = {
@@ -200,6 +204,8 @@ export default function TradeWebhookPage() {
     ? `curl -X POST "${revealedHook.url}" \\\n  -H "Content-Type: application/json" \\\n  -H "x-webhook-secret: ${revealedHook.secret}" \\\n  -d '{"message":"hello from webhook"}'`
     : "";
 
+  const bindCommand = revealedHook ? `/bind ${revealedHook.bindCode}` : "";
+
   return (
     <TradePageShell title="Webhook">
       <div className="space-y-6">
@@ -289,6 +295,21 @@ export default function TradeWebhookPage() {
               <div className="font-mono text-sm break-all text-white">
                 {revealedHook.secret}
               </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm text-[#9ca3af]">群绑定命令（在目标群里发送）</div>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleCopy(bindCommand, "已复制 /bind 命令")}
+                  disabled={!bindCommand}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  复制命令
+                </Button>
+              </div>
+              <pre className="overflow-x-auto rounded-lg border border-[#27272a] bg-black/30 p-4 text-xs text-white whitespace-pre">
+                {bindCommand}
+              </pre>
 
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm text-[#9ca3af]">curl 示例</div>
