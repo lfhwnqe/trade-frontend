@@ -8,6 +8,7 @@ import {
   FileText,
   Home,
   ReceiptText,
+  Terminal,
   KeyRound,
   Webhook,
 } from "lucide-react";
@@ -17,6 +18,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import Image from "next/image";
 import { useAlert } from "@/components/common/alert";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
@@ -24,7 +33,13 @@ import { userAtom } from "@/store/user";
 
 const USER_STORAGE_KEY = "userProfile";
 
-const tradeNavItems = [
+type NavItem = {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
+const tradeNavItems: NavItem[] = [
   {
     title: "主页",
     href: "/trade/home",
@@ -40,6 +55,9 @@ const tradeNavItems = [
     href: "/trade/summaries",
     icon: FileText,
   },
+];
+
+const integrationItems: NavItem[] = [
   {
     title: "API Token",
     href: "/trade/tokens",
@@ -144,7 +162,6 @@ export default function TradeShell({
             prefetch
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#00c2b2] to-white text-black">
-              {/* <span className="text-sm font-bold">TJ</span> */}
               <Image
                 src={`/favicon.png`}
                 width={30}
@@ -152,15 +169,10 @@ export default function TradeShell({
                 alt="Picture of the author"
               />
             </div>
-            {/* <Image
-              src={`/favicon.png`}
-              width={30}
-              height={30}
-              alt="Picture of the author"
-            ></Image> */}
             MMC Trading
           </Link>
         </div>
+
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {tradeNavItems.map((item) => {
             const isActive =
@@ -186,7 +198,59 @@ export default function TradeShell({
             );
           })}
         </nav>
-        <div className="p-4 border-t border-[#27272a]">
+
+        <div className="p-4 border-t border-[#27272a] space-y-2">
+          {/* Developer Tools -> Integration Center drawer */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-white transition-colors"
+              >
+                <Terminal className="h-4 w-4" />
+                <span>Developer Tools</span>
+              </button>
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              className="bg-[#0b0b0b] border-r border-[#27272a] text-[#e5e7eb]"
+            >
+              <SheetHeader>
+                <SheetTitle className="text-white">Integration Center</SheetTitle>
+                <SheetDescription className="text-[#9ca3af]">
+                  API / Webhook integrations for automation.
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="px-4 pb-4 space-y-2">
+                {integrationItems.map((item) => {
+                  const isActive =
+                    pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      prefetch
+                      key={item.title}
+                      className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        isActive
+                          ? "bg-[#00c2b2]/15 text-[#00c2b2]"
+                          : "text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-[#00c2b2]"
+                      }`}
+                      href={item.href}
+                    >
+                      <item.icon
+                        className={`h-4 w-4 ${
+                          isActive ? "text-[#00c2b2]" : "text-[#9ca3af]"
+                        }`}
+                      />
+                      {item.title}
+                    </Link>
+                  );
+                })}
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* user menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -197,9 +261,7 @@ export default function TradeShell({
                   {initials}
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-white">
-                    {displayName}
-                  </p>
+                  <p className="text-sm font-medium text-white">{displayName}</p>
                   <p className="text-xs text-[#9ca3af]">{userRole}</p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-[#9ca3af] group-hover:text-white" />
@@ -209,16 +271,15 @@ export default function TradeShell({
               side="top"
               className="w-[--radix-popper-anchor-width]"
             >
-              <DropdownMenuItem onClick={() => router.push("/")}>
-                <span>首页</span>
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/")}>首页</DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
-                <span>{isLoggingOut ? "退出中..." : "退出登录"}</span>
+                {isLoggingOut ? "退出中..." : "退出登录"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </aside>
+
       <div className="flex-1 lg:ml-64 min-h-screen bg-black min-w-0">
         {children}
       </div>
