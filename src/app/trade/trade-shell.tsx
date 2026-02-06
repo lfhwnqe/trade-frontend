@@ -11,6 +11,7 @@ import {
   Terminal,
   KeyRound,
   Webhook,
+  Link2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -67,6 +68,11 @@ const integrationItems: NavItem[] = [
     title: "Webhook",
     href: "/trade/webhook",
     icon: Webhook,
+  },
+  {
+    title: "币安合约同步",
+    href: "/trade/binance-futures",
+    icon: Link2,
   },
 ];
 
@@ -243,7 +249,9 @@ export default function TradeShell({
                             <div className="text-xs text-gray-400">
                               {item.title === "API Token"
                                 ? "生成 Token，用于脚本/自动化写入交易"
-                                : "TradingView 单 URL 触发，推送到 Telegram 群"}
+                                : item.title === "Webhook"
+                                  ? "TradingView 单 URL 触发，推送到 Telegram 群"
+                                  : "配置只读 API Key，导入最近 1 年合约成交"}
                             </div>
                           </div>
                         </div>
