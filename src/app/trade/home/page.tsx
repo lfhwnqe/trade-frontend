@@ -16,7 +16,11 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Trade } from "../config";
 
 function fetchDashboard() {
@@ -125,6 +129,13 @@ export default function TradeHomePage() {
     lastMonthSimulationTradeCount: number;
     recent30SimulationWinRate: number;
     previous30SimulationWinRate: number;
+    // dashboard v2
+    recent30RealTradeCount: number;
+    recent30SimulationTradeCount: number;
+    recent30ProfitLossAvg: number;
+    previous30ProfitLossAvg: number;
+    recent30SimulationProfitLossAvg: number;
+    previous30SimulationProfitLossAvg: number;
   }>({
     thisMonthTradeCount: 0,
     lastMonthTradeCount: 0,
@@ -134,6 +145,12 @@ export default function TradeHomePage() {
     lastMonthSimulationTradeCount: 0,
     recent30SimulationWinRate: 0,
     previous30SimulationWinRate: 0,
+    recent30RealTradeCount: 0,
+    recent30SimulationTradeCount: 0,
+    recent30ProfitLossAvg: 0,
+    previous30ProfitLossAvg: 0,
+    recent30SimulationProfitLossAvg: 0,
+    previous30SimulationProfitLossAvg: 0,
   });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
   const [tradesLoading, setTradesLoading] = React.useState(true);
@@ -142,6 +159,9 @@ export default function TradeHomePage() {
   const [error, setError] = React.useState<string | null>(null);
   const [winRateRange, setWinRateRange] = React.useState<"7d" | "30d" | "3m">(
     "7d",
+  );
+  const [chartMode, setChartMode] = React.useState<"winRate" | "count">(
+    "winRate",
   );
   const [winRateData, setWinRateData] = React.useState<WinRateResponse | null>(
     null,
@@ -185,6 +205,20 @@ export default function TradeHomePage() {
           ),
           previous30SimulationWinRate: normalizeNumber(
             data.previous30SimulationWinRate,
+          ),
+          recent30RealTradeCount: normalizeNumber(data.recent30RealTradeCount),
+          recent30SimulationTradeCount: normalizeNumber(
+            data.recent30SimulationTradeCount,
+          ),
+          recent30ProfitLossAvg: normalizeNumber(data.recent30ProfitLossAvg),
+          previous30ProfitLossAvg: normalizeNumber(
+            data.previous30ProfitLossAvg,
+          ),
+          recent30SimulationProfitLossAvg: normalizeNumber(
+            data.recent30SimulationProfitLossAvg,
+          ),
+          previous30SimulationProfitLossAvg: normalizeNumber(
+            data.previous30SimulationProfitLossAvg,
           ),
         });
         setFeaturedSummaries(
@@ -245,12 +279,17 @@ export default function TradeHomePage() {
         : winRateData.real;
     const labels = labelsSource.map((point) => point.date);
 
-    const buildRateMap = (series: WinRatePoint[]) =>
-      new Map(series.map((point) => [point.date, point.winRate]));
+    const buildValueMap = (series: WinRatePoint[]) =>
+      new Map(
+        series.map((point) => [
+          point.date,
+          chartMode === "winRate" ? point.winRate : point.total,
+        ]),
+      );
     const buildDetailMap = (series: WinRatePoint[]) =>
       new Map(series.map((point) => [point.date, point]));
-    const simulationMap = buildRateMap(winRateData.simulation);
-    const realMap = buildRateMap(winRateData.real);
+    const simulationMap = buildValueMap(winRateData.simulation);
+    const realMap = buildValueMap(winRateData.real);
     const simulationDetailMap = buildDetailMap(winRateData.simulation);
     const realDetailMap = buildDetailMap(winRateData.real);
 
@@ -269,7 +308,7 @@ export default function TradeHomePage() {
         labels: displayLabels,
         datasets: [
           {
-            label: "真实交易",
+            label: `真实交易${chartMode === "winRate" ? "" : "数量"}`,
             data: realRates,
             borderColor: "#22c55e",
             backgroundColor: "rgba(34, 197, 94, 0.12)",
@@ -280,7 +319,7 @@ export default function TradeHomePage() {
             fill: "origin",
           },
           {
-            label: "模拟交易",
+            label: `模拟交易${chartMode === "winRate" ? "" : "数量"}`,
             data: simulationRates,
             borderColor: "#60a5fa",
             backgroundColor: "rgba(96, 165, 250, 0.2)",
@@ -381,11 +420,16 @@ export default function TradeHomePage() {
           },
           y: {
             suggestedMin: 0,
-            suggestedMax: 100,
+            suggestedMax:
+              chartMode === "winRate"
+                ? 100
+                : Math.max(5, ...realRates, ...simulationRates) + 1,
             ticks: {
               color: "#9ca3af",
-              callback: (value) => `${value}%`,
-              stepSize: 25,
+              callback: (value) =>
+                chartMode === "winRate" ? `${value}%` : String(value),
+              stepSize: chartMode === "winRate" ? 25 : undefined,
+              precision: chartMode === "winRate" ? 0 : 0,
             },
             grid: {
               color: "rgba(255,255,255,0.06)",
@@ -402,7 +446,7 @@ export default function TradeHomePage() {
       }
       setWinRateTooltip(null);
     };
-  }, [winRateData, winRateLoading, winRateError]);
+  }, [winRateData, winRateLoading, winRateError, chartMode]);
 
   const formatDateTime = (value?: string) => {
     if (!value) return { date: "-", time: "-" };
@@ -446,7 +490,6 @@ export default function TradeHomePage() {
     return `${parsed}%`;
   };
 
-
   const formatPercentChange = (
     current: number,
     previous: number,
@@ -487,6 +530,16 @@ export default function TradeHomePage() {
     stats.previous30SimulationWinRate,
   );
 
+  const realProfitLossAvgDelta = formatDelta(
+    stats.recent30ProfitLossAvg,
+    stats.previous30ProfitLossAvg,
+  );
+
+  const simulationProfitLossAvgDelta = formatDelta(
+    stats.recent30SimulationProfitLossAvg,
+    stats.previous30SimulationProfitLossAvg,
+  );
+
   return (
     <TradePageShell title="主页">
       <div className="space-y-6">
@@ -496,8 +549,8 @@ export default function TradeHomePage() {
           </div>
         ) : null}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-[#9ca3af]">本月交易数</h3>
               <div className="p-2 bg-blue-500/10 rounded-lg">
                 <Wallet className="h-4 w-4 text-blue-400" />
@@ -526,8 +579,8 @@ export default function TradeHomePage() {
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">较上月</p>
           </div>
-          <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-[#9ca3af]">胜率</h3>
               <div className="p-2 bg-emerald-500/10 rounded-lg">
                 <PieChart className="h-4 w-4 text-emerald-400" />
@@ -551,8 +604,8 @@ export default function TradeHomePage() {
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">最近 30 笔交易</p>
           </div>
-          <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-[#9ca3af]">
                 本月模拟交易数
               </h3>
@@ -583,8 +636,8 @@ export default function TradeHomePage() {
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">较上月</p>
           </div>
-          <div className="bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-[#9ca3af]">模拟胜率</h3>
               <div className="p-2 bg-yellow-500/10 rounded-lg">
                 <PiggyBank className="h-4 w-4 text-yellow-400" />
@@ -609,10 +662,153 @@ export default function TradeHomePage() {
             <p className="text-xs text-[#9ca3af] mt-1">最近 30 笔模拟交易</p>
           </div>
         </div>
+
+        <div className="bg-[#121212] p-4 rounded-xl border border-[#27272a] shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+              <Sigma className="h-4 w-4 text-[#9ca3af]" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-white">近 30 笔对比</div>
+              <div className="text-xs text-[#9ca3af]">
+                真实与模拟分别展示（近 30 vs 60-30）
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {/* 真实交易 */}
+            <div className="rounded-xl border border-[#27272a] bg-black/20 px-4 py-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">真实交易</span>
+                <span className="text-xs text-[#9ca3af]">
+                  近 30 笔：{loading ? "..." : stats.recent30RealTradeCount}
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-3">
+                  <div className="text-[11px] text-[#9ca3af]">
+                    最近 30 综合盈亏 %
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-white">
+                    {loading ? "..." : `${stats.recent30ProfitLossAvg}%`}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-3">
+                  <div className="text-[11px] text-[#9ca3af]">
+                    之前 30（60-30）
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-white">
+                    {loading ? "..." : `${stats.previous30ProfitLossAvg}%`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-xs">
+                <span className="text-[#9ca3af]">变化（最近-之前）</span>
+                <span
+                  className={`font-medium ${
+                    realProfitLossAvgDelta.trend === "up"
+                      ? "text-emerald-400"
+                      : realProfitLossAvgDelta.trend === "down"
+                        ? "text-red-400"
+                        : "text-[#9ca3af]"
+                  }`}
+                >
+                  {loading ? "..." : realProfitLossAvgDelta.text}
+                </span>
+              </div>
+            </div>
+
+            {/* 模拟交易 */}
+            <div className="rounded-xl border border-[#27272a] bg-black/20 px-4 py-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">模拟交易</span>
+                <span className="text-xs text-[#9ca3af]">
+                  近 30 笔：
+                  {loading ? "..." : stats.recent30SimulationTradeCount}
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-3">
+                  <div className="text-[11px] text-[#9ca3af]">
+                    最近 30 综合盈亏 %
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-white">
+                    {loading
+                      ? "..."
+                      : `${stats.recent30SimulationProfitLossAvg}%`}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-3">
+                  <div className="text-[11px] text-[#9ca3af]">
+                    之前 30（60-30）
+                  </div>
+                  <div className="mt-1 text-lg font-bold text-white">
+                    {loading
+                      ? "..."
+                      : `${stats.previous30SimulationProfitLossAvg}%`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-xs">
+                <span className="text-[#9ca3af]">变化（最近-之前）</span>
+                <span
+                  className={`font-medium ${
+                    simulationProfitLossAvgDelta.trend === "up"
+                      ? "text-emerald-400"
+                      : simulationProfitLossAvgDelta.trend === "down"
+                        ? "text-red-400"
+                        : "text-[#9ca3af]"
+                  }`}
+                >
+                  {loading ? "..." : simulationProfitLossAvgDelta.text}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">胜率曲线</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  {chartMode === "winRate" ? "胜率曲线" : "交易数量曲线"}
+                </h3>
+                <p className="text-xs text-[#9ca3af] mt-1">
+                  点击切换查看胜率或交易数量
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-lg border border-[#27272a] bg-black/20 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setChartMode("winRate")}
+                    className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                      chartMode === "winRate"
+                        ? "bg-white/10 text-white"
+                        : "text-[#9ca3af] hover:text-white"
+                    }`}
+                  >
+                    胜率
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartMode("count")}
+                    className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                      chartMode === "count"
+                        ? "bg-white/10 text-white"
+                        : "text-[#9ca3af] hover:text-white"
+                    }`}
+                  >
+                    数量
+                  </button>
+                </div>
+              </div>
               <select
                 value={winRateRange}
                 onChange={(event) =>
@@ -639,7 +835,8 @@ export default function TradeHomePage() {
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="text-[11px] uppercase tracking-[0.2em] text-emerald-400">
-                      {winRateTooltip.title || "胜率"}
+                      {winRateTooltip.title ||
+                        (chartMode === "winRate" ? "胜率" : "交易数量")}
                     </span>
                   </div>
                   {(["real", "simulation"] as const).map((key) => {
@@ -648,10 +845,12 @@ export default function TradeHomePage() {
                         ? winRateTooltip.real
                         : winRateTooltip.simulation;
                     const labelText = key === "real" ? "真实交易" : "模拟交易";
-                    const winRate =
-                      typeof detail?.winRate === "number"
-                        ? `${detail.winRate}%`
-                        : "-";
+                    const primaryValue =
+                      chartMode === "winRate"
+                        ? typeof detail?.winRate === "number"
+                          ? `${detail.winRate}%`
+                          : "-"
+                        : String(detail?.total ?? 0);
                     return (
                       <div
                         key={key}
@@ -659,7 +858,7 @@ export default function TradeHomePage() {
                       >
                         <div className="flex items-center justify-between text-[11px] text-[#9ca3af]">
                           <span>{labelText}</span>
-                          <span className="text-emerald-400">{winRate}</span>
+                          <span className="text-emerald-400">{primaryValue}</span>
                         </div>
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="flex items-center gap-1 text-[#9ca3af]">
