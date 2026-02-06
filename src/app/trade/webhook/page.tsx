@@ -7,7 +7,15 @@ import { Input } from "@/components/ui/input";
 import { useAlert } from "@/components/common/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
-import { Copy, Info, Link as LinkIcon, RefreshCcw, Webhook } from "lucide-react";
+import { useAtomImmer } from "@/hooks/useAtomImmer";
+import { userAtom } from "@/store/user";
+import {
+  Copy,
+  Info,
+  Link as LinkIcon,
+  RefreshCcw,
+  Webhook,
+} from "lucide-react";
 
 function envApiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -67,7 +75,10 @@ async function createHook(name?: string) {
     },
   });
   if (!resp.ok) throw new Error(await resp.text());
-  const json = (await resp.json()) as { success: boolean; data: CreateHookResponse };
+  const json = (await resp.json()) as {
+    success: boolean;
+    data: CreateHookResponse;
+  };
   return json.data;
 }
 
@@ -86,7 +97,10 @@ async function listHooks(limit = 20, cursor?: string) {
     actualBody: {},
   });
   if (!resp.ok) throw new Error(await resp.text());
-  const json = (await resp.json()) as { success: boolean; data: ListHooksResponse };
+  const json = (await resp.json()) as {
+    success: boolean;
+    data: ListHooksResponse;
+  };
   return json.data;
 }
 
@@ -113,8 +127,13 @@ function formatTime(value?: string) {
 
 export default function TradeWebhookPage() {
   const [errorAlert, successAlert] = useAlert();
+  const [user] = useAtomImmer(userAtom);
+  const userRole = user.role || "FreePlan";
+  const isAdmin = userRole === "Admins" || userRole === "SuperAdmins";
 
-  const [apiBaseUrl] = React.useState(() => normalizeApiBaseUrl(envApiBaseUrl()));
+  const [apiBaseUrl] = React.useState(() =>
+    normalizeApiBaseUrl(envApiBaseUrl()),
+  );
 
   // Telegram setWebhook part (admin/dev ops)
   const [telegramSecret, setTelegramSecret] = React.useState("");
@@ -127,7 +146,8 @@ export default function TradeWebhookPage() {
   const [creating, setCreating] = React.useState(false);
   const [newName, setNewName] = React.useState("");
 
-  const [revealedHook, setRevealedHook] = React.useState<CreateHookResponse | null>(null);
+  const [revealedHook, setRevealedHook] =
+    React.useState<CreateHookResponse | null>(null);
 
   const [testMessage, setTestMessage] = React.useState("hello from webhook");
   const [testing, setTesting] = React.useState(false);
@@ -213,9 +233,12 @@ export default function TradeWebhookPage() {
     ? `curl -X POST "${revealedHook.triggerUrl}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"message":"hello from webhook"}'`
     : "";
 
-  const token = revealedHook ? revealedHook.triggerUrl.split("/").pop() || "" : "";
+  const token = revealedHook
+    ? revealedHook.triggerUrl.split("/").pop() || ""
+    : "";
 
-  const buildProxyUrl = (t: string) => `${origin}/api/webhook?token=${encodeURIComponent(t)}`;
+  const buildProxyUrl = (t: string) =>
+    `${origin}/api/webhook?token=${encodeURIComponent(t)}`;
 
   const sampleProxyCurl = revealedHook
     ? `curl -X POST "${buildProxyUrl(token)}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"message":"hello from webhook"}'`
@@ -227,11 +250,14 @@ export default function TradeWebhookPage() {
     if (!revealedHook || testing) return;
     setTesting(true);
     try {
-      const resp = await fetch(`/api/webhook?token=${encodeURIComponent(token)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: testMessage || "(empty)" }),
-      });
+      const resp = await fetch(
+        `/api/webhook?token=${encodeURIComponent(token)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: testMessage || "(empty)" }),
+        },
+      );
       const text = await resp.text();
       if (!resp.ok) {
         throw new Error(text || `HTTP ${resp.status}`);
@@ -256,26 +282,35 @@ export default function TradeWebhookPage() {
           </h3>
           <ol className="mt-3 space-y-2 text-sm text-[#9ca3af] list-decimal pl-5">
             <li>
-              在本页创建一个 Hook（得到 URL + secret + /bind 命令，secret 仅展示一次）。
+              在本页创建一个 Hook（得到 URL + secret + /bind 命令，secret
+              仅展示一次）。
             </li>
             <li>
-              把系统通知机器人（clawbot）拉进目标 Telegram 群（需要管理员把 bot 加进群）。
+              把系统通知机器人（clawbot）拉进目标 Telegram 群（需要管理员把 bot
+              加进群）。
             </li>
             <li>
-              在群里发送上面生成的：<span className="text-white font-mono">/bind &lt;bindCode&gt;</span>
+              在群里发送上面生成的：
+              <span className="text-white font-mono">
+                /bind &lt;bindCode&gt;
+              </span>
               ，即可把“这个 hook”绑定到“这个群”。
             </li>
             <li>
-              外部系统触发 webhook：对 Hook URL 发 POST（无需 header），body 里带 message。
+              外部系统触发 webhook：对 Hook URL 发 POST（无需 header），body
+              里带 message。
             </li>
             <li>
-              群里会收到消息；你放在群里的 clawbot 看到消息后就可以执行后续自动任务。
+              群里会收到消息；你放在群里的 clawbot
+              看到消息后就可以执行后续自动任务。
             </li>
           </ol>
 
           <div className="mt-4 text-xs text-[#9ca3af]">
-            说明：Telegram 的 <span className="text-white font-mono">/start</span> 深链只能在私聊里用，
-            所以群绑定必须通过 <span className="text-white font-mono">/bind</span> 命令完成。
+            说明：Telegram 的{" "}
+            <span className="text-white font-mono">/start</span>{" "}
+            深链只能在私聊里用， 所以群绑定必须通过{" "}
+            <span className="text-white font-mono">/bind</span> 命令完成。
           </div>
 
           <div className="mt-4 text-xs text-[#9ca3af]">
@@ -291,10 +326,15 @@ export default function TradeWebhookPage() {
                 创建 Hook
               </h3>
               <p className="text-sm text-[#9ca3af] mt-1">
-                创建后会返回一次触发 URL（TradingView 可直接用，触发时无需 header）。
+                创建后会返回一次触发 URL（TradingView 可直接用，触发时无需
+                header）。
               </p>
             </div>
-            <Button variant="secondary" onClick={loadFirstPage} disabled={loading}>
+            <Button
+              variant="secondary"
+              onClick={loadFirstPage}
+              disabled={loading}
+            >
               <RefreshCcw className="h-4 w-4 mr-2" />
               刷新
             </Button>
@@ -318,22 +358,14 @@ export default function TradeWebhookPage() {
 
           {revealedHook ? (
             <div className="mt-4 rounded-lg border border-[#27272a] bg-black/20 p-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">触发 URL（TradingView 用，无需 header）</div>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleCopy(revealedHook.triggerUrl, "已复制 URL")}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  复制 URL
-                </Button>
-              </div>
               <div className="font-mono text-sm break-all text-white">
                 {revealedHook.triggerUrl}
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">当前域名代理 URL（可选，不暴露 API Base URL）</div>
+                <div className="text-sm text-[#9ca3af]">
+                  当前域名代理 URL（可选，不暴露 API Base URL）
+                </div>
                 <Button
                   variant="secondary"
                   onClick={() => handleCopy(buildProxyUrl(token), "已复制 URL")}
@@ -348,7 +380,9 @@ export default function TradeWebhookPage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">群绑定命令（在目标群里发送）</div>
+                <div className="text-sm text-[#9ca3af]">
+                  群绑定命令（在目标群里发送）
+                </div>
                 <Button
                   variant="secondary"
                   onClick={() => handleCopy(bindCommand, "已复制 /bind 命令")}
@@ -363,7 +397,9 @@ export default function TradeWebhookPage() {
               </pre>
 
               <div className="mt-4 rounded-lg border border-[#27272a] bg-black/20 p-4">
-                <div className="text-sm text-[#9ca3af] mb-2">快速测试（会触发并推送到已绑定群）</div>
+                <div className="text-sm text-[#9ca3af] mb-2">
+                  快速测试（会触发并推送到已绑定群）
+                </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Input
                     value={testMessage}
@@ -385,7 +421,9 @@ export default function TradeWebhookPage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">curl 示例（直接打后端 triggerUrl）</div>
+                <div className="text-sm text-[#9ca3af]">
+                  curl 示例（直接打后端 triggerUrl）
+                </div>
                 <Button
                   variant="secondary"
                   onClick={() => handleCopy(sampleCurl, "已复制 curl")}
@@ -400,7 +438,9 @@ export default function TradeWebhookPage() {
               </pre>
 
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">curl 示例（走当前域名代理 /api/webhook）</div>
+                <div className="text-sm text-[#9ca3af]">
+                  curl 示例（走当前域名代理 /api/webhook）
+                </div>
                 <Button
                   variant="secondary"
                   onClick={() => handleCopy(sampleProxyCurl, "已复制 curl")}
@@ -485,7 +525,9 @@ export default function TradeWebhookPage() {
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs break-all">
                               {origin && item.triggerUrl
-                                ? buildProxyUrl(item.triggerUrl.split("/").pop() || "")
+                                ? buildProxyUrl(
+                                    item.triggerUrl.split("/").pop() || "",
+                                  )
                                 : item.url}
                             </span>
                             <Button
@@ -551,38 +593,44 @@ export default function TradeWebhookPage() {
           </div>
         </div>
 
-        <div className="bg-[#121212] rounded-xl border border-[#27272a] shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-white">Telegram setWebhook（管理员/开发）</h3>
-          <p className="mt-2 text-sm text-[#9ca3af]">
-            用于绑定 bot webhook。对最终用户一般不暴露 token。
-          </p>
+        {isAdmin ? (
+          <div className="bg-[#121212] rounded-xl border border-[#27272a] shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-white">
+              Telegram setWebhook（管理员/开发）
+            </h3>
+            <p className="mt-2 text-sm text-[#9ca3af]">
+              用于绑定 bot webhook（系统级一次性配置）。
+            </p>
 
-          <div className="mt-4">
-            <div className="text-sm text-[#9ca3af] mb-2">TELEGRAM_WEBHOOK_SECRET</div>
-            <Input
-              value={telegramSecret}
-              onChange={(e) => setTelegramSecret(e.target.value)}
-              placeholder="用于 Telegram setWebhook secret_token"
-              className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
-            />
+            <div className="mt-4">
+              <div className="text-sm text-[#9ca3af] mb-2">
+                TELEGRAM_WEBHOOK_SECRET
+              </div>
+              <Input
+                value={telegramSecret}
+                onChange={(e) => setTelegramSecret(e.target.value)}
+                placeholder="用于 Telegram setWebhook secret_token"
+                className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+              />
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="text-sm text-[#9ca3af]">setWebhook 命令</div>
+              <Button
+                variant="secondary"
+                onClick={() => handleCopy(setWebhookCurl, "已复制命令")}
+                disabled={!setWebhookCurl}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                复制命令
+              </Button>
+            </div>
+
+            <pre className="mt-3 overflow-x-auto rounded-lg border border-[#27272a] bg-black/30 p-4 text-xs text-white whitespace-pre">
+              {setWebhookCurl || "请先填写 API Base URL"}
+            </pre>
           </div>
-
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <div className="text-sm text-[#9ca3af]">setWebhook 命令</div>
-            <Button
-              variant="secondary"
-              onClick={() => handleCopy(setWebhookCurl, "已复制命令")}
-              disabled={!setWebhookCurl}
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              复制命令
-            </Button>
-          </div>
-
-          <pre className="mt-3 overflow-x-auto rounded-lg border border-[#27272a] bg-black/30 p-4 text-xs text-white whitespace-pre">
-            {setWebhookCurl || "请先填写 API Base URL"}
-          </pre>
-        </div>
+        ) : null}
       </div>
     </TradePageShell>
   );

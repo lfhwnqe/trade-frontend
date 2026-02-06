@@ -9,7 +9,6 @@ import {
   Home,
   ReceiptText,
   KeyRound,
-  Send,
   Webhook,
 } from "lucide-react";
 import {
@@ -45,11 +44,6 @@ const tradeNavItems = [
     title: "API Token",
     href: "/trade/tokens",
     icon: KeyRound,
-  },
-  {
-    title: "Telegram 绑定",
-    href: "/trade/telegram",
-    icon: Send,
   },
   {
     title: "Webhook",
