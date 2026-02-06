@@ -129,6 +129,9 @@ export default function TradeWebhookPage() {
 
   const [revealedHook, setRevealedHook] = React.useState<CreateHookResponse | null>(null);
 
+  const [testMessage, setTestMessage] = React.useState("hello from webhook");
+  const [testing, setTesting] = React.useState(false);
+
   const loadFirstPage = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -219,6 +222,29 @@ export default function TradeWebhookPage() {
     : "";
 
   const bindCommand = revealedHook ? `/bind ${revealedHook.bindCode}` : "";
+
+  const handleTestTrigger = async () => {
+    if (!revealedHook || testing) return;
+    setTesting(true);
+    try {
+      const resp = await fetch(`/api/webhook?token=${encodeURIComponent(token)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: testMessage || "(empty)" }),
+      });
+      const text = await resp.text();
+      if (!resp.ok) {
+        throw new Error(text || `HTTP ${resp.status}`);
+      }
+      successAlert("已触发：请到 Telegram 群查看消息");
+      console.log("webhook test response:", text);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "触发失败";
+      errorAlert(msg);
+    } finally {
+      setTesting(false);
+    }
+  };
 
   return (
     <TradePageShell title="Webhook">
@@ -335,6 +361,28 @@ export default function TradeWebhookPage() {
               <pre className="overflow-x-auto rounded-lg border border-[#27272a] bg-black/30 p-4 text-xs text-white whitespace-pre">
                 {bindCommand}
               </pre>
+
+              <div className="mt-4 rounded-lg border border-[#27272a] bg-black/20 p-4">
+                <div className="text-sm text-[#9ca3af] mb-2">快速测试（会触发并推送到已绑定群）</div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Input
+                    value={testMessage}
+                    onChange={(e) => setTestMessage(e.target.value)}
+                    placeholder="输入要推送的内容"
+                    className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                  <Button
+                    onClick={handleTestTrigger}
+                    disabled={!token || testing}
+                    className="bg-[#00c2b2] text-black hover:bg-[#00c2b2]/90"
+                  >
+                    {testing ? "触发中..." : "测试触发"}
+                  </Button>
+                </div>
+                <div className="mt-2 text-xs text-[#9ca3af]">
+                  注意：同一个 hook 1 分钟只能触发一次（限流）。
+                </div>
+              </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm text-[#9ca3af]">curl 示例（直接打后端 triggerUrl）</div>
