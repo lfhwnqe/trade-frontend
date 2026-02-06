@@ -158,15 +158,15 @@ export default function LoginPage() {
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm text-white/60">
-                  邮箱
+                  账号 / 邮箱
                 </label>
                 <Input
-                  type="email"
+                  type="text"
                   id="email"
                   name="email"
-                  placeholder="name@company.com"
+                  placeholder="name@company.com 或 test_linuo"
                   value={form.email}
-                  autoComplete="email"
+                  autoComplete="username"
                   required
                   onChange={handleChange}
                   aria-invalid={!!form.error}

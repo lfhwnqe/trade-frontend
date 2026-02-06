@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, FileText, Home, ReceiptText, KeyRound } from "lucide-react";
+import {
+  ChevronDown,
+  FileText,
+  Home,
+  ReceiptText,
+  KeyRound,
+  Send,
+  Webhook,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +45,16 @@ const tradeNavItems = [
     title: "API Token",
     href: "/trade/tokens",
     icon: KeyRound,
+  },
+  {
+    title: "Telegram 绑定",
+    href: "/trade/telegram",
+    icon: Send,
+  },
+  {
+    title: "Webhook",
+    href: "/trade/webhook",
+    icon: Webhook,
   },
 ];
 
