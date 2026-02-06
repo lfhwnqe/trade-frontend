@@ -212,8 +212,10 @@ export default function TradeWebhookPage() {
 
   const token = revealedHook ? revealedHook.triggerUrl.split("/").pop() || "" : "";
 
+  const buildProxyUrl = (t: string) => `${origin}/api/webhook?token=${encodeURIComponent(t)}`;
+
   const sampleProxyCurl = revealedHook
-    ? `curl -X POST "${origin}/api/webhook?token=${token}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"message":"hello from webhook"}'`
+    ? `curl -X POST "${buildProxyUrl(token)}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"message":"hello from webhook"}'`
     : "";
 
   const bindCommand = revealedHook ? `/bind ${revealedHook.bindCode}` : "";
@@ -308,7 +310,7 @@ export default function TradeWebhookPage() {
                 <div className="text-sm text-[#9ca3af]">当前域名代理 URL（可选，不暴露 API Base URL）</div>
                 <Button
                   variant="secondary"
-                  onClick={() => handleCopy(`${origin}/api/webhook?token=${token}`, "已复制 URL")}
+                  onClick={() => handleCopy(buildProxyUrl(token), "已复制 URL")}
                   disabled={!origin || !token}
                 >
                   <Copy className="h-4 w-4 mr-2" />
@@ -316,7 +318,7 @@ export default function TradeWebhookPage() {
                 </Button>
               </div>
               <div className="font-mono text-sm break-all text-white">
-                {origin && token ? `${origin}/api/webhook?token=${token}` : ""}
+                {origin && token ? buildProxyUrl(token) : ""}
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -434,12 +436,23 @@ export default function TradeWebhookPage() {
                         <td className="px-6 py-4 text-[#9ca3af]">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs break-all">
-                              {item.url}
+                              {origin && item.triggerUrl
+                                ? buildProxyUrl(item.triggerUrl.split("/").pop() || "")
+                                : item.url}
                             </span>
                             <Button
                               size="sm"
                               variant="secondary"
-                              onClick={() => handleCopy(item.url, "已复制 URL")}
+                              onClick={() =>
+                                handleCopy(
+                                  origin && item.triggerUrl
+                                    ? buildProxyUrl(
+                                        item.triggerUrl.split("/").pop() || "",
+                                      )
+                                    : item.url,
+                                  "已复制 URL",
+                                )
+                              }
                             >
                               <LinkIcon className="h-4 w-4" />
                             </Button>
