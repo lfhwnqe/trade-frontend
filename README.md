@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trade Frontend
 
-## Getting Started
+交易记录系统的前端（Next.js App Router）。负责：交易录入/编辑、列表筛选、仪表盘展示、管理后台等。
 
-First, run the development server:
+相关总览文档见仓库根目录：`../README.md` 与 `../docs/`。
+
+## 技术栈
+
+- Next.js 15（App Router）
+- React 19
+- TailwindCSS + Radix UI
+- 状态管理：Jotai
+
+## 本地开发
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+cd trade-frontend
+pnpm i  # 或 yarn
 pnpm dev
-# or
-bun dev
+
+# http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 目录结构（关键位置）
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `src/app/trade/*`：交易相关页面
+- `src/app/admin/*`：管理相关页面
+- `src/utils/fetchWithAuth.ts`：统一 fetch 封装（401 自动跳转登录并保存回跳地址）
+- `src/app/trade/config.ts`：交易表单枚举/类型定义（需要与后端 DTO 同步）
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 与后端联调
 
-## Learn More
+- 后端 Swagger（本地）：`http://localhost:7800/api/docs`
+- 环境变量清单：见 `../docs/env.md`
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> 建议：后续做一个脚本/CI 检查 `config.ts` 与后端 DTO 枚举/字段是否一致，避免“前后端字段漂移”。
