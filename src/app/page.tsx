@@ -1,4 +1,5 @@
 import { Space_Grotesk } from "next/font/google";
+import Link from "next/link";
 import HomeAuthCta from "@/components/home-auth-cta";
 import {
   ArrowRight,
@@ -99,12 +100,12 @@ export default function Home() {
               >
                 方案与价格
               </a>
-              <a
+              <Link
                 className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
-                href="#"
+                href="/docs"
               >
-                学习中心
-              </a>
+                文档
+              </Link>
             </nav>
             <div className="flex items-center gap-3">
               <HomeAuthCta />
@@ -473,16 +474,14 @@ export default function Home() {
               <div>
                 <h4 className="mb-4 font-bold">学习资源</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
-                  {/* <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
-                      文档
-                    </a>
-                  </li>
                   <li>
-                    <a className="transition-colors hover:text-[#00c2b2]" href="#">
-                      API 参考
-                    </a>
-                  </li> */}
+                    <Link
+                      className="transition-colors hover:text-[#00c2b2]"
+                      href="/docs"
+                    >
+                      文档
+                    </Link>
+                  </li>
                   <li>
                     <a
                       className="transition-colors hover:text-[#00c2b2]"
