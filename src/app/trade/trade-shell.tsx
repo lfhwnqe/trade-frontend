@@ -208,7 +208,7 @@ export default function TradeShell({
                 className="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-white transition-colors"
               >
                 <Terminal className="h-4 w-4" />
-                <span>Developer Tools</span>
+                <span>开发者工具</span>
               </button>
             </SheetTrigger>
             <SheetContent
@@ -216,36 +216,58 @@ export default function TradeShell({
               className="bg-[#0b0b0b] border-r border-[#27272a] text-[#e5e7eb]"
             >
               <SheetHeader>
-                <SheetTitle className="text-white">Integration Center</SheetTitle>
+                <SheetTitle className="text-white">集成中心</SheetTitle>
                 <SheetDescription className="text-[#9ca3af]">
-                  API / Webhook integrations for automation.
+                  在这里配置自动化集成：API Token、Webhook。
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="px-4 pb-4 space-y-2">
-                {integrationItems.map((item) => {
-                  const isActive =
-                    pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  return (
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-1 gap-3">
+                  {integrationItems.map((item) => (
                     <Link
+                      key={item.href}
                       prefetch
-                      key={item.title}
-                      className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        isActive
-                          ? "bg-[#00c2b2]/15 text-[#00c2b2]"
-                          : "text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-[#00c2b2]"
-                      }`}
                       href={item.href}
+                      className="group rounded-xl border border-white/10 bg-[#121212]/60 p-4 transition-colors hover:border-[#00c2b2]/40"
                     >
-                      <item.icon
-                        className={`h-4 w-4 ${
-                          isActive ? "text-[#00c2b2]" : "text-[#9ca3af]"
-                        }`}
-                      />
-                      {item.title}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#00c2b2]/10 text-[#00c2b2]">
+                            <item.icon className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-white">
+                              {item.title}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {item.title === "API Token"
+                                ? "生成 Token，用于脚本/自动化写入交易"
+                                : "TradingView 单 URL 触发，推送到 Telegram 群"}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500 group-hover:text-gray-400">
+                          打开 →
+                        </div>
+                      </div>
                     </Link>
-                  );
-                })}
+                  ))}
+                </div>
+
+                <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-sm font-semibold text-white">文档</div>
+                  <div className="mt-1 text-xs text-gray-400">
+                    需要复制示例、查看参数说明？去
+                    <Link
+                      href="/docs"
+                      className="ml-1 text-[#00c2b2] hover:underline"
+                    >
+                      文档中心
+                    </Link>
+                    。
+                  </div>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
