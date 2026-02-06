@@ -663,52 +663,37 @@ export default function TradeHomePage() {
           </div>
         </div>
 
-        <div className="bg-[#121212] p-4 rounded-xl border border-[#27272a] shadow-sm">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-              <Sigma className="h-4 w-4 text-[#9ca3af]" />
-            </div>
-            <div>
-              <div className="text-sm font-medium text-white">近 30 笔对比</div>
-              <div className="text-xs text-[#9ca3af]">
-                真实与模拟分别展示（近 30 vs 60-30）
+        <div className="bg-[#121212] px-4 py-3 rounded-xl border border-[#27272a] shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                <Sigma className="h-4 w-4 text-[#9ca3af]" />
               </div>
+              <div className="text-sm font-medium text-white">近 30 笔对比</div>
+            </div>
+            <div className="text-xs text-[#9ca3af]">
+              真实/模拟（近 30 vs 60-30）
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {/* 真实交易 */}
-            <div className="rounded-xl border border-[#27272a] bg-black/20 px-4 py-4">
+          <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+            {/* 真实 */}
+            <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">真实交易</span>
+                <span className="text-sm font-medium text-white">真实</span>
                 <span className="text-xs text-[#9ca3af]">
-                  近 30 笔：{loading ? "..." : stats.recent30RealTradeCount}
+                  近30: {loading ? "..." : stats.recent30RealTradeCount}
                 </span>
               </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-3">
-                  <div className="text-[11px] text-[#9ca3af]">
-                    最近 30 综合盈亏 %
-                  </div>
-                  <div className="mt-1 text-lg font-bold text-white">
-                    {loading ? "..." : `${stats.recent30ProfitLossAvg}%`}
-                  </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                <div className="text-[#9ca3af]">
+                  最近: <span className="text-white font-medium">{loading ? "..." : `${stats.recent30ProfitLossAvg}%`}</span>
                 </div>
-                <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-3">
-                  <div className="text-[11px] text-[#9ca3af]">
-                    之前 30（60-30）
-                  </div>
-                  <div className="mt-1 text-lg font-bold text-white">
-                    {loading ? "..." : `${stats.previous30ProfitLossAvg}%`}
-                  </div>
+                <div className="text-[#9ca3af]">
+                  之前: <span className="text-white font-medium">{loading ? "..." : `${stats.previous30ProfitLossAvg}%`}</span>
                 </div>
-              </div>
-
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="text-[#9ca3af]">变化（最近-之前）</span>
-                <span
-                  className={`font-medium ${
+                <div
+                  className={`text-right font-medium ${
                     realProfitLossAvgDelta.trend === "up"
                       ? "text-emerald-400"
                       : realProfitLossAvgDelta.trend === "down"
@@ -716,48 +701,28 @@ export default function TradeHomePage() {
                         : "text-[#9ca3af]"
                   }`}
                 >
-                  {loading ? "..." : realProfitLossAvgDelta.text}
-                </span>
+                  Δ {loading ? "..." : realProfitLossAvgDelta.text}
+                </div>
               </div>
             </div>
 
-            {/* 模拟交易 */}
-            <div className="rounded-xl border border-[#27272a] bg-black/20 px-4 py-4">
+            {/* 模拟 */}
+            <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">模拟交易</span>
+                <span className="text-sm font-medium text-white">模拟</span>
                 <span className="text-xs text-[#9ca3af]">
-                  近 30 笔：
-                  {loading ? "..." : stats.recent30SimulationTradeCount}
+                  近30: {loading ? "..." : stats.recent30SimulationTradeCount}
                 </span>
               </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-3">
-                  <div className="text-[11px] text-[#9ca3af]">
-                    最近 30 综合盈亏 %
-                  </div>
-                  <div className="mt-1 text-lg font-bold text-white">
-                    {loading
-                      ? "..."
-                      : `${stats.recent30SimulationProfitLossAvg}%`}
-                  </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                <div className="text-[#9ca3af]">
+                  最近: <span className="text-white font-medium">{loading ? "..." : `${stats.recent30SimulationProfitLossAvg}%`}</span>
                 </div>
-                <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-3">
-                  <div className="text-[11px] text-[#9ca3af]">
-                    之前 30（60-30）
-                  </div>
-                  <div className="mt-1 text-lg font-bold text-white">
-                    {loading
-                      ? "..."
-                      : `${stats.previous30SimulationProfitLossAvg}%`}
-                  </div>
+                <div className="text-[#9ca3af]">
+                  之前: <span className="text-white font-medium">{loading ? "..." : `${stats.previous30SimulationProfitLossAvg}%`}</span>
                 </div>
-              </div>
-
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="text-[#9ca3af]">变化（最近-之前）</span>
-                <span
-                  className={`font-medium ${
+                <div
+                  className={`text-right font-medium ${
                     simulationProfitLossAvgDelta.trend === "up"
                       ? "text-emerald-400"
                       : simulationProfitLossAvgDelta.trend === "down"
@@ -765,8 +730,8 @@ export default function TradeHomePage() {
                         : "text-[#9ca3af]"
                   }`}
                 >
-                  {loading ? "..." : simulationProfitLossAvgDelta.text}
-                </span>
+                  Δ {loading ? "..." : simulationProfitLossAvgDelta.text}
+                </div>
               </div>
             </div>
           </div>
