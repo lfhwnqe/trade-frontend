@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, FileText, Home, ReceiptText } from "lucide-react";
+import { ChevronDown, FileText, Home, ReceiptText, KeyRound } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +32,11 @@ const tradeNavItems = [
     title: "交易总结",
     href: "/trade/summaries",
     icon: FileText,
+  },
+  {
+    title: "API Token",
+    href: "/trade/tokens",
+    icon: KeyRound,
   },
 ];
 
