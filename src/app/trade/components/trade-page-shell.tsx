@@ -5,12 +5,14 @@ import Link from "next/link";
 
 type TradePageShellProps = {
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
   showAddButton?: boolean;
 };
 
 export default function TradePageShell({
   title,
+  subtitle,
   children,
   showAddButton = true,
 }: TradePageShellProps) {
@@ -21,9 +23,14 @@ export default function TradePageShell({
           <button className="lg:hidden p-1 text-[#9ca3af] hover:text-white focus:outline-none">
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="text-xl font-semibold text-white tracking-tight">
-            {title}
-          </h1>
+          <div>
+            <h1 className="text-xl font-semibold text-white tracking-tight">
+              {title}
+            </h1>
+            {subtitle ? (
+              <div className="mt-0.5 text-xs text-[#9ca3af]">{subtitle}</div>
+            ) : null}
+          </div>
         </div>
         {showAddButton ? (
           <div className="flex items-center gap-4">

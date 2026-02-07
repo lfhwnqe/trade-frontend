@@ -11,6 +11,8 @@ import {
   Terminal,
   KeyRound,
   Webhook,
+  Link2,
+  Menu,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +28,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useAlert } from "@/components/common/alert";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
@@ -67,6 +70,16 @@ const integrationItems: NavItem[] = [
     title: "Webhook",
     href: "/trade/webhook",
     icon: Webhook,
+  },
+  {
+    title: "币安合约同步",
+    href: "/trade/binance-futures",
+    icon: Link2,
+  },
+  {
+    title: "币安已平仓仓位",
+    href: "/trade/binance-positions",
+    icon: Link2,
   },
 ];
 
@@ -243,7 +256,9 @@ export default function TradeShell({
                             <div className="text-xs text-gray-400">
                               {item.title === "API Token"
                                 ? "生成 Token，用于脚本/自动化写入交易"
-                                : "TradingView 单 URL 触发，推送到 Telegram 群"}
+                                : item.title === "Webhook"
+                                  ? "TradingView 单 URL 触发，推送到 Telegram 群"
+                                  : "配置只读 API Key，导入最近 1 年合约成交"}
                             </div>
                           </div>
                         </div>
@@ -303,7 +318,77 @@ export default function TradeShell({
       </aside>
 
       <div className="flex-1 lg:ml-64 min-h-screen bg-black min-w-0">
-        {children}
+        {/* Mobile top bar */}
+        <div className="lg:hidden sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md">
+          <div className="flex h-14 items-center justify-between px-4">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="secondary" className="bg-[#121212] border border-[#27272a]">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="bg-[#0b0b0b] border-r border-[#27272a] text-[#e5e7eb]"
+              >
+                <SheetHeader>
+                  <SheetTitle className="text-white">导航</SheetTitle>
+                  <SheetDescription className="text-[#9ca3af]">
+                    Trade 模块
+                  </SheetDescription>
+                </SheetHeader>
+
+                <div className="px-4 pb-4 space-y-6">
+                  <div>
+                    <div className="text-xs font-semibold text-gray-400">页面</div>
+                    <div className="mt-2 space-y-1">
+                      {tradeNavItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
+                        >
+                          {item.title}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs font-semibold text-gray-400">集成中心</div>
+                    <div className="mt-2 space-y-1">
+                      {integrationItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
+                        >
+                          {item.title}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-300 hover:bg-white/5"
+                    >
+                      {isLoggingOut ? "退出中..." : "退出登录"}
+                    </button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <div className="text-sm font-semibold text-white">MMC Trading</div>
+            <div className="text-xs text-[#9ca3af]">{displayName}</div>
+          </div>
+        </div>
+
+        <div className="lg:pt-0">{children}</div>
       </div>
     </div>
   );

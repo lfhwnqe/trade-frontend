@@ -1,4 +1,16 @@
 import Link from "next/link";
+import { DocsShell } from "../_components/docs-shell";
+import { docsNav } from "../_components/docs-data";
+
+const toc = [
+  { title: "创建 Webhook", href: "#create", level: 2 as const },
+  { title: "绑定 Telegram 群", href: "#bind", level: 2 as const },
+  { title: "触发方式（推荐：前端代理）", href: "#trigger", level: 2 as const },
+  { title: "限流说明", href: "#rate-limit", level: 2 as const },
+  { title: "后端直连触发接口", href: "#backend-endpoint", level: 2 as const },
+  { title: "Legacy 接口", href: "#legacy", level: 2 as const },
+  { title: "对应 Skill", href: "#skill", level: 2 as const },
+] as const;
 
 function CodeBlock({ children }: { children: string }) {
   return (
@@ -8,127 +20,80 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
-function H2({ id, children }: { id: string; children: string }) {
-  return (
-    <h2 id={id} className="mt-10 text-xl font-semibold text-white">
-      {children}
-    </h2>
-  );
-}
-
 export default function WebhookDocPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <div className="text-xs font-medium text-[#00c2b2]">Integration</div>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
-              Webhook 使用指南（TradingView → Telegram 群）
-            </h1>
-            <p className="mt-3 text-sm text-gray-400 md:text-base">
-              一个 hook 对应一个 Telegram 群：创建 → 绑定 → 触发 → 推送到群。
-            </p>
-          </div>
-          <Link href="/docs" className="text-sm text-gray-300 hover:text-[#00c2b2]">
-            ← 返回文档
-          </Link>
-        </div>
-
-        <div className="mt-8 rounded-xl border border-white/10 bg-[#121212]/70 p-5 text-sm text-gray-300">
-          <div className="font-semibold text-white">核心模型</div>
-          <ul className="mt-3 list-disc space-y-2 pl-5">
-            <li>
-              每个 hook 都会生成一个唯一触发 URL（TradingView 友好：无需额外 header）。
-            </li>
-            <li>
-              每个 hook 绑定一个 Telegram 群：在群里发送
-              <span className="ml-1 font-mono text-white">/bind &lt;bindCode&gt;</span>
-              完成绑定。
-            </li>
-            <li>
-              防滥用：每个 hook 限流 <span className="font-mono text-white">1 分钟最多 1 次</span>。
-            </li>
-          </ul>
-        </div>
-
-        <H2 id="create">1. 创建 Webhook</H2>
-        <p className="mt-3 text-sm text-gray-400">
-          登录后进入 <span className="font-mono text-white">Trade → Developer Tools → Integration Center → Webhook</span>
-          ，创建一个 hook。
-        </p>
-        <p className="mt-3 text-sm text-gray-400">
-          创建成功后会拿到：
-          <span className="ml-1 font-mono text-white">triggerUrl</span>
-          、
-          <span className="font-mono text-white">bindCode</span>
-          等信息。
-        </p>
-
-        <H2 id="bind">2. 绑定 Telegram 群</H2>
-        <p className="mt-3 text-sm text-gray-400">
-          把机器人拉进目标 Telegram 群，在群里发送：
-        </p>
-        <CodeBlock>{`/bind <bindCode>`}</CodeBlock>
-        <p className="mt-3 text-sm text-gray-400">
-          绑定成功后，此 hook 的所有触发消息都会推送到该群。
-        </p>
-
-        <H2 id="trigger">3. 触发方式（推荐：前端代理 URL）</H2>
-        <p className="mt-3 text-sm text-gray-400">
-          为了让 TradingView/外部系统更稳定地触发（且避免暴露后端真实 base URL），前端提供了代理接口：
-        </p>
-        <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-5 text-sm text-gray-300">
-          <div className="font-semibold text-white">推荐触发 URL</div>
-          <div className="mt-2 font-mono text-xs text-white">
-            POST /api/webhook?token=tw_xxx
-          </div>
-          <div className="mt-2 text-xs text-gray-400">
-            请求 body：<span className="font-mono">{`{ "message": "..." }`}</span>
-          </div>
-        </div>
-
-        <CodeBlock>{`curl -X POST "https://<YOUR_FRONTEND_ORIGIN>/api/webhook?token=tw_xxx" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"BTC breakout, log a new trade."}'`}</CodeBlock>
-
-        <H2 id="rate-limit">4. 限流说明</H2>
-        <p className="mt-3 text-sm text-gray-400">
-          每个 hook 限流：1 分钟最多触发 1 次。
-          如果触发过快，接口会返回 delivered=false，并给出 nextInMs。
-        </p>
-
-        <H2 id="backend-endpoint">5. 后端触发接口（直连）</H2>
-        <p className="mt-3 text-sm text-gray-400">
-          如果你要绕过前端代理，后端也支持直接触发：
-        </p>
-        <CodeBlock>{`POST https://<YOUR_API_BASE>/webhook/trade-alert/:triggerToken
-Body: { "message": "..." }
-(无需额外 header)`}</CodeBlock>
-
-        <H2 id="legacy">6. Legacy 接口（兼容旧模式）</H2>
-        <p className="mt-3 text-sm text-gray-400">
-          旧接口仍保留兼容（需要 header secret）：
-        </p>
-        <CodeBlock>{`POST https://<YOUR_API_BASE>/webhook/trade-alert/hook/:hookId
-Header: x-webhook-secret: <secret>`}</CodeBlock>
-
-        <H2 id="skill">7. 对应 Skill（规格/文档维护）</H2>
-        <p className="mt-3 text-sm text-gray-400">
-          和 Webhook 相关的接口/字段变更，建议同步维护 specs 文档，并用 OpenClaw skill
-          <span className="ml-1 font-mono text-[#00c2b2]">trade-specs-maintainer</span>
-          做一致性检查。
-        </p>
-
-        <div className="mt-10 flex items-center justify-between border-t border-white/10 pt-6">
-          <Link href="/docs/api-token" className="text-sm text-gray-300 hover:text-[#00c2b2]">
-            ← 上一篇：API Token 使用指南
-          </Link>
-          <Link href="/docs" className="text-sm text-gray-300 hover:text-[#00c2b2]">
-            返回文档首页 →
-          </Link>
-        </div>
+    <DocsShell
+      title="Webhook 使用指南（TradingView → Telegram 群）"
+      description="一个 hook 对应一个 Telegram 群：创建 → 绑定 → 触发 → 推送到群。"
+      nav={docsNav}
+      toc={[...toc]}
+    >
+      <div className="rounded-xl border border-white/10 bg-black/20 p-5 text-sm text-gray-300">
+        <div className="font-semibold text-white">核心模型</div>
+        <ul className="mt-3 list-disc space-y-2 pl-5">
+          <li>每个 hook 都会生成一个唯一触发 URL（无需额外 header）。</li>
+          <li>
+            每个 hook 绑定一个 Telegram 群：群内发送 <code>/bind &lt;bindCode&gt;</code>。
+          </li>
+          <li>
+            防滥用：每个 hook 限流 <code>1 分钟最多 1 次</code>。
+          </li>
+        </ul>
       </div>
-    </div>
+
+      <section id="create">
+        <h2>创建 Webhook</h2>
+        <p>
+          登录后进入 <strong>Trade → 开发者工具 → 集成中心 → Webhook</strong> 创建 hook。
+          创建成功后会拿到：<code>triggerUrl</code>、<code>bindCode</code> 等。
+        </p>
+      </section>
+
+      <section id="bind">
+        <h2>绑定 Telegram 群</h2>
+        <p>把机器人拉进目标 Telegram 群，在群里发送：</p>
+        <CodeBlock>{`/bind <bindCode>`}</CodeBlock>
+      </section>
+
+      <section id="trigger">
+        <h2>触发方式（推荐：前端代理 URL）</h2>
+        <p>
+          推荐使用前端代理（更稳定，也避免暴露后端真实 base URL）：
+          <code>POST /api/webhook?token=tw_xxx</code>
+        </p>
+        <CodeBlock>{`curl -X POST "https://<YOUR_FRONTEND_ORIGIN>/api/webhook?token=tw_xxx" \\\n  -H "Content-Type: application/json" \\\n  -d '{"message":"BTC breakout, log a new trade."}'`}</CodeBlock>
+      </section>
+
+      <section id="rate-limit">
+        <h2>限流说明</h2>
+        <p>
+          每个 hook 限流：1 分钟最多触发 1 次。如果触发过快，接口会返回 delivered=false，并给出 nextInMs。
+        </p>
+      </section>
+
+      <section id="backend-endpoint">
+        <h2>后端触发接口（直连）</h2>
+        <CodeBlock>{`POST https://<YOUR_API_BASE>/webhook/trade-alert/:triggerToken\nBody: { "message": "..." }\n(无需额外 header)`}</CodeBlock>
+      </section>
+
+      <section id="legacy">
+        <h2>Legacy 接口（兼容旧模式）</h2>
+        <CodeBlock>{`POST https://<YOUR_API_BASE>/webhook/trade-alert/hook/:hookId\nHeader: x-webhook-secret: <secret>`}</CodeBlock>
+      </section>
+
+      <section id="skill">
+        <h2>对应 Skill（规格/文档维护）</h2>
+        <p>
+          Webhook 相关接口/字段变更建议同步维护 specs 文档，并用 OpenClaw skill <code>trade-specs-maintainer</code> 做一致性检查。
+        </p>
+      </section>
+
+      <hr />
+      <p>
+        Next steps：
+        <Link href="/docs/get-started">快速开始</Link> 或
+        <Link href="/docs/api-token">API Token 使用指南</Link>
+      </p>
+    </DocsShell>
   );
 }
