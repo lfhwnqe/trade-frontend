@@ -36,7 +36,21 @@ export default function BinanceFuturesDocPage() {
         <h2>在哪里创建 API Key</h2>
         <p>
           在 Binance 官网 / App 的 API 管理页面创建 API Key。
-          由于 Binance 页面会不定期改版，本页只给“方向性指引”：
+        </p>
+        <p>
+          官方指引：
+          <a
+            className="text-[#00c2b2] hover:underline"
+            href="https://www.binance.com/zh-CN/support/faq/detail/360002502072"
+            target="_blank"
+            rel="noreferrer"
+          >
+            如何创建 Binance API Key（官方 FAQ）
+          </a>
+          。
+        </p>
+        <p>
+          由于 Binance 页面会不定期改版，本页同时给出“方向性指引”：
         </p>
         <ol>
           <li>
