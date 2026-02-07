@@ -21,6 +21,20 @@ type PositionItem = {
   fillCount: number;
 };
 
+type OpenPositionItem = {
+  symbol: string;
+  positionSide: "LONG" | "SHORT";
+  openTime: number;
+  lastTime: number;
+  openPrice: number;
+  currentQty: number;
+  maxOpenQty: number;
+  realizedPnl: number;
+  fees: number;
+  feeAsset?: string;
+  fillCount: number;
+};
+
 type ListResp = {
   items: PositionItem[];
   nextToken: string | null;
@@ -81,7 +95,9 @@ export default function BinancePositionsPage() {
   const [errorAlert, successAlert] = useAlert();
 
   const [range, setRange] = React.useState<"7d" | "30d" | "1y">("7d");
+  const [tab, setTab] = React.useState<"closed" | "open">("closed");
   const [items, setItems] = React.useState<PositionItem[]>([]);
+  const [openItems, setOpenItems] = React.useState<OpenPositionItem[]>([]);
   const [nextToken, setNextToken] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
@@ -134,8 +150,10 @@ export default function BinancePositionsPage() {
               try {
                 setLoading(true);
                 const res = await rebuildPositions(range);
+                const opened = (res?.data?.openItems || []) as OpenPositionItem[];
+                setOpenItems(opened);
                 successAlert(
-                  `已重建仓位历史：${res?.data?.rebuiltCount ?? 0} 条`,
+                  `已重建：已平仓 ${res?.data?.rebuiltCount ?? 0} 条；未平仓 ${res?.data?.openCount ?? 0} 条（预览显示最多 50 条）`,
                 );
                 await load("reset");
               } catch (e) {
@@ -182,80 +200,180 @@ export default function BinancePositionsPage() {
         </div>
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 overflow-x-auto">
-          <div className="text-lg font-semibold text-white">仓位历史列表</div>
-          <div className="mt-2 text-xs text-[#6b7280]">
-            说明：杠杆/全仓逐仓等字段 Binance 不一定通过成交接口提供，我们后续再补齐。
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-lg font-semibold text-white">仓位历史</div>
+              <div className="mt-2 text-xs text-[#6b7280]">
+                说明：杠杆/全仓逐仓等字段 Binance 不一定通过成交接口提供，我们后续再补齐。
+                未平仓的“开仓时间”是所选范围内首次出现时间（可能早于真实开仓时间）。
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={tab === "closed" ? "default" : "secondary"}
+                onClick={() => setTab("closed")}
+                className={tab === "closed" ? "bg-[#00c2b2] text-black hover:bg-[#00a79a]" : ""}
+              >
+                已平仓
+              </Button>
+              <Button
+                variant={tab === "open" ? "default" : "secondary"}
+                onClick={() => setTab("open")}
+                className={tab === "open" ? "bg-[#00c2b2] text-black hover:bg-[#00a79a]" : ""}
+              >
+                未平仓
+              </Button>
+            </div>
           </div>
 
-          <table className="mt-4 w-full text-sm">
-            <thead className="text-[#9ca3af]">
-              <tr className="border-b border-[#27272a]">
-                <th className="py-2 pr-3 text-left">选择</th>
-                <th className="py-2 pr-3 text-left">标的</th>
-                <th className="py-2 pr-3 text-left">方向</th>
-                <th className="py-2 pr-3 text-left">开仓时间</th>
-                <th className="py-2 pr-3 text-left">平仓时间</th>
-                <th className="py-2 pr-3 text-right">开仓价</th>
-                <th className="py-2 pr-3 text-right">平仓均价</th>
-                <th className="py-2 pr-3 text-right">最大持仓</th>
-                <th className="py-2 pr-3 text-right">已实现盈亏</th>
-                <th className="py-2 pr-3 text-right">收益率(估算)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((p) => (
-                <tr key={p.positionKey} className="border-b border-[#27272a] hover:bg-white/5">
-                  <td className="py-2 pr-3">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selected[p.positionKey])}
-                      onChange={(e) =>
-                        setSelected((prev) => ({
-                          ...prev,
-                          [p.positionKey]: e.target.checked,
-                        }))
-                      }
-                    />
-                  </td>
-                  <td className="py-2 pr-3 text-white font-mono">{p.symbol}</td>
-                  <td className="py-2 pr-3 text-[#e5e7eb]">{p.positionSide}</td>
-                  <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">
-                    {new Date(p.openTime).toLocaleString()}
-                  </td>
-                  <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">
-                    {new Date(p.closeTime).toLocaleString()}
-                  </td>
-                  <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
-                    {p.openPrice?.toFixed ? p.openPrice.toFixed(2) : p.openPrice}
-                  </td>
-                  <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
-                    {p.closePrice?.toFixed ? p.closePrice.toFixed(2) : p.closePrice}
-                  </td>
-                  <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
-                    {p.maxOpenQty}
-                  </td>
-                  <td className="py-2 pr-3 text-right font-mono">
-                    <span
-                      className={p.realizedPnl >= 0 ? "text-[#00c2b2]" : "text-red-400"}
+          {tab === "closed" ? (
+            <>
+              <table className="mt-4 w-full text-sm">
+                <thead className="text-[#9ca3af]">
+                  <tr className="border-b border-[#27272a]">
+                    <th className="py-2 pr-3 text-left">选择</th>
+                    <th className="py-2 pr-3 text-left">标的</th>
+                    <th className="py-2 pr-3 text-left">方向</th>
+                    <th className="py-2 pr-3 text-left">开仓时间</th>
+                    <th className="py-2 pr-3 text-left">平仓时间</th>
+                    <th className="py-2 pr-3 text-right">开仓价</th>
+                    <th className="py-2 pr-3 text-right">平仓均价</th>
+                    <th className="py-2 pr-3 text-right">最大持仓</th>
+                    <th className="py-2 pr-3 text-right">已实现盈亏</th>
+                    <th className="py-2 pr-3 text-right">收益率(估算)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((p) => (
+                    <tr
+                      key={p.positionKey}
+                      className="border-b border-[#27272a] hover:bg-white/5"
                     >
-                      {p.realizedPnl}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
-                    {typeof p.pnlPercent === "number"
-                      ? `${(p.pnlPercent * 100).toFixed(2)}%`
-                      : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <td className="py-2 pr-3">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(selected[p.positionKey])}
+                          onChange={(e) =>
+                            setSelected((prev) => ({
+                              ...prev,
+                              [p.positionKey]: e.target.checked,
+                            }))
+                          }
+                        />
+                      </td>
+                      <td className="py-2 pr-3 text-white font-mono">
+                        {p.symbol}
+                      </td>
+                      <td className="py-2 pr-3 text-[#e5e7eb]">
+                        {p.positionSide}
+                      </td>
+                      <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">
+                        {new Date(p.openTime).toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">
+                        {new Date(p.closeTime).toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {p.openPrice?.toFixed ? p.openPrice.toFixed(2) : p.openPrice}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {p.closePrice?.toFixed ? p.closePrice.toFixed(2) : p.closePrice}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {p.maxOpenQty}
+                      </td>
+                      <td className="py-2 pr-3 text-right font-mono">
+                        <span
+                          className={
+                            p.realizedPnl >= 0 ? "text-[#00c2b2]" : "text-red-400"
+                          }
+                        >
+                          {p.realizedPnl}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {typeof p.pnlPercent === "number"
+                          ? `${(p.pnlPercent * 100).toFixed(2)}%`
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-          {items.length === 0 ? (
-            <div className="mt-4 text-sm text-[#9ca3af]">
-              暂无数据：请先在“币安合约同步”页导入一次成交记录。
-            </div>
-          ) : null}
+              {items.length === 0 ? (
+                <div className="mt-4 text-sm text-[#9ca3af]">
+                  暂无已平仓数据：请先同步并重建（或该范围内尚未平仓）。
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <table className="mt-4 w-full text-sm">
+                <thead className="text-[#9ca3af]">
+                  <tr className="border-b border-[#27272a]">
+                    <th className="py-2 pr-3 text-left">标的</th>
+                    <th className="py-2 pr-3 text-left">方向</th>
+                    <th className="py-2 pr-3 text-left">开仓时间(范围内首次)</th>
+                    <th className="py-2 pr-3 text-left">最后更新时间</th>
+                    <th className="py-2 pr-3 text-right">开仓均价</th>
+                    <th className="py-2 pr-3 text-right">当前持仓量</th>
+                    <th className="py-2 pr-3 text-right">最大持仓量</th>
+                    <th className="py-2 pr-3 text-right">已实现盈亏</th>
+                    <th className="py-2 pr-3 text-right">手续费</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {openItems.map((p) => (
+                    <tr
+                      key={`${p.symbol}-${p.openTime}-${p.positionSide}`}
+                      className="border-b border-[#27272a] hover:bg-white/5"
+                    >
+                      <td className="py-2 pr-3 text-white font-mono">
+                        {p.symbol}
+                      </td>
+                      <td className="py-2 pr-3 text-[#e5e7eb]">
+                        {p.positionSide}
+                      </td>
+                      <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">
+                        {new Date(p.openTime).toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">
+                        {new Date(p.lastTime).toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {p.openPrice?.toFixed ? p.openPrice.toFixed(2) : p.openPrice}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {p.currentQty}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {p.maxOpenQty}
+                      </td>
+                      <td className="py-2 pr-3 text-right font-mono">
+                        <span
+                          className={
+                            p.realizedPnl >= 0 ? "text-[#00c2b2]" : "text-red-400"
+                          }
+                        >
+                          {p.realizedPnl}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {p.fees} {p.feeAsset || ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {openItems.length === 0 ? (
+                <div className="mt-4 text-sm text-[#9ca3af]">
+                  暂无未平仓数据：请先点一次“重建仓位历史”。
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </TradePageShell>
