@@ -74,6 +74,11 @@ const integrationItems: NavItem[] = [
     href: "/trade/binance-futures",
     icon: Link2,
   },
+  {
+    title: "币安已平仓仓位",
+    href: "/trade/binance-positions",
+    icon: Link2,
+  },
 ];
 
 export default function TradeShell({
