@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, Home, ReceiptText } from "lucide-react";
+import { ChevronDown, Home, ReceiptText, Menu } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -198,6 +207,56 @@ export default function AdminShell({
         </div>
       </aside>
       <div className="flex-1 lg:ml-64 min-h-screen bg-black min-w-0">
+        {/* Mobile top bar */}
+        <div className="lg:hidden sticky top-0 z-30 border-b border-white/10 bg-black/80 backdrop-blur-md">
+          <div className="flex h-14 items-center justify-between px-4">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="secondary" className="bg-[#121212] border border-[#27272a]">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="bg-[#0b0b0b] border-r border-[#27272a] text-[#e5e7eb]">
+                <SheetHeader>
+                  <SheetTitle className="text-white">导航</SheetTitle>
+                  <SheetDescription className="text-[#9ca3af]">Admin 模块</SheetDescription>
+                </SheetHeader>
+
+                <div className="px-4 pb-4 space-y-6">
+                  <div>
+                    <div className="text-xs font-semibold text-gray-400">页面</div>
+                    <div className="mt-2 space-y-1">
+                      {tradeNavItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
+                        >
+                          {item.title}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-300 hover:bg-white/5"
+                    >
+                      {isLoggingOut ? "退出中..." : "退出登录"}
+                    </button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <div className="text-sm font-semibold text-white">MMC Trading</div>
+            <div className="text-xs text-[#9ca3af]">{displayName}</div>
+          </div>
+        </div>
+
         {children}
       </div>
     </div>
