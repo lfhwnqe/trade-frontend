@@ -49,6 +49,20 @@ async function listPositions(
   return (json.data || {}) as ListResp;
 }
 
+async function rebuildPositions(range: "7d" | "30d" | "1y") {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/positions/rebuild",
+      actualMethod: "POST",
+    },
+    actualBody: { range },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 async function convertPositions(positionKeys: string[]) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -89,7 +103,7 @@ export default function BinancePositionsPage() {
         setNextToken(data.nextToken || null);
       } catch (e) {
         console.error(e);
-        errorAlert("加载仓位历史失败（需要先同步成交记录）");
+        errorAlert("加载仓位历史失败：你可以先点“重建仓位历史”");
       } finally {
         setLoading(false);
       }
@@ -113,6 +127,28 @@ export default function BinancePositionsPage() {
               <option value="1y">最近 1 年</option>
             </select>
           </div>
+
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              try {
+                setLoading(true);
+                const res = await rebuildPositions(range);
+                successAlert(
+                  `已重建仓位历史：${res?.data?.rebuiltCount ?? 0} 条`,
+                );
+                await load("reset");
+              } catch (e) {
+                console.error(e);
+                errorAlert("重建失败：请先同步成交记录");
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+          >
+            {loading ? "处理中..." : "重建仓位历史"}
+          </Button>
 
           <Button variant="secondary" onClick={() => load("reset")} disabled={loading}>
             {loading ? "加载中..." : "刷新/加载"}
