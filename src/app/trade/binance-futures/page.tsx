@@ -14,6 +14,25 @@ type KeyStatus = {
   updatedAt: string | null;
 };
 
+type FillItem = {
+  tradeKey: string;
+  tradeId: string;
+  symbol: string;
+  time: number;
+  side?: string;
+  positionSide?: string;
+  price?: string;
+  qty?: string;
+  realizedPnl?: string;
+  commission?: string;
+  commissionAsset?: string;
+};
+
+type FillListResponse = {
+  items: FillItem[];
+  nextToken: string | null;
+};
+
 async function getKeyStatus() {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -74,6 +93,39 @@ async function importFills(range: "7d" | "30d" | "1y", symbols?: string[]) {
   return res.json();
 }
 
+async function listFills(pageSize: number, nextToken?: string | null) {
+  const query = new URLSearchParams();
+  query.set("pageSize", String(pageSize));
+  if (nextToken) query.set("nextToken", nextToken);
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `trade/integrations/binance-futures/fills?${query.toString()}`,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const json = await res.json();
+  return (json.data || {}) as FillListResponse;
+}
+
+async function convertFills(tradeKeys: string[]) {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/convert",
+      actualMethod: "POST",
+    },
+    actualBody: { tradeKeys },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export default function BinanceFuturesIntegrationPage() {
   const [errorAlert, successAlert] = useAlert();
 
@@ -88,6 +140,12 @@ export default function BinanceFuturesIntegrationPage() {
   const [saving, setSaving] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+
+  const [fills, setFills] = React.useState<FillItem[]>([]);
+  const [fillsLoading, setFillsLoading] = React.useState(false);
+  const [fillsNextToken, setFillsNextToken] = React.useState<string | null>(null);
+  const [selected, setSelected] = React.useState<Record<string, boolean>>({});
+  const [converting, setConverting] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     try {
@@ -114,6 +172,33 @@ export default function BinanceFuturesIntegrationPage() {
     return Array.from(new Set(parts));
   }, [symbolsText]);
 
+  const selectedKeys = React.useMemo(
+    () => Object.keys(selected).filter((k) => selected[k]),
+    [selected],
+  );
+
+  const loadFills = React.useCallback(
+    async (mode: "reset" | "more") => {
+      try {
+        setFillsLoading(true);
+        const pageSize = 50;
+        const token = mode === "more" ? fillsNextToken : null;
+        const data = await listFills(pageSize, token);
+
+        setFills((prev) =>
+          mode === "more" ? [...prev, ...(data.items || [])] : data.items || [],
+        );
+        setFillsNextToken(data.nextToken || null);
+      } catch (e) {
+        console.error(e);
+        errorAlert("加载同步记录失败");
+      } finally {
+        setFillsLoading(false);
+      }
+    },
+    [errorAlert, fillsNextToken],
+  );
+
   return (
     <TradePageShell title="币安合约同步" subtitle="只读 API Key（查看权限）→ 手动导入最近 1 年成交记录（fills）">
       <div className="mb-4 text-sm text-[#9ca3af]">
@@ -124,6 +209,48 @@ export default function BinanceFuturesIntegrationPage() {
         。
       </div>
       <div className="space-y-6">
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => loadFills("reset")}
+            disabled={fillsLoading || !status?.configured}
+          >
+            {fillsLoading ? "加载中..." : "查看已同步记录"}
+          </Button>
+          {fills.length > 0 && fillsNextToken ? (
+            <Button
+              variant="secondary"
+              onClick={() => loadFills("more")}
+              disabled={fillsLoading}
+            >
+              {fillsLoading ? "加载中..." : "加载更多"}
+            </Button>
+          ) : null}
+
+          {selectedKeys.length > 0 ? (
+            <Button
+              onClick={async () => {
+                try {
+                  setConverting(true);
+                  const res = await convertFills(selectedKeys);
+                  successAlert(
+                    `已导入为系统交易记录：${res?.data?.createdCount ?? 0} 条`,
+                  );
+                  setSelected({});
+                } catch (e) {
+                  console.error(e);
+                  errorAlert("导入为交易记录失败");
+                } finally {
+                  setConverting(false);
+                }
+              }}
+              disabled={converting}
+              className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+            >
+              {converting ? "导入中..." : `导入选中（${selectedKeys.length}）为交易`}
+            </Button>
+          ) : null}
+        </div>
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
           <div className="text-lg font-semibold text-white">配置状态</div>
           <div className="mt-2 text-sm text-[#9ca3af]">
@@ -131,7 +258,7 @@ export default function BinanceFuturesIntegrationPage() {
               "加载中..."
             ) : status?.configured ? (
               <div>
-                已配置（API Key 尾号：
+                已配置（尾号：
                 <span className="font-mono text-white">{status.apiKeyTail}</span>
                 ）
                 {status.updatedAt ? (
@@ -146,80 +273,169 @@ export default function BinanceFuturesIntegrationPage() {
           </div>
         </div>
 
+        {fills.length > 0 ? (
+          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 overflow-x-auto">
+            <div className="text-lg font-semibold text-white">已同步成交记录</div>
+            <table className="mt-4 w-full text-sm">
+              <thead className="text-[#9ca3af]">
+                <tr className="border-b border-[#27272a]">
+                  <th className="py-2 pr-3 text-left">选择</th>
+                  <th className="py-2 pr-3 text-left">时间</th>
+                  <th className="py-2 pr-3 text-left">Symbol</th>
+                  <th className="py-2 pr-3 text-left">方向</th>
+                  <th className="py-2 pr-3 text-right">价格</th>
+                  <th className="py-2 pr-3 text-right">数量</th>
+                  <th className="py-2 pr-3 text-right">已实现盈亏</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fills.map((f) => (
+                  <tr
+                    key={f.tradeKey}
+                    className="border-b border-[#27272a] hover:bg-white/5"
+                  >
+                    <td className="py-2 pr-3">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selected[f.tradeKey])}
+                        onChange={(e) =>
+                          setSelected((prev) => ({
+                            ...prev,
+                            [f.tradeKey]: e.target.checked,
+                          }))
+                        }
+                      />
+                    </td>
+                    <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">
+                      {f.time ? new Date(f.time).toLocaleString() : "-"}
+                    </td>
+                    <td className="py-2 pr-3 text-white font-mono">
+                      {f.symbol}
+                    </td>
+                    <td className="py-2 pr-3 text-[#e5e7eb]">
+                      {f.positionSide || f.side || "-"}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                      {f.price ?? "-"}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                      {f.qty ?? "-"}
+                    </td>
+                    <td className="py-2 pr-3 text-right font-mono">
+                      <span
+                        className={
+                          Number(f.realizedPnl ?? 0) >= 0
+                            ? "text-[#00c2b2]"
+                            : "text-red-400"
+                        }
+                      >
+                        {f.realizedPnl ?? "-"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
-          <div className="text-lg font-semibold text-white">设置 API Key（只读权限即可）</div>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <div className="mb-2 text-sm text-[#9ca3af]">API Key</div>
-              <Input
-                value={apiKey}
-                onChange={(e) => setApiKeyValue(e.target.value)}
-                placeholder="Binance API Key"
-                className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
-              />
-            </div>
-            <div>
-              <div className="mb-2 text-sm text-[#9ca3af]">API Secret</div>
-              <Input
-                value={apiSecret}
-                onChange={(e) => setApiSecretValue(e.target.value)}
-                placeholder="Binance API Secret"
-                type="password"
-                className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
-              />
-            </div>
+          <div className="text-lg font-semibold text-white">API Key 配置</div>
+          <div className="mt-2 text-sm text-[#9ca3af]">
+            {status?.configured ? (
+              <span>
+                已配置（尾号：
+                <span className="font-mono text-white">{status.apiKeyTail}</span>
+                ）
+              </span>
+            ) : (
+              "未配置"
+            )}
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Button
-              onClick={async () => {
-                try {
-                  setSaving(true);
-                  await setKey(apiKey.trim(), apiSecret.trim());
-                  successAlert("保存成功");
-                  setApiKeyValue("");
-                  setApiSecretValue("");
-                  await refresh();
-                } catch (e) {
-                  console.error(e);
-                  errorAlert("保存失败");
-                } finally {
-                  setSaving(false);
-                }
-              }}
-              disabled={saving || apiKey.trim().length < 8 || apiSecret.trim().length < 8}
-              className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
-            >
-              {saving ? "保存中..." : "保存"}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                try {
-                  setDeleting(true);
-                  await deleteKey();
-                  successAlert("已删除");
-                  await refresh();
-                } catch (e) {
-                  console.error(e);
-                  errorAlert("删除失败");
-                } finally {
-                  setDeleting(false);
-                }
-              }}
-              disabled={deleting}
-            >
-              {deleting ? "删除中..." : "删除配置"}
-            </Button>
-          </div>
+          {!status?.configured ? (
+            <>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <div className="mb-2 text-sm text-[#9ca3af]">API Key</div>
+                  <Input
+                    value={apiKey}
+                    onChange={(e) => setApiKeyValue(e.target.value)}
+                    placeholder="Binance API 密钥"
+                    className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
+                <div>
+                  <div className="mb-2 text-sm text-[#9ca3af]">API Secret</div>
+                  <Input
+                    value={apiSecret}
+                    onChange={(e) => setApiSecretValue(e.target.value)}
+                    placeholder="Binance 密钥"
+                    type="password"
+                    className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
+              </div>
 
-          <div className="mt-4 text-xs text-[#6b7280]">
-            安全说明：服务端会加密保存 Secret（不返回明文），仅用于读取你的合约成交记录。
-          </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  onClick={async () => {
+                    try {
+                      setSaving(true);
+                      await setKey(apiKey.trim(), apiSecret.trim());
+                      successAlert("保存成功");
+                      setApiKeyValue("");
+                      setApiSecretValue("");
+                      await refresh();
+                    } catch (e) {
+                      console.error(e);
+                      errorAlert("保存失败");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={
+                    saving || apiKey.trim().length < 8 || apiSecret.trim().length < 8
+                  }
+                  className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+                >
+                  {saving ? "保存中..." : "保存"}
+                </Button>
+              </div>
+
+              <div className="mt-4 text-xs text-[#6b7280]">
+                安全说明：服务端会加密保存 Secret（不返回明文），仅用于读取你的合约成交记录。
+              </div>
+            </>
+          ) : null}
+
+          {status?.configured ? (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  try {
+                    setDeleting(true);
+                    await deleteKey();
+                    successAlert("已删除");
+                    await refresh();
+                  } catch (e) {
+                    console.error(e);
+                    errorAlert("删除失败");
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+              >
+                {deleting ? "删除中..." : "删除配置"}
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
-          <div className="text-lg font-semibold text-white">手动导入（最近 1 年）</div>
+          <div className="text-lg font-semibold text-white">手动导入（最近成交）</div>
           <div className="mt-2 text-sm text-[#9ca3af]">
             默认导入范围为 <span className="font-mono text-white">7 天</span>。你可以选择导入 1 个月或 1 年。
             Binance 单次查询最大 7 天，系统会自动分段。
