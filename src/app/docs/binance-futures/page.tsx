@@ -15,7 +15,7 @@ export default function BinanceFuturesDocPage() {
   return (
     <DocsShell
       title="币安合约同步（只读）"
-      description="配置只读 API Key → 手动导入最近 1 年合约成交（fills）。"
+      description="配置只读 API Key → 手动导入合约成交（fills）。默认导入最近 7 天，可选 1 个月或 1 年。"
       nav={docsNav}
       toc={[...toc]}
     >
@@ -99,9 +99,10 @@ export default function BinanceFuturesDocPage() {
       </section>
 
       <section id="import">
-        <h2>手动导入（最近 1 年）</h2>
+        <h2>手动导入（默认最近 7 天）</h2>
         <p>
-          保存 Key 后点击“开始导入”。系统会导入最近 1 年的合约成交记录，并自动去重。
+          保存 Key 后点击“开始导入”。你可以在页面选择导入范围：最近 7 天（默认）/ 1 个月 / 1 年。
+          系统会自动分段拉取，并自动去重。
         </p>
         <p>
           如果 Binance 接口提示<strong>必须提供 symbol</strong>，请在页面填写 symbols（例如

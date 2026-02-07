@@ -57,7 +57,7 @@ async function deleteKey() {
   return res.json();
 }
 
-async function importFills(symbols?: string[]) {
+async function importFills(range: "7d" | "30d" | "1y", symbols?: string[]) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
@@ -65,7 +65,10 @@ async function importFills(symbols?: string[]) {
       targetPath: "trade/integrations/binance-futures/import",
       actualMethod: "POST",
     },
-    actualBody: symbols && symbols.length > 0 ? { symbols } : {},
+    actualBody:
+      symbols && symbols.length > 0
+        ? { range, symbols }
+        : { range },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -80,6 +83,7 @@ export default function BinanceFuturesIntegrationPage() {
   const [apiKey, setApiKeyValue] = React.useState("");
   const [apiSecret, setApiSecretValue] = React.useState("");
   const [symbolsText, setSymbolsText] = React.useState("");
+  const [range, setRange] = React.useState<"7d" | "30d" | "1y">("7d");
 
   const [saving, setSaving] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
@@ -217,7 +221,23 @@ export default function BinanceFuturesIntegrationPage() {
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
           <div className="text-lg font-semibold text-white">手动导入（最近 1 年）</div>
           <div className="mt-2 text-sm text-[#9ca3af]">
-            默认会尝试不传 symbol 导入；如果 Binance 要求提供 symbol，请在下面填写（例如 BTCUSDT, ETHUSDT）。
+            默认导入范围为 <span className="font-mono text-white">7 天</span>。你可以选择导入 1 个月或 1 年。
+            Binance 单次查询最大 7 天，系统会自动分段。
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <div className="mb-2 text-sm text-[#9ca3af]">导入范围</div>
+              <select
+                value={range}
+                onChange={(e) => setRange(e.target.value as "7d" | "30d" | "1y")}
+                className="w-full rounded-md bg-[#1e1e1e] border border-[#27272a] px-3 py-2 text-sm text-[#e5e7eb]"
+              >
+                <option value="7d">最近 7 天（默认）</option>
+                <option value="30d">最近 1 个月</option>
+                <option value="1y">最近 1 年</option>
+              </select>
+            </div>
           </div>
 
           <div className="mt-4">
@@ -238,7 +258,7 @@ export default function BinanceFuturesIntegrationPage() {
               onClick={async () => {
                 try {
                   setImporting(true);
-                  const res = await importFills(parsedSymbols);
+                  const res = await importFills(range, parsedSymbols);
                   successAlert(
                     `导入完成：新增 ${res?.data?.importedCount ?? 0}，跳过 ${res?.data?.skippedCount ?? 0}`,
                   );
