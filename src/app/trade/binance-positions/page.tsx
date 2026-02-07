@@ -22,25 +22,27 @@ type PositionItem = {
 };
 
 type OpenPositionItem = {
+  positionKey: string;
   symbol: string;
   positionSide: "LONG" | "SHORT";
   openTime: number;
-  lastTime: number;
+  closeTime: number; // lastTime
   openPrice: number;
-  currentQty: number;
+  currentQty?: number;
   maxOpenQty: number;
   realizedPnl: number;
-  fees: number;
+  fees?: number;
   feeAsset?: string;
   fillCount: number;
+  status?: "OPEN" | "CLOSED";
 };
 
-type ListResp = {
-  items: PositionItem[];
+type ListResp<T> = {
+  items: T[];
   nextToken: string | null;
 };
 
-async function listPositions(
+async function listPositions<T>(
   range: "7d" | "30d" | "1y",
   status: "open" | "closed",
   nextToken?: string | null,
@@ -62,7 +64,7 @@ async function listPositions(
   });
   if (!res.ok) throw new Error(await res.text());
   const json = await res.json();
-  return (json.data || {}) as ListResp;
+  return (json.data || {}) as ListResp<T>;
 }
 
 async function rebuildPositions(range: "7d" | "30d" | "1y") {
@@ -93,6 +95,20 @@ async function convertPositions(positionKeys: string[]) {
   return res.json();
 }
 
+async function convertOpenPositions(positionKeys: string[]) {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/positions/convert-open",
+      actualMethod: "POST",
+    },
+    actualBody: { positionKeys },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export default function BinancePositionsPage() {
   const [errorAlert, successAlert] = useAlert();
 
@@ -110,22 +126,30 @@ export default function BinancePositionsPage() {
     [selected],
   );
 
+  const [openSelected, setOpenSelected] = React.useState<Record<string, boolean>>(
+    {},
+  );
+  const openSelectedKeys = React.useMemo(
+    () => Object.keys(openSelected).filter((k) => openSelected[k]),
+    [openSelected],
+  );
+
   const load = React.useCallback(
     async (mode: "reset" | "more") => {
       try {
         setLoading(true);
         const token = mode === "more" ? nextToken : null;
         const status = tab === "open" ? "open" : "closed";
-        const data = await listPositions(range, status, token);
+        const data =
+          tab === "open"
+            ? await listPositions<OpenPositionItem>(range, status, token)
+            : await listPositions<PositionItem>(range, status, token);
         if (tab === "open") {
-          const next = (data.items || []) as unknown as OpenPositionItem[];
-          setOpenItems((prev) =>
-            mode === "more" ? [...prev, ...next] : next,
-          );
+          const next = (data.items || []) as OpenPositionItem[];
+          setOpenItems((prev) => (mode === "more" ? [...prev, ...next] : next));
         } else {
-          setItems((prev) =>
-            mode === "more" ? [...prev, ...(data.items || [])] : data.items || [],
-          );
+          const next = (data.items || []) as PositionItem[];
+          setItems((prev) => (mode === "more" ? [...prev, ...next] : next));
         }
         setNextToken(data.nextToken || null);
       } catch (e) {
@@ -188,7 +212,7 @@ export default function BinancePositionsPage() {
             </Button>
           ) : null}
 
-          {selectedKeys.length > 0 ? (
+          {tab === "closed" && selectedKeys.length > 0 ? (
             <Button
               className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
               onClick={async () => {
@@ -205,6 +229,26 @@ export default function BinancePositionsPage() {
               }}
             >
               导入选中（{selectedKeys.length}）为交易
+            </Button>
+          ) : null}
+
+          {tab === "open" && openSelectedKeys.length > 0 ? (
+            <Button
+              className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+              onClick={async () => {
+                try {
+                  const res = await convertOpenPositions(openSelectedKeys);
+                  successAlert(
+                    `已创建进行中交易（ENTERED）：${res?.data?.createdCount ?? 0} 条`,
+                  );
+                  setOpenSelected({});
+                } catch (e) {
+                  console.error(e);
+                  errorAlert("创建交易失败");
+                }
+              }}
+            >
+              创建进行中交易（{openSelectedKeys.length}）
             </Button>
           ) : null}
         </div>
@@ -322,6 +366,7 @@ export default function BinancePositionsPage() {
               <table className="mt-4 w-full text-sm">
                 <thead className="text-[#9ca3af]">
                   <tr className="border-b border-[#27272a]">
+                    <th className="py-2 pr-3 text-left">选择</th>
                     <th className="py-2 pr-3 text-left">标的</th>
                     <th className="py-2 pr-3 text-left">方向</th>
                     <th className="py-2 pr-3 text-left">开仓时间(范围内首次)</th>
@@ -336,9 +381,21 @@ export default function BinancePositionsPage() {
                 <tbody>
                   {openItems.map((p) => (
                     <tr
-                      key={`${p.symbol}-${p.openTime}-${p.positionSide}`}
+                      key={p.positionKey}
                       className="border-b border-[#27272a] hover:bg-white/5"
                     >
+                      <td className="py-2 pr-3">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(openSelected[p.positionKey])}
+                          onChange={(e) =>
+                            setOpenSelected((prev) => ({
+                              ...prev,
+                              [p.positionKey]: e.target.checked,
+                            }))
+                          }
+                        />
+                      </td>
                       <td className="py-2 pr-3 text-white font-mono">
                         {p.symbol}
                       </td>
@@ -349,13 +406,13 @@ export default function BinancePositionsPage() {
                         {new Date(p.openTime).toLocaleString()}
                       </td>
                       <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">
-                        {new Date(p.lastTime).toLocaleString()}
+                        {new Date(p.closeTime).toLocaleString()}
                       </td>
                       <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
                         {p.openPrice?.toFixed ? p.openPrice.toFixed(2) : p.openPrice}
                       </td>
                       <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
-                        {p.currentQty}
+                        {typeof p.currentQty === "number" ? p.currentQty : "-"}
                       </td>
                       <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
                         {p.maxOpenQty}
@@ -370,7 +427,7 @@ export default function BinancePositionsPage() {
                         </span>
                       </td>
                       <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
-                        {p.fees} {p.feeAsset || ""}
+                        {typeof p.fees === "number" ? p.fees : "-"} {p.feeAsset || ""}
                       </td>
                     </tr>
                   ))}
