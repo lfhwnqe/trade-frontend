@@ -13,6 +13,7 @@ import {
   Webhook,
   Link2,
   Menu,
+  LockKeyhole,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -309,6 +310,13 @@ export default function TradeShell({
               className="w-[--radix-popper-anchor-width]"
             >
               <DropdownMenuItem onClick={() => router.push("/")}>首页</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/trade/password")}
+              >
+                <span className="flex items-center gap-2">
+                  <LockKeyhole className="h-4 w-4" />
+                  修改密码
+                </span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
                 {isLoggingOut ? "退出中..." : "退出登录"}
               </DropdownMenuItem>
@@ -369,7 +377,13 @@ export default function TradeShell({
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-white/10">
+                  <div className="pt-2 border-t border-white/10 space-y-1">
+                    <Link
+                      href="/trade/password"
+                      className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
+                    >
+                      修改密码
+                    </Link>
                     <button
                       type="button"
                       onClick={handleLogout}
