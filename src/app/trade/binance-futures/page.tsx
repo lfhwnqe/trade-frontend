@@ -112,6 +112,13 @@ export default function BinanceFuturesIntegrationPage() {
 
   return (
     <TradePageShell title="币安合约同步" subtitle="只读 API Key（查看权限）→ 手动导入最近 1 年成交记录（fills）">
+      <div className="mb-4 text-sm text-[#9ca3af]">
+        不知道 API Key/Secret 从哪里获取？看
+        <a className="ml-1 text-[#00c2b2] hover:underline" href="/docs/binance-futures">
+          币安合约同步文档
+        </a>
+        。
+      </div>
       <div className="space-y-6">
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
           <div className="text-lg font-semibold text-white">配置状态</div>

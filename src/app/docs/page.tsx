@@ -21,6 +21,12 @@ const docs = [
     href: "/docs/webhook",
     tag: "Integrations",
   },
+  {
+    title: "币安合约同步（只读）",
+    desc: "从哪里拿 API Key/Secret、需要哪些权限、如何导入最近 1 年成交。",
+    href: "/docs/binance-futures",
+    tag: "Integrations",
+  },
 ] as const;
 
 export default function DocsIndexPage() {
