@@ -42,11 +42,13 @@ type ListResp = {
 
 async function listPositions(
   range: "7d" | "30d" | "1y",
+  status: "open" | "closed",
   nextToken?: string | null,
 ) {
   const query = new URLSearchParams();
   query.set("pageSize", "20");
   query.set("range", range);
+  query.set("status", status);
   if (nextToken) query.set("nextToken", nextToken);
 
   const res = await fetchWithAuth("/api/proxy-post", {
@@ -97,6 +99,7 @@ export default function BinancePositionsPage() {
   const [range, setRange] = React.useState<"7d" | "30d" | "1y">("7d");
   const [tab, setTab] = React.useState<"closed" | "open">("closed");
   const [items, setItems] = React.useState<PositionItem[]>([]);
+  // open items will be loaded from listPositions(status=open)
   const [openItems, setOpenItems] = React.useState<OpenPositionItem[]>([]);
   const [nextToken, setNextToken] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -112,10 +115,18 @@ export default function BinancePositionsPage() {
       try {
         setLoading(true);
         const token = mode === "more" ? nextToken : null;
-        const data = await listPositions(range, token);
-        setItems((prev) =>
-          mode === "more" ? [...prev, ...(data.items || [])] : data.items || [],
-        );
+        const status = tab === "open" ? "open" : "closed";
+        const data = await listPositions(range, status, token);
+        if (tab === "open") {
+          const next = (data.items || []) as unknown as OpenPositionItem[];
+          setOpenItems((prev) =>
+            mode === "more" ? [...prev, ...next] : next,
+          );
+        } else {
+          setItems((prev) =>
+            mode === "more" ? [...prev, ...(data.items || [])] : data.items || [],
+          );
+        }
         setNextToken(data.nextToken || null);
       } catch (e) {
         console.error(e);
@@ -124,7 +135,7 @@ export default function BinancePositionsPage() {
         setLoading(false);
       }
     },
-    [errorAlert, nextToken, range],
+    [errorAlert, nextToken, range, tab],
   );
 
   return (
@@ -150,8 +161,7 @@ export default function BinancePositionsPage() {
               try {
                 setLoading(true);
                 const res = await rebuildPositions(range);
-                const opened = (res?.data?.openItems || []) as OpenPositionItem[];
-                setOpenItems(opened);
+                // open positions are persisted; list will load them by status=open
                 successAlert(
                   `已重建：已平仓 ${res?.data?.rebuiltCount ?? 0} 条；未平仓 ${res?.data?.openCount ?? 0} 条（预览显示最多 50 条）`,
                 );
