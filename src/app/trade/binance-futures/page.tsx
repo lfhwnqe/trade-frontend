@@ -90,7 +90,11 @@ async function cleanupSyncedData() {
   return res.json();
 }
 
-async function importFills(range: "7d" | "30d" | "1y", symbols?: string[]) {
+async function importFills(
+  range: "7d" | "30d" | "1y",
+  market: "usdtm" | "coinm",
+  symbols?: string[],
+) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
@@ -100,8 +104,8 @@ async function importFills(range: "7d" | "30d" | "1y", symbols?: string[]) {
     },
     actualBody:
       symbols && symbols.length > 0
-        ? { range, symbols }
-        : { range },
+        ? { range, market, symbols }
+        : { range, market },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -150,6 +154,7 @@ export default function BinanceFuturesIntegrationPage() {
   const [apiSecret, setApiSecretValue] = React.useState("");
   const [symbolsText, setSymbolsText] = React.useState("");
   const [range, setRange] = React.useState<"7d" | "30d" | "1y">("7d");
+  const [market, setMarket] = React.useState<"usdtm" | "coinm">("usdtm");
 
   const [saving, setSaving] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
@@ -487,6 +492,18 @@ export default function BinanceFuturesIntegrationPage() {
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
+              <div className="mb-2 text-sm text-[#9ca3af]">合约市场</div>
+              <select
+                value={market}
+                onChange={(e) => setMarket(e.target.value as "usdtm" | "coinm")}
+                className="w-full rounded-md bg-[#1e1e1e] border border-[#27272a] px-3 py-2 text-sm text-[#e5e7eb]"
+              >
+                <option value="usdtm">USDⓈ-M（USDT/USDC 永续）</option>
+                <option value="coinm">COIN-M（币本位）</option>
+              </select>
+            </div>
+
+            <div>
               <div className="mb-2 text-sm text-[#9ca3af]">导入范围</div>
               <select
                 value={range}
@@ -518,7 +535,7 @@ export default function BinanceFuturesIntegrationPage() {
               onClick={async () => {
                 try {
                   setImporting(true);
-                  const res = await importFills(range, parsedSymbols);
+                  const res = await importFills(range, market, parsedSymbols);
                   successAlert(
                     `导入完成：新增 ${res?.data?.importedCount ?? 0}，跳过 ${res?.data?.skippedCount ?? 0}`,
                   );
