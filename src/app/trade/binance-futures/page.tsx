@@ -76,6 +76,20 @@ async function deleteKey() {
   return res.json();
 }
 
+async function cleanupSyncedData() {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/cleanup",
+      actualMethod: "POST",
+    },
+    actualBody: { includeKeys: false },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 async function importFills(range: "7d" | "30d" | "1y", symbols?: string[]) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -146,6 +160,7 @@ export default function BinanceFuturesIntegrationPage() {
   const [fillsNextToken, setFillsNextToken] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
   const [converting, setConverting] = React.useState(false);
+  const [cleaning, setCleaning] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     try {
@@ -226,6 +241,35 @@ export default function BinanceFuturesIntegrationPage() {
               {fillsLoading ? "加载中..." : "加载更多"}
             </Button>
           ) : null}
+
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              const ok = window.confirm(
+                "确认清空‘币安合约同步’的数据吗？\n\n将删除：已同步的成交记录/仓位聚合数据。\n不会删除系统里的真实交易记录。",
+              );
+              if (!ok) return;
+
+              try {
+                setCleaning(true);
+                const res = await cleanupSyncedData();
+                successAlert(
+                  `已清空：fills ${res?.data?.fillsDeleted ?? 0} 条，positions ${res?.data?.positionsDeleted ?? 0} 条`,
+                );
+                setFills([]);
+                setFillsNextToken(null);
+                setSelected({});
+              } catch (e) {
+                console.error(e);
+                errorAlert("清空失败");
+              } finally {
+                setCleaning(false);
+              }
+            }}
+            disabled={cleaning || !status?.configured}
+          >
+            {cleaning ? "清空中..." : "清空同步数据"}
+          </Button>
 
           {selectedKeys.length > 0 ? (
             <Button
