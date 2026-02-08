@@ -102,6 +102,12 @@ export default function Home() {
               </a>
               <Link
                 className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
+                href="/home-v2"
+              >
+                新版主页
+              </Link>
+              <Link
+                className="text-sm font-medium transition-colors hover:text-[#00c2b2]"
                 href="/docs"
               >
                 文档
