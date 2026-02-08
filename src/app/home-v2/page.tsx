@@ -18,7 +18,6 @@ import {
   Sparkles,
   MessageSquare,
   Brain,
-  Mail,
   Database,
 } from "lucide-react";
 
@@ -153,7 +152,7 @@ export default function HomeV2() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00c2b2] opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00c2b2]" />
                   </span>
-                  已上线：TradingView 提醒 → Telegram 群同步 + 币安合约同步
+                  已上线：TradingView webhook 绑定交易 → Telegram 群提醒（可升级自动分析） + 币安合约同步
                 </div>
 
                 <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tighter text-white">
@@ -218,7 +217,7 @@ export default function HomeV2() {
                         </div>
                         <div>
                           <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
-                            Webhook → Telegram 群
+                            Trade Webhook → Telegram 群
                           </div>
                           <div className="text-xs text-white font-mono">
                             BTCUSDC 空单加仓 @ 69008.4 → 推送到群
@@ -325,7 +324,7 @@ export default function HomeV2() {
                   {
                     node: "NODE_02",
                     title: "2. 执行",
-                    desc: "TradingView 提醒直接同步到 Telegram 群，群里所有人都能第一时间看到。",
+                    desc: "TradingView webhook 绑定到某条交易，触发后自动推送到 Telegram 群。",
                     icon: Zap,
                     delay: "delay-200",
                     barDelay: "100ms",
@@ -479,10 +478,10 @@ export default function HomeV2() {
                   <div className="h-10 w-10 rounded bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition-transform">
                     <Webhook className="h-5 w-5" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">TradingView → Telegram 群</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">TradingView → Telegram（按交易绑定）</h3>
                   <p className="text-gray-400 text-sm">
-                    你在 TradingView 触发提醒，消息会第一时间进到 Telegram 群里。
-                    不管是你自己复盘，还是团队协作，都能保持信息一致。
+                    每条交易可以创建一个专属 webhook。
+                    TradingView 触发后，消息会直接进到该交易绑定的 Telegram 群里，避免“只看到提醒却不知道对应哪一笔交易”。
                   </p>
                 </div>
 
@@ -514,7 +513,7 @@ export default function HomeV2() {
                   </h2>
                   <p className="text-gray-400 text-lg leading-relaxed max-w-xl">
                     你不需要“复制粘贴、手动整理、到处记笔记”。
-                    从信号到入库，系统可以帮你把流程跑起来：提醒同步到 Telegram 群，自动生成分析报告，最后变成可管理的交易记录。
+                    从信号到复盘，系统可以帮你把流程跑起来：提醒绑定到某条交易并同步到 Telegram 群；Pro 用户还可以自动生成分析报告。
                   </p>
                 </div>
 
@@ -600,7 +599,7 @@ export default function HomeV2() {
                         </div>
                         <ArrowRight className="h-4 w-4 text-gray-600" />
                       </div>
-                      <h4 className="text-white font-bold mb-2">OpenClaw 自动分析</h4>
+                      <h4 className="text-white font-bold mb-2">系统自动分析（Pro）</h4>
                       <div className="space-y-1.5 mb-2">
                         <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                           <div className="h-full bg-purple-500 w-3/4" />
@@ -619,26 +618,21 @@ export default function HomeV2() {
                         第 04 步
                       </div>
                       <div className="mb-6 flex justify-between items-start">
-                        <div className="flex -space-x-2">
-                          <div className="h-10 w-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 z-10">
-                            <Mail className="h-5 w-5" />
-                          </div>
-                          <div className="h-10 w-10 rounded-full bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                            <MessageSquare className="h-5 w-5" />
-                          </div>
+                        <div className="h-10 w-10 rounded bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                          <MessageSquare className="h-5 w-5" />
                         </div>
                         <ArrowRight className="h-4 w-4 text-gray-600" />
                       </div>
-                      <h4 className="text-white font-bold mb-2">多渠道同步</h4>
+                      <h4 className="text-white font-bold mb-2">发送分析报告到群</h4>
                       <div className="flex gap-2 mb-2">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                          邮件
-                        </span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                          群内摘要
+                          群内报告
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-300 border border-white/10">
+                          结构化结论
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500">报告发到邮箱，关键结论同步回群里。</p>
+                      <p className="text-xs text-gray-500">把关键结论直接发回 Telegram 群，方便立刻执行或讨论。</p>
                     </div>
                   </div>
 
