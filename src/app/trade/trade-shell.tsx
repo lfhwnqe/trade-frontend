@@ -13,7 +13,6 @@ import {
   Webhook,
   Link2,
   Menu,
-  LockKeyhole,
 } from "lucide-react";
 import {
   DropdownMenu,
