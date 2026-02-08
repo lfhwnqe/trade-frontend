@@ -43,15 +43,78 @@ export default function HomeV2() {
           -webkit-mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
           mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
         }
+        .circuit-bg {
+          background-image: radial-gradient(#00c2b2 1px, transparent 1px);
+          background-size: 20px 20px;
+          opacity: 0.05;
+        }
+        .glass-card {
+          background: rgba(15, 15, 17, 0.7);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-hover:hover {
+          box-shadow: 0 0 30px -5px rgba(0, 194, 178, 0.3);
+          border-color: rgba(0, 194, 178, 0.5);
+        }
+        .animate-scan-line {
+          position: absolute;
+          width: 100%;
+          height: 2px;
+          background: linear-gradient(to right, transparent, #00c2b2, transparent);
+          box-shadow: 0 0 15px #00c2b2;
+          animation: scan 4s linear infinite;
+          z-index: 20;
+          opacity: 0.7;
+          left: 0;
+        }
+        .data-flow-line {
+          position: absolute;
+          top: 50%;
+          left: 0;
+          width: 100%;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #00c2b2, transparent);
+          background-size: 200% 100%;
+          animation: flowHorizontal 2.2s linear infinite;
+          z-index: 0;
+          opacity: 0.28;
+        }
+        @keyframes scan {
+          0% { top: -10%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { top: 110%; opacity: 0; }
+        }
+        @keyframes flowHorizontal {
+          0% { background-position: 100% 0; }
+          100% { background-position: -100% 0; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-14px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .pulse-slow { animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-up { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-400 { animation-delay: 400ms; }
       `}</style>
 
       <div className="fixed inset-0 pointer-events-none z-0 grid-bg" />
+      <div className="fixed inset-0 pointer-events-none z-0 circuit-bg" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-md">
           <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-2">
-              <div className="text-[#00c2b2] flex items-center justify-center">
+              <div className="text-[#00c2b2] flex items-center justify-center pulse-slow">
                 <Image src={`/favicon.png`} width={30} height={30} alt="logo" />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">MMCTradeJournal</span>
@@ -84,7 +147,7 @@ export default function HomeV2() {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#00c2b2]/10 blur-[100px] rounded-full pointer-events-none" />
 
             <div className="container mx-auto px-4 md:px-6 relative z-10">
-              <div className="flex flex-col items-center text-center gap-8 max-w-4xl mx-auto mb-16">
+              <div className="flex flex-col items-center text-center gap-8 max-w-4xl mx-auto mb-16 fade-in-up">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#00c2b2]/20 bg-[#00c2b2]/5 text-xs font-medium text-[#00c2b2] mb-4">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00c2b2] opacity-75" />
@@ -126,8 +189,9 @@ export default function HomeV2() {
               </div>
 
               {/* Screenshot mock (keep same as v1 style for now) */}
-              <div className="relative w-full max-w-6xl mx-auto group perspective-1000 mt-12">
-                <div className="relative rounded-xl border border-white/10 bg-[#0f0f11] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] overflow-hidden transition-transform duration-700 ease-out transform group-hover:scale-[1.005]">
+              <div className="relative w-full max-w-6xl mx-auto group perspective-1000 mt-12 fade-in-up delay-200">
+                <div className="relative rounded-xl border border-white/10 bg-[#0f0f11] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] overflow-hidden transition-all duration-700 ease-out transform group-hover:scale-[1.005] glow-hover">
+                  <div className="animate-scan-line" />
                   <div className="h-10 border-b border-white/5 bg-[#151515] flex items-center px-4 gap-2">
                     <div className="flex gap-2">
                       <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50" />
@@ -135,7 +199,7 @@ export default function HomeV2() {
                       <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50" />
                     </div>
                     <div className="ml-4 h-6 px-4 bg-black/40 rounded border border-white/5 text-xs flex items-center text-gray-500 font-mono w-64">
-                      app.mmctradejournal.com/journal
+                      https://trade.maomaocong.com
                     </div>
                   </div>
 
@@ -147,8 +211,8 @@ export default function HomeV2() {
                       src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBwgUGn6geldT9bVd_pzVfzYT0XTZDzKCOcxXRxNxLD-qUfDgVN7udoC6A4Crd1P7NBG2rX4-77rd4IkRc3chKNdi1fu91H2yQbi4oWQgzP1D3U7G_NGlkdx8vdsZBzjblAacM5kYKyAmqJHAQ_nvFxXCrc3PxazISAmEeIsM71-c15uagwyNhCN_tqX4-XxzsdQ4ijVQavf_tllakFq7i9diO8VI7FuleltmtdsNkLhptyqzcjxwdkJPyiUUM1Qnx4GErfvuj4g"
                     />
 
-                    <div className="absolute bottom-6 left-6 flex gap-4">
-                      <div className="bg-black/80 backdrop-blur border border-white/10 p-3 rounded-lg flex items-center gap-3">
+                    <div className="absolute bottom-6 left-6 flex gap-4 animate-float">
+                      <div className="glass-card p-3 rounded-lg flex items-center gap-3 border-l-2 border-l-[#00c2b2] shadow-lg">
                         <div className="h-8 w-8 rounded bg-[#00c2b2]/20 flex items-center justify-center text-[#00c2b2]">
                           <Webhook className="h-4 w-4" />
                         </div>
@@ -163,7 +227,7 @@ export default function HomeV2() {
                       </div>
                     </div>
 
-                    <div className="absolute top-6 right-6 w-64 bg-[#0f0f11]/95 border border-white/10 p-4 rounded-lg backdrop-blur shadow-2xl">
+                    <div className="absolute top-6 right-6 w-64 glass-card p-4 rounded-lg shadow-2xl animate-float" style={{ animationDelay: "1s" }}>
                       <div className="flex justify-between items-center mb-3">
                         <div className="text-xs text-gray-400 font-medium uppercase">
                           本月
@@ -193,8 +257,10 @@ export default function HomeV2() {
           </section>
 
           {/* Ticker */}
-          <div className="w-full border-y border-white/5 bg-[#080808] py-3 overflow-hidden">
-            <div className="flex gap-16 whitespace-nowrap text-xs font-mono font-medium text-gray-500 px-4">
+          <div className="w-full border-y border-white/5 bg-[#080808] py-3 overflow-hidden relative">
+            <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10" />
+            <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10" />
+            <div className="flex gap-16 whitespace-nowrap text-xs font-mono font-medium text-gray-500 px-4" style={{ animation: "flowHorizontal 20s linear infinite" }}>
               <span className="flex items-center gap-2">
                 <span className="text-white">BTCUSDC</span>
                 <span className="text-[#00c2b2]">生命周期：进行中</span>
@@ -427,12 +493,14 @@ export default function HomeV2() {
               </div>
 
               <div className="relative mt-12">
-                <div className="hidden lg:block absolute top-1/2 left-0 w-full h-px bg-white/10 -translate-y-1/2 z-0" />
+                <div className="hidden lg:block absolute top-1/2 left-0 w-full h-px bg-white/10 -translate-y-1/2 z-0">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#00c2b2]/50 to-transparent w-1/3" style={{ animation: "flowHorizontal 3s linear infinite", opacity: 0.5 }} />
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10">
                   {/* STEP 01 */}
-                  <div className="group relative">
-                    <div className="bg-[#0f0f11] border border-white/10 rounded-xl p-6 h-full transition-all duration-300 group-hover:border-[#00c2b2]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
+                  <div className="group relative fade-in-up delay-100">
+                    <div className="glass-card glow-hover rounded-xl p-6 h-full transition-all duration-300 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] hover:-translate-y-1">
                       <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-[#00c2b2] border border-[#00c2b2]/20 rounded-md font-mono">
                         第 01 步
                       </div>
@@ -452,8 +520,8 @@ export default function HomeV2() {
                   </div>
 
                   {/* STEP 02 */}
-                  <div className="group relative">
-                    <div className="bg-[#0f0f11] border border-white/10 rounded-xl p-6 h-full transition-all duration-300 group-hover:border-[#00c2b2]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
+                  <div className="group relative fade-in-up delay-200">
+                    <div className="glass-card glow-hover rounded-xl p-6 h-full transition-all duration-300 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] hover:-translate-y-1">
                       <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-gray-400 border border-white/10 rounded-md font-mono">
                         第 02 步
                       </div>
@@ -474,8 +542,8 @@ export default function HomeV2() {
                   </div>
 
                   {/* STEP 03 */}
-                  <div className="group relative">
-                    <div className="bg-[#0f0f11] border border-white/10 rounded-xl p-6 h-full transition-all duration-300 group-hover:border-[#00c2b2]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
+                  <div className="group relative fade-in-up delay-300">
+                    <div className="glass-card glow-hover rounded-xl p-6 h-full transition-all duration-300 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] hover:-translate-y-1">
                       <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-cyan-300 border border-cyan-300/20 rounded-md font-mono">
                         第 03 步
                       </div>
@@ -498,8 +566,8 @@ export default function HomeV2() {
                   </div>
 
                   {/* STEP 04 */}
-                  <div className="group relative">
-                    <div className="bg-[#0f0f11] border border-white/10 rounded-xl p-6 h-full transition-all duration-300 group-hover:border-[#00c2b2]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
+                  <div className="group relative fade-in-up delay-400">
+                    <div className="glass-card glow-hover rounded-xl p-6 h-full transition-all duration-300 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] hover:-translate-y-1">
                       <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-gray-400 border border-white/10 rounded-md font-mono">
                         第 04 步
                       </div>
@@ -528,8 +596,8 @@ export default function HomeV2() {
                   </div>
 
                   {/* FINISH */}
-                  <div className="group relative">
-                    <div className="bg-gradient-to-br from-[#0f0f11] to-[#00c2b2]/5 border border-[#00c2b2]/30 rounded-xl p-6 h-full transition-all duration-300 hover:scale-[1.02] shadow-[0_0_30px_-10px_rgba(0,194,178,0.15)]">
+                  <div className="group relative fade-in-up delay-400">
+                    <div className="bg-gradient-to-br from-[#0f0f11] to-[#00c2b2]/5 border border-[#00c2b2]/30 rounded-xl p-6 h-full transition-all duration-300 hover:scale-[1.05] shadow-[0_0_30px_-10px_rgba(0,194,178,0.15)]">
                       <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-[#00c2b2] border border-[#00c2b2]/20 rounded-md font-mono font-bold">
                         完成
                       </div>
