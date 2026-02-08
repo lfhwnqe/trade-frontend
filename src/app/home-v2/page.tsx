@@ -421,7 +421,7 @@ export default function HomeV2() {
                   </div>
                 </div>
 
-                <div id="api" className="md:row-span-2 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors relative overflow-hidden glow-hover fade-in-up delay-200">
+                <div id="api" className="md:row-span-2 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors relative overflow-hidden glow-hover fade-in-up delay-200 hover:border-[#00c2b2]/50">
                   <div className="relative z-10">
                     <div className="h-10 w-10 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-4">
                       <Terminal className="h-5 w-5" />
@@ -432,7 +432,7 @@ export default function HomeV2() {
                       不想折腾也没关系——手动记录一样好用。
                     </p>
 
-                    <div className="bg-black rounded-lg p-4 border border-white/5 font-mono text-xs overflow-hidden">
+                    <div className="bg-black rounded-lg p-4 border border-white/5 font-mono text-xs overflow-hidden group-hover:border-white/20 transition-colors">
                       <div className="flex gap-1.5 mb-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
                         <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
@@ -452,12 +452,12 @@ export default function HomeV2() {
                       </p>
                       <p>{"}"});</p>
                       <p className="mt-2 text-gray-500">{"// Token 格式"}</p>
-                      <p className="text-gray-400">tc_83k...92x</p>
+                      <p className="text-gray-400 group-hover:text-white transition-colors">tc_83k...92x</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-300">
+                <div className="rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-300 hover:border-[#00c2b2]/50">
                   <div className="h-10 w-10 rounded bg-yellow-500/10 flex items-center justify-center text-yellow-400 mb-4 group-hover:scale-110 transition-transform">
                     <Link2 className="h-5 w-5" />
                   </div>
@@ -475,7 +475,7 @@ export default function HomeV2() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-400">
+                <div className="rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-400 hover:border-[#00c2b2]/50">
                   <div className="h-10 w-10 rounded bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition-transform">
                     <Webhook className="h-5 w-5" />
                   </div>
@@ -486,7 +486,7 @@ export default function HomeV2() {
                   </p>
                 </div>
 
-                <div className="md:col-span-3 lg:col-span-1 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-400">
+                <div className="md:col-span-3 lg:col-span-1 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-400 hover:border-[#00c2b2]/50">
                   <div className="h-10 w-10 rounded bg-pink-500/10 flex items-center justify-center text-pink-400 mb-4 group-hover:scale-110 transition-transform">
                     <BarChart3 className="h-5 w-5" />
                   </div>
