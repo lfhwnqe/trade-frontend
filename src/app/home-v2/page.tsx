@@ -281,49 +281,96 @@ export default function HomeV2() {
           </div>
 
           {/* Lifecycle */}
-          <section id="lifecycle" className="py-24 border-b border-white/5 bg-[#0a0a0a] relative">
-            <div className="container mx-auto px-4 md:px-6">
-              <div className="text-center mb-16">
+          <section
+            id="lifecycle"
+            className="py-24 border-b border-white/5 bg-[#0a0a0a] relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#00c2b2]/5 via-[#0a0a0a] to-[#0a0a0a] opacity-40" />
+
+            <div className="container mx-auto px-4 md:px-6 relative z-10">
+              <div className="text-center mb-20 fade-in-up">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                   交易不是一条记录，而是一段过程
                 </h2>
-                <p className="text-gray-400">把“凭感觉”变成“有据可依”：每一步都能回看、复盘、改进。</p>
+                <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                  把“凭感觉”变成“有据可依”：每一步都能回看、复盘、改进。
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
-                <div className="hidden md:block absolute top-12 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-[#00c2b2]/30 to-transparent z-0" />
+              <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                <div className="hidden lg:block absolute top-1/2 left-0 w-full h-px bg-white/5 -translate-y-1/2 z-0" />
+
+                <div
+                  className="hidden lg:block absolute top-1/2 left-[25%] w-2 h-2 bg-[#00c2b2] rounded-full z-20"
+                  style={{ boxShadow: "0 0 10px #00c2b2", animation: "ping 3s linear infinite" }}
+                />
+                <div
+                  className="hidden lg:block absolute top-1/2 left-[50%] w-2 h-2 bg-[#00c2b2] rounded-full z-20"
+                  style={{ boxShadow: "0 0 10px #00c2b2", animation: "ping 3s linear infinite", animationDelay: "1s" }}
+                />
+                <div
+                  className="hidden lg:block absolute top-1/2 left-[75%] w-2 h-2 bg-[#00c2b2] rounded-full z-20"
+                  style={{ boxShadow: "0 0 10px #00c2b2", animation: "ping 3s linear infinite", animationDelay: "2s" }}
+                />
 
                 {[
                   {
+                    node: "NODE_01",
                     title: "1. 计划",
                     desc: "下单前把理由写清楚：为什么进、哪里错、什么时候离场。",
                     icon: Layers,
+                    delay: "delay-100",
+                    barDelay: "",
                   },
                   {
+                    node: "NODE_02",
                     title: "2. 执行",
                     desc: "TradingView 提醒直接同步到 Telegram 群，群里所有人都能第一时间看到。",
                     icon: Zap,
+                    delay: "delay-200",
+                    barDelay: "100ms",
                   },
                   {
+                    node: "NODE_03",
                     title: "3. 同步",
                     desc: "币安成交自动同步进来，系统会帮你整理成“这一次持仓”的完整记录。",
                     icon: RefreshCw,
+                    delay: "delay-300",
+                    barDelay: "200ms",
                   },
                   {
+                    node: "NODE_04",
                     title: "4. 复盘",
                     desc: "复盘不只是算盈亏：找出做对/做错的模式，下一次少踩同样的坑。",
                     icon: LineChart,
+                    delay: "delay-400",
+                    barDelay: "300ms",
                   },
                 ].map((it) => (
-                  <div
-                    key={it.title}
-                    className="relative z-10 flex flex-col items-center text-center group"
-                  >
-                    <div className="w-24 h-24 rounded-2xl bg-[#0f0f11] border border-white/10 flex items-center justify-center mb-6 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] group-hover:border-[#00c2b2]/50 transition-colors">
-                      <it.icon className="h-10 w-10 text-gray-400 group-hover:text-[#00c2b2] transition-colors" />
+                  <div key={it.title} className={`group relative z-10 fade-in-up ${it.delay}`}>
+                    <div className="h-full bg-[#0f0f11]/80 backdrop-blur-sm border border-white/10 rounded-2xl p-8 transition-all duration-300 hover:-translate-y-2 hover:border-[#00c2b2]/50 hover:shadow-[0_0_25px_-5px_rgba(0,194,178,0.25)]">
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#00c2b2]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+
+                      <div className="relative z-10 flex flex-col items-start h-full">
+                        <div className="w-16 h-16 rounded-xl bg-[#0f0f11] border border-white/10 flex items-center justify-center mb-6 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] group-hover:border-[#00c2b2]/60 group-hover:shadow-[0_0_20px_rgba(0,194,178,0.25)] transition-all duration-300">
+                          <it.icon className="h-8 w-8 text-gray-400 group-hover:text-[#00c2b2] transition-colors" />
+                        </div>
+
+                        <div className="text-xs font-mono text-[#00c2b2] mb-2 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+                          {it.node}
+                        </div>
+
+                        <h3 className="text-2xl font-bold text-white mb-3">{it.title}</h3>
+                        <p className="text-sm text-gray-400 leading-relaxed mb-6">{it.desc}</p>
+
+                        <div className="mt-auto w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#00c2b2] w-0 group-hover:w-full transition-all duration-700 ease-in-out"
+                            style={{ transitionDelay: it.barDelay ? it.barDelay : undefined }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">{it.title}</h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">{it.desc}</p>
                   </div>
                 ))}
               </div>
