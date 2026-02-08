@@ -389,69 +389,168 @@ export default function HomeV2() {
 
           {/* Scenario */}
           <section className="py-20 border-y border-white/5 bg-[#0a0a0a]">
-            <div className="container mx-auto px-4 md:px-6">
-              <div className="mx-auto max-w-4xl text-center">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-gray-300">
-                  场景示范
-                </div>
-                <h2 className="mt-5 text-3xl md:text-4xl font-bold text-white">
-                  从 Webhook 到复盘闭环：Telegram 群 + OpenClaw 自动分析
-                </h2>
-                <p className="mt-4 text-gray-400">
-                  一个更贴近真实使用的例子：
-                  TradingView 触发提醒后，消息会进到 Telegram 群。
-                  你的个人 OpenClaw Agent 可以自动读懂这些信息、生成一份“复盘报告”，
-                  同时发到邮箱并把摘要同步到群里。
-                  最后，系统还能把分析结论自动写入 MMCTradeJournal——你打开平台就能继续管理这笔交易的整个生命周期。
-                </p>
-              </div>
-
-              <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-5">
-                {[
-                  {
-                    title: "1) TradingView 触发",
-                    desc: "用单一 URL webhook（无需 header）触发交易提醒。",
-                    icon: Webhook,
-                  },
-                  {
-                    title: "2) 推送到 Telegram 群",
-                    desc: "一个 hook 对应一个群；群内 /bind 完成绑定；带限流。",
-                    icon: MessageSquare,
-                  },
-                  {
-                    title: "3) 自动分析（可选）",
-                    desc: "你的个人 Agent 会把信息整理成可读的结论：计划、风险点、执行建议。",
-                    icon: Brain,
-                  },
-                  {
-                    title: "4) 报告分发",
-                    desc: "将分析报告发送到邮箱，同时把摘要/关键结论同步回 Telegram 群。",
-                    icon: Mail,
-                  },
-                  {
-                    title: "5) 自动入库",
-                    desc: "分析结论会变成一条交易记录，你可以在平台里继续补全、跟踪、复盘。",
-                    icon: Database,
-                  },
-                ].map((it) => (
-                  <div
-                    key={it.title}
-                    className="rounded-2xl bg-[#0f0f11] border border-white/10 p-5 hover:border-[#00c2b2]/30 transition-colors"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-white">
-                      <it.icon className="h-5 w-5" />
-                    </div>
-                    <div className="mt-4 text-sm font-semibold text-white">{it.title}</div>
-                    <div className="mt-2 text-sm text-gray-400">{it.desc}</div>
+            <div className="container mx-auto px-4 md:px-6 relative z-10">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-20 gap-8">
+                <div className="max-w-2xl">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#00c2b2]/20 bg-[#00c2b2]/5 text-xs font-medium text-[#00c2b2] mb-6">
+                    <Zap className="h-4 w-4" />
+                    工作流自动化
                   </div>
-                ))}
+                  <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+                    场景示范：自动化闭环
+                  </h2>
+                  <p className="text-gray-400 text-lg leading-relaxed max-w-xl">
+                    你不需要“复制粘贴、手动整理、到处记笔记”。
+                    从信号到入库，系统可以帮你把流程跑起来：提醒同步到 Telegram 群，自动生成分析报告，最后变成可管理的交易记录。
+                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">
+                      延迟
+                    </span>
+                    <span className="text-2xl font-mono text-white font-bold">
+                      &lt; 200ms
+                    </span>
+                  </div>
+                  <div className="w-px h-12 bg-white/10" />
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">
+                      稳定性
+                    </span>
+                    <span className="text-2xl font-mono text-white font-bold">
+                      99.9%
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="mx-auto mt-8 max-w-6xl rounded-xl border border-white/10 bg-black/20 p-5">
-                <div className="text-sm font-semibold text-white">为什么这个闭环重要？</div>
-                <div className="mt-2 text-sm text-gray-400">
-                  你不需要在多个工具之间手工搬运信息：分析结果可以自动沉淀成 Trade，后续在平台里补全入场/离场、复盘总结、
-                  仪表盘统计和分享都能自然衔接。
+              <div className="relative mt-12">
+                <div className="hidden lg:block absolute top-1/2 left-0 w-full h-px bg-white/10 -translate-y-1/2 z-0" />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 relative z-10">
+                  {/* STEP 01 */}
+                  <div className="group relative">
+                    <div className="bg-[#0f0f11] border border-white/10 rounded-xl p-6 h-full transition-all duration-300 group-hover:border-[#00c2b2]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
+                      <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-[#00c2b2] border border-[#00c2b2]/20 rounded-md font-mono">
+                        第 01 步
+                      </div>
+                      <div className="mb-6 flex justify-between items-start">
+                        <div className="h-10 w-10 rounded bg-[#131722] border border-white/5 flex items-center justify-center text-white">
+                          <Webhook className="h-5 w-5" />
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <h4 className="text-white font-bold mb-2">TradingView 提醒触发</h4>
+                      <div className="bg-[#1e222d] rounded p-3 border border-white/5 font-mono text-[10px] text-gray-400 mb-2">
+                        <div className="text-green-400">提醒：BTC 做多</div>
+                        <div className="truncate">msg: {"{\"ticker\":\"BTC\",\"px\":42100}"}</div>
+                      </div>
+                      <p className="text-xs text-gray-500">TradingView 把提醒发送到 webhook 地址。</p>
+                    </div>
+                  </div>
+
+                  {/* STEP 02 */}
+                  <div className="group relative">
+                    <div className="bg-[#0f0f11] border border-white/10 rounded-xl p-6 h-full transition-all duration-300 group-hover:border-[#00c2b2]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
+                      <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-gray-400 border border-white/10 rounded-md font-mono">
+                        第 02 步
+                      </div>
+                      <div className="mb-6 flex justify-between items-start">
+                        <div className="h-10 w-10 rounded bg-[#24A1DE]/10 border border-[#24A1DE]/20 flex items-center justify-center text-[#24A1DE]">
+                          <MessageSquare className="h-5 w-5" />
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <h4 className="text-white font-bold mb-2">推送到 Telegram 群</h4>
+                      <div className="bg-[#1c242d] rounded-lg p-3 border border-white/5 relative mb-2">
+                        <div className="absolute -left-1 top-3 w-2 h-2 bg-[#1c242d] rotate-45 border-l border-b border-white/5" />
+                        <div className="text-[10px] text-gray-300">收到信号 ⚡️</div>
+                        <div className="text-[10px] text-gray-500 mt-1">正在生成可读内容…</div>
+                      </div>
+                      <p className="text-xs text-gray-500">群里成员同步看到同一条提醒，信息不丢。</p>
+                    </div>
+                  </div>
+
+                  {/* STEP 03 */}
+                  <div className="group relative">
+                    <div className="bg-[#0f0f11] border border-white/10 rounded-xl p-6 h-full transition-all duration-300 group-hover:border-[#00c2b2]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
+                      <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-cyan-300 border border-cyan-300/20 rounded-md font-mono">
+                        第 03 步
+                      </div>
+                      <div className="mb-6 flex justify-between items-start">
+                        <div className="h-10 w-10 rounded bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 animate-pulse">
+                          <Brain className="h-5 w-5" />
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <h4 className="text-white font-bold mb-2">OpenClaw 自动分析</h4>
+                      <div className="space-y-1.5 mb-2">
+                        <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-purple-500 w-3/4" />
+                        </div>
+                        <div className="h-1.5 w-2/3 bg-white/10 rounded-full" />
+                        <div className="h-1.5 w-5/6 bg-white/10 rounded-full" />
+                      </div>
+                      <p className="text-xs text-gray-500">自动整理关键点：计划、风险、执行建议。</p>
+                    </div>
+                  </div>
+
+                  {/* STEP 04 */}
+                  <div className="group relative">
+                    <div className="bg-[#0f0f11] border border-white/10 rounded-xl p-6 h-full transition-all duration-300 group-hover:border-[#00c2b2]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)]">
+                      <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-gray-400 border border-white/10 rounded-md font-mono">
+                        第 04 步
+                      </div>
+                      <div className="mb-6 flex justify-between items-start">
+                        <div className="flex -space-x-2">
+                          <div className="h-10 w-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 z-10">
+                            <Mail className="h-5 w-5" />
+                          </div>
+                          <div className="h-10 w-10 rounded-full bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                            <MessageSquare className="h-5 w-5" />
+                          </div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <h4 className="text-white font-bold mb-2">多渠道同步</h4>
+                      <div className="flex gap-2 mb-2">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          邮件
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                          群内摘要
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">报告发到邮箱，关键结论同步回群里。</p>
+                    </div>
+                  </div>
+
+                  {/* FINISH */}
+                  <div className="group relative">
+                    <div className="bg-gradient-to-br from-[#0f0f11] to-[#00c2b2]/5 border border-[#00c2b2]/30 rounded-xl p-6 h-full transition-all duration-300 hover:scale-[1.02] shadow-[0_0_30px_-10px_rgba(0,194,178,0.15)]">
+                      <div className="absolute -top-3 left-6 px-2 bg-[#0f0f11] text-xs text-[#00c2b2] border border-[#00c2b2]/20 rounded-md font-mono font-bold">
+                        完成
+                      </div>
+                      <div className="mb-6 flex justify-between items-start">
+                        <div className="h-10 w-10 rounded bg-[#00c2b2] text-black flex items-center justify-center shadow-[0_0_25px_-5px_rgba(0,194,178,0.25)]">
+                          <Database className="h-5 w-5" />
+                        </div>
+                      </div>
+                      <h4 className="text-white font-bold mb-2">自动建档</h4>
+                      <div className="bg-black/40 rounded border border-[#00c2b2]/20 p-2 mb-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-[10px] text-white font-mono">Trade 已创建</span>
+                        </div>
+                        <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                          <div className="bg-[#00c2b2] h-full w-full" />
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400">交易生命周期在平台里自动开启，后续可继续补全与管理。</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
