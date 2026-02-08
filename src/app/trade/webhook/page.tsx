@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import TradePageShell from "../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { useAtomImmer } from "@/hooks/useAtomImmer";
 import { userAtom } from "@/store/user";
-import {
-  Copy,
-  Info,
-  Link as LinkIcon,
-  RefreshCcw,
-  Webhook,
-} from "lucide-react";
+import { Copy, Info, RefreshCcw, Webhook } from "lucide-react";
 
 function envApiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -37,6 +32,10 @@ type HookItem = {
   chatId?: number;
   chatTitle?: string;
   boundAt?: string;
+
+  // trade-scoped
+  tradeTransactionId?: string;
+  tradeShortId?: string;
 };
 
 type CreateHookResponse = {
@@ -60,6 +59,14 @@ type CreateHookResponse = {
 type ListHooksResponse = {
   items: HookItem[];
   nextCursor?: string;
+};
+
+type TradeSummary = {
+  transactionId: string;
+  tradeShortId?: string;
+  tradeSubject?: string;
+  status?: string;
+  createdAt?: string;
 };
 
 async function createHook(name?: string) {
@@ -143,33 +150,100 @@ export default function TradeWebhookPage() {
   const [items, setItems] = React.useState<HookItem[]>([]);
   const [nextCursor, setNextCursor] = React.useState<string | undefined>();
 
+  const [bindCodeMap, setBindCodeMap] = React.useState<Record<string, string>>(
+    {},
+  );
+
+  // trade cache for list rendering
+  const [tradeMap, setTradeMap] = React.useState<Record<string, TradeSummary>>(
+    {},
+  );
+
+  // legacy creation (dev/admin only)
   const [creating, setCreating] = React.useState(false);
   const [newName, setNewName] = React.useState("");
-
   const [revealedHook, setRevealedHook] =
     React.useState<CreateHookResponse | null>(null);
 
-  const [testMessage, setTestMessage] = React.useState("hello from webhook");
-  const [testing, setTesting] = React.useState(false);
+  // (removed) legacy test trigger UI
+
+  const fetchTradeSummary = React.useCallback(
+    async (transactionId: string): Promise<TradeSummary | null> => {
+      try {
+        const resp = await fetchWithAuth("/api/proxy-post", {
+          method: "POST",
+          credentials: "include",
+          proxyParams: {
+            targetPath: `trade/${encodeURIComponent(transactionId)}`,
+            actualMethod: "GET",
+          },
+          actualBody: {},
+        });
+        const json = (await resp.json()) as {
+          success?: boolean;
+          data?: unknown;
+        };
+        if (!resp.ok || !json?.success) return null;
+
+        const t = (json?.data ?? null) as Record<string, unknown> | null;
+        if (!t) return null;
+
+        return {
+          transactionId: String((t.transactionId as string) || transactionId),
+          tradeShortId:
+            typeof t.tradeShortId === "string" ? t.tradeShortId : undefined,
+          tradeSubject:
+            typeof t.tradeSubject === "string" ? t.tradeSubject : undefined,
+          status: typeof t.status === "string" ? t.status : undefined,
+          createdAt: typeof t.createdAt === "string" ? t.createdAt : undefined,
+        };
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
 
   const loadFirstPage = React.useCallback(async () => {
     setLoading(true);
     try {
       const data = await listHooks(20);
-      setItems(Array.isArray(data.items) ? data.items : []);
+      const newItems = Array.isArray(data.items) ? data.items : [];
+      setItems(newItems);
       setNextCursor(data.nextCursor);
+
+      // hydrate trade summaries for trade-scoped hooks
+      const tradeIds = Array.from(
+        new Set(
+          newItems
+            .map((it) => it.tradeTransactionId)
+            .filter((v): v is string => typeof v === "string" && v.length > 0),
+        ),
+      ).filter((id) => !tradeMap[id]);
+
+      if (tradeIds.length > 0) {
+        const results = await Promise.all(tradeIds.map(fetchTradeSummary));
+        setTradeMap((prev) => {
+          const next = { ...prev };
+          for (const r of results) {
+            if (r?.transactionId) next[r.transactionId] = r;
+          }
+          return next;
+        });
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "获取 webhook 列表失败";
       errorAlert(msg);
     } finally {
       setLoading(false);
     }
-  }, [errorAlert]);
+  }, [errorAlert, fetchTradeSummary, tradeMap]);
 
   React.useEffect(() => {
     loadFirstPage();
   }, [loadFirstPage]);
 
+  // Legacy create: keep behind admin/dev only (trade-scoped webhook should be created from Trade detail)
   const handleCreate = async () => {
     if (creating) return;
     setCreating(true);
@@ -227,50 +301,7 @@ export default function TradeWebhookPage() {
     ? `curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "url": "${telegramWebhookUrl}",\n    "secret_token": "${telegramSecret || "<TELEGRAM_WEBHOOK_SECRET>"}"\n  }'`
     : "";
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-
-  const sampleCurl = revealedHook
-    ? `curl -X POST "${revealedHook.triggerUrl}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"message":"hello from webhook"}'`
-    : "";
-
-  const token = revealedHook
-    ? revealedHook.triggerUrl.split("/").pop() || ""
-    : "";
-
-  const buildProxyUrl = (t: string) =>
-    `${origin}/api/webhook?token=${encodeURIComponent(t)}`;
-
-  const sampleProxyCurl = revealedHook
-    ? `curl -X POST "${buildProxyUrl(token)}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"message":"hello from webhook"}'`
-    : "";
-
-  const bindCommand = revealedHook ? `/bind ${revealedHook.bindCode}` : "";
-
-  const handleTestTrigger = async () => {
-    if (!revealedHook || testing) return;
-    setTesting(true);
-    try {
-      const resp = await fetch(
-        `/api/webhook?token=${encodeURIComponent(token)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: testMessage || "(empty)" }),
-        },
-      );
-      const text = await resp.text();
-      if (!resp.ok) {
-        throw new Error(text || `HTTP ${resp.status}`);
-      }
-      successAlert("已触发：请到 Telegram 群查看消息");
-      console.log("webhook test response:", text);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "触发失败";
-      errorAlert(msg);
-    } finally {
-      setTesting(false);
-    }
-  };
+  // (removed) legacy sample curl / proxy / test trigger UI
 
   return (
     <TradePageShell title="Webhook">
@@ -278,31 +309,25 @@ export default function TradeWebhookPage() {
         <div className="bg-[#121212] rounded-xl border border-[#27272a] shadow-sm p-6">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
             <Info className="h-5 w-5 text-[#00c2b2]" />
-            闭环说明（Webhook → Telegram 群）
+            <span>使用说明（TradingView → Telegram，按交易绑定）</span>
           </h3>
           <ol className="mt-3 space-y-2 text-sm text-[#9ca3af] list-decimal pl-5">
             <li>
-              在本页创建一个 Hook（得到 URL + secret + /bind 命令，secret
-              仅展示一次）。
+              在「交易详情页」为某一条 Trade 创建 webhook（1 笔交易 = 1 个 webhook）。
             </li>
             <li>
-              把系统通知机器人（clawbot）拉进目标 Telegram 群（需要管理员把 bot
-              加进群）。
+              把官方 bot 拉进目标 Telegram 群。
             </li>
             <li>
-              在群里发送上面生成的：
-              <span className="text-white font-mono">
-                /bind &lt;bindCode&gt;
-              </span>
-              ，即可把“这个 hook”绑定到“这个群”。
+              在群里发送：
+              <span className="text-white font-mono">/bind &lt;bindCode&gt;</span>
+              ，把该交易的 webhook 绑定到这个群。
             </li>
             <li>
-              外部系统触发 webhook：对 Hook URL 发 POST（无需 header），body
-              里带 message。
+              在 TradingView alert 的 webhook URL 填入系统生成的 URL（URL path 里会携带 tradeShortId）。
             </li>
             <li>
-              群里会收到消息；你放在群里的 clawbot
-              看到消息后就可以执行后续自动任务。
+              TradingView 触发后，消息会推送到该交易绑定的 Telegram 群。
             </li>
           </ol>
 
@@ -323,274 +348,185 @@ export default function TradeWebhookPage() {
             <div>
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <Webhook className="h-5 w-5 text-[#00c2b2]" />
-                创建 Hook
+                已创建的交易 Webhook
               </h3>
               <p className="text-sm text-[#9ca3af] mt-1">
-                创建后会返回一次触发 URL（TradingView 可直接用，触发时无需
-                header）。
+                为了让你知道哪些交易已经开启了 webhook（用于配额限制）。创建/删除在「交易详情页」完成。
               </p>
             </div>
-            <Button
-              variant="secondary"
-              onClick={loadFirstPage}
-              disabled={loading}
-            >
+            <Button variant="secondary" onClick={loadFirstPage} disabled={loading}>
               <RefreshCcw className="h-4 w-4 mr-2" />
               刷新
             </Button>
           </div>
 
-          <div className="mt-4 flex flex-col sm:flex-row gap-3">
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="名称（可选，例如 group-A / claw / server）"
-              className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
-            />
-            <Button
-              onClick={handleCreate}
-              disabled={creating}
-              className="bg-[#00c2b2] text-black hover:bg-[#00c2b2]/90"
-            >
-              {creating ? "创建中..." : "创建"}
-            </Button>
+          <div className="mt-4 space-y-3">
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full bg-white/5" />
+                <Skeleton className="h-10 w-full bg-white/5" />
+                <Skeleton className="h-10 w-full bg-white/5" />
+              </div>
+            ) : null}
+
+            {!loading && items.length === 0 ? (
+              <div className="text-sm text-[#9ca3af]">暂无 webhook。去某条交易详情页创建。</div>
+            ) : null}
+
+            {!loading && items.length > 0 ? (
+              <div className="space-y-3">
+                {items.map((it) => {
+                  const tradeId = it.tradeTransactionId;
+                  const trade = tradeId ? tradeMap[tradeId] : undefined;
+                  const title = trade?.tradeSubject
+                    ? `${trade.tradeSubject}${trade.status ? ` · ${trade.status}` : ""}`
+                    : tradeId
+                      ? `Trade ${tradeId.slice(0, 8)}...`
+                      : it.name || it.hookId;
+
+                  return (
+                    <div
+                      key={it.hookId}
+                      className="rounded-lg border border-[#27272a] bg-black/20 p-4"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="text-white font-semibold truncate">
+                            {title}
+                          </div>
+                          <div className="mt-1 text-xs text-[#9ca3af]">
+                            绑定群：{it.chatTitle ? `「${it.chatTitle}」` : "未绑定"}
+                            {it.boundAt ? ` · 绑定时间：${formatTime(it.boundAt)}` : ""}
+                          </div>
+                          <div className="mt-2 text-xs text-[#9ca3af]">
+                            webhook URL：
+                            <span className="ml-2 font-mono text-white break-all">
+                              {it.triggerUrl || "-"}
+                            </span>
+                          </div>
+
+                          {bindCodeMap[it.hookId] ? (
+                            <div className="mt-2 text-xs text-[#9ca3af]">
+                              bindCode：
+                              <span className="ml-2 font-mono text-[#00c2b2] break-all">
+                                {bindCodeMap[it.hookId]}
+                              </span>
+                              <span className="ml-2 text-white/60 font-mono">/bind {bindCodeMap[it.hookId]}</span>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="secondary"
+                            onClick={() => it.triggerUrl && handleCopy(it.triggerUrl, "已复制 webhook URL")}
+                            disabled={!it.triggerUrl}
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            复制 URL
+                          </Button>
+
+                          {tradeId ? (
+                            <Link
+                              href={`/trade/detail?id=${encodeURIComponent(tradeId)}`}
+                              className="inline-flex h-10 items-center justify-center rounded-md bg-white/5 px-4 text-sm text-white hover:bg-white/10 border border-white/10"
+                            >
+                              打开交易
+                            </Link>
+                          ) : null}
+
+                          <Button
+                            variant="secondary"
+                            onClick={async () => {
+                              try {
+                                const resp = await fetchWithAuth("/api/proxy-post", {
+                                  method: "POST",
+                                  credentials: "include",
+                                  proxyParams: {
+                                    targetPath: `user/webhooks/${encodeURIComponent(it.hookId)}/bind-code`,
+                                    actualMethod: "POST",
+                                  },
+                                  actualBody: {},
+                                });
+                                const json = (await resp.json()) as {
+                                  success?: boolean;
+                                  message?: string;
+                                  data?: { bindCode?: string };
+                                };
+                                if (!resp.ok || !json?.success) {
+                                  throw new Error(json?.message || "生成 bindCode 失败");
+                                }
+                                const bindCode = String(json?.data?.bindCode || "");
+                                setBindCodeMap((prev) => ({ ...prev, [it.hookId]: bindCode }));
+                                successAlert("已生成 bindCode");
+                              } catch (e) {
+                                const msg = e instanceof Error ? e.message : "生成 bindCode 失败";
+                                errorAlert(msg);
+                              }
+                            }}
+                          >
+                            生成 bindCode
+                          </Button>
+
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleRevoke(it.hookId)}
+                          >
+                            删除
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {nextCursor ? (
+                  <div className="pt-2">
+                    <Button variant="secondary" onClick={handleLoadMore}>
+                      加载更多
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
-          {revealedHook ? (
-            <div className="mt-4 rounded-lg border border-[#27272a] bg-black/20 p-4 space-y-3">
-              <div className="font-mono text-sm break-all text-white">
-                {revealedHook.triggerUrl}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">
-                  当前域名代理 URL（可选，不暴露 API Base URL）
+          {isAdmin ? (
+            <details className="mt-6">
+              <summary className="cursor-pointer text-sm text-[#9ca3af] hover:text-white">
+                管理员 / 开发者工具（Legacy 用户级 hooks）
+              </summary>
+              <div className="mt-3 rounded-lg border border-[#27272a] bg-black/20 p-4">
+                <div className="text-sm text-[#9ca3af] mb-3">
+                  历史遗留接口：直接创建用户级 hook（不推荐）。新的 trade-scoped webhook 请在交易详情页创建。
                 </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleCopy(buildProxyUrl(token), "已复制 URL")}
-                  disabled={!origin || !token}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  复制 URL
-                </Button>
-              </div>
-              <div className="font-mono text-sm break-all text-white">
-                {origin && token ? buildProxyUrl(token) : ""}
-              </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">
-                  群绑定命令（在目标群里发送）
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleCopy(bindCommand, "已复制 /bind 命令")}
-                  disabled={!bindCommand}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  复制命令
-                </Button>
-              </div>
-              <pre className="overflow-x-auto rounded-lg border border-[#27272a] bg-black/30 p-4 text-xs text-white whitespace-pre">
-                {bindCommand}
-              </pre>
-
-              <div className="mt-4 rounded-lg border border-[#27272a] bg-black/20 p-4">
-                <div className="text-sm text-[#9ca3af] mb-2">
-                  快速测试（会触发并推送到已绑定群）
-                </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Input
-                    value={testMessage}
-                    onChange={(e) => setTestMessage(e.target.value)}
-                    placeholder="输入要推送的内容"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="名称（可选，例如 group-A / claw / server）"
                     className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
                   />
                   <Button
-                    onClick={handleTestTrigger}
-                    disabled={!token || testing}
+                    onClick={handleCreate}
+                    disabled={creating}
                     className="bg-[#00c2b2] text-black hover:bg-[#00c2b2]/90"
                   >
-                    {testing ? "触发中..." : "测试触发"}
+                    {creating ? "创建中..." : "创建"}
                   </Button>
                 </div>
-                <div className="mt-2 text-xs text-[#9ca3af]">
-                  注意：同一个 hook 1 分钟只能触发一次（限流）。
-                </div>
-              </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">
-                  curl 示例（直接打后端 triggerUrl）
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleCopy(sampleCurl, "已复制 curl")}
-                  disabled={!sampleCurl}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  复制命令
-                </Button>
+                {revealedHook ? (
+                  <div className="mt-4 rounded-lg border border-[#27272a] bg-black/20 p-4 space-y-3">
+                    <div className="font-mono text-sm break-all text-white">
+                      {revealedHook.triggerUrl}
+                    </div>
+                  </div>
+                ) : null}
               </div>
-              <pre className="overflow-x-auto rounded-lg border border-[#27272a] bg-black/30 p-4 text-xs text-white whitespace-pre">
-                {sampleCurl}
-              </pre>
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm text-[#9ca3af]">
-                  curl 示例（走当前域名代理 /api/webhook）
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleCopy(sampleProxyCurl, "已复制 curl")}
-                  disabled={!sampleProxyCurl}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  复制命令
-                </Button>
-              </div>
-              <pre className="overflow-x-auto rounded-lg border border-[#27272a] bg-black/30 p-4 text-xs text-white whitespace-pre">
-                {sampleProxyCurl}
-              </pre>
-            </div>
+            </details>
           ) : null}
-        </div>
-
-        <div className="bg-[#121212] rounded-xl border border-[#27272a] shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-[#27272a] flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">我的 Hooks</h3>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-black/20 text-[#9ca3af] font-medium border-b border-[#27272a]">
-                <tr>
-                  <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
-                    名称
-                  </th>
-                  <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
-                    URL
-                  </th>
-                  <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
-                    创建时间
-                  </th>
-                  <th className="px-6 py-3 whitespace-nowrap uppercase text-xs tracking-wider">
-                    状态
-                  </th>
-                  <th className="px-6 py-3 whitespace-nowrap text-right uppercase text-xs tracking-wider">
-                    操作
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#27272a]">
-                {loading ? (
-                  Array.from({ length: 6 }).map((_, idx) => (
-                    <tr key={`hook-skel-${idx}`}>
-                      <td className="px-6 py-4">
-                        <Skeleton className="h-4 w-24 bg-white/10" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <Skeleton className="h-4 w-64 bg-white/10" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <Skeleton className="h-4 w-32 bg-white/10" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <Skeleton className="h-4 w-14 bg-white/10" />
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Skeleton className="ml-auto h-4 w-16 bg-white/10" />
-                      </td>
-                    </tr>
-                  ))
-                ) : items.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-6 text-center text-[#9ca3af]"
-                    >
-                      暂无 hook
-                    </td>
-                  </tr>
-                ) : (
-                  items.map((item) => {
-                    const revoked = Boolean(item.revokedAt);
-                    return (
-                      <tr key={item.hookId} className="hover:bg-[#1e1e1e]">
-                        <td className="px-6 py-4 text-white font-medium">
-                          {item.name || "-"}
-                        </td>
-                        <td className="px-6 py-4 text-[#9ca3af]">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs break-all">
-                              {origin && item.triggerUrl
-                                ? buildProxyUrl(
-                                    item.triggerUrl.split("/").pop() || "",
-                                  )
-                                : item.url}
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() =>
-                                handleCopy(
-                                  origin && item.triggerUrl
-                                    ? buildProxyUrl(
-                                        item.triggerUrl.split("/").pop() || "",
-                                      )
-                                    : item.url,
-                                  "已复制 URL",
-                                )
-                              }
-                            >
-                              <LinkIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-[#9ca3af]">
-                          {formatTime(item.createdAt)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                              revoked
-                                ? "bg-red-500/10 text-red-300 border-red-500/20"
-                                : "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
-                            }`}
-                          >
-                            {revoked ? "已撤销" : "有效"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <Button
-                            variant="destructive"
-                            disabled={revoked}
-                            onClick={() => handleRevoke(item.hookId)}
-                          >
-                            撤销
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="px-6 py-4 border-t border-[#27272a] flex items-center justify-between">
-            <div className="text-xs text-[#9ca3af]">
-              {nextCursor ? "还有更多" : "已到底"}
-            </div>
-            <Button
-              variant="secondary"
-              onClick={handleLoadMore}
-              disabled={!nextCursor || loading}
-            >
-              加载更多
-            </Button>
-          </div>
         </div>
 
         {isAdmin ? (
