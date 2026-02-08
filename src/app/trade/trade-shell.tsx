@@ -299,7 +299,9 @@ export default function TradeShell({
                   {initials}
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-white">{displayName}</p>
+                  <p className="text-sm font-medium text-white">
+                    {displayName}
+                  </p>
                   <p className="text-xs text-[#9ca3af]">{userRole}</p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-[#9ca3af] group-hover:text-white" />
@@ -309,13 +311,11 @@ export default function TradeShell({
               side="top"
               className="w-[--radix-popper-anchor-width]"
             >
-              <DropdownMenuItem onClick={() => router.push("/")}>首页</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/trade/password")}
-              >
-                <span className="flex items-center gap-2">
-                  <LockKeyhole className="h-4 w-4" />
-                  修改密码
-                </span>
+              <DropdownMenuItem onClick={() => router.push("/")}>
+                首页
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/trade/password")}>
+                <span className="flex items-center gap-2">修改密码</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
                 {isLoggingOut ? "退出中..." : "退出登录"}
@@ -331,7 +331,10 @@ export default function TradeShell({
           <div className="flex h-14 items-center justify-between px-4">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="secondary" className="bg-[#121212] border border-[#27272a]">
+                <Button
+                  variant="secondary"
+                  className="bg-[#121212] border border-[#27272a]"
+                >
                   <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
@@ -348,7 +351,9 @@ export default function TradeShell({
 
                 <div className="px-4 pb-4 space-y-6">
                   <div>
-                    <div className="text-xs font-semibold text-gray-400">页面</div>
+                    <div className="text-xs font-semibold text-gray-400">
+                      页面
+                    </div>
                     <div className="mt-2 space-y-1">
                       {tradeNavItems.map((item) => (
                         <Link
@@ -363,7 +368,9 @@ export default function TradeShell({
                   </div>
 
                   <div>
-                    <div className="text-xs font-semibold text-gray-400">集成中心</div>
+                    <div className="text-xs font-semibold text-gray-400">
+                      集成中心
+                    </div>
                     <div className="mt-2 space-y-1">
                       {integrationItems.map((item) => (
                         <Link
