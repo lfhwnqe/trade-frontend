@@ -137,6 +137,8 @@ export default function TradeWebhookPage() {
   const [user] = useAtomImmer(userAtom);
   const userRole = user.role || "FreePlan";
   const isAdmin = userRole === "Admins" || userRole === "SuperAdmins";
+  const isPro = userRole === "ProPlan";
+  const quotaLimit = isAdmin ? 5 : isPro ? 1 : 0;
 
   const [apiBaseUrl] = React.useState(() =>
     normalizeApiBaseUrl(envApiBaseUrl()),
@@ -353,6 +355,14 @@ export default function TradeWebhookPage() {
               <p className="text-sm text-[#9ca3af] mt-1">
                 为了让你知道哪些交易已经开启了 webhook（用于配额限制）。创建/删除在「交易详情页」完成。
               </p>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                <span className="text-white/50">配额</span>
+                <span className="font-mono text-white">
+                  {quotaLimit === 0
+                    ? "Free 用户需升级"
+                    : `${items.length}/${quotaLimit}`}
+                </span>
+              </div>
             </div>
             <Button variant="secondary" onClick={loadFirstPage} disabled={loading}>
               <RefreshCcw className="h-4 w-4 mr-2" />
