@@ -380,7 +380,7 @@ export default function HomeV2() {
           {/* Capabilities */}
           <section id="integrations" className="py-24 bg-[#0f0f11]/50 relative">
             <div className="container mx-auto px-4 md:px-6">
-              <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+              <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6 fade-in-up">
                 <div className="max-w-xl">
                   <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
                     你会用到的功能
@@ -390,8 +390,8 @@ export default function HomeV2() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[minmax(250px,auto)]">
-                <div className="md:col-span-2 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col justify-between group hover:border-[#00c2b2]/30 transition-colors relative overflow-hidden">
-                  <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-[#00c2b2]/5 to-transparent" />
+                <div className="md:col-span-2 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col justify-between group transition-colors relative overflow-hidden glow-hover fade-in-up delay-100">
+                  <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-[#00c2b2]/5 to-transparent transition-opacity duration-300 opacity-50 group-hover:opacity-100" />
                   <div className="relative z-10 mb-8">
                     <div className="h-10 w-10 rounded bg-[#00c2b2]/10 flex items-center justify-center text-[#00c2b2] mb-4">
                       <GitBranch className="h-5 w-5" />
@@ -404,7 +404,7 @@ export default function HomeV2() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-auto opacity-80">
+                  <div className="flex items-center gap-2 mt-auto opacity-70 group-hover:opacity-100 transition-opacity">
                     {[
                       { stage: "阶段 1", text: "事前分析" },
                       { stage: "阶段 2", text: "执行记录" },
@@ -421,7 +421,7 @@ export default function HomeV2() {
                   </div>
                 </div>
 
-                <div id="api" className="md:row-span-2 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group hover:border-[#00c2b2]/30 transition-colors relative overflow-hidden">
+                <div id="api" className="md:row-span-2 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors relative overflow-hidden glow-hover fade-in-up delay-200">
                   <div className="relative z-10">
                     <div className="h-10 w-10 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-4">
                       <Terminal className="h-5 w-5" />
@@ -457,8 +457,8 @@ export default function HomeV2() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group hover:border-[#00c2b2]/30 transition-colors">
-                  <div className="h-10 w-10 rounded bg-yellow-500/10 flex items-center justify-center text-yellow-400 mb-4">
+                <div className="rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-300">
+                  <div className="h-10 w-10 rounded bg-yellow-500/10 flex items-center justify-center text-yellow-400 mb-4 group-hover:scale-110 transition-transform">
                     <Link2 className="h-5 w-5" />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">币安合约同步（省掉手工抄单）</h3>
@@ -475,8 +475,8 @@ export default function HomeV2() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group hover:border-[#00c2b2]/30 transition-colors">
-                  <div className="h-10 w-10 rounded bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4">
+                <div className="rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-400">
+                  <div className="h-10 w-10 rounded bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition-transform">
                     <Webhook className="h-5 w-5" />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">TradingView → Telegram 群</h3>
@@ -486,8 +486,8 @@ export default function HomeV2() {
                   </p>
                 </div>
 
-                <div className="md:col-span-3 lg:col-span-1 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group hover:border-[#00c2b2]/30 transition-colors">
-                  <div className="h-10 w-10 rounded bg-pink-500/10 flex items-center justify-center text-pink-400 mb-4">
+                <div className="md:col-span-3 lg:col-span-1 rounded-2xl bg-[#0f0f11] border border-white/10 p-8 flex flex-col group transition-colors glow-hover fade-in-up delay-400">
+                  <div className="h-10 w-10 rounded bg-pink-500/10 flex items-center justify-center text-pink-400 mb-4 group-hover:scale-110 transition-transform">
                     <BarChart3 className="h-5 w-5" />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">用数据看清问题</h3>
