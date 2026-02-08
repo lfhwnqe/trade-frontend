@@ -16,6 +16,10 @@ import {
   LineChart,
   CreditCard,
   Sparkles,
+  MessageSquare,
+  Brain,
+  Mail,
+  Database,
 } from "lucide-react";
 
 const spaceGrotesk = Space_Grotesk({
@@ -86,7 +90,7 @@ export default function HomeV2() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00c2b2] opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00c2b2]" />
                   </span>
-                  系统 v2：Webhook + Binance 同步已可用
+                  系统 v2：TradingView Webhook → Telegram 群 + Binance 同步已可用
                 </div>
 
                 <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tighter text-white">
@@ -149,10 +153,10 @@ export default function HomeV2() {
                         </div>
                         <div>
                           <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
-                            最新 Webhook
+                            Webhook → Telegram 群
                           </div>
                           <div className="text-xs text-white font-mono">
-                            BTCUSDC 空单加仓 @ 69008.4
+                            BTCUSDC 空单加仓 @ 69008.4 → 推送到群
                           </div>
                         </div>
                       </div>
@@ -374,6 +378,73 @@ export default function HomeV2() {
                   <p className="text-gray-400 text-sm">
                     胜率趋势（7d/30d/3m）、近 30 笔对比、仪表盘聚合与高质量总结高亮。
                   </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Scenario */}
+          <section className="py-20 border-y border-white/5 bg-[#0a0a0a]">
+            <div className="container mx-auto px-4 md:px-6">
+              <div className="mx-auto max-w-4xl text-center">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-gray-300">
+                  场景示范
+                </div>
+                <h2 className="mt-5 text-3xl md:text-4xl font-bold text-white">
+                  从 Webhook 到复盘闭环：Telegram 群 + OpenClaw 自动分析
+                </h2>
+                <p className="mt-4 text-gray-400">
+                  TradingView 触发 → 推送到 Telegram 群 → 你的个人 OpenClaw Agent 自动分析 →
+                  输出报告（邮件 + 群内同步）→ 使用 API Token 回写到 MMCTradeJournal，覆盖交易全生命周期管理。
+                </p>
+              </div>
+
+              <div className="mx-auto mt-10 grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-5">
+                {[
+                  {
+                    title: "1) TradingView 触发",
+                    desc: "用单一 URL webhook（无需 header）触发交易提醒。",
+                    icon: Webhook,
+                  },
+                  {
+                    title: "2) 推送到 Telegram 群",
+                    desc: "一个 hook 对应一个群；群内 /bind 完成绑定；带限流。",
+                    icon: MessageSquare,
+                  },
+                  {
+                    title: "3) OpenClaw 自动分析",
+                    desc: "群内消息触发你的个人 Agent，调用 MMCTrade 的交易分析 skill 生成结构化结论。",
+                    icon: Brain,
+                  },
+                  {
+                    title: "4) 报告分发",
+                    desc: "将分析报告发送到邮箱，同时把摘要/关键结论同步回 Telegram 群。",
+                    icon: Mail,
+                  },
+                  {
+                    title: "5) 回写入库",
+                    desc: "用 API Token 将分析结果直接写入 Trade 数据库，平台内可继续跟踪/补全。",
+                    icon: Database,
+                  },
+                ].map((it) => (
+                  <div
+                    key={it.title}
+                    className="rounded-2xl bg-[#0f0f11] border border-white/10 p-5 hover:border-[#00c2b2]/30 transition-colors"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 text-white">
+                      <it.icon className="h-5 w-5" />
+                    </div>
+                    <div className="mt-4 text-sm font-semibold text-white">{it.title}</div>
+                    <div className="mt-2 text-sm text-gray-400">{it.desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mx-auto mt-8 max-w-6xl rounded-xl border border-white/10 bg-black/20 p-5">
+                <div className="text-sm font-semibold text-white">为什么这个闭环重要？</div>
+                <div className="mt-2 text-sm text-gray-400">
+                  你不需要在多个工具之间手工搬运信息：分析结果可以自动沉淀成 Trade，后续在平台里补全入场/离场、复盘总结、
+                  仪表盘统计和分享都能自然衔接。
                 </div>
               </div>
             </div>
