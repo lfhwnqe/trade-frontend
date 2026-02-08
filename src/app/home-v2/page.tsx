@@ -65,7 +65,7 @@ export default function HomeV2() {
                 集成
               </a>
               <a className="text-sm font-medium text-gray-400 hover:text-[#00c2b2] transition-colors" href="#api">
-                API
+                自动化
               </a>
               <a className="text-sm font-medium text-gray-400 hover:text-[#00c2b2] transition-colors" href="#security">
                 安全
@@ -90,20 +90,21 @@ export default function HomeV2() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00c2b2] opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00c2b2]" />
                   </span>
-                  系统 v2：TradingView Webhook → Telegram 群 + Binance 同步已可用
+                  已上线：TradingView 提醒 → Telegram 群同步 + 币安合约同步
                 </div>
 
                 <h1 className="text-5xl md:text-7xl font-bold leading-tight tracking-tighter text-white">
-                  建立你的交易优势。
+                  把每一笔交易
                   <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00c2b2] via-cyan-400 to-white">
-                    用结构化复盘更聪明地迭代。
+                    变成下一次更稳的底气。
                   </span>
                 </h1>
 
                 <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                  一套管理完整交易生命周期的系统：事前计划 → 执行 → 数据同步 → 事后复盘。
-                  让每一笔交易都有理由、有过程、有结论。
+                  你不需要把截图、想法、成交记录散落在不同地方。
+                  MMCTradeJournal 把「计划 → 执行 → 同步 → 复盘」串成一条线：
+                  记录得越清楚，改进就越有方向。
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4">
@@ -111,7 +112,7 @@ export default function HomeV2() {
                     href="/trade/home"
                     className="h-12 px-8 rounded bg-white text-black font-bold text-lg transition-all hover:bg-gray-200 flex items-center justify-center gap-2"
                   >
-                    开始记录
+                    进入交易控制台
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
@@ -119,7 +120,7 @@ export default function HomeV2() {
                     className="h-12 px-8 rounded border border-white/10 text-gray-300 hover:bg-white/5 font-medium transition-all flex items-center justify-center gap-2"
                   >
                     <Terminal className="h-4 w-4" />
-                    阅读文档
+                    了解怎么用
                   </Link>
                 </div>
               </div>
@@ -218,9 +219,9 @@ export default function HomeV2() {
             <div className="container mx-auto px-4 md:px-6">
               <div className="text-center mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                  结构化交易生命周期
+                  交易不是一条记录，而是一段过程
                 </h2>
-                <p className="text-gray-400">把混乱变成流程：每一笔交易都有明确路径。</p>
+                <p className="text-gray-400">把“凭感觉”变成“有据可依”：每一步都能回看、复盘、改进。</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
@@ -229,22 +230,22 @@ export default function HomeV2() {
                 {[
                   {
                     title: "1. 计划",
-                    desc: "事前分析：明确入场、止损、止盈与执行条件。",
+                    desc: "下单前把理由写清楚：为什么进、哪里错、什么时候离场。",
                     icon: Layers,
                   },
                   {
                     title: "2. 执行",
-                    desc: "下单执行：Webhook 可从 TradingView 把信号推送到 Telegram 群。",
+                    desc: "TradingView 提醒直接同步到 Telegram 群，群里所有人都能第一时间看到。",
                     icon: Zap,
                   },
                   {
                     title: "3. 同步",
-                    desc: "Binance 合约同步：fills/手续费/仓位（OPEN/CLOSED）聚合落库。",
+                    desc: "币安成交自动同步进来，系统会帮你整理成“这一次持仓”的完整记录。",
                     icon: RefreshCw,
                   },
                   {
                     title: "4. 复盘",
-                    desc: "事后复盘：胜率趋势、近 30 笔对比、总结沉淀与复读。",
+                    desc: "复盘不只是算盈亏：找出做对/做错的模式，下一次少踩同样的坑。",
                     icon: LineChart,
                   },
                 ].map((it) => (
@@ -269,9 +270,9 @@ export default function HomeV2() {
               <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
                 <div className="max-w-xl">
                   <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
-                    核心能力
+                    你会用到的功能
                   </h2>
-                  <p className="text-gray-400">为手动交易与自动化工作流准备。</p>
+                  <p className="text-gray-400">不用懂技术，也能把交易流程“管起来”。</p>
                 </div>
               </div>
 
@@ -282,10 +283,11 @@ export default function HomeV2() {
                     <div className="h-10 w-10 rounded bg-[#00c2b2]/10 flex items-center justify-center text-[#00c2b2] mb-4">
                       <GitBranch className="h-5 w-5" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">结构化 Trade 生命周期</h3>
+                    <h3 className="text-2xl font-bold text-white mb-2">把交易“管得住”</h3>
                     <p className="text-gray-400 max-w-md">
-                      不只是记录盈亏，更是记录过程。系统把交易分阶段固化为工作流，
-                      让每一笔交易都能沉淀复用的经验。
+                      不只是记一条盈亏。
+                      你可以把每次进出场背后的想法、证据、执行情况都留在同一条交易里，
+                      以后回看会很清楚：哪次是策略对、哪次是执行错。
                     </p>
                   </div>
 
@@ -311,10 +313,10 @@ export default function HomeV2() {
                     <div className="h-10 w-10 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-4">
                       <Terminal className="h-5 w-5" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">开发者 API</h3>
+                    <h3 className="text-2xl font-bold text-white mb-2">自动化写入（可选）</h3>
                     <p className="text-gray-400 mb-6 text-sm">
-                      用 API Token 把你的交易数据接入脚本/自动化；权限面收敛到 `/trade/*`，
-                      并禁止删除交易。
+                      如果你有脚本、策略或想做自动化：可以用“API Token”把分析结果直接写进系统。
+                      不想折腾也没关系——手动记录一样好用。
                     </p>
 
                     <div className="bg-black rounded-lg p-4 border border-white/5 font-mono text-xs overflow-hidden">
@@ -346,10 +348,10 @@ export default function HomeV2() {
                   <div className="h-10 w-10 rounded bg-yellow-500/10 flex items-center justify-center text-yellow-400 mb-4">
                     <Link2 className="h-5 w-5" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Binance 合约同步</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">币安合约同步（省掉手工抄单）</h3>
                   <p className="text-gray-400 text-sm mb-4">
-                    只读 Key 同步成交 fills，重建仓位（OPEN/CLOSED），并可转换为 Trade（ENTERED/EXITED）。
-                    支持 usdtm/coinm 市场。
+                    连接你的只读 Key 后，成交记录会自动同步进来。
+                    系统会帮你整理出“这一笔持仓”的来龙去脉，方便你后续复盘和管理。
                   </p>
                   <div className="mt-auto flex items-center gap-2 text-xs font-mono text-green-400">
                     <span className="relative flex h-2 w-2">
@@ -364,9 +366,10 @@ export default function HomeV2() {
                   <div className="h-10 w-10 rounded bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4">
                     <Webhook className="h-5 w-5" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Webhook + Telegram</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">TradingView → Telegram 群</h3>
                   <p className="text-gray-400 text-sm">
-                    TradingView 单 URL 触发（无需 header），一个 hook 对应一个 Telegram 群，并带限流。
+                    你在 TradingView 触发提醒，消息会第一时间进到 Telegram 群里。
+                    不管是你自己复盘，还是团队协作，都能保持信息一致。
                   </p>
                 </div>
 
@@ -374,9 +377,10 @@ export default function HomeV2() {
                   <div className="h-10 w-10 rounded bg-pink-500/10 flex items-center justify-center text-pink-400 mb-4">
                     <BarChart3 className="h-5 w-5" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">统计与趋势</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">用数据看清问题</h3>
                   <p className="text-gray-400 text-sm">
-                    胜率趋势（7d/30d/3m）、近 30 笔对比、仪表盘聚合与高质量总结高亮。
+                    你会看到胜率趋势、近 30 笔对比等关键指标。
+                    重点不是“好看”，而是让你知道：问题出在策略、执行，还是心态。
                   </p>
                 </div>
               </div>
@@ -394,8 +398,11 @@ export default function HomeV2() {
                   从 Webhook 到复盘闭环：Telegram 群 + OpenClaw 自动分析
                 </h2>
                 <p className="mt-4 text-gray-400">
-                  TradingView 触发 → 推送到 Telegram 群 → 你的个人 OpenClaw Agent 自动分析 →
-                  输出报告（邮件 + 群内同步）→ 使用 API Token 回写到 MMCTradeJournal，覆盖交易全生命周期管理。
+                  一个更贴近真实使用的例子：
+                  TradingView 触发提醒后，消息会进到 Telegram 群。
+                  你的个人 OpenClaw Agent 可以自动读懂这些信息、生成一份“复盘报告”，
+                  同时发到邮箱并把摘要同步到群里。
+                  最后，系统还能把分析结论自动写入 MMCTradeJournal——你打开平台就能继续管理这笔交易的整个生命周期。
                 </p>
               </div>
 
@@ -412,8 +419,8 @@ export default function HomeV2() {
                     icon: MessageSquare,
                   },
                   {
-                    title: "3) OpenClaw 自动分析",
-                    desc: "群内消息触发你的个人 Agent，调用 MMCTrade 的交易分析 skill 生成结构化结论。",
+                    title: "3) 自动分析（可选）",
+                    desc: "你的个人 Agent 会把信息整理成可读的结论：计划、风险点、执行建议。",
                     icon: Brain,
                   },
                   {
@@ -422,8 +429,8 @@ export default function HomeV2() {
                     icon: Mail,
                   },
                   {
-                    title: "5) 回写入库",
-                    desc: "用 API Token 将分析结果直接写入 Trade 数据库，平台内可继续跟踪/补全。",
+                    title: "5) 自动入库",
+                    desc: "分析结论会变成一条交易记录，你可以在平台里继续补全、跟踪、复盘。",
                     icon: Database,
                   },
                 ].map((it) => (
