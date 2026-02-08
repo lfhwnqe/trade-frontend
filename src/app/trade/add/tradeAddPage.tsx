@@ -28,6 +28,7 @@ import {
 import { useAlert } from "@/components/common/alert";
 import { LoadingButton } from "../components/LoadingButton";
 import { Button } from "@/components/ui/button";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import {
   Sheet,
   SheetContent,
@@ -277,6 +278,15 @@ export default function TradeAddPage({
   const [checklistState, setChecklistState] = useState<Record<string, boolean>>(
     {},
   );
+
+  // Trade webhook (TradingView -> Telegram)
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookExists, setWebhookExists] = useState(false);
+  const [webhookTriggerUrl, setWebhookTriggerUrl] = useState<string>("");
+  const [webhookHookId, setWebhookHookId] = useState<string>("");
+  const [webhookChatTitle, setWebhookChatTitle] = useState<string>("");
+  const [webhookBindCode, setWebhookBindCode] = useState<string>("");
+  const [webhookSecret, setWebhookSecret] = useState<string>("");
   // 主体渲染，非弹窗模式而是全宽居中大表单
   const transactionId = searchParams.get("id");
   const detailId = detailIdProp ?? transactionId;
@@ -316,6 +326,67 @@ export default function TradeAddPage({
     }
   }, [detailId, detailMode, errorAlert, setDetailLoading, setForm]);
   // }, [searchParams, errorAlert, setDetailLoading, setForm]);
+
+  // Load trade webhook status (readOnly/detail)
+  useEffect(() => {
+    if (!transactionId || !readOnly) {
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      setWebhookLoading(true);
+      setWebhookBindCode("");
+      setWebhookSecret("");
+      try {
+        const resp = await fetchWithAuth("/api/proxy-post", {
+          method: "POST",
+          credentials: "include",
+          proxyParams: {
+            targetPath: `trade/${encodeURIComponent(transactionId)}/webhook`,
+            actualMethod: "GET",
+          },
+          actualBody: {},
+        });
+
+        const json = (await resp.json()) as {
+          data?: {
+            exists?: boolean;
+            hook?: {
+              hookId?: string;
+              triggerUrl?: string;
+              chatTitle?: string;
+            };
+          };
+        };
+        const exists = !!json?.data?.exists;
+        if (cancelled) return;
+
+        setWebhookExists(exists);
+        if (!exists) {
+          setWebhookTriggerUrl("");
+          setWebhookHookId("");
+          setWebhookChatTitle("");
+          return;
+        }
+
+        const hook = json?.data?.hook;
+        setWebhookTriggerUrl(String(hook?.triggerUrl || ""));
+        setWebhookHookId(String(hook?.hookId || ""));
+        setWebhookChatTitle(String(hook?.chatTitle || ""));
+      } catch (e) {
+        // ignore; do not block detail
+        console.warn("Failed to load webhook status", e);
+      } finally {
+        if (!cancelled) setWebhookLoading(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [transactionId, readOnly]);
 
   // 离开页面时自动重置表单，避免脏数据
   useEffect(() => {
@@ -833,6 +904,220 @@ export default function TradeAddPage({
           <div className="relative h-full min-h-0 xl:grid xl:grid-cols-[minmax(0,1fr)_16rem] xl:gap-6">
             <div className="min-w-0 h-full min-h-0 flex flex-col">
               <div className="space-y-6 pr-2">
+                {readOnly && transactionId ? (
+                  <div className="rounded-2xl border border-white/10 bg-black/40 p-5 backdrop-blur-xl">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-white">
+                          TradingView Webhook（此交易）
+                        </div>
+                        <div className="mt-1 text-xs text-white/50">
+                          1 笔交易对应 1 个 webhook。TradingView 触发后会推送到绑定的 Telegram 群。
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {!webhookExists ? (
+                          <Button
+                            type="button"
+                            disabled={webhookLoading}
+                            className="bg-[#00c2b2] text-black hover:bg-[#009e91]"
+                            onClick={async () => {
+                              if (!transactionId) return;
+                              setWebhookLoading(true);
+                              setWebhookBindCode("");
+                              setWebhookSecret("");
+                              try {
+                                const resp = await fetchWithAuth("/api/proxy-post", {
+                                  method: "POST",
+                                  credentials: "include",
+                                  proxyParams: {
+                                    targetPath: `trade/${encodeURIComponent(transactionId)}/webhook`,
+                                    actualMethod: "POST",
+                                  },
+                                  actualBody: {},
+                                });
+
+                                const json = (await resp.json()) as {
+                                  success?: boolean;
+                                  message?: string;
+                                  data?: {
+                                    hook?: { hookId?: string; chatTitle?: string };
+                                    hookId?: string;
+                                    triggerUrl?: string;
+                                    bindCode?: string;
+                                    secret?: string;
+                                  };
+                                };
+                                if (!resp.ok || !json?.success) {
+                                  throw new Error(json?.message || "创建 webhook 失败");
+                                }
+
+                                const data = json?.data;
+                                setWebhookExists(true);
+                                setWebhookTriggerUrl(String(data?.triggerUrl || ""));
+                                setWebhookHookId(String(data?.hook?.hookId || data?.hookId || ""));
+                                setWebhookBindCode(String(data?.bindCode || ""));
+                                setWebhookSecret(String(data?.secret || ""));
+                                setWebhookChatTitle(String(data?.hook?.chatTitle || ""));
+                                success("Webhook 创建成功：bindCode/secret 仅展示一次，请及时复制");
+                              } catch (e) {
+                                const msg = e instanceof Error ? e.message : "创建 webhook 失败";
+                                errorAlert(msg);
+                              } finally {
+                                setWebhookLoading(false);
+                              }
+                            }}
+                          >
+                            {webhookLoading ? "创建中..." : "创建 webhook"}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={webhookLoading}
+                            className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                            onClick={async () => {
+                              const ok = confirm("确认删除该交易的 webhook？删除后 TradingView 触发将失效。");
+                              if (!ok) return;
+                              setWebhookLoading(true);
+                              try {
+                                const resp = await fetchWithAuth("/api/proxy-post", {
+                                  method: "POST",
+                                  credentials: "include",
+                                  proxyParams: {
+                                    targetPath: `trade/${encodeURIComponent(transactionId)}/webhook`,
+                                    actualMethod: "DELETE",
+                                  },
+                                  actualBody: {},
+                                });
+                                const json = (await resp.json()) as {
+                                  success?: boolean;
+                                  message?: string;
+                                  data?: unknown;
+                                };
+                                if (!resp.ok || !json?.success) {
+                                  throw new Error(json?.message || "删除 webhook 失败");
+                                }
+                                setWebhookExists(false);
+                                setWebhookTriggerUrl("");
+                                setWebhookHookId("");
+                                setWebhookBindCode("");
+                                setWebhookSecret("");
+                                setWebhookChatTitle("");
+                                success("Webhook 已删除");
+                              } catch (e) {
+                                const msg = e instanceof Error ? e.message : "删除 webhook 失败";
+                                errorAlert(msg);
+                              } finally {
+                                setWebhookLoading(false);
+                              }
+                            }}
+                          >
+                            {webhookLoading ? "删除中..." : "删除 webhook"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {webhookExists ? (
+                      <div className="mt-4 space-y-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <div className="flex-1">
+                            <div className="text-xs text-white/50 mb-1">TradingView Webhook URL</div>
+                            <div className="flex gap-2">
+                              <input
+                                value={webhookTriggerUrl}
+                                readOnly
+                                className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 text-xs text-white/80 outline-none"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                                onClick={async () => {
+                                  if (!webhookTriggerUrl) return;
+                                  try {
+                                    await navigator.clipboard.writeText(webhookTriggerUrl);
+                                    success("已复制 webhook URL");
+                                  } catch {
+                                    errorAlert("复制失败，请手动复制");
+                                  }
+                                }}
+                              >
+                                复制
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-white/50">
+                          绑定状态：{webhookChatTitle ? `已绑定到群「${webhookChatTitle}」` : "未绑定（把 bot 拉进群后 /bind）"}
+                        </div>
+
+                        {webhookBindCode ? (
+                          <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+                            <div className="text-xs text-white/60">群内绑定命令</div>
+                            <div className="mt-1 font-mono text-xs text-[#00c2b2]">/bind {webhookBindCode}</div>
+                          </div>
+                        ) : null}
+
+                        {webhookSecret ? (
+                          <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+                            <div className="text-xs text-white/60">Secret（仅展示一次）</div>
+                            <div className="mt-1 font-mono text-xs text-white/80 break-all">{webhookSecret}</div>
+                          </div>
+                        ) : null}
+
+                        {webhookHookId ? (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                              onClick={async () => {
+                                if (!webhookHookId) return;
+                                setWebhookLoading(true);
+                                try {
+                                  const resp = await fetchWithAuth("/api/proxy-post", {
+                                    method: "POST",
+                                    credentials: "include",
+                                    proxyParams: {
+                                      targetPath: `user/webhooks/${encodeURIComponent(webhookHookId)}/bind-code`,
+                                      actualMethod: "POST",
+                                    },
+                                    actualBody: {},
+                                  });
+                                  const json = (await resp.json()) as {
+                                    success?: boolean;
+                                    message?: string;
+                                    data?: { bindCode?: string };
+                                  };
+                                  if (!resp.ok || !json?.success) {
+                                    throw new Error(json?.message || "生成 bindCode 失败");
+                                  }
+                                  setWebhookBindCode(String(json?.data?.bindCode || ""));
+                                  success("已生成新的 bindCode");
+                                } catch (e) {
+                                  const msg = e instanceof Error ? e.message : "生成 bindCode 失败";
+                                  errorAlert(msg);
+                                } finally {
+                                  setWebhookLoading(false);
+                                }
+                              }}
+                            >
+                              生成绑定码（bindCode）
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="mt-4 text-xs text-white/50">
+                        还未创建 webhook。创建后会得到一个 TradingView URL，用于把提醒绑定到这笔交易。
+                      </div>
+                    )}
+                  </div>
+                ) : null}
                 <div className="md:hidden">
                   <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[#a1a1aa]">
                     Trade Status
