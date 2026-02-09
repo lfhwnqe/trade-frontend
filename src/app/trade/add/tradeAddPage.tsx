@@ -324,10 +324,6 @@ export default function TradeAddPage({
     return `${origin}/api/webhook?${qs.toString()}`;
   }, [origin, webhookTriggerToken, webhookTriggerUrl]);
 
-  const webhookSampleBody = React.useMemo(() => {
-    return JSON.stringify({ message: webhookTestMessage }, null, 2);
-  }, [webhookTestMessage]);
-
   // 新增时固定为已分析状态，避免跨状态填写
   useEffect(() => {
     if (!isCreateMode) {
@@ -1148,7 +1144,7 @@ export default function TradeAddPage({
                             TradingView Webhook（此交易）
                           </SheetTitle>
                           <div className="mt-2 text-xs text-white/50">
-                            1 笔交易对应 1 个 webhook。推荐把所有交易的 webhook 都绑定到同一个“交易群”，方便 clawbot 统一接收与分析。
+                            为这笔交易创建 webhook，并绑定到 Telegram 群。
                           </div>
                         </SheetHeader>
 
@@ -1427,54 +1423,9 @@ export default function TradeAddPage({
                                   {webhookTestUrl ? (
                                     <div className="rounded-lg border border-white/10 bg-black/30 p-3">
                                       <div className="text-xs text-white/60">
-                                        测试闭环（自己触发一次）
+                                        测试
                                       </div>
-                                      <div className="mt-1 text-xs text-white/50">
-                                        复制测试链接 + body，在 Postman/curl 里发一次，确认能推送到绑定群。
-                                      </div>
-
-                                      <div className="mt-3">
-                                        <div className="text-xs text-white/60 mb-1">
-                                          测试链接（推荐：前端代理）
-                                        </div>
-                                        <div className="flex gap-2">
-                                          <input
-                                            value={webhookTestUrl}
-                                            readOnly
-                                            className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 text-xs text-white/80 outline-none"
-                                          />
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            className="border-white/20 bg-white/5 text-white hover:bg-white/10"
-                                            onClick={async () => {
-                                              try {
-                                                await navigator.clipboard.writeText(
-                                                  webhookTestUrl,
-                                                );
-                                                success("已复制测试链接");
-                                              } catch {
-                                                errorAlert("复制失败，请手动复制");
-                                              }
-                                            }}
-                                          >
-                                            复制
-                                          </Button>
-                                        </div>
-                                      </div>
-
-                                      <div className="mt-3">
-                                        <div className="text-xs text-white/60 mb-1">
-                                          Body 示例
-                                        </div>
-                                        <textarea
-                                          value={webhookSampleBody}
-                                          readOnly
-                                          className="h-24 w-full rounded-md border border-white/10 bg-black/40 p-3 text-xs font-mono text-white/80 outline-none"
-                                        />
-                                      </div>
-
-                                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                                         <Input
                                           value={webhookTestMessage}
                                           onChange={(e) =>
@@ -1525,12 +1476,11 @@ export default function TradeAddPage({
                                         >
                                           {webhookTestSending
                                             ? "触发中..."
-                                            : "一键测试触发"}
+                                            : "测试触发"}
                                         </Button>
                                       </div>
-
-                                      <div className="mt-3 text-xs text-white/40">
-                                        注意：同一个 webhook 1 分钟只能触发 1 次（限流）。
+                                      <div className="mt-2 text-xs text-white/40">
+                                        注意：同一个 webhook 1 分钟只能触发 1 次。
                                       </div>
                                     </div>
                                   ) : null}
