@@ -242,6 +242,27 @@ export type CreateTradeDto = {
   // ===== 基础字段 =====
   profitLossPercentage?: number;
   riskRewardRatio?: string;
+
+  // ===== R 模型字段 =====
+  riskModelVersion?: string;
+  plannedStopLossPrice?: number;
+  plannedTakeProfitPrice?: number;
+  plannedRiskAmount?: number;
+  plannedRiskPct?: number;
+  plannedRiskPerUnit?: number;
+  plannedRewardPerUnit?: number;
+  plannedRR?: number;
+  realizedR?: number;
+  rEfficiency?: number;
+  exitDeviationR?: number;
+  maxFavorableExcursionR?: number;
+  maxAdverseExcursionR?: number;
+  exitType?: "TP" | "SL" | "MANUAL" | "TIME" | "FORCED";
+  exitQualityTag?: "TECHNICAL" | "EMOTIONAL" | "SYSTEM" | "UNKNOWN";
+  exitReasonCode?: string;
+  exitReasonNote?: string;
+  rMetricsReady?: boolean;
+
   // 新增
   grade?: string;
   analysisExpired?: boolean;
@@ -416,6 +437,27 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     // ===== 计算字段/可选 =====
     profitLossPercentage: parseNum(form.profitLossPercentage),
     riskRewardRatio: form.riskRewardRatio,
+
+    // ===== R 模型 =====
+    riskModelVersion: form.riskModelVersion,
+    plannedStopLossPrice: parseNum(form.plannedStopLossPrice),
+    plannedTakeProfitPrice: parseNum(form.plannedTakeProfitPrice),
+    plannedRiskAmount: parseNum(form.plannedRiskAmount),
+    plannedRiskPct: parseNum(form.plannedRiskPct),
+    plannedRiskPerUnit: parseNum(form.plannedRiskPerUnit),
+    plannedRewardPerUnit: parseNum(form.plannedRewardPerUnit),
+    plannedRR: parseNum(form.plannedRR),
+    realizedR: parseNum(form.realizedR),
+    rEfficiency: parseNum(form.rEfficiency),
+    exitDeviationR: parseNum(form.exitDeviationR),
+    maxFavorableExcursionR: parseNum(form.maxFavorableExcursionR),
+    maxAdverseExcursionR: parseNum(form.maxAdverseExcursionR),
+    exitType: form.exitType as CreateTradeDto["exitType"],
+    exitQualityTag: form.exitQualityTag as CreateTradeDto["exitQualityTag"],
+    exitReasonCode: form.exitReasonCode,
+    exitReasonNote: form.exitReasonNote,
+    rMetricsReady: form.rMetricsReady,
+
   };
 }
 
