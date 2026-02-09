@@ -159,7 +159,7 @@ async function listFills(pageSize: number, nextToken?: string | null) {
   return (json.data || {}) as FillListResponse;
 }
 
-async function aggregatePreview(tradeKeys: string[]) {
+async function aggregatePreview(tradeKeys: string[], leverage?: number | null) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
@@ -167,13 +167,21 @@ async function aggregatePreview(tradeKeys: string[]) {
       targetPath: "trade/integrations/binance-futures/fills/aggregate-preview",
       actualMethod: "POST",
     },
-    actualBody: { tradeKeys },
+    actualBody: {
+      tradeKeys,
+      ...(typeof leverage === "number" && Number.isFinite(leverage)
+        ? { leverage }
+        : {}),
+    },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-async function aggregateConvert(tradeKeys: string[]) {
+async function aggregateConvert(
+  tradeKeys: string[],
+  leverage?: number | null,
+) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
@@ -181,21 +189,12 @@ async function aggregateConvert(tradeKeys: string[]) {
       targetPath: "trade/integrations/binance-futures/fills/aggregate-convert",
       actualMethod: "POST",
     },
-    actualBody: { tradeKeys },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-async function convertFills(tradeKeys: string[]) {
-  const res = await fetchWithAuth("/api/proxy-post", {
-    method: "POST",
-    credentials: "include",
-    proxyParams: {
-      targetPath: "trade/integrations/binance-futures/convert",
-      actualMethod: "POST",
+    actualBody: {
+      tradeKeys,
+      ...(typeof leverage === "number" && Number.isFinite(leverage)
+        ? { leverage }
+        : {}),
     },
-    actualBody: { tradeKeys },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -210,6 +209,7 @@ export default function BinanceFuturesIntegrationPage() {
   const [apiKey, setApiKeyValue] = React.useState("");
   const [apiSecret, setApiSecretValue] = React.useState("");
   const [defaultLeverage, setDefaultLeverage] = React.useState<number | null>(30);
+  const [previewLeverage, setPreviewLeverage] = React.useState<number | null>(30);
   const [symbolsText, setSymbolsText] = React.useState("");
   const [range, setRange] = React.useState<"7d" | "30d" | "1y">("7d");
   const [market, setMarket] = React.useState<"usdtm" | "coinm">("usdtm");
@@ -235,6 +235,7 @@ export default function BinanceFuturesIntegrationPage() {
       setStatus(s);
       if (typeof s.defaultLeverage === "number") {
         setDefaultLeverage(s.defaultLeverage);
+        setPreviewLeverage(s.defaultLeverage);
       }
     } catch (e) {
       console.error(e);
@@ -347,7 +348,7 @@ export default function BinanceFuturesIntegrationPage() {
                 onClick={async () => {
                   try {
                     setAggregating(true);
-                    const res = await aggregatePreview(selectedKeys);
+                    const res = await aggregatePreview(selectedKeys, previewLeverage);
                     setAggregateResult(res);
                     setAggregateOpen(true);
                     successAlert(
@@ -365,51 +366,7 @@ export default function BinanceFuturesIntegrationPage() {
                 {aggregating ? "处理中..." : `合并成交预览（${selectedKeys.length}）`}
               </Button>
 
-              <Button
-                onClick={async () => {
-                  try {
-                    setConverting(true);
-                    const res = await aggregateConvert(selectedKeys);
-                    successAlert("已生成 1 笔交易记录（可编辑）");
-                    setSelected({});
-                    const tid = res?.data?.transactionId;
-                    if (tid) {
-                      window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
-                    }
-                  } catch (e) {
-                    console.error(e);
-                    errorAlert("生成交易失败");
-                  } finally {
-                    setConverting(false);
-                  }
-                }}
-                disabled={converting}
-                className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
-              >
-                {converting ? "生成中..." : `生成交易（${selectedKeys.length}）`}
-              </Button>
 
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  try {
-                    setConverting(true);
-                    const res = await convertFills(selectedKeys);
-                    successAlert(
-                      `（旧）已导入为系统交易记录：${res?.data?.createdCount ?? 0} 条`,
-                    );
-                    setSelected({});
-                  } catch (e) {
-                    console.error(e);
-                    errorAlert("导入为交易记录失败");
-                  } finally {
-                    setConverting(false);
-                  }
-                }}
-                disabled={converting}
-              >
-                {converting ? "导入中..." : `（旧）逐条导入（${selectedKeys.length}）`}
-              </Button>
             </>
           ) : null}
         </div>
@@ -418,6 +375,10 @@ export default function BinanceFuturesIntegrationPage() {
           const r = aggregateResult as unknown as {
             data?: {
               totals?: { buyQty?: number; sellQty?: number; netQty?: number };
+              leverageUsed?: number | null;
+              defaultLeverage?: number | null;
+              pnlPercentNotional?: number | null;
+              roiPercent?: number | null;
               closedPositions?: unknown[];
               openPositions?: unknown[];
             };
@@ -426,6 +387,12 @@ export default function BinanceFuturesIntegrationPage() {
           const netQty = typeof totals?.netQty === "number" ? totals.netQty : null;
           const buyQty = typeof totals?.buyQty === "number" ? totals.buyQty : null;
           const sellQty = typeof totals?.sellQty === "number" ? totals.sellQty : null;
+          const pnlPercentNotional =
+            typeof r?.data?.pnlPercentNotional === "number"
+              ? r.data.pnlPercentNotional
+              : null;
+          const roiPercent =
+            typeof r?.data?.roiPercent === "number" ? r.data.roiPercent : null;
 
           const closed = Array.isArray(r?.data?.closedPositions)
             ? r.data.closedPositions
@@ -502,6 +469,56 @@ export default function BinanceFuturesIntegrationPage() {
                   <div>手续费：<span className="text-[#e5e7eb] font-mono">{fees == null ? "-" : fees.toFixed(8)}</span></div>
                 </div>
 
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3 text-xs text-[#9ca3af]">
+                  <div>
+                    收益率（按名义本金）：
+                    <span className="text-[#e5e7eb] font-mono ml-1">
+                      {pnlPercentNotional == null ? "-" : `${(pnlPercentNotional * 100).toFixed(2)}%`}
+                    </span>
+                  </div>
+                  <div>
+                    收益率（按杠杆估算）：
+                    <span className="text-[#e5e7eb] font-mono ml-1">
+                      {roiPercent == null ? "-" : `${(roiPercent * 100).toFixed(2)}%`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>杠杆：</span>
+                    <input
+                      value={previewLeverage ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const n = Number(v);
+                        setPreviewLeverage(
+                          v.trim().length === 0 || !Number.isFinite(n)
+                            ? null
+                            : Math.max(1, Math.min(125, Math.trunc(n))),
+                        );
+                      }}
+                      className="w-24 rounded bg-[#1a1a1a] border border-[#27272a] px-2 py-1 text-[#e5e7eb]"
+                    />
+                    <Button
+                      variant="secondary"
+                      className="h-7 px-2"
+                      onClick={async () => {
+                        try {
+                          setAggregating(true);
+                          const res = await aggregatePreview(selectedKeys, previewLeverage);
+                          setAggregateResult(res);
+                        } catch (e) {
+                          console.error(e);
+                          errorAlert("刷新预览失败");
+                        } finally {
+                          setAggregating(false);
+                        }
+                      }}
+                      disabled={aggregating || selectedKeys.length === 0}
+                    >
+                      刷新
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="mt-3 text-xs text-[#6b7280] font-mono">
                   buyQty={buyQty == null ? "-" : buyQty} · sellQty={sellQty == null ? "-" : sellQty} · netQty={netQty == null ? "-" : netQty}
                 </div>
@@ -512,7 +529,7 @@ export default function BinanceFuturesIntegrationPage() {
                     onClick={async () => {
                       try {
                         setConverting(true);
-                        const res = await aggregateConvert(selectedKeys);
+                        const res = await aggregateConvert(selectedKeys, previewLeverage);
                         successAlert("已生成 1 笔交易记录（可编辑）");
                         setSelected({});
                         const tid = res?.data?.transactionId;
