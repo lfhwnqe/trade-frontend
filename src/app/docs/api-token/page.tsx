@@ -115,6 +115,21 @@ export default function ApiTokenDocPage() {
         </p>
       </section>
 
+      <section id="clawbot">
+        <h2>结合 Telegram Webhook：让你的 Clawbot 自动分析</h2>
+        <p>
+          推荐做法：让 webhook 把提醒推到 Telegram 群，然后由你自己的 clawbot 监听群消息，解析其中的
+          <code>META_JSON</code>（包含 <code>transactionId</code>），再用 API Token 拉取 trade 的分析字段：
+        </p>
+        <CodeBlock>{`# 1) clawbot 从群消息 META_JSON 解析出 transactionId
+# 2) 用 API token 拉取交易详情（包含计划、关键位、风控等）
+curl -X GET "https://<YOUR_API_BASE>/trade/<transactionId>" \
+  -H "Authorization: Bearer tc_xxx"`}</CodeBlock>
+        <p className="mt-3">
+          然后 clawbot 把 webhook message + trade 详情一起喂给你的分析 prompt/agent，即可生成报告并回发群。
+        </p>
+      </section>
+
       <hr />
       <p>
         Next steps：

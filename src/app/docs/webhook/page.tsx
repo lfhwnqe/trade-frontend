@@ -90,6 +90,15 @@ export default function WebhookDocPage() {
             body 建议至少包含一段可读消息：
           </p>
           <CodeBlock>{`{ "message": "BTCUSDC 回踩关键位，计划 A 触发" }`}</CodeBlock>
+
+          <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4 text-gray-300">
+            <div className="font-semibold text-white">给 Clawbot 用的结构化信息</div>
+            <p className="mt-2">
+              系统推送到 Telegram 群的消息会包含一个 <code>META_JSON</code> 代码块，里面有：
+              <code>transactionId</code> / <code>tradeShortId</code> 等字段。
+              你的 clawbot 可以从群消息中解析这些字段后，用你自己的 API Token 调用 <code>/trade/*</code> 接口拉取该交易的分析数据，再结合 webhook 的 message 做二次分析。
+            </p>
+          </div>
         </section>
 
         <div className="mt-6 rounded-lg border border-white/10 bg-black/30 p-4 text-gray-300">
