@@ -173,6 +173,20 @@ async function aggregatePreview(tradeKeys: string[]) {
   return res.json();
 }
 
+async function aggregateSave(tradeKeys: string[]) {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/fills/aggregate-save",
+      actualMethod: "POST",
+    },
+    actualBody: { tradeKeys },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 async function aggregateConvert(tradeKeys: string[]) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -369,16 +383,15 @@ export default function BinanceFuturesIntegrationPage() {
                 onClick={async () => {
                   try {
                     setConverting(true);
-                    const res = await aggregateConvert(selectedKeys);
-                    successAlert("已生成 1 笔交易记录（可编辑）");
-                    setSelected({});
-                    const tid = res?.data?.transactionId;
-                    if (tid) {
-                      window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
-                    }
+                    const res = await aggregateSave(selectedKeys);
+                    setAggregateResult(res);
+                    setAggregateOpen(true);
+                    successAlert(
+                      `已入库为仓位：${res?.data?.status ?? ""} (${res?.data?.positionKey ?? ""})`,
+                    );
                   } catch (e) {
                     console.error(e);
-                    errorAlert("生成交易失败");
+                    errorAlert("保存仓位失败");
                   } finally {
                     setConverting(false);
                   }
@@ -386,7 +399,7 @@ export default function BinanceFuturesIntegrationPage() {
                 disabled={converting}
                 className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
               >
-                {converting ? "生成中..." : `生成交易（${selectedKeys.length}）`}
+                {converting ? "保存中..." : `保存为仓位（${selectedKeys.length}）`}
               </Button>
 
               <Button
@@ -426,6 +439,40 @@ export default function BinanceFuturesIntegrationPage() {
               <Button
                 variant="secondary"
                 onClick={() => setAggregateOpen(false)}
+              >
+                关闭
+              </Button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button
+                className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+                onClick={async () => {
+                  try {
+                    setConverting(true);
+                    const res = await aggregateConvert(selectedKeys);
+                    successAlert("已生成 1 笔交易记录（可编辑）");
+                    setSelected({});
+                    const tid = res?.data?.transactionId;
+                    if (tid) {
+                      window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
+                    }
+                  } catch (e) {
+                    console.error(e);
+                    errorAlert("生成交易失败");
+                  } finally {
+                    setConverting(false);
+                  }
+                }}
+                disabled={converting || selectedKeys.length === 0}
+              >
+                {converting ? "生成中..." : `转为复盘交易（${selectedKeys.length}）`}
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={() => setAggregateOpen(false)}
+                disabled={converting}
               >
                 关闭
               </Button>
