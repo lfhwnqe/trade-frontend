@@ -327,9 +327,9 @@ export default function TradeAddPage({
   }, [detailId, detailMode, errorAlert, setDetailLoading, setForm]);
   // }, [searchParams, errorAlert, setDetailLoading, setForm]);
 
-  // Load trade webhook status (readOnly/detail)
+  // Load trade webhook status
   useEffect(() => {
-    if (!transactionId || !readOnly) {
+    if (!transactionId) {
       return;
     }
 
@@ -386,7 +386,7 @@ export default function TradeAddPage({
     return () => {
       cancelled = true;
     };
-  }, [transactionId, readOnly]);
+  }, [transactionId]);
 
   // 离开页面时自动重置表单，避免脏数据
   useEffect(() => {
@@ -904,7 +904,7 @@ export default function TradeAddPage({
           <div className="relative h-full min-h-0 xl:grid xl:grid-cols-[minmax(0,1fr)_16rem] xl:gap-6">
             <div className="min-w-0 h-full min-h-0 flex flex-col">
               <div className="space-y-6 pr-2">
-                {readOnly && transactionId ? (
+                {transactionId ? (
                   <div className="rounded-2xl border border-white/10 bg-black/40 p-5 backdrop-blur-xl">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
