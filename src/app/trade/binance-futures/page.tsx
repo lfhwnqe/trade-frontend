@@ -73,6 +73,24 @@ async function setKey(
   return res.json();
 }
 
+async function updateSettings(defaultLeverage?: number | null) {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/settings",
+      actualMethod: "POST",
+    },
+    actualBody: {
+      ...(typeof defaultLeverage === "number" && Number.isFinite(defaultLeverage)
+        ? { defaultLeverage }
+        : {}),
+    },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 async function deleteKey() {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -492,27 +510,75 @@ export default function BinanceFuturesIntegrationPage() {
           ) : null}
 
           {status?.configured ? (
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  try {
-                    setDeleting(true);
-                    await deleteKey();
-                    successAlert("已删除");
-                    await refresh();
-                  } catch (e) {
-                    console.error(e);
-                    errorAlert("删除失败");
-                  } finally {
-                    setDeleting(false);
-                  }
-                }}
-                disabled={deleting}
-              >
-                {deleting ? "删除中..." : "删除配置"}
-              </Button>
-            </div>
+            <>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="md:col-span-2">
+                  <div className="text-xs text-[#6b7280]">
+                    已配置 Key/Secret（不显示明文）。如需修改请删除后重新配置。
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 text-sm text-[#9ca3af]">默认杠杆（用于 ROI 估算）</div>
+                  <Input
+                    value={defaultLeverage ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const n = Number(v);
+                      setDefaultLeverage(
+                        v.trim().length === 0 || !Number.isFinite(n)
+                          ? null
+                          : Math.max(1, Math.min(125, Math.trunc(n))),
+                      );
+                    }}
+                    placeholder="例如 30"
+                    inputMode="numeric"
+                    className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  onClick={async () => {
+                    try {
+                      setSaving(true);
+                      await updateSettings(defaultLeverage);
+                      successAlert("保存成功");
+                      await refresh();
+                    } catch (e) {
+                      console.error(e);
+                      errorAlert("保存失败");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving}
+                  className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+                >
+                  {saving ? "保存中..." : "保存杠杆"}
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      setDeleting(true);
+                      await deleteKey();
+                      successAlert("已删除");
+                      await refresh();
+                    } catch (e) {
+                      console.error(e);
+                      errorAlert("删除失败");
+                    } finally {
+                      setDeleting(false);
+                    }
+                  }}
+                  disabled={deleting}
+                >
+                  {deleting ? "删除中..." : "删除配置"}
+                </Button>
+              </div>
+            </>
           ) : null}
         </div>
 
