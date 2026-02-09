@@ -11,6 +11,7 @@ import { useAlert } from "@/components/common/alert";
 type KeyStatus = {
   configured: boolean;
   apiKeyTail: string | null;
+  defaultLeverage?: number | null;
   updatedAt: string | null;
 };
 
@@ -48,7 +49,11 @@ async function getKeyStatus() {
   return (json.data || {}) as KeyStatus;
 }
 
-async function setKey(apiKey: string, apiSecret: string) {
+async function setKey(
+  apiKey: string,
+  apiSecret: string,
+  defaultLeverage?: number | null,
+) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
@@ -56,7 +61,13 @@ async function setKey(apiKey: string, apiSecret: string) {
       targetPath: "trade/integrations/binance-futures/key",
       actualMethod: "POST",
     },
-    actualBody: { apiKey, apiSecret },
+    actualBody: {
+      apiKey,
+      apiSecret,
+      ...(typeof defaultLeverage === "number" && Number.isFinite(defaultLeverage)
+        ? { defaultLeverage }
+        : {}),
+    },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -152,6 +163,7 @@ export default function BinanceFuturesIntegrationPage() {
 
   const [apiKey, setApiKeyValue] = React.useState("");
   const [apiSecret, setApiSecretValue] = React.useState("");
+  const [defaultLeverage, setDefaultLeverage] = React.useState<number | null>(30);
   const [symbolsText, setSymbolsText] = React.useState("");
   const [range, setRange] = React.useState<"7d" | "30d" | "1y">("7d");
   const [market, setMarket] = React.useState<"usdtm" | "coinm">("usdtm");
@@ -172,6 +184,9 @@ export default function BinanceFuturesIntegrationPage() {
       setLoading(true);
       const s = await getKeyStatus();
       setStatus(s);
+      if (typeof s.defaultLeverage === "number") {
+        setDefaultLeverage(s.defaultLeverage);
+      }
     } catch (e) {
       console.error(e);
       errorAlert("加载配置状态失败");
@@ -404,7 +419,7 @@ export default function BinanceFuturesIntegrationPage() {
 
           {!status?.configured ? (
             <>
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                   <div className="mb-2 text-sm text-[#9ca3af]">API Key</div>
                   <Input
@@ -424,6 +439,24 @@ export default function BinanceFuturesIntegrationPage() {
                     className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
                   />
                 </div>
+                <div>
+                  <div className="mb-2 text-sm text-[#9ca3af]">默认杠杆（用于 ROI 估算）</div>
+                  <Input
+                    value={defaultLeverage ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const n = Number(v);
+                      setDefaultLeverage(
+                        v.trim().length === 0 || !Number.isFinite(n)
+                          ? null
+                          : Math.max(1, Math.min(125, Math.trunc(n))),
+                      );
+                    }}
+                    placeholder="例如 30"
+                    inputMode="numeric"
+                    className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -431,7 +464,7 @@ export default function BinanceFuturesIntegrationPage() {
                   onClick={async () => {
                     try {
                       setSaving(true);
-                      await setKey(apiKey.trim(), apiSecret.trim());
+                      await setKey(apiKey.trim(), apiSecret.trim(), defaultLeverage);
                       successAlert("保存成功");
                       setApiKeyValue("");
                       setApiSecretValue("");

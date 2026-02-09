@@ -18,6 +18,9 @@ type PositionItem = {
   closedQty: number;
   realizedPnl: number;
   pnlPercent?: number;
+  pnlPercentNotional?: number;
+  roiPercent?: number;
+  defaultLeverage?: number | null;
   fillCount: number;
 };
 
@@ -294,7 +297,8 @@ export default function BinancePositionsPage() {
                     <th className="py-2 pr-3 text-right">平仓均价</th>
                     <th className="py-2 pr-3 text-right">最大持仓</th>
                     <th className="py-2 pr-3 text-right">已实现盈亏</th>
-                    <th className="py-2 pr-3 text-right">收益率(估算)</th>
+                    <th className="py-2 pr-3 text-right">收益率（按名义本金）</th>
+                    <th className="py-2 pr-3 text-right">ROI（按杠杆估算）</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -346,9 +350,18 @@ export default function BinancePositionsPage() {
                         </span>
                       </td>
                       <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
-                        {typeof p.pnlPercent === "number"
-                          ? `${(p.pnlPercent * 100).toFixed(2)}%`
-                          : "-"}
+                        {typeof p.pnlPercentNotional === "number"
+                          ? `${(p.pnlPercentNotional * 100).toFixed(2)}%`
+                          : typeof p.pnlPercent === "number"
+                            ? `${(p.pnlPercent * 100).toFixed(2)}%`
+                            : "-"}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-[#e5e7eb] font-mono">
+                        {typeof p.roiPercent === "number"
+                          ? `${(p.roiPercent * 100).toFixed(2)}%`
+                          : p.defaultLeverage
+                            ? "-"
+                            : "(未设置杠杆)"}
                       </td>
                     </tr>
                   ))}
