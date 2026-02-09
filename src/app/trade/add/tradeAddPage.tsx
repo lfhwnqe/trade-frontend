@@ -1347,22 +1347,69 @@ export default function TradeAddPage({
 
                                   {webhookBindCode ? (
                                     <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-                                      <div className="text-xs text-white/60">
-                                        群内绑定命令
+                                      <div className="flex items-center justify-between gap-3">
+                                        <div className="text-xs text-white/60">
+                                          群内绑定命令
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                                          onClick={async () => {
+                                            const cmd = `/bind ${webhookBindCode}`;
+                                            try {
+                                              await navigator.clipboard.writeText(cmd);
+                                              success("已复制 /bind 命令");
+                                            } catch {
+                                              errorAlert("复制失败，请手动复制");
+                                            }
+                                          }}
+                                        >
+                                          复制
+                                        </Button>
                                       </div>
-                                      <div className="mt-1 font-mono text-xs text-[#00c2b2]">
-                                        /bind {webhookBindCode}
+                                      <input
+                                        readOnly
+                                        value={`/bind ${webhookBindCode}`}
+                                        className="mt-2 h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 text-xs font-mono text-white/80 outline-none"
+                                      />
+                                      <div className="mt-2 text-xs text-white/40">
+                                        提示：bindCode 很长是正常的，建议直接复制粘贴。
                                       </div>
                                     </div>
                                   ) : null}
 
                                   {webhookSecret ? (
                                     <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-                                      <div className="text-xs text-white/60">
-                                        Secret（仅展示一次）
+                                      <div className="flex items-center justify-between gap-3">
+                                        <div className="text-xs text-white/60">
+                                          Secret（仅展示一次）
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                                          onClick={async () => {
+                                            try {
+                                              await navigator.clipboard.writeText(webhookSecret);
+                                              success("已复制 secret");
+                                            } catch {
+                                              errorAlert("复制失败，请手动复制");
+                                            }
+                                          }}
+                                        >
+                                          复制
+                                        </Button>
                                       </div>
-                                      <div className="mt-1 font-mono text-xs text-white/80 break-all">
+                                      <div className="mt-2 font-mono text-xs text-white/80 break-all">
                                         {webhookSecret}
+                                      </div>
+                                      <div className="mt-2 text-xs text-white/40">
+                                        说明：这是 legacy 鉴权 secret，仅在调用旧接口
+                                        <span className="font-mono"> /webhook/trade-alert/hook/:hookId</span>
+                                        时需要。TradingView 推荐使用 triggerUrl（无需 secret）。
                                       </div>
                                     </div>
                                   ) : null}
