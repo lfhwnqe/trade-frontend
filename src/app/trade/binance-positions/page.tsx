@@ -115,6 +115,11 @@ async function convertOpenPositions(positionKeys: string[]) {
 export default function BinancePositionsPage() {
   const [errorAlert, successAlert] = useAlert();
 
+  const [debugOpen, setDebugOpen] = React.useState(false);
+  const [debugInput, setDebugInput] = React.useState("");
+  const [debugRunning, setDebugRunning] = React.useState(false);
+  const [debugOutput, setDebugOutput] = React.useState<unknown>(null);
+
   const [range, setRange] = React.useState<"7d" | "30d" | "1y">("7d");
   const [tab, setTab] = React.useState<"closed" | "open">("closed");
   const [items, setItems] = React.useState<PositionItem[]>([]);
@@ -205,6 +210,14 @@ export default function BinancePositionsPage() {
             {loading ? "处理中..." : "重建仓位历史"}
           </Button>
 
+          <Button
+            variant="secondary"
+            onClick={() => setDebugOpen((v) => !v)}
+            disabled={loading}
+          >
+            {debugOpen ? "关闭调试" : "调试：粘贴 JSON 重建"}
+          </Button>
+
           <Button variant="secondary" onClick={() => load("reset")} disabled={loading}>
             {loading ? "加载中..." : "刷新/加载"}
           </Button>
@@ -255,6 +268,90 @@ export default function BinancePositionsPage() {
             </Button>
           ) : null}
         </div>
+
+        {debugOpen ? (
+          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-lg font-semibold text-white">调试：粘贴 JSON 预览重建</div>
+                <div className="mt-2 text-xs text-[#6b7280]">
+                  把“已同步成交记录”的 items JSON 数组粘贴到下面（每项可以包含 raw 字段），点击预览。
+                  该操作不会写入数据库，仅用于定位聚合逻辑问题。
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setDebugInput("");
+                  setDebugOutput(null);
+                }}
+                disabled={debugRunning}
+              >
+                清空
+              </Button>
+            </div>
+
+            <textarea
+              value={debugInput}
+              onChange={(e) => setDebugInput(e.target.value)}
+              placeholder="粘贴 JSON 数组，例如：[ { ... }, { ... } ]"
+              className="mt-4 h-56 w-full rounded-md bg-[#0b0b0b] border border-[#27272a] p-3 text-xs text-[#e5e7eb] font-mono"
+            />
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button
+                className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+                disabled={debugRunning}
+                onClick={async () => {
+                  try {
+                    setDebugRunning(true);
+                    setDebugOutput(null);
+
+                    let arr: unknown[] = [];
+                    try {
+                      const parsed = JSON.parse(debugInput || "[]");
+                      arr = Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                      errorAlert("JSON 解析失败：请确认是数组格式");
+                      return;
+                    }
+
+                    const res = await fetchWithAuth("/api/proxy-post", {
+                      method: "POST",
+                      credentials: "include",
+                      proxyParams: {
+                        targetPath:
+                          "trade/integrations/binance-futures/positions/rebuild-preview",
+                        actualMethod: "POST",
+                      },
+                      actualBody: { fills: arr },
+                    });
+
+                    if (!res.ok) throw new Error(await res.text());
+                    const json = await res.json();
+                    setDebugOutput(json);
+                    successAlert(
+                      `预览完成：closed ${json?.data?.rebuiltCount ?? 0}，open ${json?.data?.openCount ?? 0}，scanned ${json?.data?.scannedFills ?? 0}`,
+                    );
+                  } catch (e) {
+                    console.error(e);
+                    errorAlert("预览失败");
+                  } finally {
+                    setDebugRunning(false);
+                  }
+                }}
+              >
+                {debugRunning ? "处理中..." : "预览重建"}
+              </Button>
+            </div>
+
+            {debugOutput ? (
+              <pre className="mt-4 max-h-[420px] overflow-auto rounded-md bg-[#0b0b0b] border border-[#27272a] p-3 text-xs text-[#e5e7eb]">
+                {JSON.stringify(debugOutput, null, 2)}
+              </pre>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 overflow-x-auto">
           <div className="flex items-center justify-between gap-3">
