@@ -28,6 +28,7 @@ import {
 import { useAlert } from "@/components/common/alert";
 import { LoadingButton } from "../components/LoadingButton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import {
   Sheet,
@@ -287,10 +288,44 @@ export default function TradeAddPage({
   const [webhookChatTitle, setWebhookChatTitle] = useState<string>("");
   const [webhookBindCode, setWebhookBindCode] = useState<string>("");
   const [webhookSecret, setWebhookSecret] = useState<string>("");
+  const [webhookTestSending, setWebhookTestSending] = useState(false);
+  const [webhookTestMessage, setWebhookTestMessage] = useState(
+    "hello from MMCTradeJournal",
+  );
   // 主体渲染，非弹窗模式而是全宽居中大表单
   const transactionId = searchParams.get("id");
   const detailId = detailIdProp ?? transactionId;
   const isCreateMode = !detailId && !readOnly;
+
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "";
+
+  const webhookTriggerToken = React.useMemo(() => {
+    if (!webhookTriggerUrl) return "";
+    // backend trigger url: .../webhook/trade-alert/<token>/<tradeShortId>
+    const parts = webhookTriggerUrl.split("/webhook/trade-alert/");
+    if (parts.length < 2) return "";
+    const tail = parts[1];
+    const seg = tail.split("/").filter(Boolean);
+    return seg[0] || "";
+  }, [webhookTriggerUrl]);
+
+  const webhookTestUrl = React.useMemo(() => {
+    if (!origin || !webhookTriggerToken) return "";
+    const qs = new URLSearchParams();
+    qs.set("token", webhookTriggerToken);
+    // tradeShortId is already embedded in triggerUrl path; proxy accepts optional tradeShortId
+    // but including it makes intent explicit.
+    const tradeShortId = webhookTriggerUrl
+      .split("/webhook/trade-alert/")[1]
+      ?.split("/")[1];
+    if (tradeShortId) qs.set("tradeShortId", tradeShortId);
+    return `${origin}/api/webhook?${qs.toString()}`;
+  }, [origin, webhookTriggerToken, webhookTriggerUrl]);
+
+  const webhookSampleBody = React.useMemo(() => {
+    return JSON.stringify({ message: webhookTestMessage }, null, 2);
+  }, [webhookTestMessage]);
 
   // 新增时固定为已分析状态，避免跨状态填写
   useEffect(() => {
@@ -1066,6 +1101,91 @@ export default function TradeAddPage({
                           <div className="rounded-lg border border-white/10 bg-black/30 p-3">
                             <div className="text-xs text-white/60">Secret（仅展示一次）</div>
                             <div className="mt-1 font-mono text-xs text-white/80 break-all">{webhookSecret}</div>
+                          </div>
+                        ) : null}
+
+                        {webhookTestUrl ? (
+                          <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+                            <div className="text-xs text-white/60">测试闭环（自己触发一次）</div>
+                            <div className="mt-1 text-xs text-white/50">
+                              复制下面的测试链接 + body，在 Postman/curl 里发一次，确认能推送到绑定群。
+                            </div>
+
+                            <div className="mt-3">
+                              <div className="text-xs text-white/60 mb-1">测试链接（推荐：前端代理）</div>
+                              <div className="flex gap-2">
+                                <input
+                                  value={webhookTestUrl}
+                                  readOnly
+                                  className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 text-xs text-white/80 outline-none"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                                  onClick={async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(webhookTestUrl);
+                                      success("已复制测试链接");
+                                    } catch {
+                                      errorAlert("复制失败，请手动复制");
+                                    }
+                                  }}
+                                >
+                                  复制
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="mt-3">
+                              <div className="text-xs text-white/60 mb-1">Body 示例</div>
+                              <textarea
+                                value={webhookSampleBody}
+                                readOnly
+                                className="h-24 w-full rounded-md border border-white/10 bg-black/40 p-3 text-xs font-mono text-white/80 outline-none"
+                              />
+                            </div>
+
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                              <Input
+                                value={webhookTestMessage}
+                                onChange={(e) => setWebhookTestMessage(e.target.value)}
+                                placeholder="自定义 message（测试用）"
+                                className="h-10 border-white/10 bg-black/40 text-white placeholder:text-white/30"
+                              />
+                              <Button
+                                type="button"
+                                disabled={webhookTestSending}
+                                className="bg-[#00c2b2] text-black hover:bg-[#009e91]"
+                                onClick={async () => {
+                                  if (!webhookTestUrl) return;
+                                  setWebhookTestSending(true);
+                                  try {
+                                    const resp = await fetch(webhookTestUrl, {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ message: webhookTestMessage }),
+                                    });
+                                    const text = await resp.text();
+                                    if (!resp.ok) {
+                                      throw new Error(text || `HTTP ${resp.status}`);
+                                    }
+                                    success("已触发：请到 Telegram 群查看消息");
+                                  } catch (e) {
+                                    const msg = e instanceof Error ? e.message : "触发失败";
+                                    errorAlert(msg);
+                                  } finally {
+                                    setWebhookTestSending(false);
+                                  }
+                                }}
+                              >
+                                {webhookTestSending ? "触发中..." : "一键测试触发"}
+                              </Button>
+                            </div>
+
+                            <div className="mt-3 text-xs text-white/40">
+                              注意：同一个 webhook 1 分钟只能触发 1 次（限流）。
+                            </div>
                           </div>
                         ) : null}
 
