@@ -81,6 +81,9 @@ export default function WebhookDocPage() {
           <p className="mt-3 text-gray-300">
             绑定成功后，这条交易的 TradingView 触发会推送到该群。
           </p>
+          <p className="mt-2 text-gray-300">
+            <strong>推荐做法：</strong>把你所有交易的 webhook 都绑定到同一个“交易群”，这样你的 clawbot 只需要进一个群就能统一接收与分析。
+          </p>
         </section>
 
         <section id="tv">

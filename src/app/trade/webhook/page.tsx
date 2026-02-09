@@ -156,6 +156,22 @@ export default function TradeWebhookPage() {
     {},
   );
 
+  const chatStats = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const it of items) {
+      const key = it.chatTitle
+        ? String(it.chatTitle)
+        : it.chatId
+          ? `chat:${it.chatId}`
+          : "未绑定";
+      map[key] = (map[key] || 0) + 1;
+    }
+    const entries = Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+    return entries;
+  }, [items]);
+
   // trade cache for list rendering
   const [tradeMap, setTradeMap] = React.useState<Record<string, TradeSummary>>(
     {},
@@ -355,13 +371,27 @@ export default function TradeWebhookPage() {
               <p className="text-sm text-[#9ca3af] mt-1">
                 为了让你知道哪些交易已经开启了 webhook（用于配额限制）。创建/删除在「交易详情页」完成。
               </p>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                <span className="text-white/50">配额</span>
-                <span className="font-mono text-white">
-                  {quotaLimit === 0
-                    ? "Free 用户需升级"
-                    : `${items.length}/${quotaLimit}`}
-                </span>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                  <span className="text-white/50">配额</span>
+                  <span className="font-mono text-white">
+                    {quotaLimit === 0
+                      ? "Free 用户需升级"
+                      : `${items.length}/${quotaLimit}`}
+                  </span>
+                  <span className="ml-2 text-white/30">（推荐全部绑定同一个交易群）</span>
+                </div>
+
+                {chatStats.length > 0 ? (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    <span className="text-white/50">群分布</span>
+                    <span className="text-white/80">
+                      {chatStats
+                        .map(([name, count]) => `${name}(${count})`)
+                        .join(" · ")}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
             <Button variant="secondary" onClick={loadFirstPage} disabled={loading}>

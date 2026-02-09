@@ -1089,6 +1089,9 @@ export default function TradeAddPage({
                         <div className="text-xs text-white/50">
                           绑定状态：{webhookChatTitle ? `已绑定到群「${webhookChatTitle}」` : "未绑定（把 bot 拉进群后 /bind）"}
                         </div>
+                        <div className="text-xs text-white/40">
+                          推荐：把所有交易的 webhook 都绑定到同一个“交易群”，方便你的 clawbot 统一接收与分析。
+                        </div>
 
                         {webhookBindCode ? (
                           <div className="rounded-lg border border-white/10 bg-black/30 p-3">
