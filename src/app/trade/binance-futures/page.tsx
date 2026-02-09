@@ -159,6 +159,34 @@ async function listFills(pageSize: number, nextToken?: string | null) {
   return (json.data || {}) as FillListResponse;
 }
 
+async function aggregatePreview(tradeKeys: string[]) {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/fills/aggregate-preview",
+      actualMethod: "POST",
+    },
+    actualBody: { tradeKeys },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function aggregateConvert(tradeKeys: string[]) {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/fills/aggregate-convert",
+      actualMethod: "POST",
+    },
+    actualBody: { tradeKeys },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 async function convertFills(tradeKeys: string[]) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -195,6 +223,9 @@ export default function BinanceFuturesIntegrationPage() {
   const [fillsNextToken, setFillsNextToken] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
   const [converting, setConverting] = React.useState(false);
+  const [aggregating, setAggregating] = React.useState(false);
+  const [aggregateResult, setAggregateResult] = React.useState<unknown>(null);
+  const [aggregateOpen, setAggregateOpen] = React.useState(false);
   const [cleaning, setCleaning] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
@@ -310,29 +341,102 @@ export default function BinanceFuturesIntegrationPage() {
           </Button>
 
           {selectedKeys.length > 0 ? (
-            <Button
-              onClick={async () => {
-                try {
-                  setConverting(true);
-                  const res = await convertFills(selectedKeys);
-                  successAlert(
-                    `已导入为系统交易记录：${res?.data?.createdCount ?? 0} 条`,
-                  );
-                  setSelected({});
-                } catch (e) {
-                  console.error(e);
-                  errorAlert("导入为交易记录失败");
-                } finally {
-                  setConverting(false);
-                }
-              }}
-              disabled={converting}
-              className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
-            >
-              {converting ? "导入中..." : `导入选中（${selectedKeys.length}）为交易`}
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  try {
+                    setAggregating(true);
+                    const res = await aggregatePreview(selectedKeys);
+                    setAggregateResult(res);
+                    setAggregateOpen(true);
+                    successAlert(
+                      `聚合预览完成：netQty=${res?.data?.totals?.netQty ?? 0}`,
+                    );
+                  } catch (e) {
+                    console.error(e);
+                    errorAlert("聚合预览失败");
+                  } finally {
+                    setAggregating(false);
+                  }
+                }}
+                disabled={aggregating}
+              >
+                {aggregating ? "处理中..." : `聚合预览（${selectedKeys.length}）`}
+              </Button>
+
+              <Button
+                onClick={async () => {
+                  try {
+                    setConverting(true);
+                    const res = await aggregateConvert(selectedKeys);
+                    successAlert("已生成 1 笔交易记录（可编辑）");
+                    setSelected({});
+                    const tid = res?.data?.transactionId;
+                    if (tid) {
+                      window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
+                    }
+                  } catch (e) {
+                    console.error(e);
+                    errorAlert("生成交易失败");
+                  } finally {
+                    setConverting(false);
+                  }
+                }}
+                disabled={converting}
+                className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+              >
+                {converting ? "生成中..." : `生成交易（${selectedKeys.length}）`}
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  try {
+                    setConverting(true);
+                    const res = await convertFills(selectedKeys);
+                    successAlert(
+                      `（旧）已导入为系统交易记录：${res?.data?.createdCount ?? 0} 条`,
+                    );
+                    setSelected({});
+                  } catch (e) {
+                    console.error(e);
+                    errorAlert("导入为交易记录失败");
+                  } finally {
+                    setConverting(false);
+                  }
+                }}
+                disabled={converting}
+              >
+                {converting ? "导入中..." : `（旧）逐条导入（${selectedKeys.length}）`}
+              </Button>
+            </>
           ) : null}
         </div>
+
+        {aggregateOpen && aggregateResult ? (
+          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-lg font-semibold text-white">聚合预览</div>
+                <div className="mt-2 text-xs text-[#6b7280]">
+                  用你勾选的成交记录聚合成一笔仓位/交易。netQty≈0 表示闭合；不为 0 说明可能漏选。
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => setAggregateOpen(false)}
+              >
+                关闭
+              </Button>
+            </div>
+
+            <pre className="mt-4 max-h-[420px] overflow-auto rounded-md bg-[#0b0b0b] border border-[#27272a] p-3 text-xs text-[#e5e7eb]">
+              {JSON.stringify(aggregateResult, null, 2)}
+            </pre>
+          </div>
+        ) : null}
+
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
           <div className="text-lg font-semibold text-white">配置状态</div>
           <div className="mt-2 text-sm text-[#9ca3af]">
