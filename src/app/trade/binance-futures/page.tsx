@@ -581,12 +581,19 @@ export default function BinanceFuturesIntegrationPage() {
                 {fills.map((f) => (
                   <tr
                     key={f.tradeKey}
-                    className="border-b border-[#27272a] hover:bg-white/5"
+                    className="border-b border-[#27272a] hover:bg-white/5 cursor-pointer"
+                    onClick={() =>
+                      setSelected((prev) => ({
+                        ...prev,
+                        [f.tradeKey]: !Boolean(prev[f.tradeKey]),
+                      }))
+                    }
                   >
                     <td className="py-2 pr-3">
                       <input
                         type="checkbox"
                         checked={Boolean(selected[f.tradeKey])}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) =>
                           setSelected((prev) => ({
                             ...prev,
