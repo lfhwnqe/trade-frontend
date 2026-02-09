@@ -287,7 +287,7 @@ export default function TradeAddPage({
   const [webhookHookId, setWebhookHookId] = useState<string>("");
   const [webhookChatTitle, setWebhookChatTitle] = useState<string>("");
   const [webhookBindCode, setWebhookBindCode] = useState<string>("");
-  const [webhookSecret, setWebhookSecret] = useState<string>("");
+  // legacy secret removed (TradingView-friendly triggerUrl does not require header secrets)
   const [webhookTestSending, setWebhookTestSending] = useState(false);
   const [webhookTestMessage, setWebhookTestMessage] = useState(
     "hello from MMCTradeJournal",
@@ -372,9 +372,7 @@ export default function TradeAddPage({
     let cancelled = false;
     const run = async () => {
       setWebhookLoading(true);
-      setWebhookBindCode("");
-      setWebhookSecret("");
-      try {
+      setWebhookBindCode("");      try {
         const resp = await fetchWithAuth("/api/proxy-post", {
           method: "POST",
           credentials: "include",
@@ -1170,9 +1168,7 @@ export default function TradeAddPage({
                                     onClick={async () => {
                                       if (!transactionId) return;
                                       setWebhookLoading(true);
-                                      setWebhookBindCode("");
-                                      setWebhookSecret("");
-                                      try {
+                                      setWebhookBindCode("");                                      try {
                                         const resp = await fetchWithAuth(
                                           "/api/proxy-post",
                                           {
@@ -1221,14 +1217,11 @@ export default function TradeAddPage({
                                         setWebhookBindCode(
                                           String(data?.bindCode || ""),
                                         );
-                                        setWebhookSecret(
-                                          String(data?.secret || ""),
-                                        );
                                         setWebhookChatTitle(
                                           String(data?.hook?.chatTitle || ""),
                                         );
                                         success(
-                                          "Webhook 创建成功：bindCode/secret 仅展示一次，请及时复制",
+                                          "Webhook 创建成功：bindCode 仅展示一次，请及时复制",
                                         );
                                       } catch (e) {
                                         const msg =
@@ -1283,9 +1276,7 @@ export default function TradeAddPage({
                                         setWebhookExists(false);
                                         setWebhookTriggerUrl("");
                                         setWebhookHookId("");
-                                        setWebhookBindCode("");
-                                        setWebhookSecret("");
-                                        setWebhookChatTitle("");
+                                        setWebhookBindCode("");                                        setWebhookChatTitle("");
                                         success("Webhook 已删除");
                                       } catch (e) {
                                         const msg =
@@ -1376,40 +1367,6 @@ export default function TradeAddPage({
                                       />
                                       <div className="mt-2 text-xs text-white/40">
                                         提示：bindCode 很长是正常的，建议直接复制粘贴。
-                                      </div>
-                                    </div>
-                                  ) : null}
-
-                                  {webhookSecret ? (
-                                    <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-                                      <div className="flex items-center justify-between gap-3">
-                                        <div className="text-xs text-white/60">
-                                          Secret（仅展示一次）
-                                        </div>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          className="border-white/20 bg-white/5 text-white hover:bg-white/10"
-                                          onClick={async () => {
-                                            try {
-                                              await navigator.clipboard.writeText(webhookSecret);
-                                              success("已复制 secret");
-                                            } catch {
-                                              errorAlert("复制失败，请手动复制");
-                                            }
-                                          }}
-                                        >
-                                          复制
-                                        </Button>
-                                      </div>
-                                      <div className="mt-2 font-mono text-xs text-white/80 break-all">
-                                        {webhookSecret}
-                                      </div>
-                                      <div className="mt-2 text-xs text-white/40">
-                                        说明：这是 legacy 鉴权 secret，仅在调用旧接口
-                                        <span className="font-mono"> /webhook/trade-alert/hook/:hookId</span>
-                                        时需要。TradingView 推荐使用 triggerUrl（无需 secret）。
                                       </div>
                                     </div>
                                   ) : null}
