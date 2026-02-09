@@ -173,20 +173,6 @@ async function aggregatePreview(tradeKeys: string[]) {
   return res.json();
 }
 
-async function aggregateSave(tradeKeys: string[]) {
-  const res = await fetchWithAuth("/api/proxy-post", {
-    method: "POST",
-    credentials: "include",
-    proxyParams: {
-      targetPath: "trade/integrations/binance-futures/fills/aggregate-save",
-      actualMethod: "POST",
-    },
-    actualBody: { tradeKeys },
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
 async function aggregateConvert(tradeKeys: string[]) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -365,7 +351,7 @@ export default function BinanceFuturesIntegrationPage() {
                     setAggregateResult(res);
                     setAggregateOpen(true);
                     successAlert(
-                      `聚合预览完成：netQty=${res?.data?.totals?.netQty ?? 0}`,
+                      `预览完成：netQty=${res?.data?.totals?.netQty ?? 0}`,
                     );
                   } catch (e) {
                     console.error(e);
@@ -376,22 +362,23 @@ export default function BinanceFuturesIntegrationPage() {
                 }}
                 disabled={aggregating}
               >
-                {aggregating ? "处理中..." : `聚合预览（${selectedKeys.length}）`}
+                {aggregating ? "处理中..." : `合并成交预览（${selectedKeys.length}）`}
               </Button>
 
               <Button
                 onClick={async () => {
                   try {
                     setConverting(true);
-                    const res = await aggregateSave(selectedKeys);
-                    setAggregateResult(res);
-                    setAggregateOpen(true);
-                    successAlert(
-                      `已入库为仓位：${res?.data?.status ?? ""} (${res?.data?.positionKey ?? ""})`,
-                    );
+                    const res = await aggregateConvert(selectedKeys);
+                    successAlert("已生成 1 笔交易记录（可编辑）");
+                    setSelected({});
+                    const tid = res?.data?.transactionId;
+                    if (tid) {
+                      window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
+                    }
                   } catch (e) {
                     console.error(e);
-                    errorAlert("保存仓位失败");
+                    errorAlert("生成交易失败");
                   } finally {
                     setConverting(false);
                   }
@@ -399,7 +386,7 @@ export default function BinanceFuturesIntegrationPage() {
                 disabled={converting}
                 className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
               >
-                {converting ? "保存中..." : `保存为仓位（${selectedKeys.length}）`}
+                {converting ? "生成中..." : `生成交易（${selectedKeys.length}）`}
               </Button>
 
               <Button
@@ -427,62 +414,131 @@ export default function BinanceFuturesIntegrationPage() {
           ) : null}
         </div>
 
-        {aggregateOpen && aggregateResult ? (
-          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-lg font-semibold text-white">聚合预览</div>
-                <div className="mt-2 text-xs text-[#6b7280]">
-                  用你勾选的成交记录聚合成一笔仓位/交易。netQty≈0 表示闭合；不为 0 说明可能漏选。
+        {aggregateOpen && aggregateResult ? (() => {
+          const r = aggregateResult as unknown as {
+            data?: {
+              totals?: { buyQty?: number; sellQty?: number; netQty?: number };
+              closedPositions?: unknown[];
+              openPositions?: unknown[];
+            };
+          };
+          const totals = r?.data?.totals;
+          const netQty = typeof totals?.netQty === "number" ? totals.netQty : null;
+          const buyQty = typeof totals?.buyQty === "number" ? totals.buyQty : null;
+          const sellQty = typeof totals?.sellQty === "number" ? totals.sellQty : null;
+
+          const closed = Array.isArray(r?.data?.closedPositions)
+            ? r.data.closedPositions
+            : [];
+          const open = Array.isArray(r?.data?.openPositions) ? r.data.openPositions : [];
+
+          const p = ((closed[0] || open[0] || null) as unknown) as {
+            symbol?: string;
+            positionSide?: string;
+            openTime?: number;
+            closeTime?: number;
+            lastTime?: number;
+            openPrice?: number;
+            closePrice?: number;
+            realizedPnl?: number;
+            fees?: number;
+            closedQty?: number;
+            currentQty?: number;
+            maxOpenQty?: number;
+          } | null;
+
+          const symbol = p?.symbol || "-";
+          const side = p?.positionSide || "-";
+          const openTime = p?.openTime ? new Date(p.openTime).toLocaleString() : "-";
+          const closeTime = p?.closeTime
+            ? new Date(p.closeTime).toLocaleString()
+            : p?.lastTime
+              ? new Date(p.lastTime).toLocaleString()
+              : "-";
+
+          const openPrice = typeof p?.openPrice === "number" ? p.openPrice : null;
+          const closePrice = typeof p?.closePrice === "number" ? p.closePrice : null;
+          const realizedPnl = typeof p?.realizedPnl === "number" ? p.realizedPnl : null;
+          const fees = typeof p?.fees === "number" ? p.fees : null;
+          const qty = typeof p?.closedQty === "number" && p.closedQty > 0
+            ? p.closedQty
+            : typeof p?.currentQty === "number"
+              ? p.currentQty
+              : typeof p?.maxOpenQty === "number"
+                ? p.maxOpenQty
+                : null;
+
+          const isClosed = closed.length > 0 && (netQty === null || Math.abs(netQty) < 1e-9);
+
+          return (
+            <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-lg font-semibold text-white">合并成交预览</div>
+                  <div className="mt-2 text-xs text-[#6b7280]">
+                    说明：把你勾选的成交合并为“一笔仓位”。
+                    <span className="ml-1">netQty≈0 表示已闭合；不为 0 说明漏选或仍有未平仓。</span>
+                  </div>
+                </div>
+                <Button variant="secondary" onClick={() => setAggregateOpen(false)}>
+                  关闭
+                </Button>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-[#27272a] bg-[#0b0b0b] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-sm text-[#9ca3af]">{symbol} · {side} · {isClosed ? "已平仓" : "未平仓/未闭合"}</div>
+                  <div className={realizedPnl != null && realizedPnl >= 0 ? "text-[#00c2b2] font-mono" : "text-red-400 font-mono"}>
+                    {realizedPnl == null ? "-" : `${realizedPnl.toFixed(8)} USDC`}
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3 text-xs text-[#9ca3af]">
+                  <div>开仓：<span className="text-[#e5e7eb]">{openTime}</span></div>
+                  <div>平仓/最后：<span className="text-[#e5e7eb]">{closeTime}</span></div>
+                  <div>数量：<span className="text-[#e5e7eb] font-mono">{qty == null ? "-" : qty}</span></div>
+                  <div>开仓均价：<span className="text-[#e5e7eb] font-mono">{openPrice == null ? "-" : openPrice.toFixed(2)}</span></div>
+                  <div>平仓均价：<span className="text-[#e5e7eb] font-mono">{closePrice == null ? "-" : closePrice.toFixed(2)}</span></div>
+                  <div>手续费：<span className="text-[#e5e7eb] font-mono">{fees == null ? "-" : fees.toFixed(8)}</span></div>
+                </div>
+
+                <div className="mt-3 text-xs text-[#6b7280] font-mono">
+                  buyQty={buyQty == null ? "-" : buyQty} · sellQty={sellQty == null ? "-" : sellQty} · netQty={netQty == null ? "-" : netQty}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button
+                    className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+                    onClick={async () => {
+                      try {
+                        setConverting(true);
+                        const res = await aggregateConvert(selectedKeys);
+                        successAlert("已生成 1 笔交易记录（可编辑）");
+                        setSelected({});
+                        const tid = res?.data?.transactionId;
+                        if (tid) {
+                          window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
+                        }
+                      } catch (e) {
+                        console.error(e);
+                        errorAlert("生成交易失败");
+                      } finally {
+                        setConverting(false);
+                      }
+                    }}
+                    disabled={converting || selectedKeys.length === 0}
+                  >
+                    {converting ? "生成中..." : `转为复盘交易（${selectedKeys.length}）`}
+                  </Button>
+
+                  <Button variant="secondary" onClick={() => setAggregateOpen(false)} disabled={converting}>
+                    关闭
+                  </Button>
                 </div>
               </div>
-              <Button
-                variant="secondary"
-                onClick={() => setAggregateOpen(false)}
-              >
-                关闭
-              </Button>
             </div>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button
-                className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
-                onClick={async () => {
-                  try {
-                    setConverting(true);
-                    const res = await aggregateConvert(selectedKeys);
-                    successAlert("已生成 1 笔交易记录（可编辑）");
-                    setSelected({});
-                    const tid = res?.data?.transactionId;
-                    if (tid) {
-                      window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
-                    }
-                  } catch (e) {
-                    console.error(e);
-                    errorAlert("生成交易失败");
-                  } finally {
-                    setConverting(false);
-                  }
-                }}
-                disabled={converting || selectedKeys.length === 0}
-              >
-                {converting ? "生成中..." : `转为复盘交易（${selectedKeys.length}）`}
-              </Button>
-
-              <Button
-                variant="secondary"
-                onClick={() => setAggregateOpen(false)}
-                disabled={converting}
-              >
-                关闭
-              </Button>
-            </div>
-
-            <pre className="mt-4 max-h-[420px] overflow-auto rounded-md bg-[#0b0b0b] border border-[#27272a] p-3 text-xs text-[#e5e7eb]">
-              {JSON.stringify(aggregateResult, null, 2)}
-            </pre>
-          </div>
-        ) : null}
+          );
+        })() : null}
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
           <div className="text-lg font-semibold text-white">配置状态</div>
