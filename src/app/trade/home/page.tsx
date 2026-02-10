@@ -136,6 +136,32 @@ export default function TradeHomePage() {
     previous30ProfitLossAvg: number;
     recent30SimulationProfitLossAvg: number;
     previous30SimulationProfitLossAvg: number;
+    recent30RStats: {
+      expectancyR: number;
+      avgPlannedRR: number;
+      avgRealizedR: number;
+      avgREfficiency: number;
+      emotionalLeakageR: number;
+      qualityDistribution: {
+        TECHNICAL: number;
+        EMOTIONAL: number;
+        SYSTEM: number;
+        UNKNOWN: number;
+      };
+    };
+    recent30SimulationRStats: {
+      expectancyR: number;
+      avgPlannedRR: number;
+      avgRealizedR: number;
+      avgREfficiency: number;
+      emotionalLeakageR: number;
+      qualityDistribution: {
+        TECHNICAL: number;
+        EMOTIONAL: number;
+        SYSTEM: number;
+        UNKNOWN: number;
+      };
+    };
   }>({
     thisMonthTradeCount: 0,
     lastMonthTradeCount: 0,
@@ -151,6 +177,22 @@ export default function TradeHomePage() {
     previous30ProfitLossAvg: 0,
     recent30SimulationProfitLossAvg: 0,
     previous30SimulationProfitLossAvg: 0,
+    recent30RStats: {
+      expectancyR: 0,
+      avgPlannedRR: 0,
+      avgRealizedR: 0,
+      avgREfficiency: 0,
+      emotionalLeakageR: 0,
+      qualityDistribution: { TECHNICAL: 0, EMOTIONAL: 0, SYSTEM: 0, UNKNOWN: 0 },
+    },
+    recent30SimulationRStats: {
+      expectancyR: 0,
+      avgPlannedRR: 0,
+      avgRealizedR: 0,
+      avgREfficiency: 0,
+      emotionalLeakageR: 0,
+      qualityDistribution: { TECHNICAL: 0, EMOTIONAL: 0, SYSTEM: 0, UNKNOWN: 0 },
+    },
   });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
   const [tradesLoading, setTradesLoading] = React.useState(true);
@@ -189,6 +231,36 @@ export default function TradeHomePage() {
           const parsed = Number(value);
           return Number.isFinite(parsed) ? parsed : 0;
         };
+        const normalizeRStats = (raw: unknown) => {
+          const input = (raw ?? {}) as {
+            expectancyR?: unknown;
+            avgPlannedRR?: unknown;
+            avgRealizedR?: unknown;
+            avgREfficiency?: unknown;
+            emotionalLeakageR?: unknown;
+            qualityDistribution?: {
+              TECHNICAL?: unknown;
+              EMOTIONAL?: unknown;
+              SYSTEM?: unknown;
+              UNKNOWN?: unknown;
+            };
+          };
+
+          return {
+            expectancyR: normalizeNumber(input.expectancyR),
+            avgPlannedRR: normalizeNumber(input.avgPlannedRR),
+            avgRealizedR: normalizeNumber(input.avgRealizedR),
+            avgREfficiency: normalizeNumber(input.avgREfficiency),
+            emotionalLeakageR: normalizeNumber(input.emotionalLeakageR),
+            qualityDistribution: {
+              TECHNICAL: normalizeNumber(input.qualityDistribution?.TECHNICAL),
+              EMOTIONAL: normalizeNumber(input.qualityDistribution?.EMOTIONAL),
+              SYSTEM: normalizeNumber(input.qualityDistribution?.SYSTEM),
+              UNKNOWN: normalizeNumber(input.qualityDistribution?.UNKNOWN),
+            },
+          };
+        };
+
         setStats({
           thisMonthTradeCount: normalizeNumber(data.thisMonthTradeCount),
           lastMonthTradeCount: normalizeNumber(data.lastMonthTradeCount),
@@ -220,6 +292,8 @@ export default function TradeHomePage() {
           previous30SimulationProfitLossAvg: normalizeNumber(
             data.previous30SimulationProfitLossAvg,
           ),
+          recent30RStats: normalizeRStats(data.recent30RStats),
+          recent30SimulationRStats: normalizeRStats(data.recent30SimulationRStats),
         });
         setFeaturedSummaries(
           parseFeaturedSummaries(data.summaryHighlights).slice(0, 3),
@@ -513,6 +587,8 @@ export default function TradeHomePage() {
     return { text, trend };
   };
 
+  const formatR = (value: number) => value.toFixed(2);
+
   const tradeCountChange = formatPercentChange(
     stats.thisMonthTradeCount,
     stats.lastMonthTradeCount,
@@ -732,6 +808,52 @@ export default function TradeHomePage() {
                 >
                   Δ {loading ? "..." : simulationProfitLossAvgDelta.text}
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#121212] px-4 py-3 rounded-xl border border-[#27272a] shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                <Sigma className="h-4 w-4 text-[#9ca3af]" />
+              </div>
+              <div className="text-sm font-medium text-white">R 指标看板（近30笔）</div>
+            </div>
+            <div className="text-xs text-[#9ca3af]">Expectancy / RR / R效率 / 情绪泄露</div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+            <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">真实</span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div className="text-[#9ca3af]">Expectancy(R): <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30RStats.expectancyR)}</span></div>
+                <div className="text-[#9ca3af]">平均计划RR: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30RStats.avgPlannedRR)}</span></div>
+                <div className="text-[#9ca3af]">平均实现R: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30RStats.avgRealizedR)}</span></div>
+                <div className="text-[#9ca3af]">平均R效率: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30RStats.avgREfficiency)}</span></div>
+                <div className="text-[#9ca3af]">情绪泄露R: <span className="text-red-400 font-medium">{loading ? "..." : formatR(stats.recent30RStats.emotionalLeakageR)}</span></div>
+              </div>
+              <div className="mt-2 text-xs text-[#9ca3af]">
+                标签分布：技 {stats.recent30RStats.qualityDistribution.TECHNICAL} / 情 {stats.recent30RStats.qualityDistribution.EMOTIONAL} / 系 {stats.recent30RStats.qualityDistribution.SYSTEM} / 未 {stats.recent30RStats.qualityDistribution.UNKNOWN}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">模拟</span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div className="text-[#9ca3af]">Expectancy(R): <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.expectancyR)}</span></div>
+                <div className="text-[#9ca3af]">平均计划RR: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgPlannedRR)}</span></div>
+                <div className="text-[#9ca3af]">平均实现R: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgRealizedR)}</span></div>
+                <div className="text-[#9ca3af]">平均R效率: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgREfficiency)}</span></div>
+                <div className="text-[#9ca3af]">情绪泄露R: <span className="text-red-400 font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.emotionalLeakageR)}</span></div>
+              </div>
+              <div className="mt-2 text-xs text-[#9ca3af]">
+                标签分布：技 {stats.recent30SimulationRStats.qualityDistribution.TECHNICAL} / 情 {stats.recent30SimulationRStats.qualityDistribution.EMOTIONAL} / 系 {stats.recent30SimulationRStats.qualityDistribution.SYSTEM} / 未 {stats.recent30SimulationRStats.qualityDistribution.UNKNOWN}
               </div>
             </div>
           </div>
