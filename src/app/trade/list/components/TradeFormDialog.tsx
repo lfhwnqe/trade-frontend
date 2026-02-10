@@ -992,12 +992,14 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              计划RR（自动）:
-            </label>
-            <BaseInput value={(form.plannedRR as string) ?? ""} readOnly />
-          </div>
+          {form.status === TradeStatus.ENTERED ? (
+            <div className="col-span-2">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                计划RR（自动）:
+              </label>
+              <BaseInput value={(form.plannedRR as string) ?? ""} readOnly />
+            </div>
+          ) : null}
           {/* 是否遵守交易系统 */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1383,6 +1385,16 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             />
           </div>
           {/* R模型：自动计算（只读展示） */}
+          {(form.status === TradeStatus.EXITED ||
+            form.status === TradeStatus.EARLY_EXITED) ? (
+            <div className="col-span-2">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                计划RR（自动）:
+              </label>
+              <BaseInput value={(form.plannedRR as string) ?? ""} readOnly />
+            </div>
+          ) : null}
+
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               实现R（自动）:
