@@ -57,6 +57,15 @@ export const exitQualityTagOptions = [
   { label: "未知", value: "UNKNOWN" },
 ];
 
+export const exitReasonCodeOptions = [
+  { label: '结构破坏', value: 'CHOCH_BREAK' },
+  { label: '订单流反转', value: 'ORDERFLOW_REVERSAL' },
+  { label: '情绪离场', value: 'EMOTIONAL_EXIT' },
+  { label: '时间到期', value: 'TIME_EXIT' },
+  { label: '系统规则离场', value: 'SYSTEM_EXIT' },
+  { label: '其他', value: 'OTHER' },
+];
+
 // 计划选项
 export const planOptions = [
   { label: "A计划", value: "A" },
@@ -208,8 +217,6 @@ export type Trade = {
 
   // R 模型
   riskModelVersion?: string;
-  plannedStopLossPrice?: string;
-  plannedTakeProfitPrice?: string;
   plannedRiskAmount?: string;
   plannedRiskPct?: string;
   plannedRiskPerUnit?: string;

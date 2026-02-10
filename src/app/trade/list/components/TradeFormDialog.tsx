@@ -22,6 +22,7 @@ import {
   tradeTypeOptions,
   exitTypeOptions,
   exitQualityTagOptions,
+  exitReasonCodeOptions,
 } from "../../config";
 import { Input as BaseInput } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -965,34 +966,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               <p className="text-sm text-destructive mt-1">{errors.stopLoss}</p>
             )}
           </div>
-          {/* 计划止损价（R模型） */}
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              计划止损价（R模型）:
-            </label>
-            <BaseInput
-              {...enteredSection.inputProps}
-              id="plannedStopLossPrice"
-              name="plannedStopLossPrice"
-              type="number"
-              value={(form.plannedStopLossPrice as string) ?? ""}
-              onChange={handleFormChange}
-            />
-          </div>
-          {/* 计划止盈价（R模型） */}
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              计划止盈价（R模型）:
-            </label>
-            <BaseInput
-              {...enteredSection.inputProps}
-              id="plannedTakeProfitPrice"
-              name="plannedTakeProfitPrice"
-              type="number"
-              value={(form.plannedTakeProfitPrice as string) ?? ""}
-              onChange={handleFormChange}
-            />
-          </div>
           {/* 止盈点 */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1018,6 +991,12 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 {errors.takeProfit}
               </p>
             )}
+          </div>
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              计划RR（自动）:
+            </label>
+            <BaseInput value={(form.plannedRR as string) ?? ""} readOnly />
           </div>
           {/* 是否遵守交易系统 */}
           <div className="col-span-2">
@@ -1406,12 +1385,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           {/* R模型：自动计算（只读展示） */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              计划RR（自动）:
-            </label>
-            <BaseInput value={(form.plannedRR as string) ?? ""} readOnly />
-          </div>
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
               实现R（自动）:
             </label>
             <BaseInput value={(form.realizedR as string) ?? ""} readOnly />
@@ -1476,14 +1449,23 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
               离场原因代码:
             </label>
-            <BaseInput
-              {...exitedSection.inputProps}
-              id="exitReasonCode"
+            <BaseSelect
+              {...exitedSection.selectProps}
               name="exitReasonCode"
-              type="text"
               value={(form.exitReasonCode as string) ?? ""}
-              onChange={handleFormChange}
-            />
+              onValueChange={(value) => handleFormSelectChange("exitReasonCode", value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="请选择离场原因代码" />
+              </SelectTrigger>
+              <SelectContent>
+                {exitReasonCodeOptions.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
           </div>
 
           <div className="col-span-2">

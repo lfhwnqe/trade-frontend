@@ -245,8 +245,6 @@ export type CreateTradeDto = {
 
   // ===== R 模型字段 =====
   riskModelVersion?: string;
-  plannedStopLossPrice?: number;
-  plannedTakeProfitPrice?: number;
   plannedRiskAmount?: number;
   plannedRiskPct?: number;
   plannedRiskPerUnit?: number;
@@ -440,8 +438,6 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
 
     // ===== R 模型 =====
     riskModelVersion: form.riskModelVersion,
-    plannedStopLossPrice: parseNum(form.plannedStopLossPrice),
-    plannedTakeProfitPrice: parseNum(form.plannedTakeProfitPrice),
     plannedRiskAmount: parseNum(form.plannedRiskAmount),
     plannedRiskPct: parseNum(form.plannedRiskPct),
     plannedRiskPerUnit: parseNum(form.plannedRiskPerUnit),
