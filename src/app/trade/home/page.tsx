@@ -606,16 +606,6 @@ export default function TradeHomePage() {
     stats.previous30SimulationWinRate,
   );
 
-  const realProfitLossAvgDelta = formatDelta(
-    stats.recent30ProfitLossAvg,
-    stats.previous30ProfitLossAvg,
-  );
-
-  const simulationProfitLossAvgDelta = formatDelta(
-    stats.recent30SimulationProfitLossAvg,
-    stats.previous30SimulationProfitLossAvg,
-  );
-
   return (
     <TradePageShell title="主页">
       <div className="space-y-6">
@@ -736,80 +726,6 @@ export default function TradeHomePage() {
               </span>
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">最近 30 笔模拟交易</p>
-          </div>
-        </div>
-
-        <div className="bg-[#121212] px-4 py-3 rounded-xl border border-[#27272a] shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                <Sigma className="h-4 w-4 text-[#9ca3af]" />
-              </div>
-              <div className="text-sm font-medium text-white">近 30 笔对比</div>
-            </div>
-            <div className="text-xs text-[#9ca3af]">
-              真实/模拟（近 30 vs 60-30）
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
-            {/* 真实 */}
-            <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">真实</span>
-                <span className="text-xs text-[#9ca3af]">
-                  近30: {loading ? "..." : stats.recent30RealTradeCount}
-                </span>
-              </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                <div className="text-[#9ca3af]">
-                  最近: <span className="text-white font-medium">{loading ? "..." : `${stats.recent30ProfitLossAvg}%`}</span>
-                </div>
-                <div className="text-[#9ca3af]">
-                  之前: <span className="text-white font-medium">{loading ? "..." : `${stats.previous30ProfitLossAvg}%`}</span>
-                </div>
-                <div
-                  className={`text-right font-medium ${
-                    realProfitLossAvgDelta.trend === "up"
-                      ? "text-emerald-400"
-                      : realProfitLossAvgDelta.trend === "down"
-                        ? "text-red-400"
-                        : "text-[#9ca3af]"
-                  }`}
-                >
-                  Δ {loading ? "..." : realProfitLossAvgDelta.text}
-                </div>
-              </div>
-            </div>
-
-            {/* 模拟 */}
-            <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">模拟</span>
-                <span className="text-xs text-[#9ca3af]">
-                  近30: {loading ? "..." : stats.recent30SimulationTradeCount}
-                </span>
-              </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                <div className="text-[#9ca3af]">
-                  最近: <span className="text-white font-medium">{loading ? "..." : `${stats.recent30SimulationProfitLossAvg}%`}</span>
-                </div>
-                <div className="text-[#9ca3af]">
-                  之前: <span className="text-white font-medium">{loading ? "..." : `${stats.previous30SimulationProfitLossAvg}%`}</span>
-                </div>
-                <div
-                  className={`text-right font-medium ${
-                    simulationProfitLossAvgDelta.trend === "up"
-                      ? "text-emerald-400"
-                      : simulationProfitLossAvgDelta.trend === "down"
-                        ? "text-red-400"
-                        : "text-[#9ca3af]"
-                  }`}
-                >
-                  Δ {loading ? "..." : simulationProfitLossAvgDelta.text}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
