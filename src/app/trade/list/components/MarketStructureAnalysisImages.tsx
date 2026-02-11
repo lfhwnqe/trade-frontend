@@ -5,6 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { nanoid } from "nanoid";
 import imageCompression from "browser-image-compression";
 import { ALLOWED_IMAGE_TYPES, getImageUploadUrl, uploadToS3 } from "../request";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import type { MarketStructureAnalysisImage } from "../../config";
 import { useAlert } from "@/components/common/alert";
 import { Input as BaseInput } from "@/components/ui/input";
@@ -123,21 +124,35 @@ export function MarketStructureAnalysisImages({
 
             await uploadToS3(uploadUrl, processedFile);
 
-            let cdnUrl = "";
-            if (key.startsWith("http")) {
-              cdnUrl = key;
-            } else {
-              const cloudfrontDomain =
-                process.env.NEXT_PUBLIC_IMAGE_CDN_PREFIX ||
-                "dyslh3g7kcbva.cloudfront.net";
-              cdnUrl = `https://${cloudfrontDomain}/${key}`;
+            let resolvedUrl = "";
+            try {
+              const resolveResp = await fetchWithAuth("/api/proxy-post", {
+                method: "POST",
+                credentials: "include",
+                proxyParams: {
+                  targetPath: "trade/image/resolve",
+                  actualMethod: "POST",
+                },
+                actualBody: {
+                  refs: [key],
+                  ...(transactionId ? { transactionId } : {}),
+                },
+              });
+              if (resolveResp.ok) {
+                const resolveJson = (await resolveResp.json()) as {
+                  data?: { items?: Array<{ url?: string }> };
+                };
+                resolvedUrl = String(resolveJson?.data?.items?.[0]?.url || "");
+              }
+            } catch {
+              // ignore resolve error here; keep empty url, details page will resolve later
             }
 
             return {
               success: true,
               loadingKey,
               result: {
-                image: { key, url: cdnUrl },
+                image: { key, url: resolvedUrl },
                 title: "",
                 analysis: "",
               },
