@@ -480,7 +480,10 @@ export async function updateTrade(id: string, data: Partial<CreateTradeDto>) {
     targetPath: `trade/${id}`,
     actualMethod: "PATCH",
   };
-  const actualBody = data;
+  const actualBody = {
+    ...(data as Partial<CreateTradeDto> & { transactionId?: string }),
+  };
+  delete (actualBody as { transactionId?: string }).transactionId;
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
