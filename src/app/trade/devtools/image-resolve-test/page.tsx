@@ -21,6 +21,13 @@ export default function ImageResolveTestPage() {
   const [uploadResult, setUploadResult] = React.useState<unknown>(null);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
 
+  // M3 migrate legacy refs test
+  const [migrateLimit, setMigrateLimit] = React.useState("200");
+  const [migrateDryRun, setMigrateDryRun] = React.useState(true);
+  const [migrateLoading, setMigrateLoading] = React.useState(false);
+  const [migrateResult, setMigrateResult] = React.useState<unknown>(null);
+  const [migrateError, setMigrateError] = React.useState<string | null>(null);
+
   const runResolve = async () => {
     const refs = refsText
       .split("\n")
@@ -132,6 +139,49 @@ export default function ImageResolveTestPage() {
     }
   };
 
+
+  const runMigrateLegacyTest = async () => {
+    setMigrateLoading(true);
+    setMigrateError(null);
+    setMigrateResult(null);
+
+    try {
+      const qp = new URLSearchParams();
+      qp.set("limit", migrateLimit || "200");
+      qp.set("dryRun", migrateDryRun ? "true" : "false");
+
+      const res = await fetchWithAuth("/api/proxy-post", {
+        method: "POST",
+        credentials: "include",
+        proxyParams: {
+          targetPath: `trade/image/migrate-legacy?${qp.toString()}`,
+          actualMethod: "POST",
+        },
+        actualBody: {},
+      });
+
+      const text = await res.text();
+      let json: unknown = null;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = text;
+      }
+
+      if (!res.ok) {
+        setMigrateError(
+          typeof json === "string" ? json : JSON.stringify(json, null, 2),
+        );
+        return;
+      }
+
+      setMigrateResult(json);
+    } catch (e) {
+      setMigrateError(e instanceof Error ? e.message : "请求失败");
+    } finally {
+      setMigrateLoading(false);
+    }
+  };
   return (
     <TradePageShell
       title="图片接口测试"
@@ -229,6 +279,49 @@ export default function ImageResolveTestPage() {
 
           <pre className="max-h-[280px] overflow-auto rounded-md bg-black p-3 text-xs text-[#e5e7eb]">
             {uploadResult ? JSON.stringify(uploadResult, null, 2) : "(暂无)"}
+          </pre>
+        </div>
+
+        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 space-y-3">
+          <div className="text-sm font-semibold text-white">M3：历史图片引用迁移（当前用户）</div>
+          <p className="text-xs text-[#9ca3af]">
+            先 dryRun 预览变更量；确认后再把 dryRun 取消执行真实回写。
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <input
+              value={migrateLimit}
+              onChange={(e) => setMigrateLimit(e.target.value)}
+              className="w-full rounded-md border border-[#27272a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#00c2b2]"
+              placeholder="limit，默认 200"
+            />
+            <label className="flex items-center gap-2 text-sm text-[#9ca3af]">
+              <input
+                type="checkbox"
+                checked={migrateDryRun}
+                onChange={(e) => setMigrateDryRun(e.target.checked)}
+              />
+              dryRun（仅预览）
+            </label>
+          </div>
+
+          <button
+            type="button"
+            onClick={runMigrateLegacyTest}
+            disabled={migrateLoading}
+            className="rounded-md bg-[#00c2b2] px-4 py-2 text-sm font-semibold text-black hover:bg-[#00a79a] disabled:opacity-60"
+          >
+            {migrateLoading ? "请求中..." : "调用 /trade/image/migrate-legacy"}
+          </button>
+
+          {migrateError ? (
+            <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200 whitespace-pre-wrap">
+              {migrateError}
+            </div>
+          ) : null}
+
+          <pre className="max-h-[280px] overflow-auto rounded-md bg-black p-3 text-xs text-[#e5e7eb]">
+            {migrateResult ? JSON.stringify(migrateResult, null, 2) : "(暂无)"}
           </pre>
         </div>
       </div>
