@@ -782,65 +782,146 @@ export default function TradeHomePage() {
           </div>
         </div>
 
-        <div className="bg-[#121212] px-4 py-3 rounded-xl border border-[#27272a] shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+        <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#121212] shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#27272a] bg-white/[0.02] px-6 py-4">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                <Sigma className="h-4 w-4 text-[#9ca3af]" />
+              <div className="flex h-8 w-8 items-center justify-center rounded border border-[#27272a] bg-[#1e1e1e]">
+                <Sigma className="h-4 w-4 text-emerald-400" />
               </div>
-              <div className="text-sm font-medium text-white">R 指标看板（近30笔）</div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+                R 指标看板
+                <span className="ml-2 text-xs font-normal text-[#9ca3af]">
+                  (Last 30 Trades)
+                </span>
+              </h2>
             </div>
-            <div className="text-xs text-[#9ca3af]">Expectancy / RR / R效率 / 情绪泄露</div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
-            <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">真实</span>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div className="text-[#9ca3af]">Expectancy(R): <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30RStats.expectancyR)}</span></div>
-                <div className="text-[#9ca3af]">平均计划RR: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30RStats.avgPlannedRR)}</span></div>
-                <div className="text-[#9ca3af]">平均实现R: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30RStats.avgRealizedR)}</span></div>
-                <div className="text-[#9ca3af]">平均R效率: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30RStats.avgREfficiency)}</span></div>
-                <div className="text-[#9ca3af]">情绪泄露R: <span className="text-red-400 font-medium">{loading ? "..." : formatR(stats.recent30RStats.emotionalLeakageR)}</span></div>
-              </div>
-              <div className="mt-2 text-xs text-[#9ca3af]">
-                标签分布：技 {stats.recent30RStats.qualityDistribution.TECHNICAL} / 情 {stats.recent30RStats.qualityDistribution.EMOTIONAL} / 系 {stats.recent30RStats.qualityDistribution.SYSTEM} / 未 {stats.recent30RStats.qualityDistribution.UNKNOWN}
-              </div>
-              <ul className="mt-2 space-y-1 text-xs">
-                {buildRPrompts(stats.recent30RStats).map((item, idx) => (
-                  <li key={`real-r-prompt-${idx}`} className={getRPromptLevel(item.kind)}>
-                    • {item.text}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">模拟</span>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div className="text-[#9ca3af]">Expectancy(R): <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.expectancyR)}</span></div>
-                <div className="text-[#9ca3af]">平均计划RR: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgPlannedRR)}</span></div>
-                <div className="text-[#9ca3af]">平均实现R: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgRealizedR)}</span></div>
-                <div className="text-[#9ca3af]">平均R效率: <span className="text-white font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgREfficiency)}</span></div>
-                <div className="text-[#9ca3af]">情绪泄露R: <span className="text-red-400 font-medium">{loading ? "..." : formatR(stats.recent30SimulationRStats.emotionalLeakageR)}</span></div>
-              </div>
-              <div className="mt-2 text-xs text-[#9ca3af]">
-                标签分布：技 {stats.recent30SimulationRStats.qualityDistribution.TECHNICAL} / 情 {stats.recent30SimulationRStats.qualityDistribution.EMOTIONAL} / 系 {stats.recent30SimulationRStats.qualityDistribution.SYSTEM} / 未 {stats.recent30SimulationRStats.qualityDistribution.UNKNOWN}
-              </div>
-              <ul className="mt-2 space-y-1 text-xs">
-                {buildRPrompts(stats.recent30SimulationRStats).map((item, idx) => (
-                  <li key={`sim-r-prompt-${idx}`} className={getRPromptLevel(item.kind)}>
-                    • {item.text}
-                  </li>
-                ))}
-              </ul>
+            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9ca3af]">
+              Expectancy / RR / Efficiency / Emotional Leakage
             </div>
           </div>
-        </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2">
+            <div className="space-y-6 border-b border-[#27272a] p-6 lg:border-b-0 lg:border-r">
+              <div className="flex items-center justify-between">
+                <h3 className="border-l-2 border-emerald-400 pl-2 text-xs font-bold uppercase tracking-[0.16em] text-white">
+                  Real Trades（真实）
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Expectancy (R)</p>
+                  <p className="text-xl font-bold text-emerald-400">{loading ? "..." : formatR(stats.recent30RStats.expectancyR)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Avg Planned RR</p>
+                  <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgPlannedRR)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Avg Realized R</p>
+                  <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgRealizedR)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R-Efficiency</p>
+                  <p className="text-xl font-bold text-white">
+                    {loading ? "..." : `${(stats.recent30RStats.avgREfficiency * 100).toFixed(1)}%`}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Emotional Leakage R</p>
+                  <p className={`text-xl font-bold ${stats.recent30RStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
+                    {loading ? "..." : formatR(stats.recent30RStats.emotionalLeakageR)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[#9ca3af]">Tag Distribution</span>
+                  <span className="text-[#9ca3af]">
+                    Tech: {stats.recent30RStats.qualityDistribution.TECHNICAL} / Emot: {stats.recent30RStats.qualityDistribution.EMOTIONAL} / Strat: {stats.recent30RStats.qualityDistribution.SYSTEM} / Untagged: {stats.recent30RStats.qualityDistribution.UNKNOWN}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {buildRPrompts(stats.recent30RStats).map((item, idx) => (
+                    <div key={`real-r-prompt-${idx}`} className="flex items-start gap-2">
+                      <span
+                        className={`mt-1.5 h-1.5 w-1.5 rounded-full ${
+                          item.kind === "good"
+                            ? "bg-emerald-400"
+                            : item.kind === "warn"
+                              ? "bg-yellow-300"
+                              : "bg-red-400"
+                        }`}
+                      />
+                      <p className={`text-xs ${getRPromptLevel(item.kind)}`}>{item.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6 p-6">
+              <div className="flex items-center justify-between">
+                <h3 className="border-l-2 border-[#9ca3af] pl-2 text-xs font-bold uppercase tracking-[0.16em] text-white">
+                  Simulated（模拟）
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Expectancy (R)</p>
+                  <p className="text-xl font-bold text-emerald-400">{loading ? "..." : formatR(stats.recent30SimulationRStats.expectancyR)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Avg Planned RR</p>
+                  <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgPlannedRR)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Avg Realized R</p>
+                  <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgRealizedR)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R-Efficiency</p>
+                  <p className="text-xl font-bold text-white">
+                    {loading ? "..." : `${(stats.recent30SimulationRStats.avgREfficiency * 100).toFixed(1)}%`}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Emotional Leakage R</p>
+                  <p className={`text-xl font-bold ${stats.recent30SimulationRStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
+                    {loading ? "..." : formatR(stats.recent30SimulationRStats.emotionalLeakageR)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[#9ca3af]">Tag Distribution</span>
+                  <span className="text-[#9ca3af]">
+                    Tech: {stats.recent30SimulationRStats.qualityDistribution.TECHNICAL} / Emot: {stats.recent30SimulationRStats.qualityDistribution.EMOTIONAL} / Strat: {stats.recent30SimulationRStats.qualityDistribution.SYSTEM} / Untagged: {stats.recent30SimulationRStats.qualityDistribution.UNKNOWN}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {buildRPrompts(stats.recent30SimulationRStats).map((item, idx) => (
+                    <div key={`sim-r-prompt-${idx}`} className="flex items-start gap-2">
+                      <span
+                        className={`mt-1.5 h-1.5 w-1.5 rounded-full ${
+                          item.kind === "good"
+                            ? "bg-emerald-400"
+                            : item.kind === "warn"
+                              ? "bg-yellow-300"
+                              : "bg-red-400"
+                        }`}
+                      />
+                      <p className={`text-xs ${getRPromptLevel(item.kind)}`}>{item.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-[#121212] p-6 rounded-xl border border-[#27272a] shadow-sm">
