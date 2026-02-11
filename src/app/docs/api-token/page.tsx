@@ -116,12 +116,11 @@ export default function ApiTokenDocPage() {
         <p>
           下载地址：
           <a
-            href="https://raw.githubusercontent.com/lfhwnqe/trade-sys-spec/main/skills/trade-api-token-agent/SKILL.md"
-            target="_blank"
-            rel="noreferrer"
+            href="/downloads/trade-api-token-agent-SKILL.md"
+            download
             className="ml-2 text-[#00c2b2] underline"
           >
-            SKILL.md
+            下载 SKILL.md
           </a>
         </p>
       </section>
