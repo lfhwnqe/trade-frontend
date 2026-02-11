@@ -11,6 +11,7 @@ import { useAlert } from "@/components/common/alert";
 type KeyStatus = {
   configured: boolean;
   apiKeyTail: string | null;
+  defaultLeverage?: number | null;
   updatedAt: string | null;
 };
 
@@ -48,7 +49,11 @@ async function getKeyStatus() {
   return (json.data || {}) as KeyStatus;
 }
 
-async function setKey(apiKey: string, apiSecret: string) {
+async function setKey(
+  apiKey: string,
+  apiSecret: string,
+  defaultLeverage?: number | null,
+) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
@@ -56,7 +61,31 @@ async function setKey(apiKey: string, apiSecret: string) {
       targetPath: "trade/integrations/binance-futures/key",
       actualMethod: "POST",
     },
-    actualBody: { apiKey, apiSecret },
+    actualBody: {
+      apiKey,
+      apiSecret,
+      ...(typeof defaultLeverage === "number" && Number.isFinite(defaultLeverage)
+        ? { defaultLeverage }
+        : {}),
+    },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function updateSettings(defaultLeverage?: number | null) {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/settings",
+      actualMethod: "POST",
+    },
+    actualBody: {
+      ...(typeof defaultLeverage === "number" && Number.isFinite(defaultLeverage)
+        ? { defaultLeverage }
+        : {}),
+    },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -90,7 +119,11 @@ async function cleanupSyncedData() {
   return res.json();
 }
 
-async function importFills(range: "7d" | "30d" | "1y", symbols?: string[]) {
+async function importFills(
+  range: "7d" | "30d" | "1y",
+  market: "usdtm" | "coinm",
+  symbols?: string[],
+) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
@@ -100,8 +133,8 @@ async function importFills(range: "7d" | "30d" | "1y", symbols?: string[]) {
     },
     actualBody:
       symbols && symbols.length > 0
-        ? { range, symbols }
-        : { range },
+        ? { range, market, symbols }
+        : { range, market },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -126,15 +159,42 @@ async function listFills(pageSize: number, nextToken?: string | null) {
   return (json.data || {}) as FillListResponse;
 }
 
-async function convertFills(tradeKeys: string[]) {
+async function aggregatePreview(tradeKeys: string[], leverage?: number | null) {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
     proxyParams: {
-      targetPath: "trade/integrations/binance-futures/convert",
+      targetPath: "trade/integrations/binance-futures/fills/aggregate-preview",
       actualMethod: "POST",
     },
-    actualBody: { tradeKeys },
+    actualBody: {
+      tradeKeys,
+      ...(typeof leverage === "number" && Number.isFinite(leverage)
+        ? { leverage }
+        : {}),
+    },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function aggregateConvert(
+  tradeKeys: string[],
+  leverage?: number | null,
+) {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "trade/integrations/binance-futures/fills/aggregate-convert",
+      actualMethod: "POST",
+    },
+    actualBody: {
+      tradeKeys,
+      ...(typeof leverage === "number" && Number.isFinite(leverage)
+        ? { leverage }
+        : {}),
+    },
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -148,8 +208,11 @@ export default function BinanceFuturesIntegrationPage() {
 
   const [apiKey, setApiKeyValue] = React.useState("");
   const [apiSecret, setApiSecretValue] = React.useState("");
+  const [defaultLeverage, setDefaultLeverage] = React.useState<number | null>(30);
+  const [previewLeverage, setPreviewLeverage] = React.useState<number | null>(30);
   const [symbolsText, setSymbolsText] = React.useState("");
   const [range, setRange] = React.useState<"7d" | "30d" | "1y">("7d");
+  const [market, setMarket] = React.useState<"usdtm" | "coinm">("usdtm");
 
   const [saving, setSaving] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
@@ -160,6 +223,9 @@ export default function BinanceFuturesIntegrationPage() {
   const [fillsNextToken, setFillsNextToken] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
   const [converting, setConverting] = React.useState(false);
+  const [aggregating, setAggregating] = React.useState(false);
+  const [aggregateResult, setAggregateResult] = React.useState<unknown>(null);
+  const [aggregateOpen, setAggregateOpen] = React.useState(false);
   const [cleaning, setCleaning] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
@@ -167,6 +233,10 @@ export default function BinanceFuturesIntegrationPage() {
       setLoading(true);
       const s = await getKeyStatus();
       setStatus(s);
+      if (typeof s.defaultLeverage === "number") {
+        setDefaultLeverage(s.defaultLeverage);
+        setPreviewLeverage(s.defaultLeverage);
+      }
     } catch (e) {
       console.error(e);
       errorAlert("加载配置状态失败");
@@ -272,29 +342,221 @@ export default function BinanceFuturesIntegrationPage() {
           </Button>
 
           {selectedKeys.length > 0 ? (
-            <Button
-              onClick={async () => {
-                try {
-                  setConverting(true);
-                  const res = await convertFills(selectedKeys);
-                  successAlert(
-                    `已导入为系统交易记录：${res?.data?.createdCount ?? 0} 条`,
-                  );
-                  setSelected({});
-                } catch (e) {
-                  console.error(e);
-                  errorAlert("导入为交易记录失败");
-                } finally {
-                  setConverting(false);
-                }
-              }}
-              disabled={converting}
-              className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
-            >
-              {converting ? "导入中..." : `导入选中（${selectedKeys.length}）为交易`}
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  try {
+                    setAggregating(true);
+                    const res = await aggregatePreview(selectedKeys, previewLeverage);
+                    setAggregateResult(res);
+                    setAggregateOpen(true);
+                    successAlert(
+                      `预览完成：netQty=${res?.data?.totals?.netQty ?? 0}`,
+                    );
+                  } catch (e) {
+                    console.error(e);
+                    errorAlert("聚合预览失败");
+                  } finally {
+                    setAggregating(false);
+                  }
+                }}
+                disabled={aggregating}
+              >
+                {aggregating ? "处理中..." : `合并成交预览（${selectedKeys.length}）`}
+              </Button>
+
+
+            </>
           ) : null}
         </div>
+
+        {aggregateOpen && aggregateResult ? (() => {
+          const r = aggregateResult as unknown as {
+            data?: {
+              totals?: { buyQty?: number; sellQty?: number; netQty?: number };
+              leverageUsed?: number | null;
+              defaultLeverage?: number | null;
+              pnlPercentNotional?: number | null;
+              roiPercent?: number | null;
+              closedPositions?: unknown[];
+              openPositions?: unknown[];
+            };
+          };
+          const totals = r?.data?.totals;
+          const netQty = typeof totals?.netQty === "number" ? totals.netQty : null;
+          const buyQty = typeof totals?.buyQty === "number" ? totals.buyQty : null;
+          const sellQty = typeof totals?.sellQty === "number" ? totals.sellQty : null;
+          const pnlPercentNotional =
+            typeof r?.data?.pnlPercentNotional === "number"
+              ? r.data.pnlPercentNotional
+              : null;
+          const roiPercent =
+            typeof r?.data?.roiPercent === "number" ? r.data.roiPercent : null;
+
+          const closed = Array.isArray(r?.data?.closedPositions)
+            ? r.data.closedPositions
+            : [];
+          const open = Array.isArray(r?.data?.openPositions) ? r.data.openPositions : [];
+
+          const p = ((closed[0] || open[0] || null) as unknown) as {
+            symbol?: string;
+            positionSide?: string;
+            openTime?: number;
+            closeTime?: number;
+            lastTime?: number;
+            openPrice?: number;
+            closePrice?: number;
+            realizedPnl?: number;
+            fees?: number;
+            closedQty?: number;
+            currentQty?: number;
+            maxOpenQty?: number;
+          } | null;
+
+          const symbol = p?.symbol || "-";
+          const side = p?.positionSide || "-";
+          const openTime = p?.openTime ? new Date(p.openTime).toLocaleString() : "-";
+          const closeTime = p?.closeTime
+            ? new Date(p.closeTime).toLocaleString()
+            : p?.lastTime
+              ? new Date(p.lastTime).toLocaleString()
+              : "-";
+
+          const openPrice = typeof p?.openPrice === "number" ? p.openPrice : null;
+          const closePrice = typeof p?.closePrice === "number" ? p.closePrice : null;
+          const realizedPnl = typeof p?.realizedPnl === "number" ? p.realizedPnl : null;
+          const fees = typeof p?.fees === "number" ? p.fees : null;
+          const qty = typeof p?.closedQty === "number" && p.closedQty > 0
+            ? p.closedQty
+            : typeof p?.currentQty === "number"
+              ? p.currentQty
+              : typeof p?.maxOpenQty === "number"
+                ? p.maxOpenQty
+                : null;
+
+          const isClosed = closed.length > 0 && (netQty === null || Math.abs(netQty) < 1e-9);
+
+          return (
+            <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-lg font-semibold text-white">合并成交预览</div>
+                  <div className="mt-2 text-xs text-[#6b7280]">
+                    说明：把你勾选的成交合并为“一笔仓位”。
+                    <span className="ml-1">netQty≈0 表示已闭合；不为 0 说明漏选或仍有未平仓。</span>
+                  </div>
+                </div>
+                <Button variant="secondary" onClick={() => setAggregateOpen(false)}>
+                  关闭
+                </Button>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-[#27272a] bg-[#0b0b0b] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-sm text-[#9ca3af]">{symbol} · {side} · {isClosed ? "已平仓" : "未平仓/未闭合"}</div>
+                  <div className={realizedPnl != null && realizedPnl >= 0 ? "text-[#00c2b2] font-mono" : "text-red-400 font-mono"}>
+                    {realizedPnl == null ? "-" : `${realizedPnl.toFixed(8)} USDC`}
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3 text-xs text-[#9ca3af]">
+                  <div>开仓：<span className="text-[#e5e7eb]">{openTime}</span></div>
+                  <div>平仓/最后：<span className="text-[#e5e7eb]">{closeTime}</span></div>
+                  <div>数量：<span className="text-[#e5e7eb] font-mono">{qty == null ? "-" : qty}</span></div>
+                  <div>开仓均价：<span className="text-[#e5e7eb] font-mono">{openPrice == null ? "-" : openPrice.toFixed(2)}</span></div>
+                  <div>平仓均价：<span className="text-[#e5e7eb] font-mono">{closePrice == null ? "-" : closePrice.toFixed(2)}</span></div>
+                  <div>手续费：<span className="text-[#e5e7eb] font-mono">{fees == null ? "-" : fees.toFixed(8)}</span></div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3 text-xs text-[#9ca3af]">
+                  <div>
+                    收益率（按名义本金）：
+                    <span className="text-[#e5e7eb] font-mono ml-1">
+                      {pnlPercentNotional == null ? "-" : `${(pnlPercentNotional * 100).toFixed(2)}%`}
+                    </span>
+                  </div>
+                  <div>
+                    收益率（按杠杆估算）：
+                    <span className="text-[#e5e7eb] font-mono ml-1">
+                      {roiPercent == null ? "-" : `${(roiPercent * 100).toFixed(2)}%`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>杠杆：</span>
+                    <input
+                      value={previewLeverage ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const n = Number(v);
+                        setPreviewLeverage(
+                          v.trim().length === 0 || !Number.isFinite(n)
+                            ? null
+                            : Math.max(1, Math.min(125, Math.trunc(n))),
+                        );
+                      }}
+                      className="w-24 rounded bg-[#1a1a1a] border border-[#27272a] px-2 py-1 text-[#e5e7eb]"
+                    />
+                    <Button
+                      variant="secondary"
+                      className="h-7 px-2"
+                      onClick={async () => {
+                        try {
+                          setAggregating(true);
+                          const res = await aggregatePreview(selectedKeys, previewLeverage);
+                          setAggregateResult(res);
+                        } catch (e) {
+                          console.error(e);
+                          errorAlert("刷新预览失败");
+                        } finally {
+                          setAggregating(false);
+                        }
+                      }}
+                      disabled={aggregating || selectedKeys.length === 0}
+                    >
+                      刷新
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-3 text-xs text-[#6b7280] font-mono">
+                  buyQty={buyQty == null ? "-" : buyQty} · sellQty={sellQty == null ? "-" : sellQty} · netQty={netQty == null ? "-" : netQty}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button
+                    className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+                    onClick={async () => {
+                      try {
+                        setConverting(true);
+                        const res = await aggregateConvert(selectedKeys, previewLeverage);
+                        successAlert("已生成 1 笔交易记录（可编辑）");
+                        setSelected({});
+                        const tid = res?.data?.transactionId;
+                        if (tid) {
+                          window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
+                        }
+                      } catch (e) {
+                        console.error(e);
+                        errorAlert("生成交易失败");
+                      } finally {
+                        setConverting(false);
+                      }
+                    }}
+                    disabled={converting || selectedKeys.length === 0}
+                  >
+                    {converting ? "生成中..." : `转为复盘交易（${selectedKeys.length}）`}
+                  </Button>
+
+                  <Button variant="secondary" onClick={() => setAggregateOpen(false)} disabled={converting}>
+                    关闭
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })() : null}
+
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
           <div className="text-lg font-semibold text-white">配置状态</div>
           <div className="mt-2 text-sm text-[#9ca3af]">
@@ -336,12 +598,19 @@ export default function BinanceFuturesIntegrationPage() {
                 {fills.map((f) => (
                   <tr
                     key={f.tradeKey}
-                    className="border-b border-[#27272a] hover:bg-white/5"
+                    className="border-b border-[#27272a] hover:bg-white/5 cursor-pointer"
+                    onClick={() =>
+                      setSelected((prev) => ({
+                        ...prev,
+                        [f.tradeKey]: !Boolean(prev[f.tradeKey]),
+                      }))
+                    }
                   >
                     <td className="py-2 pr-3">
                       <input
                         type="checkbox"
                         checked={Boolean(selected[f.tradeKey])}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) =>
                           setSelected((prev) => ({
                             ...prev,
@@ -399,7 +668,7 @@ export default function BinanceFuturesIntegrationPage() {
 
           {!status?.configured ? (
             <>
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                   <div className="mb-2 text-sm text-[#9ca3af]">API Key</div>
                   <Input
@@ -419,6 +688,24 @@ export default function BinanceFuturesIntegrationPage() {
                     className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
                   />
                 </div>
+                <div>
+                  <div className="mb-2 text-sm text-[#9ca3af]">默认杠杆（用于 ROI 估算）</div>
+                  <Input
+                    value={defaultLeverage ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const n = Number(v);
+                      setDefaultLeverage(
+                        v.trim().length === 0 || !Number.isFinite(n)
+                          ? null
+                          : Math.max(1, Math.min(125, Math.trunc(n))),
+                      );
+                    }}
+                    placeholder="例如 30"
+                    inputMode="numeric"
+                    className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -426,7 +713,7 @@ export default function BinanceFuturesIntegrationPage() {
                   onClick={async () => {
                     try {
                       setSaving(true);
-                      await setKey(apiKey.trim(), apiSecret.trim());
+                      await setKey(apiKey.trim(), apiSecret.trim(), defaultLeverage);
                       successAlert("保存成功");
                       setApiKeyValue("");
                       setApiSecretValue("");
@@ -454,27 +741,75 @@ export default function BinanceFuturesIntegrationPage() {
           ) : null}
 
           {status?.configured ? (
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  try {
-                    setDeleting(true);
-                    await deleteKey();
-                    successAlert("已删除");
-                    await refresh();
-                  } catch (e) {
-                    console.error(e);
-                    errorAlert("删除失败");
-                  } finally {
-                    setDeleting(false);
-                  }
-                }}
-                disabled={deleting}
-              >
-                {deleting ? "删除中..." : "删除配置"}
-              </Button>
-            </div>
+            <>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="md:col-span-2">
+                  <div className="text-xs text-[#6b7280]">
+                    已配置 Key/Secret（不显示明文）。如需修改请删除后重新配置。
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 text-sm text-[#9ca3af]">默认杠杆（用于 ROI 估算）</div>
+                  <Input
+                    value={defaultLeverage ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const n = Number(v);
+                      setDefaultLeverage(
+                        v.trim().length === 0 || !Number.isFinite(n)
+                          ? null
+                          : Math.max(1, Math.min(125, Math.trunc(n))),
+                      );
+                    }}
+                    placeholder="例如 30"
+                    inputMode="numeric"
+                    className="bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  onClick={async () => {
+                    try {
+                      setSaving(true);
+                      await updateSettings(defaultLeverage);
+                      successAlert("保存成功");
+                      await refresh();
+                    } catch (e) {
+                      console.error(e);
+                      errorAlert("保存失败");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving}
+                  className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+                >
+                  {saving ? "保存中..." : "保存杠杆"}
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      setDeleting(true);
+                      await deleteKey();
+                      successAlert("已删除");
+                      await refresh();
+                    } catch (e) {
+                      console.error(e);
+                      errorAlert("删除失败");
+                    } finally {
+                      setDeleting(false);
+                    }
+                  }}
+                  disabled={deleting}
+                >
+                  {deleting ? "删除中..." : "删除配置"}
+                </Button>
+              </div>
+            </>
           ) : null}
         </div>
 
@@ -486,6 +821,18 @@ export default function BinanceFuturesIntegrationPage() {
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <div className="mb-2 text-sm text-[#9ca3af]">合约市场</div>
+              <select
+                value={market}
+                onChange={(e) => setMarket(e.target.value as "usdtm" | "coinm")}
+                className="w-full rounded-md bg-[#1e1e1e] border border-[#27272a] px-3 py-2 text-sm text-[#e5e7eb]"
+              >
+                <option value="usdtm">USDⓈ-M（USDT/USDC 永续）</option>
+                <option value="coinm">COIN-M（币本位）</option>
+              </select>
+            </div>
+
             <div>
               <div className="mb-2 text-sm text-[#9ca3af]">导入范围</div>
               <select
@@ -518,7 +865,7 @@ export default function BinanceFuturesIntegrationPage() {
               onClick={async () => {
                 try {
                   setImporting(true);
-                  const res = await importFills(range, parsedSymbols);
+                  const res = await importFills(range, market, parsedSymbols);
                   successAlert(
                     `导入完成：新增 ${res?.data?.importedCount ?? 0}，跳过 ${res?.data?.skippedCount ?? 0}`,
                   );

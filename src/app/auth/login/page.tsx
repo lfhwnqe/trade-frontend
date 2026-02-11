@@ -203,6 +203,17 @@ export default function LoginPage() {
               >
                 {form.isLoading ? "登录中..." : "登录"}
               </Button>
+
+              <div className="flex items-center justify-between text-sm text-white/60">
+                <span />
+                <Link
+                  prefetch
+                  href="/auth/forgot"
+                  className="font-medium text-[#00c2b2] hover:text-[#00a89c]"
+                >
+                  忘记密码？
+                </Link>
+              </div>
             </form>
             <div className="mt-6 text-center text-sm text-white/60">
               还没有账号？

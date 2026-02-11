@@ -42,6 +42,30 @@ export const tradeResultOptions = [
   { label: "保本", value: "BREAKEVEN" },
 ];
 
+export const exitTypeOptions = [
+  { label: "止盈", value: "TP" },
+  { label: "止损", value: "SL" },
+  { label: "手动", value: "MANUAL" },
+  { label: "时间到期", value: "TIME" },
+  { label: "被动强平", value: "FORCED" },
+];
+
+export const exitQualityTagOptions = [
+  { label: "技术性离场", value: "TECHNICAL" },
+  { label: "情绪性离场", value: "EMOTIONAL" },
+  { label: "系统性离场", value: "SYSTEM" },
+  { label: "未知", value: "UNKNOWN" },
+];
+
+export const exitReasonCodeOptions = [
+  { label: '结构破坏', value: 'CHOCH_BREAK' },
+  { label: '订单流反转', value: 'ORDERFLOW_REVERSAL' },
+  { label: '情绪离场', value: 'EMOTIONAL_EXIT' },
+  { label: '时间到期', value: 'TIME_EXIT' },
+  { label: '系统规则离场', value: 'SYSTEM_EXIT' },
+  { label: '其他', value: 'OTHER' },
+];
+
 // 计划选项
 export const planOptions = [
   { label: "A计划", value: "A" },
@@ -190,6 +214,24 @@ export type Trade = {
   lessonsLearnedImportance?: number;
   profitLossPercentage?: string;
   riskRewardRatio?: string;
+
+  // R 模型
+  riskModelVersion?: string;
+  plannedRiskAmount?: string;
+  plannedRiskPct?: string;
+  plannedRiskPerUnit?: string;
+  plannedRewardPerUnit?: string;
+  plannedRR?: string;
+  realizedR?: string;
+  rEfficiency?: string;
+  exitDeviationR?: string;
+  maxFavorableExcursionR?: string;
+  maxAdverseExcursionR?: string;
+  exitType?: string;
+  exitQualityTag?: string;
+  exitReasonCode?: string;
+  exitReasonNote?: string;
+  rMetricsReady?: boolean;
 
   // 旧遗留/兼容字段
   tradeDuration?: string;

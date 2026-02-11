@@ -184,6 +184,7 @@ export enum TradeResult {
  * CreateTradeDto 类型，对齐后端 CreateTradeDto （所有字段类型与必选/可选严格一致，见后端 dto 和 entity 注释）
  */
 export type CreateTradeDto = {
+  transactionId?: string;
   // ===== 交易类型 =====
   tradeType: string;
   // ===== 交易状态 =====
@@ -242,6 +243,25 @@ export type CreateTradeDto = {
   // ===== 基础字段 =====
   profitLossPercentage?: number;
   riskRewardRatio?: string;
+
+  // ===== R 模型字段 =====
+  riskModelVersion?: string;
+  plannedRiskAmount?: number;
+  plannedRiskPct?: number;
+  plannedRiskPerUnit?: number;
+  plannedRewardPerUnit?: number;
+  plannedRR?: number;
+  realizedR?: number;
+  rEfficiency?: number;
+  exitDeviationR?: number;
+  maxFavorableExcursionR?: number;
+  maxAdverseExcursionR?: number;
+  exitType?: "TP" | "SL" | "MANUAL" | "TIME" | "FORCED";
+  exitQualityTag?: "TECHNICAL" | "EMOTIONAL" | "SYSTEM" | "UNKNOWN";
+  exitReasonCode?: string;
+  exitReasonNote?: string;
+  rMetricsReady?: boolean;
+
   // 新增
   grade?: string;
   analysisExpired?: boolean;
@@ -337,6 +357,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
   };
 
   return {
+    transactionId: form.transactionId,
     analysisTime: form.analysisTime,
     analysisPeriod: form.analysisPeriod,
     // ===== 交易类型 =====
@@ -416,6 +437,25 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     // ===== 计算字段/可选 =====
     profitLossPercentage: parseNum(form.profitLossPercentage),
     riskRewardRatio: form.riskRewardRatio,
+
+    // ===== R 模型 =====
+    riskModelVersion: form.riskModelVersion,
+    plannedRiskAmount: parseNum(form.plannedRiskAmount),
+    plannedRiskPct: parseNum(form.plannedRiskPct),
+    plannedRiskPerUnit: parseNum(form.plannedRiskPerUnit),
+    plannedRewardPerUnit: parseNum(form.plannedRewardPerUnit),
+    plannedRR: parseNum(form.plannedRR),
+    realizedR: parseNum(form.realizedR),
+    rEfficiency: parseNum(form.rEfficiency),
+    exitDeviationR: parseNum(form.exitDeviationR),
+    maxFavorableExcursionR: parseNum(form.maxFavorableExcursionR),
+    maxAdverseExcursionR: parseNum(form.maxAdverseExcursionR),
+    exitType: form.exitType as CreateTradeDto["exitType"],
+    exitQualityTag: form.exitQualityTag as CreateTradeDto["exitQualityTag"],
+    exitReasonCode: form.exitReasonCode,
+    exitReasonNote: form.exitReasonNote,
+    rMetricsReady: form.rMetricsReady,
+
   };
 }
 
@@ -441,7 +481,10 @@ export async function updateTrade(id: string, data: Partial<CreateTradeDto>) {
     targetPath: `trade/${id}`,
     actualMethod: "PATCH",
   };
-  const actualBody = data;
+  const actualBody = {
+    ...(data as Partial<CreateTradeDto> & { transactionId?: string }),
+  };
+  delete (actualBody as { transactionId?: string }).transactionId;
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -501,9 +544,13 @@ export async function getImageUploadUrl(params: {
   fileName: string;
   fileType: string;
   date: string;
+  transactionId?: string;
+  contentLength?: number;
+  source?: "trade" | string;
 }): Promise<{ uploadUrl: string; key: string }> {
+  const hasTransaction = !!params.transactionId;
   const proxyParams = {
-    targetPath: "image/upload-url",
+    targetPath: hasTransaction ? "trade/image/upload-url" : "image/upload-url",
     actualMethod: "POST",
   };
   const actualBody = params;

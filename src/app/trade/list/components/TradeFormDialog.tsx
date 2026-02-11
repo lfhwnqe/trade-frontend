@@ -20,6 +20,9 @@ import {
   tradeGradeOptions,
   tradeResultOptions,
   tradeTypeOptions,
+  exitTypeOptions,
+  exitQualityTagOptions,
+  exitReasonCodeOptions,
 } from "../../config";
 import { Input as BaseInput } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -620,6 +623,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ marketStructureAnalysisImages: items })
               }
+              transactionId={form.transactionId}
               max={10}
             />
           </div>
@@ -632,6 +636,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ expectedPathImagesDetailed: items })
               }
+              transactionId={form.transactionId}
               max={5}
             />
           </div>
@@ -644,6 +649,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ trendAnalysisImages: items })
               }
+              transactionId={form.transactionId}
               max={10}
             />
           </div>
@@ -767,7 +773,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 onChange={(items) =>
                   handleFormUpdate({ actualPathImagesDetailed: items })
                 }
-                max={10}
+                transactionId={form.transactionId}
+              max={10}
               />
             </div>
             {/* 实际路径复盘 */}
@@ -989,6 +996,14 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
+          {form.status === TradeStatus.ENTERED ? (
+            <div className="col-span-2">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                计划RR（自动）:
+              </label>
+              <BaseInput value={(form.plannedRR as string) ?? ""} readOnly />
+            </div>
+          ) : null}
           {/* 是否遵守交易系统 */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1145,6 +1160,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ entryAnalysisImagesDetailed: items })
               }
+              transactionId={form.transactionId}
               max={10}
             />
           </div>
@@ -1373,6 +1389,125 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={handleFormChange}
             />
           </div>
+          {/* R模型：自动计算（只读展示） */}
+          {(form.status === TradeStatus.EXITED ||
+            form.status === TradeStatus.EARLY_EXITED) ? (
+            <div className="col-span-2">
+              <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                计划RR（自动）:
+              </label>
+              <BaseInput value={(form.plannedRR as string) ?? ""} readOnly />
+            </div>
+          ) : null}
+
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              实现R（自动）:
+            </label>
+            <BaseInput value={(form.realizedR as string) ?? ""} readOnly />
+          </div>
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              R效率（自动）:
+            </label>
+            <BaseInput value={(form.rEfficiency as string) ?? ""} readOnly />
+          </div>
+
+          {/* 离场标签 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              离场类型:
+            </label>
+            <BaseSelect
+              {...exitedSection.selectProps}
+              name="exitType"
+              value={(form.exitType as string) ?? ""}
+              onValueChange={(value) => handleFormSelectChange("exitType", value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="请选择离场类型" />
+              </SelectTrigger>
+              <SelectContent>
+                {exitTypeOptions.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+            {errors.exitQualityTag && (
+              <p className="mt-1 text-sm text-destructive">
+                {errors.exitQualityTag}
+              </p>
+            )}
+          </div>
+
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              离场质量标签:
+            </label>
+            <BaseSelect
+              {...exitedSection.selectProps}
+              name="exitQualityTag"
+              value={(form.exitQualityTag as string) ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("exitQualityTag", value)
+              }
+            >
+              <SelectTrigger
+                className={`w-full ${errors.exitQualityTag ? "border-destructive" : ""}`}
+              >
+                <SelectValue placeholder="请选择离场质量标签" />
+              </SelectTrigger>
+              <SelectContent>
+                {exitQualityTagOptions.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+          </div>
+
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              离场原因代码:
+            </label>
+            <BaseSelect
+              {...exitedSection.selectProps}
+              name="exitReasonCode"
+              value={(form.exitReasonCode as string) ?? ""}
+              onValueChange={(value) => handleFormSelectChange("exitReasonCode", value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="请选择离场原因代码" />
+              </SelectTrigger>
+              <SelectContent>
+                {exitReasonCodeOptions.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+          </div>
+
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              离场原因备注:
+            </label>
+            <BaseTextarea
+              {...exitedSection.textareaProps}
+              id="exitReasonNote"
+              name="exitReasonNote"
+              value={(form.exitReasonNote as string) ?? ""}
+              onChange={(e) =>
+                handleFormUpdate({ exitReasonNote: e.target.value })
+              }
+              className="min-h-[80px]"
+            />
+          </div>
+
           {/* 交易分级 */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1424,6 +1559,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ actualPathImagesDetailed: items })
               }
+              transactionId={form.transactionId}
               max={10}
             />
           </div>
@@ -1615,6 +1751,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
         if (!form.tradeResult) {
           newErrors.tradeResult = "交易结果为必填项";
+        }
+
+        if (!form.exitQualityTag) {
+          newErrors.exitQualityTag = "离场质量标签为必填项";
         }
 
         // 如果选择了执行计划，则计划类型必填
