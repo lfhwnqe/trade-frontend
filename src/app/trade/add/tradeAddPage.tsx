@@ -300,6 +300,19 @@ export default function TradeAddPage({
 
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
+  const apiBaseUrl = React.useMemo(() => {
+    const raw = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+    if (!raw) return "";
+    return raw.endsWith("/") ? raw : `${raw}/`;
+  }, []);
+
+  const absoluteWebhookTriggerUrl = React.useMemo(() => {
+    const raw = String(webhookTriggerUrl || "").trim();
+    if (!raw) return "";
+    if (/^https?:\/\//i.test(raw)) return raw;
+    if (!apiBaseUrl) return raw;
+    return `${apiBaseUrl}${raw.replace(/^\/+/, "")}`;
+  }, [apiBaseUrl, webhookTriggerUrl]);
 
   const webhookTriggerToken = React.useMemo(() => {
     if (!webhookTriggerUrl) return "";
@@ -1421,7 +1434,7 @@ export default function TradeAddPage({
                                     </div>
                                     <div className="flex gap-2">
                                       <input
-                                        value={webhookTriggerUrl}
+                                        value={absoluteWebhookTriggerUrl}
                                         readOnly
                                         className="h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 text-xs text-white/80 outline-none"
                                       />
@@ -1430,10 +1443,10 @@ export default function TradeAddPage({
                                         variant="outline"
                                         className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                                         onClick={async () => {
-                                          if (!webhookTriggerUrl) return;
+                                          if (!absoluteWebhookTriggerUrl) return;
                                           try {
                                             await navigator.clipboard.writeText(
-                                              webhookTriggerUrl,
+                                              absoluteWebhookTriggerUrl,
                                             );
                                             success("已复制 webhook URL");
                                           } catch {
