@@ -125,13 +125,21 @@ async function revokeHook(hookId: string) {
   return resp.json();
 }
 
-function toAbsoluteWebhookUrl(url?: string, apiBaseUrl?: string) {
+function toOriginWebhookUrl(url?: string, origin?: string) {
   const raw = String(url || "").trim();
   if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) return raw;
-  const base = normalizeApiBaseUrl(String(apiBaseUrl || ""));
-  if (!base) return raw;
-  return `${base}${raw.replace(/^\/+/, "")}`;
+  const idx = raw.indexOf("/webhook/trade-alert/");
+  if (idx < 0) return raw;
+  const tail = raw.slice(idx + "/webhook/trade-alert/".length);
+  const seg = tail.split("/").filter(Boolean);
+  const token = seg[0] || "";
+  const tradeShortId = seg[1] || "";
+  if (!token || !origin) return raw;
+
+  const qs = new URLSearchParams();
+  qs.set("token", token);
+  if (tradeShortId) qs.set("tradeShortId", tradeShortId);
+  return `${origin.replace(/\/$/, "")}/api/webhook?${qs.toString()}`;
 }
 
 function formatTime(value?: string) {
@@ -151,6 +159,9 @@ export default function TradeWebhookPage() {
 
   const [apiBaseUrl] = React.useState(() =>
     normalizeApiBaseUrl(envApiBaseUrl()),
+  );
+  const [origin] = React.useState(() =>
+    typeof window !== "undefined" ? window.location.origin : "",
   );
 
   // Telegram setWebhook part (admin/dev ops)
@@ -427,9 +438,9 @@ export default function TradeWebhookPage() {
                 {items.map((it) => {
                   const tradeId = it.tradeTransactionId;
                   const trade = tradeId ? tradeMap[tradeId] : undefined;
-                  const absoluteTriggerUrl = toAbsoluteWebhookUrl(
+                  const absoluteTriggerUrl = toOriginWebhookUrl(
                     it.triggerUrl,
-                    apiBaseUrl,
+                    origin,
                   );
                   const title = trade?.tradeSubject
                     ? `${trade.tradeSubject}${trade.status ? ` · ${trade.status}` : ""}`
@@ -576,7 +587,7 @@ export default function TradeWebhookPage() {
                 {revealedHook ? (
                   <div className="mt-4 rounded-lg border border-[#27272a] bg-black/20 p-4 space-y-3">
                     <div className="font-mono text-sm break-all text-white">
-                      {toAbsoluteWebhookUrl(revealedHook.triggerUrl, apiBaseUrl)}
+                      {toOriginWebhookUrl(revealedHook.triggerUrl, origin)}
                     </div>
                   </div>
                 ) : null}

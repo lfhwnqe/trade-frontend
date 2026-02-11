@@ -300,19 +300,22 @@ export default function TradeAddPage({
 
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
-  const apiBaseUrl = React.useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-    if (!raw) return "";
-    return raw.endsWith("/") ? raw : `${raw}/`;
-  }, []);
-
   const absoluteWebhookTriggerUrl = React.useMemo(() => {
     const raw = String(webhookTriggerUrl || "").trim();
     if (!raw) return "";
-    if (/^https?:\/\//i.test(raw)) return raw;
-    if (!apiBaseUrl) return raw;
-    return `${apiBaseUrl}${raw.replace(/^\/+/, "")}`;
-  }, [apiBaseUrl, webhookTriggerUrl]);
+    const idx = raw.indexOf("/webhook/trade-alert/");
+    if (idx < 0) return raw;
+    const tail = raw.slice(idx + "/webhook/trade-alert/".length);
+    const seg = tail.split("/").filter(Boolean);
+    const token = seg[0] || "";
+    const tradeShortId = seg[1] || "";
+    if (!token || !origin) return raw;
+
+    const qs = new URLSearchParams();
+    qs.set("token", token);
+    if (tradeShortId) qs.set("tradeShortId", tradeShortId);
+    return `${origin.replace(/\/$/, "")}/api/webhook?${qs.toString()}`;
+  }, [origin, webhookTriggerUrl]);
 
   const webhookTriggerToken = React.useMemo(() => {
     if (!webhookTriggerUrl) return "";
