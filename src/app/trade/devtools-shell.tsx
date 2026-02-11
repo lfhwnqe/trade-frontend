@@ -16,7 +16,6 @@ const devtoolItems: NavItem[] = [
   { title: "API Token", href: "/trade/devtools/tokens", icon: KeyRound },
   { title: "Webhook", href: "/trade/devtools/webhook", icon: Webhook },
   { title: "币安合约同步", href: "/trade/devtools/binance-futures", icon: Link2 },
-  { title: "币安已平仓仓位", href: "/trade/devtools/binance-positions", icon: Link2 },
 ];
 
 export default function DevtoolsShell({ children }: { children: React.ReactNode }) {
