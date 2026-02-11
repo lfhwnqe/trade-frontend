@@ -589,6 +589,59 @@ export default function TradeHomePage() {
 
   const formatR = (value: number) => value.toFixed(2);
 
+  const getRPromptLevel = (kind: "good" | "warn" | "bad") => {
+    if (kind === "good") return "text-emerald-300";
+    if (kind === "warn") return "text-yellow-300";
+    return "text-red-300";
+  };
+
+  const buildRPrompts = (rStats: {
+    expectancyR: number;
+    avgPlannedRR: number;
+    avgRealizedR: number;
+    avgREfficiency: number;
+    emotionalLeakageR: number;
+    qualityDistribution: {
+      TECHNICAL: number;
+      EMOTIONAL: number;
+      SYSTEM: number;
+      UNKNOWN: number;
+    };
+  }) => {
+    const prompts: Array<{ kind: "good" | "warn" | "bad"; text: string }> = [];
+
+    if (rStats.expectancyR >= 0.5) {
+      prompts.push({ kind: "good", text: `Expectancy ${formatR(rStats.expectancyR)}R，系统当前有正期望。` });
+    } else if (rStats.expectancyR >= 0) {
+      prompts.push({ kind: "warn", text: `Expectancy ${formatR(rStats.expectancyR)}R，边际偏弱，优先优化低质量离场。` });
+    } else {
+      prompts.push({ kind: "bad", text: `Expectancy ${formatR(rStats.expectancyR)}R，当前是负期望，建议先降频并复盘样本。` });
+    }
+
+    if (rStats.avgREfficiency >= 0.7) {
+      prompts.push({ kind: "good", text: `R效率 ${formatR(rStats.avgREfficiency)}，计划兑现较好。` });
+    } else if (rStats.avgREfficiency >= 0.5) {
+      prompts.push({ kind: "warn", text: `R效率 ${formatR(rStats.avgREfficiency)}，仍有提前离场/拿不住利润问题。` });
+    } else {
+      prompts.push({ kind: "bad", text: `R效率 ${formatR(rStats.avgREfficiency)}，计划兑现不足，优先修正出场纪律。` });
+    }
+
+    if (rStats.emotionalLeakageR > 0.5) {
+      prompts.push({ kind: "bad", text: `情绪泄露 ${formatR(rStats.emotionalLeakageR)}R，情绪离场影响显著。` });
+    } else if (rStats.emotionalLeakageR > 0) {
+      prompts.push({ kind: "warn", text: `情绪泄露 ${formatR(rStats.emotionalLeakageR)}R，建议继续压缩情绪干预。` });
+    } else {
+      prompts.push({ kind: "good", text: "情绪泄露接近 0，离场执行较稳定。" });
+    }
+
+    const unknown = rStats.qualityDistribution.UNKNOWN;
+    if (unknown >= 10) {
+      prompts.push({ kind: "warn", text: `有 ${unknown} 笔未标注离场标签，行为归因可信度不足。` });
+    }
+
+    return prompts;
+  };
+
   const tradeCountChange = formatPercentChange(
     stats.thisMonthTradeCount,
     stats.lastMonthTradeCount,
@@ -755,6 +808,13 @@ export default function TradeHomePage() {
               <div className="mt-2 text-xs text-[#9ca3af]">
                 标签分布：技 {stats.recent30RStats.qualityDistribution.TECHNICAL} / 情 {stats.recent30RStats.qualityDistribution.EMOTIONAL} / 系 {stats.recent30RStats.qualityDistribution.SYSTEM} / 未 {stats.recent30RStats.qualityDistribution.UNKNOWN}
               </div>
+              <ul className="mt-2 space-y-1 text-xs">
+                {buildRPrompts(stats.recent30RStats).map((item, idx) => (
+                  <li key={`real-r-prompt-${idx}`} className={getRPromptLevel(item.kind)}>
+                    • {item.text}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <div className="rounded-lg border border-[#27272a] bg-black/20 px-3 py-2">
@@ -771,6 +831,13 @@ export default function TradeHomePage() {
               <div className="mt-2 text-xs text-[#9ca3af]">
                 标签分布：技 {stats.recent30SimulationRStats.qualityDistribution.TECHNICAL} / 情 {stats.recent30SimulationRStats.qualityDistribution.EMOTIONAL} / 系 {stats.recent30SimulationRStats.qualityDistribution.SYSTEM} / 未 {stats.recent30SimulationRStats.qualityDistribution.UNKNOWN}
               </div>
+              <ul className="mt-2 space-y-1 text-xs">
+                {buildRPrompts(stats.recent30SimulationRStats).map((item, idx) => (
+                  <li key={`sim-r-prompt-${idx}`} className={getRPromptLevel(item.kind)}>
+                    • {item.text}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
