@@ -558,7 +558,6 @@ export default function AdminUserManagementPage() {
           actualBody: {
             ...(cleanupUserId ? { userId: cleanupUserId } : {}),
             dryRun: cleanupDryRun,
-            olderThanMinutes: 60,
             objectScanLimit: 3000,
             tradeScanLimit: 3000,
             deleteLimit: 500,
