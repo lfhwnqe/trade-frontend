@@ -5,23 +5,30 @@ description: Use API Token to read and edit Trade records via /trade/* endpoints
 
 # Trade API Token Agent Skill
 
-本 Skill 用于外部 Agent（如 OpenClaw/Codex/自建 Bot）通过 `tc_` API Token 调用交易接口，完成：
+本 Skill 用于外部 Agent 通过 `tc_` API Token 调用交易接口，完成查询和编辑。
 
-- 查询交易信息
-- 编辑交易信息（PATCH）
+## 0) 统一响应协议
 
-> 只允许 `/trade/*` 路径；删除接口不可用。
+成功：
+```json
+{ "success": true, "message": "可选", "data": {} }
+```
 
-## 1) 准备
+失败：
+```json
+{ "success": false, "message": "错误信息", "errorCode": "可选", "details": {} }
+```
 
-- Base URL（生产示例）：`https://k6o6esmzl5.execute-api.ap-southeast-1.amazonaws.com/prod/`
-- API Token：`tc_xxx...`
-- Header：`Authorization: Bearer tc_xxx`
+Agent 解析顺序：HTTP 2xx -> success=true -> 读取 data。
+
+## 1) 认证
 
 ```bash
 export API_BASE="https://k6o6esmzl5.execute-api.ap-southeast-1.amazonaws.com/prod/"
 export API_TOKEN="tc_xxx_your_token"
 ```
+
+Header: `Authorization: Bearer ${API_TOKEN}`
 
 ## 2) 查询单条交易
 
@@ -31,7 +38,21 @@ curl -sS "${API_BASE}trade/<transactionId>" \
   -H "Content-Type: application/json"
 ```
 
-## 3) 查询交易列表（分页）
+示例返回：
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "925bb36e-...",
+    "tradeShortId": "tr_MrTtgM89",
+    "tradeSubject": "BTC/USDC",
+    "status": "已分析",
+    "updatedAt": "2026-02-11T08:00:00.000Z"
+  }
+}
+```
+
+## 3) 查询列表
 
 ```bash
 curl -sS "${API_BASE}trade/list" \
@@ -41,7 +62,7 @@ curl -sS "${API_BASE}trade/list" \
   -d '{"page":1,"limit":20}'
 ```
 
-## 4) 编辑交易（PATCH）
+## 4) 编辑交易
 
 ```bash
 curl -sS "${API_BASE}trade/<transactionId>" \
@@ -55,38 +76,41 @@ curl -sS "${API_BASE}trade/<transactionId>" \
   }'
 ```
 
-## 5) 图片相关（如需）
-
-### 获取上传 URL（trade 域）
-
-```bash
-curl -sS "${API_BASE}trade/image/upload-url" \
-  -X POST \
-  -H "Authorization: Bearer ${API_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "transactionId":"<transactionId>",
-    "fileName":"chart.png",
-    "fileType":"image/png",
-    "date":"2026-02-11",
-    "contentLength":123456,
-    "source":"trade"
-  }'
+示例返回：
+```json
+{
+  "success": true,
+  "message": "更新成功",
+  "data": {
+    "transactionId": "925bb36e-...",
+    "updatedAt": "2026-02-11T09:00:00.000Z"
+  }
+}
 ```
 
-### 解析图片 key 为短时 URL
+## 5) 图片接口（可选）
 
+### 5.1 上传URL
 ```bash
-curl -sS "${API_BASE}trade/image/resolve" \
-  -X POST \
+curl -sS "${API_BASE}trade/image/upload-url" -X POST \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"transactionId":"<id>","fileName":"chart.png","fileType":"image/png","date":"2026-02-11","contentLength":123456,"source":"trade"}'
+```
+
+### 5.2 解析图片key
+```bash
+curl -sS "${API_BASE}trade/image/resolve" -X POST \
   -H "Authorization: Bearer ${API_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"refs":["uploads/<userId>/<transactionId>/2026-02-11/a.png"]}'
 ```
 
-## 6) 约束
+## 6) 错误码处理
 
-- 仅 `/trade/*` 可访问
-- `DELETE /trade/:transactionId` 会被拒绝
-- 上传时 `transactionId` 必填且必须属于 token 所属用户
-- 建议对 429（限流/配额）做重试退避
+- 400 参数错误
+- 401 token 无效
+- 403 越权
+- 404 不存在
+- 429 限流/配额
+- 5xx 服务端错误（建议重试）
