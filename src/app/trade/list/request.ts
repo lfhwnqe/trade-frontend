@@ -539,7 +539,7 @@ export async function getImageUploadUrl(params: {
   fileName: string;
   fileType: string;
   date: string;
-  transactionId?: string;
+  transactionId: string;
   contentLength?: number;
   source?: "trade" | string;
 }): Promise<{ uploadUrl: string; key: string }> {

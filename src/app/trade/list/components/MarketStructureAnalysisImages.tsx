@@ -93,6 +93,10 @@ export function MarketStructureAnalysisImages({
     async (files: File[]) => {
       if (readOnly || reachMax) return;
       if (!files || files.length === 0) return;
+      if (!transactionId) {
+        errorAlert("请先保存交易生成 transactionId，再上传图片");
+        return;
+      }
       const n = max ? max - value.length : files.length;
       if (n <= 0) return;
       const filesToAdd = files.slice(0, n);
@@ -135,7 +139,7 @@ export function MarketStructureAnalysisImages({
                 },
                 actualBody: {
                   refs: [key],
-                  ...(transactionId ? { transactionId } : {}),
+                  transactionId,
                 },
               });
               if (resolveResp.ok) {
