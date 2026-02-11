@@ -125,6 +125,15 @@ async function revokeHook(hookId: string) {
   return resp.json();
 }
 
+function toAbsoluteWebhookUrl(url?: string, apiBaseUrl?: string) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const base = normalizeApiBaseUrl(String(apiBaseUrl || ""));
+  if (!base) return raw;
+  return `${base}${raw.replace(/^\/+/, "")}`;
+}
+
 function formatTime(value?: string) {
   if (!value) return "-";
   const date = new Date(value);
@@ -418,6 +427,10 @@ export default function TradeWebhookPage() {
                 {items.map((it) => {
                   const tradeId = it.tradeTransactionId;
                   const trade = tradeId ? tradeMap[tradeId] : undefined;
+                  const absoluteTriggerUrl = toAbsoluteWebhookUrl(
+                    it.triggerUrl,
+                    apiBaseUrl,
+                  );
                   const title = trade?.tradeSubject
                     ? `${trade.tradeSubject}${trade.status ? ` · ${trade.status}` : ""}`
                     : tradeId
@@ -441,7 +454,7 @@ export default function TradeWebhookPage() {
                           <div className="mt-2 text-xs text-[#9ca3af]">
                             webhook URL：
                             <span className="ml-2 font-mono text-white break-all">
-                              {it.triggerUrl || "-"}
+                              {absoluteTriggerUrl || "-"}
                             </span>
                           </div>
 
@@ -459,8 +472,11 @@ export default function TradeWebhookPage() {
                         <div className="flex flex-wrap gap-2">
                           <Button
                             variant="secondary"
-                            onClick={() => it.triggerUrl && handleCopy(it.triggerUrl, "已复制 webhook URL")}
-                            disabled={!it.triggerUrl}
+                            onClick={() =>
+                              absoluteTriggerUrl &&
+                              handleCopy(absoluteTriggerUrl, "已复制 webhook URL")
+                            }
+                            disabled={!absoluteTriggerUrl}
                           >
                             <Copy className="h-4 w-4 mr-2" />
                             复制 URL
@@ -560,7 +576,7 @@ export default function TradeWebhookPage() {
                 {revealedHook ? (
                   <div className="mt-4 rounded-lg border border-[#27272a] bg-black/20 p-4 space-y-3">
                     <div className="font-mono text-sm break-all text-white">
-                      {revealedHook.triggerUrl}
+                      {toAbsoluteWebhookUrl(revealedHook.triggerUrl, apiBaseUrl)}
                     </div>
                   </div>
                 ) : null}
