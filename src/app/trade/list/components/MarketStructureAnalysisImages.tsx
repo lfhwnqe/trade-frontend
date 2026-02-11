@@ -58,6 +58,7 @@ export function MarketStructureAnalysisImages({
   max = 10,
   label = "市场结构分析图：",
   uploadTitle = "上传图片",
+  transactionId,
 }: {
   value: MarketStructureAnalysisImage[];
   onChange: (value: MarketStructureAnalysisImage[]) => void;
@@ -65,6 +66,7 @@ export function MarketStructureAnalysisImages({
   max?: number;
   label?: string;
   uploadTitle?: string;
+  transactionId?: string;
 }) {
   const [, errorAlert] = useAlert();
   const reachMax = !!max && value.length >= max;
@@ -114,6 +116,9 @@ export function MarketStructureAnalysisImages({
               fileName: encodeURIComponent(file.name),
               fileType: file.type,
               date: dateStr,
+              transactionId,
+              contentLength: processedFile.size,
+              source: "trade",
             });
 
             await uploadToS3(uploadUrl, processedFile);
@@ -177,7 +182,16 @@ export function MarketStructureAnalysisImages({
         errorAlert(`${failedCount} 张图片上传失败，请重试`);
       }
     },
-    [compressImage, errorAlert, max, onChange, readOnly, reachMax, value],
+    [
+      compressImage,
+      errorAlert,
+      max,
+      onChange,
+      readOnly,
+      reachMax,
+      transactionId,
+      value,
+    ],
   );
 
   const onDrop = useCallback(

@@ -539,9 +539,12 @@ export async function getImageUploadUrl(params: {
   fileName: string;
   fileType: string;
   date: string;
+  transactionId?: string;
+  contentLength?: number;
+  source?: "trade" | string;
 }): Promise<{ uploadUrl: string; key: string }> {
   const proxyParams = {
-    targetPath: "image/upload-url",
+    targetPath: "trade/image/upload-url",
     actualMethod: "POST",
   };
   const actualBody = params;
