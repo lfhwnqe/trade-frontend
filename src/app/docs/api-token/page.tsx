@@ -129,6 +129,17 @@ export default function ApiTokenDocPage() {
           >
             下载 machine.json
           </a>
+          <a
+            href="/downloads/trade-api-token-agent.schema.json"
+            download
+            className="ml-4 text-[#00c2b2] underline"
+          >
+            下载 strict schema.json
+          </a>
+        </p>
+        <p className="text-xs text-gray-400 mt-2">
+          机器建议使用 origin 直链读取：
+          <code className="ml-2">https://trade.maomaocong.com/downloads/trade-api-token-agent.schema.json</code>
         </p>
       </section>
 

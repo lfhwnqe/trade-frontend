@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trade.maomaocong.com/downloads/trade-api-token-agent.schema.json",
+  "title": "Trade API Token Agent Strict Contract",
+  "type": "object",
+  "required": ["version", "create", "patch", "responseEnvelope"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0.0" },
+    "responseEnvelope": {
+      "type": "object",
+      "required": ["successField", "messageField", "dataField"],
+      "properties": {
+        "successField": { "type": "string", "const": "success" },
+        "messageField": { "type": "string", "const": "message" },
+        "dataField": { "type": "string", "const": "data" }
+      },
+      "additionalProperties": false
+    },
+    "create": {
+      "type": "object",
+      "required": ["tradeType", "status", "tradeSubject", "marketStructure", "marketStructureAnalysis", "entryPlanA"],
+      "properties": {
+        "tradeType": { "type": "string", "enum": ["模拟交易", "真实交易"] },
+        "status": { "type": "string", "enum": ["已分析", "待入场", "已入场", "已离场", "提前离场"] },
+        "tradeSubject": { "type": "string" },
+        "marketStructure": { "type": "string", "enum": ["震荡", "趋势", "暂无法判断", "停止", "转换"] },
+        "marketStructureAnalysis": { "type": "string" },
+        "entryPlanA": {
+          "type": "object",
+          "properties": {
+            "entryReason": { "type": "string" },
+            "entrySignal": { "type": "string" },
+            "exitSignal": { "type": "string" }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
