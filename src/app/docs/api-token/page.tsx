@@ -127,14 +127,14 @@ export default function ApiTokenDocPage() {
             download
             className="ml-4 text-[#00c2b2] underline"
           >
-            下载 machine.json
+            下载 machine.json（v2）
           </a>
           <a
             href="/downloads/trade-api-token-agent.schema.json"
             download
             className="ml-4 text-[#00c2b2] underline"
           >
-            下载 strict schema.json
+            下载 strict schema.json（v2）
           </a>
         </p>
         <p className="text-xs text-gray-400 mt-2">
