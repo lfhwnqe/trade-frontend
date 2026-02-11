@@ -344,18 +344,37 @@ export default function TradeAddPage({
         detailMode === "share" ? fetchSharedTradeDetail : fetchTradeDetail;
 
       const resolveImageUrls = async (data: Trade): Promise<Trade> => {
-        const collectRefs = (items?: Array<{ image?: { key?: string; url?: string } }>) =>
+        const IMAGE_FIELDS: Array<keyof Trade> = [
+          "volumeProfileImages",
+          "marketStructureAnalysisImages",
+          "trendAnalysisImages",
+          "expectedPathImages",
+          "expectedPathImagesDetailed",
+          "entryAnalysisImages",
+          "entryAnalysisImagesDetailed",
+          "actualPathImages",
+          "actualPathImagesDetailed",
+          "analysisImages",
+          "analysisImagesDetailed",
+        ];
+
+        const collectRefs = (
+          items?: Array<{ image?: { key?: string; url?: string } }>,
+        ) =>
           (items || [])
             .map((item) => item?.image?.key || item?.image?.url || "")
             .map((ref) => ref.trim())
             .filter(Boolean);
 
         const refs = Array.from(
-          new Set([
-            ...collectRefs(data.volumeProfileImages),
-            ...collectRefs(data.marketStructureAnalysisImages),
-            ...collectRefs(data.trendAnalysisImages),
-          ]),
+          new Set(
+            IMAGE_FIELDS.flatMap((field) =>
+              collectRefs(
+                (data[field] as Array<{ image?: { key?: string; url?: string } }>) ||
+                  [],
+              ),
+            ),
+          ),
         );
 
         if (refs.length === 0) return data;
@@ -412,14 +431,17 @@ export default function TradeAddPage({
               };
             });
 
-          return {
-            ...data,
-            volumeProfileImages: patchImages(data.volumeProfileImages) as ImageResource[],
-            marketStructureAnalysisImages: patchImages(
-              data.marketStructureAnalysisImages,
-            ) as Trade["marketStructureAnalysisImages"],
-            trendAnalysisImages: patchImages(data.trendAnalysisImages) as Trade["trendAnalysisImages"],
-          };
+          const patched: Trade = { ...data };
+          IMAGE_FIELDS.forEach((field) => {
+            const current = data[field] as
+              | Array<{ image?: { key?: string; url?: string } }>
+              | undefined;
+            if (Array.isArray(current)) {
+              (patched as Record<string, unknown>)[field as string] = patchImages(current);
+            }
+          });
+
+          return patched;
         } catch {
           return data;
         }
