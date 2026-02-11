@@ -3,9 +3,9 @@ name: trade-api-token-agent
 description: Use API Token to read, create, and edit Trade records via /trade/* endpoints.
 ---
 
-# Trade API Token Agent Skill (Single-file)
+# Trade API Token Agent Skill (Single-file, Full Contract)
 
-本文件内嵌 MACHINE_JSON + STRICT_SCHEMA_JSON，机器只需下载这一个文件。
+Source of truth: `trade-backend/src/modules/trade/entities/trade.entity.ts`
 
 ## Runtime Origin URL Strategy
 
@@ -13,18 +13,29 @@ description: Use API Token to read, create, and edit Trade records via /trade/* 
 const skillUrl = new URL('/downloads/trade-api-token-agent-SKILL.md', window.location.origin).toString();
 ```
 
+## Field Dictionary
+
+Create required:
+- tradeType（交易类型）
+- status（交易状态）
+- tradeSubject（交易标的）
+- marketStructure（市场结构）
+- marketStructureAnalysis（市场结构分析）
+- entryPlanA（主入场计划）
+
+Server-controlled（禁止写）:
+- userId, createdAt, updatedAt, isShareable, shareId, tradeShortId
+- plannedRiskPerUnit, plannedRewardPerUnit, plannedRR, realizedR, rEfficiency, exitDeviationR
+
 ## MACHINE_JSON
 
 ```json
 {
   "name": "trade-api-token-agent",
-  "contractVersion": "2.0.0",
-  "schemaRef": "urn:trade-api-token-agent:schema:2.0.0",
-  "breakingChangeSince": "1.1.0",
-  "runtimeUrlStrategy": {
-    "mode": "origin-relative",
-    "skillPath": "/downloads/trade-api-token-agent-SKILL.md"
-  },
+  "contractVersion": "2.1.0",
+  "schemaRef": "urn:trade-api-token-agent:schema:2.1.0",
+  "sourceOfTruth": "trade-backend/src/modules/trade/entities/trade.entity.ts",
+  "runtimeUrlStrategy": { "mode": "origin-relative", "skillPath": "/downloads/trade-api-token-agent-SKILL.md" },
   "endpoints": [
     { "id": "getTrade", "method": "GET", "path": "/trade/{transactionId}" },
     { "id": "listTrades", "method": "POST", "path": "/trade/list" },
@@ -39,11 +50,11 @@ const skillUrl = new URL('/downloads/trade-api-token-agent-SKILL.md', window.loc
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:trade-api-token-agent:schema:2.0.0",
+  "$id": "urn:trade-api-token-agent:schema:2.1.0",
   "type": "object",
   "required": ["version", "createPayload", "patchPayload"],
   "properties": {
-    "version": { "type": "string", "const": "2.0.0" },
+    "version": { "type": "string", "const": "2.1.0" },
     "createPayload": {
       "type": "object",
       "required": ["tradeType", "status", "tradeSubject", "marketStructure", "marketStructureAnalysis", "entryPlanA"],
@@ -53,7 +64,7 @@ const skillUrl = new URL('/downloads/trade-api-token-agent-SKILL.md', window.loc
         "tradeSubject": { "type": "string" },
         "marketStructure": { "type": "string", "enum": ["震荡", "趋势", "暂无法判断", "停止", "转换"] },
         "marketStructureAnalysis": { "type": "string" },
-        "entryPlanA": { "type": "object", "additionalProperties": true }
+        "entryPlanA": { "type": "object", "additionalProperties": false }
       },
       "additionalProperties": true
     },
