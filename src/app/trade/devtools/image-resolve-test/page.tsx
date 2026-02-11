@@ -1,10 +1,23 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import TradePageShell from "@/app/trade/components/trade-page-shell";
 
 export default function ImageResolveTestPage() {
+  const router = useRouter();
+  const isDevEnv = React.useMemo(() => {
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+    return base.includes("/dev/") || base.includes("localhost") || base.includes("127.0.0.1");
+  }, []);
+
+  React.useEffect(() => {
+    if (!isDevEnv) {
+      router.replace("/trade/devtools/tokens");
+    }
+  }, [isDevEnv, router]);
+
   const [refsText, setRefsText] = React.useState(
     "https://legacy-public.example.com/a.jpg\nimages/your-user-id/2026-02-11/demo.jpg",
   );
@@ -182,6 +195,10 @@ export default function ImageResolveTestPage() {
       setMigrateLoading(false);
     }
   };
+  if (!isDevEnv) {
+    return null;
+  }
+
   return (
     <TradePageShell
       title="图片接口测试"

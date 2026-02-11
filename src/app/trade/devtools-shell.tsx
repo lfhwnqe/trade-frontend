@@ -12,11 +12,18 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
+const isDevEnv = (() => {
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+  return base.includes("/dev/") || base.includes("localhost") || base.includes("127.0.0.1");
+})();
+
 const devtoolItems: NavItem[] = [
   { title: "API Token", href: "/trade/devtools/tokens", icon: KeyRound },
   { title: "Webhook", href: "/trade/devtools/webhook", icon: Webhook },
   { title: "币安合约同步", href: "/trade/devtools/binance-futures", icon: Link2 },
-  { title: "图片解析测试", href: "/trade/devtools/image-resolve-test", icon: ImageIcon },
+  ...(isDevEnv
+    ? [{ title: "图片接口测试", href: "/trade/devtools/image-resolve-test", icon: ImageIcon }]
+    : []),
 ];
 
 export default function DevtoolsShell({ children }: { children: React.ReactNode }) {
