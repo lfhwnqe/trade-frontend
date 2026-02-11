@@ -1,3 +1,6 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import { DocsShell } from "../_components/docs-shell";
 import { docsNav } from "../_components/docs-data";
@@ -19,6 +22,39 @@ function CodeBlock({ children }: { children: string }) {
 }
 
 export default function ApiTokenDocPage() {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  const skillDownloadUrl = React.useMemo(
+    () =>
+      origin
+        ? new URL(
+            "/downloads/trade-api-token-agent-SKILL.md",
+            origin,
+          ).toString()
+        : "/downloads/trade-api-token-agent-SKILL.md",
+    [origin],
+  );
+  const machineDownloadUrl = React.useMemo(
+    () =>
+      origin
+        ? new URL(
+            "/downloads/trade-api-token-agent.machine.json",
+            origin,
+          ).toString()
+        : "/downloads/trade-api-token-agent.machine.json",
+    [origin],
+  );
+  const schemaDownloadUrl = React.useMemo(
+    () =>
+      origin
+        ? new URL(
+            "/downloads/trade-api-token-agent.schema.json",
+            origin,
+          ).toString()
+        : "/downloads/trade-api-token-agent.schema.json",
+    [origin],
+  );
+
   return (
     <DocsShell
       title="API Token 使用指南"
@@ -116,21 +152,21 @@ export default function ApiTokenDocPage() {
         <p>
           下载地址：
           <a
-            href="/downloads/trade-api-token-agent-SKILL.md"
+            href={skillDownloadUrl}
             download
             className="ml-2 text-[#00c2b2] underline"
           >
             下载 SKILL.md
           </a>
           <a
-            href="/downloads/trade-api-token-agent.machine.json"
+            href={machineDownloadUrl}
             download
             className="ml-4 text-[#00c2b2] underline"
           >
             下载 machine.json（v2）
           </a>
           <a
-            href="/downloads/trade-api-token-agent.schema.json"
+            href={schemaDownloadUrl}
             download
             className="ml-4 text-[#00c2b2] underline"
           >
@@ -139,7 +175,7 @@ export default function ApiTokenDocPage() {
         </p>
         <p className="text-xs text-gray-400 mt-2">
           机器建议运行时拼接 origin（避免换域名/环境改代码）：
-          <code className="ml-2">new URL(&apos;/downloads/trade-api-token-agent.schema.json&apos;, window.location.origin).toString()</code>
+          <code className="ml-2">{schemaDownloadUrl}</code>
         </p>
       </section>
 
