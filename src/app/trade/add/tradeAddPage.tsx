@@ -342,11 +342,95 @@ export default function TradeAddPage({
       setDetailLoading(true);
       const fetchDetail =
         detailMode === "share" ? fetchSharedTradeDetail : fetchTradeDetail;
+
+      const resolveImageUrls = async (data: Trade): Promise<Trade> => {
+        const collectRefs = (items?: Array<{ image?: { key?: string; url?: string } }>) =>
+          (items || [])
+            .map((item) => item?.image?.key || item?.image?.url || "")
+            .map((ref) => ref.trim())
+            .filter(Boolean);
+
+        const refs = Array.from(
+          new Set([
+            ...collectRefs(data.volumeProfileImages),
+            ...collectRefs(data.marketStructureAnalysisImages),
+            ...collectRefs(data.trendAnalysisImages),
+          ]),
+        );
+
+        if (refs.length === 0) return data;
+
+        try {
+          const resp = await fetchWithAuth("/api/proxy-post", {
+            method: "POST",
+            credentials: "include",
+            proxyParams: {
+              targetPath: "trade/image/resolve",
+              actualMethod: "POST",
+            },
+            actualBody: {
+              refs,
+              ...(data.transactionId ? { transactionId: data.transactionId } : {}),
+            },
+          });
+
+          if (!resp.ok) {
+            return data;
+          }
+
+          const json = (await resp.json()) as {
+            data?: {
+              items?: Array<{ ref?: string; url?: string }>;
+            };
+          };
+          const items = json?.data?.items || [];
+          const urlMap = new Map<string, string>();
+          items.forEach((it) => {
+            const ref = String(it?.ref || "").trim();
+            const url = String(it?.url || "").trim();
+            if (ref && url) urlMap.set(ref, url);
+          });
+
+          const patchImages = (
+            items?: Array<{ image?: { key?: string; url?: string } }> ,
+          ) =>
+            (items || []).map((item) => {
+              const key = item?.image?.key?.trim();
+              const rawUrl = item?.image?.url?.trim();
+              const resolvedUrl =
+                (key && urlMap.get(key)) ||
+                (rawUrl && urlMap.get(rawUrl)) ||
+                item?.image?.url ||
+                "";
+
+              return {
+                ...item,
+                image: {
+                  ...(item?.image || {}),
+                  url: resolvedUrl,
+                },
+              };
+            });
+
+          return {
+            ...data,
+            volumeProfileImages: patchImages(data.volumeProfileImages) as ImageResource[],
+            marketStructureAnalysisImages: patchImages(
+              data.marketStructureAnalysisImages,
+            ) as Trade["marketStructureAnalysisImages"],
+            trendAnalysisImages: patchImages(data.trendAnalysisImages) as Trade["trendAnalysisImages"],
+          };
+        } catch {
+          return data;
+        }
+      };
+
       fetchDetail(detailId)
-        .then((data) => {
+        .then(async (data) => {
+          const resolvedData = await resolveImageUrls(data);
           // 合并已有字段，防止丢失自定义初值
           setForm((draft) => {
-            Object.assign(draft, data);
+            Object.assign(draft, resolvedData);
           });
         })
         .catch((e) => {
