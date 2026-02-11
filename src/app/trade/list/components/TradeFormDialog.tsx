@@ -1430,6 +1430,11 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 ))}
               </SelectContent>
             </BaseSelect>
+            {errors.exitQualityTag && (
+              <p className="mt-1 text-sm text-destructive">
+                {errors.exitQualityTag}
+              </p>
+            )}
           </div>
 
           <div className="col-span-2">
@@ -1444,7 +1449,9 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 handleFormSelectChange("exitQualityTag", value)
               }
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger
+                className={`w-full ${errors.exitQualityTag ? "border-destructive" : ""}`}
+              >
                 <SelectValue placeholder="请选择离场质量标签" />
               </SelectTrigger>
               <SelectContent>
@@ -1738,6 +1745,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
         if (!form.tradeResult) {
           newErrors.tradeResult = "交易结果为必填项";
+        }
+
+        if (!form.exitQualityTag) {
+          newErrors.exitQualityTag = "离场质量标签为必填项";
         }
 
         // 如果选择了执行计划，则计划类型必填
