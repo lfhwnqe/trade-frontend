@@ -108,10 +108,21 @@ export default function ApiTokenDocPage() {
       </section>
 
       <section id="skill">
-        <h2>对应 Skill（规格/文档维护）</h2>
+        <h2>对应 Skill（外部 Agent 可下载）</h2>
         <p>
-          做“接口变更 → 文档同步 → 前后端一致性检查”可以用 OpenClaw skill：
-          <code>trade-specs-maintainer</code>。
+          我们新增了一个可直接给外部 Agent 使用的 Skill：
+          <code>trade-api-token-agent</code>（包含“查询交易 + 编辑交易”API Token 调用模板）。
+        </p>
+        <p>
+          下载地址：
+          <a
+            href="https://raw.githubusercontent.com/lfhwnqe/trade-sys-spec/main/skills/trade-api-token-agent/SKILL.md"
+            target="_blank"
+            rel="noreferrer"
+            className="ml-2 text-[#00c2b2] underline"
+          >
+            SKILL.md
+          </a>
         </p>
       </section>
 
