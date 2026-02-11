@@ -17,7 +17,35 @@ export async function POST(request: NextRequest) {
 
     const tradeShortId = request.nextUrl.searchParams.get("tradeShortId") || "";
 
-    const body = await request.text();
+    const rawBody = await request.text();
+    const incomingContentType = request.headers.get("content-type") || "";
+
+    let forwardBody = rawBody;
+    let forwardContentType = incomingContentType || "application/json";
+
+    // Backend webhook expects JSON body with { message: string }.
+    // TradingView may send plain text; normalize here for compatibility.
+    if (!incomingContentType.toLowerCase().includes("application/json")) {
+      forwardBody = JSON.stringify({
+        message: rawBody?.trim() || "TradingView alert",
+      });
+      forwardContentType = "application/json";
+    } else {
+      try {
+        const parsed = JSON.parse(rawBody || "{}");
+        if (typeof parsed?.message !== "string" || !parsed.message.trim()) {
+          forwardBody = JSON.stringify({
+            ...parsed,
+            message: rawBody?.trim() || "TradingView alert",
+          });
+        }
+      } catch {
+        forwardBody = JSON.stringify({
+          message: rawBody?.trim() || "TradingView alert",
+        });
+        forwardContentType = "application/json";
+      }
+    }
 
     const backendPath = tradeShortId
       ? `webhook/trade-alert/${token}/${encodeURIComponent(tradeShortId)}`
@@ -26,10 +54,9 @@ export async function POST(request: NextRequest) {
     const backendResp = await fetch(`${apiBaseUrl}${backendPath}`, {
       method: "POST",
       headers: {
-        "Content-Type":
-          request.headers.get("content-type") || "application/json",
+        "Content-Type": forwardContentType,
       },
-      body,
+      body: forwardBody,
     });
 
     const respText = await backendResp.text();
