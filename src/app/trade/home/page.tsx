@@ -791,12 +791,12 @@ export default function TradeHomePage() {
               <h2 className="text-sm font-bold uppercase tracking-wider text-white">
                 R 指标看板
                 <span className="ml-2 text-xs font-normal text-[#9ca3af]">
-                  (Last 30 Trades)
+                  （最近30笔）
                 </span>
               </h2>
             </div>
             <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9ca3af]">
-              Expectancy / RR / Efficiency / Emotional Leakage
+              期望值 / RR / 效率 / 情绪泄露
             </div>
           </div>
 
@@ -804,31 +804,31 @@ export default function TradeHomePage() {
             <div className="space-y-6 border-b border-[#27272a] p-6 lg:border-b-0 lg:border-r">
               <div className="flex items-center justify-between">
                 <h3 className="border-l-2 border-emerald-400 pl-2 text-xs font-bold uppercase tracking-[0.16em] text-white">
-                  Real Trades（真实）
+                  真实交易
                 </h3>
               </div>
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Expectancy (R)</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">期望值 (R)</p>
                   <p className="text-xl font-bold text-emerald-400">{loading ? "..." : formatR(stats.recent30RStats.expectancyR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Avg Planned RR</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均计划RR</p>
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgPlannedRR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Avg Realized R</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均实现R</p>
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgRealizedR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R-Efficiency</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R效率</p>
                   <p className="text-xl font-bold text-white">
                     {loading ? "..." : `${(stats.recent30RStats.avgREfficiency * 100).toFixed(1)}%`}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Emotional Leakage R</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">情绪泄露R</p>
                   <p className={`text-xl font-bold ${stats.recent30RStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
                     {loading ? "..." : formatR(stats.recent30RStats.emotionalLeakageR)}
                   </p>
@@ -837,9 +837,9 @@ export default function TradeHomePage() {
 
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[#9ca3af]">Tag Distribution</span>
+                  <span className="text-[#9ca3af]">标签分布</span>
                   <span className="text-[#9ca3af]">
-                    Tech: {stats.recent30RStats.qualityDistribution.TECHNICAL} / Emot: {stats.recent30RStats.qualityDistribution.EMOTIONAL} / Strat: {stats.recent30RStats.qualityDistribution.SYSTEM} / Untagged: {stats.recent30RStats.qualityDistribution.UNKNOWN}
+                    技术: {stats.recent30RStats.qualityDistribution.TECHNICAL} / 情绪: {stats.recent30RStats.qualityDistribution.EMOTIONAL} / 系统: {stats.recent30RStats.qualityDistribution.SYSTEM} / 未标注: {stats.recent30RStats.qualityDistribution.UNKNOWN}
                   </span>
                 </div>
                 <div className="space-y-1.5">
@@ -864,31 +864,31 @@ export default function TradeHomePage() {
             <div className="space-y-6 p-6">
               <div className="flex items-center justify-between">
                 <h3 className="border-l-2 border-[#9ca3af] pl-2 text-xs font-bold uppercase tracking-[0.16em] text-white">
-                  Simulated（模拟）
+                  模拟交易
                 </h3>
               </div>
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Expectancy (R)</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">期望值 (R)</p>
                   <p className="text-xl font-bold text-emerald-400">{loading ? "..." : formatR(stats.recent30SimulationRStats.expectancyR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Avg Planned RR</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均计划RR</p>
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgPlannedRR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Avg Realized R</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均实现R</p>
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgRealizedR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R-Efficiency</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R效率</p>
                   <p className="text-xl font-bold text-white">
                     {loading ? "..." : `${(stats.recent30SimulationRStats.avgREfficiency * 100).toFixed(1)}%`}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">Emotional Leakage R</p>
+                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">情绪泄露R</p>
                   <p className={`text-xl font-bold ${stats.recent30SimulationRStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
                     {loading ? "..." : formatR(stats.recent30SimulationRStats.emotionalLeakageR)}
                   </p>
@@ -897,9 +897,9 @@ export default function TradeHomePage() {
 
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[#9ca3af]">Tag Distribution</span>
+                  <span className="text-[#9ca3af]">标签分布</span>
                   <span className="text-[#9ca3af]">
-                    Tech: {stats.recent30SimulationRStats.qualityDistribution.TECHNICAL} / Emot: {stats.recent30SimulationRStats.qualityDistribution.EMOTIONAL} / Strat: {stats.recent30SimulationRStats.qualityDistribution.SYSTEM} / Untagged: {stats.recent30SimulationRStats.qualityDistribution.UNKNOWN}
+                    技术: {stats.recent30SimulationRStats.qualityDistribution.TECHNICAL} / 情绪: {stats.recent30SimulationRStats.qualityDistribution.EMOTIONAL} / 系统: {stats.recent30SimulationRStats.qualityDistribution.SYSTEM} / 未标注: {stats.recent30SimulationRStats.qualityDistribution.UNKNOWN}
                   </span>
                 </div>
                 <div className="space-y-1.5">
