@@ -122,6 +122,13 @@ export default function ApiTokenDocPage() {
           >
             下载 SKILL.md
           </a>
+          <a
+            href="/downloads/trade-api-token-agent.machine.json"
+            download
+            className="ml-4 text-[#00c2b2] underline"
+          >
+            下载 machine.json
+          </a>
         </p>
       </section>
 

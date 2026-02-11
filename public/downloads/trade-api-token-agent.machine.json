@@ -1,0 +1,24 @@
+{
+  "name": "trade-api-token-agent",
+  "version": "1.0.0",
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "format": "Bearer tc_<token>"
+  },
+  "baseUrl": "https://k6o6esmzl5.execute-api.ap-southeast-1.amazonaws.com/prod/",
+  "responseEnvelope": {
+    "successField": "success",
+    "messageField": "message",
+    "dataField": "data"
+  },
+  "endpoints": [
+    { "id": "getTrade", "method": "GET", "path": "/trade/{transactionId}" },
+    { "id": "listTrades", "method": "POST", "path": "/trade/list" },
+    { "id": "patchTrade", "method": "PATCH", "path": "/trade/{transactionId}" },
+    { "id": "tradeImageUploadUrl", "method": "POST", "path": "/trade/image/upload-url" },
+    { "id": "tradeImageResolve", "method": "POST", "path": "/trade/image/resolve" }
+  ],
+  "requiredPatchFields": ["remarks", "lessonsLearned", "tradeTags"],
+  "retry": { "statuses": [429, 500, 502, 503, 504], "backoffMs": [1000, 2000, 4000], "maxRetries": 2 }
+}
