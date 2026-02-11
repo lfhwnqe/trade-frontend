@@ -15,6 +15,7 @@ export default function AdminImageBedPage() {
   const [success, errorAlert] = useAlert();
   const [uploading, setUploading] = React.useState(false);
   const [items, setItems] = React.useState<UploadItem[]>([]);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
   const compressImage = React.useCallback(async (file: File) => {
     try {
@@ -154,9 +155,25 @@ export default function AdminImageBedPage() {
                   key={item.key}
                   className="rounded border border-[#27272a] p-3 text-xs"
                 >
+                  <div className="mb-2">
+                    <img
+                      src={item.url}
+                      alt="preview"
+                      className="h-24 w-24 rounded border border-[#27272a] object-cover cursor-pointer"
+                      onClick={() => setPreviewUrl(item.url)}
+                    />
+                  </div>
                   <div className="text-[#9ca3af] break-all">{item.key}</div>
                   <div className="mt-1 text-[#e5e7eb] break-all">{item.url}</div>
-                  <div className="mt-2">
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+                      onClick={() => setPreviewUrl(item.url)}
+                    >
+                      预览
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -174,6 +191,18 @@ export default function AdminImageBedPage() {
             )}
           </div>
         </div>
+        {previewUrl ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+            onClick={() => setPreviewUrl(null)}
+          >
+            <img
+              src={previewUrl}
+              alt="full preview"
+              className="max-h-[90vh] max-w-[90vw] rounded border border-[#27272a] object-contain"
+            />
+          </div>
+        ) : null}
       </div>
     </TradePageShell>
   );
