@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, KeyRound, Link2, Menu, Webhook, Wrench } from "lucide-react";
+import { Home, Image as ImageIcon, KeyRound, Link2, Menu, Webhook, Wrench } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +16,7 @@ const devtoolItems: NavItem[] = [
   { title: "API Token", href: "/trade/devtools/tokens", icon: KeyRound },
   { title: "Webhook", href: "/trade/devtools/webhook", icon: Webhook },
   { title: "币安合约同步", href: "/trade/devtools/binance-futures", icon: Link2 },
+  { title: "图片解析测试", href: "/trade/devtools/image-resolve-test", icon: ImageIcon },
 ];
 
 export default function DevtoolsShell({ children }: { children: React.ReactNode }) {
