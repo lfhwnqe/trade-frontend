@@ -531,21 +531,36 @@ export default function TradeAddPage({
     };
   }, [resetForm]);
 
-  // 本地暂存恢复
+  // 本地暂存恢复（新建态同时确保存在 transactionId，供图片上传绑定）
   useEffect(() => {
     if (transactionId || readOnly || typeof window === "undefined") {
       return;
     }
     try {
       const draft = window.localStorage.getItem(LOCAL_DRAFT_STORAGE_KEY);
+      const nextId = window.crypto?.randomUUID?.() || `draft-${Date.now()}`;
       if (draft) {
         const parsed = JSON.parse(draft) as Partial<Trade>;
         setForm((draftState) => {
           Object.assign(draftState, parsed);
+          if (!draftState.transactionId) {
+            draftState.transactionId = nextId;
+          }
+        });
+      } else {
+        setForm((draftState) => {
+          if (!draftState.transactionId) {
+            draftState.transactionId = nextId;
+          }
         });
       }
     } catch (err) {
       console.error("Failed to restore local draft", err);
+      setForm((draftState) => {
+        if (!draftState.transactionId) {
+          draftState.transactionId = window.crypto?.randomUUID?.() || `draft-${Date.now()}`;
+        }
+      });
     }
   }, [transactionId, readOnly, setForm]);
 
