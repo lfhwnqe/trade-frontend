@@ -356,6 +356,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
   };
 
   return {
+    transactionId: form.transactionId,
     analysisTime: form.analysisTime,
     analysisPeriod: form.analysisPeriod,
     // ===== 交易类型 =====

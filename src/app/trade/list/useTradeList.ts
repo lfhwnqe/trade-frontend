@@ -138,7 +138,7 @@ export function useTradeList() {
       setState((draft) => {
         draft.dialog.open = true;
         draft.dialog.editTrade = editTrade;
-        draft.dialog.form = editTrade || {};
+        draft.dialog.form = editTrade || { transactionId: crypto.randomUUID() };
       });
     },
     [setState]

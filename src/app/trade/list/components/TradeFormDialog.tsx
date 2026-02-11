@@ -623,6 +623,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ marketStructureAnalysisImages: items })
               }
+              transactionId={form.transactionId}
               max={10}
             />
           </div>
@@ -635,6 +636,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ expectedPathImagesDetailed: items })
               }
+              transactionId={form.transactionId}
               max={5}
             />
           </div>
@@ -647,6 +649,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ trendAnalysisImages: items })
               }
+              transactionId={form.transactionId}
               max={10}
             />
           </div>
@@ -770,7 +773,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 onChange={(items) =>
                   handleFormUpdate({ actualPathImagesDetailed: items })
                 }
-                max={10}
+                transactionId={form.transactionId}
+              max={10}
               />
             </div>
             {/* 实际路径复盘 */}
@@ -1156,6 +1160,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ entryAnalysisImagesDetailed: items })
               }
+              transactionId={form.transactionId}
               max={10}
             />
           </div>
@@ -1554,6 +1559,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               onChange={(items) =>
                 handleFormUpdate({ actualPathImagesDetailed: items })
               }
+              transactionId={form.transactionId}
               max={10}
             />
           </div>
