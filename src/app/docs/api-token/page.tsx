@@ -138,8 +138,8 @@ export default function ApiTokenDocPage() {
           </a>
         </p>
         <p className="text-xs text-gray-400 mt-2">
-          机器建议使用 origin 直链读取：
-          <code className="ml-2">https://trade.maomaocong.com/downloads/trade-api-token-agent.schema.json</code>
+          机器建议运行时拼接 origin（避免换域名/环境改代码）：
+          <code className="ml-2">new URL(&apos;/downloads/trade-api-token-agent.schema.json&apos;, window.location.origin).toString()</code>
         </p>
       </section>
 
