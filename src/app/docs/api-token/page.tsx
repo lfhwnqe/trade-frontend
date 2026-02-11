@@ -22,8 +22,7 @@ function CodeBlock({ children }: { children: string }) {
 }
 
 export default function ApiTokenDocPage() {
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const skillDownloadUrl = React.useMemo(
     () =>
       origin
@@ -32,26 +31,6 @@ export default function ApiTokenDocPage() {
             origin,
           ).toString()
         : "/downloads/trade-api-token-agent-SKILL.md",
-    [origin],
-  );
-  const machineDownloadUrl = React.useMemo(
-    () =>
-      origin
-        ? new URL(
-            "/downloads/trade-api-token-agent.machine.json",
-            origin,
-          ).toString()
-        : "/downloads/trade-api-token-agent.machine.json",
-    [origin],
-  );
-  const schemaDownloadUrl = React.useMemo(
-    () =>
-      origin
-        ? new URL(
-            "/downloads/trade-api-token-agent.schema.json",
-            origin,
-          ).toString()
-        : "/downloads/trade-api-token-agent.schema.json",
     [origin],
   );
 
@@ -72,7 +51,8 @@ export default function ApiTokenDocPage() {
             Token 仅允许访问 <code>/trade/*</code>，其它模块一律拒绝。
           </li>
           <li>
-            Token 可以读/写交易，但禁止删除交易（<code>DELETE /trade/:transactionId</code>
+            Token 可以读/写交易，但禁止删除交易（
+            <code>DELETE /trade/:transactionId</code>
             会返回 403）。
           </li>
         </ul>
@@ -139,7 +119,8 @@ export default function ApiTokenDocPage() {
         </p>
         <CodeBlock>{`curl -X POST "https://<YOUR_API_BASE>/trade/image/upload-url" \\\n  -H "Authorization: Bearer tc_xxx" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "contentType": "image/png",\n    "ext": "png"\n  }'`}</CodeBlock>
         <p className="text-xs text-gray-400">
-          说明：为了不开放 <code>/image/*</code> 给 API Token，上传 URL 走 trade 作用域接口。
+          说明：为了不开放 <code>/image/*</code> 给 API Token，上传 URL 走 trade
+          作用域接口。
         </p>
       </section>
 
@@ -147,7 +128,8 @@ export default function ApiTokenDocPage() {
         <h2>对应 Skill（外部 Agent 可下载）</h2>
         <p>
           我们新增了一个可直接给外部 Agent 使用的 Skill：
-          <code>trade-api-token-agent</code>（包含“查询交易 + 编辑交易”API Token 调用模板）。
+          <code>trade-api-token-agent</code>（包含“查询交易 + 编辑交易”API Token
+          调用模板）。
         </p>
         <p>
           下载地址：
@@ -158,39 +140,31 @@ export default function ApiTokenDocPage() {
           >
             下载 SKILL.md
           </a>
-          <a
-            href={machineDownloadUrl}
-            download
-            className="ml-4 text-[#00c2b2] underline"
-          >
-            下载 machine.json（v2）
-          </a>
-          <a
-            href={schemaDownloadUrl}
-            download
-            className="ml-4 text-[#00c2b2] underline"
-          >
-            下载 strict schema.json（v2）
-          </a>
         </p>
         <p className="text-xs text-gray-400 mt-2">
-          机器建议运行时拼接 origin（避免换域名/环境改代码）：
-          <code className="ml-2">{schemaDownloadUrl}</code>
+          机器建议运行时拼接 origin：
+          <code className="ml-2">{skillDownloadUrl}</code>
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          说明：此 SKILL.md 已内嵌 MACHINE_JSON + STRICT_SCHEMA_JSON（v2）。
         </p>
       </section>
 
       <section id="clawbot">
         <h2>结合 Telegram Webhook：让你的 Clawbot 自动分析</h2>
         <p>
-          推荐做法：让 webhook 把提醒推到 Telegram 群，然后由你自己的 clawbot 监听群消息，解析其中的
-          <code>META_JSON</code>（包含 <code>transactionId</code>），再用 API Token 拉取 trade 的分析字段：
+          推荐做法：让 webhook 把提醒推到 Telegram 群，然后由你自己的 clawbot
+          监听群消息，解析其中的
+          <code>META_JSON</code>（包含 <code>transactionId</code>），再用 API
+          Token 拉取 trade 的分析字段：
         </p>
         <CodeBlock>{`# 1) clawbot 从群消息 META_JSON 解析出 transactionId
 # 2) 用 API token 拉取交易详情（包含计划、关键位、风控等）
 curl -X GET "https://<YOUR_API_BASE>/trade/<transactionId>" \
   -H "Authorization: Bearer tc_xxx"`}</CodeBlock>
         <p className="mt-3">
-          然后 clawbot 把 webhook message + trade 详情一起喂给你的分析 prompt/agent，即可生成报告并回发群。
+          然后 clawbot 把 webhook message + trade 详情一起喂给你的分析
+          prompt/agent，即可生成报告并回发群。
         </p>
       </section>
 
