@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:trade-api-token-agent:schema:1.0.0",
-  "title": "Trade API Token Agent Strict Contract",
+  "$id": "urn:trade-api-token-agent:schema:2.0.0",
+  "title": "Trade API Token Agent Strict Contract v2",
   "type": "object",
-  "required": ["version", "create", "patch", "responseEnvelope"],
+  "required": ["version", "responseEnvelope", "createPayload", "patchPayload", "readModel"],
   "properties": {
-    "version": { "type": "string", "const": "1.0.0" },
+    "version": { "type": "string", "const": "2.0.0" },
     "responseEnvelope": {
       "type": "object",
       "required": ["successField", "messageField", "dataField"],
@@ -16,32 +16,40 @@
       },
       "additionalProperties": false
     },
-    "create": {
+    "createPayload": { "$ref": "#/$defs/TradeCreate" },
+    "patchPayload": { "$ref": "#/$defs/TradePatch" },
+    "readModel": { "$ref": "#/$defs/TradeRead" }
+  },
+  "$defs": {
+    "TradeType": { "type": "string", "enum": ["模拟交易", "真实交易"] },
+    "TradeStatus": { "type": "string", "enum": ["已分析", "待入场", "已入场", "已离场", "提前离场"] },
+    "MarketStructure": { "type": "string", "enum": ["震荡", "趋势", "暂无法判断", "停止", "转换"] },
+    "EntryDirection": { "type": "string", "enum": ["多", "空"] },
+    "TradeResult": { "type": "string", "enum": ["盈利", "亏损", "保本"] },
+    "TradeGrade": { "type": "string", "enum": ["高", "中", "低"] },
+    "ExitType": { "type": "string", "enum": ["TP", "SL", "MANUAL", "TIME", "FORCED"] },
+    "ExitQualityTag": { "type": "string", "enum": ["TECHNICAL", "EMOTIONAL", "SYSTEM", "UNKNOWN"] },
+    "EntryPlan": { "type": "object", "properties": { "entryReason": { "type": "string" }, "entrySignal": { "type": "string" }, "exitSignal": { "type": "string" } }, "additionalProperties": false },
+    "TradeEditableCore": {
       "type": "object",
-      "required": ["tradeType", "status", "tradeSubject", "marketStructure", "marketStructureAnalysis", "entryPlanA"],
       "properties": {
-        "tradeType": { "type": "string", "enum": ["模拟交易", "真实交易"] },
-        "status": { "type": "string", "enum": ["已分析", "待入场", "已入场", "已离场", "提前离场"] },
+        "tradeType": { "$ref": "#/$defs/TradeType" },
+        "status": { "$ref": "#/$defs/TradeStatus" },
         "tradeSubject": { "type": "string" },
-        "marketStructure": { "type": "string", "enum": ["震荡", "趋势", "暂无法判断", "停止", "转换"] },
+        "marketStructure": { "$ref": "#/$defs/MarketStructure" },
         "marketStructureAnalysis": { "type": "string" },
-        "entryPlanA": {
-          "type": "object",
-          "properties": {
-            "entryReason": { "type": "string" },
-            "entrySignal": { "type": "string" },
-            "exitSignal": { "type": "string" }
-          },
-          "required": [],
-          "additionalProperties": false
-        }
+        "entryPlanA": { "$ref": "#/$defs/EntryPlan" }
       },
       "additionalProperties": true
     },
-    "patch": {
-      "type": "object",
-      "additionalProperties": true
-    }
+    "TradeCreate": {
+      "allOf": [
+        { "$ref": "#/$defs/TradeEditableCore" },
+        { "required": ["tradeType", "status", "tradeSubject", "marketStructure", "marketStructureAnalysis", "entryPlanA"] }
+      ]
+    },
+    "TradePatch": { "$ref": "#/$defs/TradeEditableCore" },
+    "TradeRead": { "type": "object", "required": ["transactionId"], "additionalProperties": true, "properties": { "transactionId": { "type": "string" } } }
   },
   "additionalProperties": false
 }
