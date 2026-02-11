@@ -186,6 +186,10 @@ export default function AdminUserManagementPage() {
   const [registrationError, setRegistrationError] = useState<string | null>(
     null,
   );
+  const [cleanupUserId, setCleanupUserId] = useState("");
+  const [cleanupDryRun, setCleanupDryRun] = useState(true);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<unknown>(null);
 
   const pageCacheRef = useRef<Record<number, UserRecord[]>>({});
   const nextTokenRef = useRef<Record<number, string | undefined>>({});
@@ -538,6 +542,43 @@ export default function AdminUserManagementPage() {
     return desc ? sorted.reverse() : sorted;
   }, [users, sorting]);
 
+  const handleCleanupOrphans = React.useCallback(async () => {
+    setCleanupLoading(true);
+    setCleanupResult(null);
+    try {
+      const res = await fetchWithAuth(
+        "/api/proxy-post",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          proxyParams: {
+            targetPath: "trade/admin/image-orphans/cleanup",
+            actualMethod: "POST",
+          },
+          actualBody: {
+            ...(cleanupUserId ? { userId: cleanupUserId } : {}),
+            dryRun: cleanupDryRun,
+            olderThanMinutes: 60,
+            objectScanLimit: 3000,
+            tradeScanLimit: 3000,
+            deleteLimit: 500,
+          },
+        },
+        router,
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(getErrorMessage(data, "孤儿图片清理失败"));
+      }
+      setCleanupResult(data);
+      success(cleanupDryRun ? "dryRun 扫描完成" : "清理执行完成");
+    } catch (err) {
+      errorAlert(isErrorWithMessage(err) ? err.message : "孤儿图片清理失败");
+    } finally {
+      setCleanupLoading(false);
+    }
+  }, [cleanupDryRun, cleanupUserId, errorAlert, router, success]);
+
   const columns = useMemo<ColumnDef<UserRecord>[]>(
     () => [
       {
@@ -786,6 +827,42 @@ export default function AdminUserManagementPage() {
                 </div>
                 <div className="text-sm text-[#9ca3af]">
                   当前显示 {users.length} 条用户信息
+                </div>
+                <div className="w-full rounded-md border border-[#27272a] bg-[#111111] p-3 space-y-3">
+                  <div className="text-sm font-medium text-[#e5e7eb]">图片孤儿清理（管理员）</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      value={cleanupUserId}
+                      onChange={(e) => setCleanupUserId(e.target.value)}
+                      placeholder="目标 userId（不填=当前管理员）"
+                      className="min-w-[280px] rounded-md border border-[#27272a] bg-black px-3 py-2 text-sm text-white outline-none"
+                    />
+                    <label className="flex items-center gap-2 text-sm text-[#9ca3af]">
+                      <input
+                        type="checkbox"
+                        checked={cleanupDryRun}
+                        onChange={(e) => setCleanupDryRun(e.target.checked)}
+                      />
+                      dryRun
+                    </label>
+                    <Button
+                      variant="outline"
+                      className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+                      onClick={handleCleanupOrphans}
+                      disabled={cleanupLoading}
+                    >
+                      {cleanupLoading
+                        ? "执行中..."
+                        : cleanupDryRun
+                          ? "扫描孤儿图片"
+                          : "执行删除"}
+                    </Button>
+                  </div>
+                  {cleanupResult ? (
+                    <pre className="max-h-56 overflow-auto rounded-md bg-black p-3 text-xs text-[#e5e7eb]">
+                      {JSON.stringify(cleanupResult, null, 2)}
+                    </pre>
+                  ) : null}
                 </div>
               </div>
             }
