@@ -1,24 +1,20 @@
 {
   "name": "trade-api-token-agent",
-  "version": "1.0.0",
-  "auth": {
-    "type": "bearer",
-    "header": "Authorization",
-    "format": "Bearer tc_<token>"
-  },
-  "baseUrl": "https://k6o6esmzl5.execute-api.ap-southeast-1.amazonaws.com/prod/",
-  "responseEnvelope": {
-    "successField": "success",
-    "messageField": "message",
-    "dataField": "data"
+  "version": "1.1.0",
+  "sourceOfTruth": "trade-backend/src/modules/trade/entities/trade.entity.ts",
+  "auth": { "type": "bearer", "header": "Authorization", "format": "Bearer tc_<token>" },
+  "responseEnvelope": { "successField": "success", "messageField": "message", "dataField": "data" },
+  "editableFields": {
+    "createRequired": ["tradeType", "status", "tradeSubject", "marketStructure", "marketStructureAnalysis", "entryPlanA"],
+    "createOptional": ["transactionId", "analysisTime", "analysisPeriod", "grade", "analysisExpired", "volumeProfileImages", "marketStructureAnalysisImages", "trendAnalysisImages", "poc", "val", "vah", "keyPriceLevels", "preEntrySummary", "expectedPathImages", "expectedPathImagesDetailed", "expectedPathAnalysis", "entryPlanB", "entryPlanC", "preEntrySummaryImportance", "checklist", "entryPrice", "entryTime", "entryDirection", "stopLoss", "takeProfit", "entryReason", "exitReason", "earlyExitReason", "mentalityNotes", "entryAnalysisImages", "entryAnalysisImagesDetailed", "exitPrice", "exitTime", "tradeResult", "followedPlan", "followedPlanId", "actualPathImages", "actualPathImagesDetailed", "actualPathAnalysis", "tradeTags", "remarks", "lessonsLearned", "lessonsLearnedImportance", "analysisImages", "analysisImagesDetailed", "riskModelVersion", "plannedRiskAmount", "plannedRiskPct", "maxFavorableExcursionR", "maxAdverseExcursionR", "exitType", "exitQualityTag", "exitReasonCode", "exitReasonNote", "rMetricsReady", "profitLossPercentage", "riskRewardRatio", "followedSystemStrictly"],
+    "serverControlled": ["userId", "createdAt", "updatedAt", "isShareable", "shareId", "tradeShortId", "plannedRiskPerUnit", "plannedRewardPerUnit", "plannedRR", "realizedR", "rEfficiency", "exitDeviationR"]
   },
   "endpoints": [
     { "id": "getTrade", "method": "GET", "path": "/trade/{transactionId}" },
     { "id": "listTrades", "method": "POST", "path": "/trade/list" },
+    { "id": "createTrade", "method": "POST", "path": "/trade" },
     { "id": "patchTrade", "method": "PATCH", "path": "/trade/{transactionId}" },
     { "id": "tradeImageUploadUrl", "method": "POST", "path": "/trade/image/upload-url" },
     { "id": "tradeImageResolve", "method": "POST", "path": "/trade/image/resolve" }
-  ],
-  "requiredPatchFields": ["remarks", "lessonsLearned", "tradeTags"],
-  "retry": { "statuses": [429, 500, 502, 503, 504], "backoffMs": [1000, 2000, 4000], "maxRetries": 2 }
+  ]
 }
