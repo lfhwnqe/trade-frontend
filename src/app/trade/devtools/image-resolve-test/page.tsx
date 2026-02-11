@@ -13,6 +13,14 @@ export default function ImageResolveTestPage() {
   const [result, setResult] = React.useState<unknown>(null);
   const [error, setError] = React.useState<string | null>(null);
 
+  // M2 upload-url test
+  const [apiToken, setApiToken] = React.useState("");
+  const [uploadTxId, setUploadTxId] = React.useState("");
+  const [withTxId, setWithTxId] = React.useState(true);
+  const [uploadLoading, setUploadLoading] = React.useState(false);
+  const [uploadResult, setUploadResult] = React.useState<unknown>(null);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+
   const runResolve = async () => {
     const refs = refsText
       .split("\n")
@@ -63,11 +71,79 @@ export default function ImageResolveTestPage() {
     }
   };
 
+  const runUploadUrlTest = async () => {
+    if (!apiToken.trim()) {
+      setUploadError("请先输入 API Token（tc_...）");
+      return;
+    }
+
+    setUploadLoading(true);
+    setUploadError(null);
+    setUploadResult(null);
+
+    try {
+      const payload: Record<string, unknown> = {
+        fileName: "test.png",
+        fileType: "image/png",
+        date: new Date().toISOString().slice(0, 10),
+        contentLength: 1024,
+        source: "trade",
+      };
+      if (withTxId && uploadTxId.trim()) {
+        payload.transactionId = uploadTxId.trim();
+      }
+
+      const res = await fetch("/api/proxy-post", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiToken.trim()}`,
+        },
+        body: JSON.stringify({
+          request: {
+            targetPath: "trade/image/upload-url",
+            actualMethod: "POST",
+          },
+          body: payload,
+        }),
+      });
+
+      const text = await res.text();
+      let json: unknown = null;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = text;
+      }
+
+      if (!res.ok) {
+        setUploadError(
+          typeof json === "string" ? json : JSON.stringify(json, null, 2),
+        );
+        return;
+      }
+
+      setUploadResult(json);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "请求失败");
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   return (
-    <TradePageShell title="图片解析接口测试" subtitle="M1 - /trade/image/resolve" showAddButton={false}>
+    <TradePageShell
+      title="图片接口测试"
+      subtitle="M1 resolve + M2 upload-url"
+      showAddButton={false}
+    >
       <div className="space-y-4">
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 space-y-3">
-          <label className="block text-sm text-[#9ca3af]">图片引用（每行一个，支持 legacy URL + private key）</label>
+          <div className="text-sm font-semibold text-white">M1：/trade/image/resolve</div>
+          <label className="block text-sm text-[#9ca3af]">
+            图片引用（每行一个，支持 legacy URL + private key）
+          </label>
           <textarea
             value={refsText}
             onChange={(e) => setRefsText(e.target.value)}
@@ -90,16 +166,69 @@ export default function ImageResolveTestPage() {
           >
             {loading ? "请求中..." : "调用 /trade/image/resolve"}
           </button>
+
+          {error ? (
+            <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200 whitespace-pre-wrap">
+              {error}
+            </div>
+          ) : null}
+
+          <pre className="max-h-[280px] overflow-auto rounded-md bg-black p-3 text-xs text-[#e5e7eb]">
+            {result ? JSON.stringify(result, null, 2) : "(暂无)"}
+          </pre>
         </div>
 
-        {error ? (
-          <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200 whitespace-pre-wrap">{error}</div>
-        ) : null}
+        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 space-y-3">
+          <div className="text-sm font-semibold text-white">M2：/trade/image/upload-url（API Token）</div>
+          <p className="text-xs text-[#9ca3af]">
+            最简单验证：输入 API Token，切换“传/不传 transactionId”，可测试必填与越权。
+          </p>
 
-        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
-          <div className="mb-2 text-sm text-[#9ca3af]">响应结果</div>
-          <pre className="max-h-[420px] overflow-auto rounded-md bg-black p-3 text-xs text-[#e5e7eb]">
-            {result ? JSON.stringify(result, null, 2) : "(暂无)"}
+          <label className="block text-sm text-[#9ca3af]">API Token（tc_...）</label>
+          <input
+            value={apiToken}
+            onChange={(e) => setApiToken(e.target.value)}
+            className="w-full rounded-md border border-[#27272a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#00c2b2]"
+            placeholder="tc_xxx"
+          />
+
+          <div className="flex items-center gap-2 text-sm">
+            <input
+              id="withTxId"
+              type="checkbox"
+              checked={withTxId}
+              onChange={(e) => setWithTxId(e.target.checked)}
+            />
+            <label htmlFor="withTxId" className="text-[#9ca3af]">
+              请求中携带 transactionId
+            </label>
+          </div>
+
+          <input
+            value={uploadTxId}
+            onChange={(e) => setUploadTxId(e.target.value)}
+            disabled={!withTxId}
+            className="w-full rounded-md border border-[#27272a] bg-black px-3 py-2 text-sm text-white outline-none focus:border-[#00c2b2] disabled:opacity-50"
+            placeholder="可输入自己的 transactionId 或别人 transactionId 测试越权"
+          />
+
+          <button
+            type="button"
+            onClick={runUploadUrlTest}
+            disabled={uploadLoading}
+            className="rounded-md bg-[#00c2b2] px-4 py-2 text-sm font-semibold text-black hover:bg-[#00a79a] disabled:opacity-60"
+          >
+            {uploadLoading ? "请求中..." : "调用 /trade/image/upload-url"}
+          </button>
+
+          {uploadError ? (
+            <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200 whitespace-pre-wrap">
+              {uploadError}
+            </div>
+          ) : null}
+
+          <pre className="max-h-[280px] overflow-auto rounded-md bg-black p-3 text-xs text-[#e5e7eb]">
+            {uploadResult ? JSON.stringify(uploadResult, null, 2) : "(暂无)"}
           </pre>
         </div>
       </div>
