@@ -184,6 +184,7 @@ export enum TradeResult {
  * CreateTradeDto 类型，对齐后端 CreateTradeDto （所有字段类型与必选/可选严格一致，见后端 dto 和 entity 注释）
  */
 export type CreateTradeDto = {
+  transactionId?: string;
   // ===== 交易类型 =====
   tradeType: string;
   // ===== 交易状态 =====
@@ -543,12 +544,13 @@ export async function getImageUploadUrl(params: {
   fileName: string;
   fileType: string;
   date: string;
-  transactionId: string;
+  transactionId?: string;
   contentLength?: number;
   source?: "trade" | string;
 }): Promise<{ uploadUrl: string; key: string }> {
+  const hasTransaction = !!params.transactionId;
   const proxyParams = {
-    targetPath: "trade/image/upload-url",
+    targetPath: hasTransaction ? "trade/image/upload-url" : "image/upload-url",
     actualMethod: "POST",
   };
   const actualBody = params;
