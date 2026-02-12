@@ -221,8 +221,8 @@ export default function TradeSummariesPage() {
   }, [keyword, postSummaries]);
 
   return (
-    <div className="dark min-h-screen bg-[#000] text-[#e5e7eb] antialiased flex">
-      <main className="flex-1 min-h-screen flex flex-col bg-[#000]">
+    <div className="dark h-screen overflow-hidden bg-[#000] text-[#e5e7eb] antialiased flex">
+      <main className="flex-1 h-screen flex flex-col bg-[#000] overflow-hidden">
         <header className="h-24 border-b border-[#27272a] flex items-center justify-between px-8 sticky top-0 z-30 bg-black/90 backdrop-blur">
           <div>
             <h1 className="text-3xl italic text-white tracking-wide">交易反思墙</h1>
@@ -233,7 +233,7 @@ export default function TradeSummariesPage() {
           </Button>
         </header>
 
-        <div className="p-8 bg-black max-w-6xl mx-auto w-full flex-1 min-h-0 flex flex-col gap-6">
+        <div className="p-8 bg-black max-w-6xl mx-auto w-full flex-1 min-h-0 overflow-hidden flex flex-col gap-6">
           <div className="w-full max-w-2xl">
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-[#666]" />
@@ -253,7 +253,7 @@ export default function TradeSummariesPage() {
             <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{postError}</div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0 overflow-hidden">
             <section className="min-h-0 flex flex-col bg-[#0a0a0a] border border-[#222] rounded-xl p-4">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-2 h-2 rounded-full bg-[#D4AF37]" />
