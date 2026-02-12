@@ -9,6 +9,7 @@ import Chart from "chart.js/auto";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
+  CircleHelp,
   PiggyBank,
   PieChart,
   Sigma,
@@ -595,6 +596,32 @@ export default function TradeHomePage() {
     return "text-red-300";
   };
 
+  const RMetricLabel = ({
+    label,
+    tip,
+  }: {
+    label: string;
+    tip: string;
+  }) => (
+    <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase text-[#9ca3af]">
+      <span>{label}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[#6b7280] hover:text-[#d1d5db]"
+            aria-label={`${label} 指标说明`}
+          >
+            <CircleHelp className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs text-xs leading-relaxed">
+          {tip}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+
   const buildRPrompts = (rStats: {
     expectancyR: number;
     avgPlannedRR: number;
@@ -810,25 +837,25 @@ export default function TradeHomePage() {
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">期望值 (R)</p>
+                  <RMetricLabel label="期望值 (R)" tip="最近30笔的平均实现R。>0 代表系统在当前样本上是正期望。" />
                   <p className="text-xl font-bold text-emerald-400">{loading ? "..." : formatR(stats.recent30RStats.expectancyR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均计划RR</p>
+                  <RMetricLabel label="平均计划RR" tip="开仓前计划的平均盈亏比（Reward/Risk）。反映策略设计目标。" />
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgPlannedRR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均实现R</p>
+                  <RMetricLabel label="平均实现R" tip="实际离场后兑现出来的平均R。用于对比计划与执行结果。" />
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgRealizedR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R效率</p>
+                  <RMetricLabel label="R效率" tip="平均实现R ÷ 平均计划RR。越接近1，说明越能按计划兑现利润。" />
                   <p className="text-xl font-bold text-white">
                     {loading ? "..." : `${(stats.recent30RStats.avgREfficiency * 100).toFixed(1)}%`}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">情绪泄露R</p>
+                  <RMetricLabel label="情绪泄露R" tip="当前定义：max(0, 技术性离场 realizedR总和 - 情绪性离场 realizedR总和)。用于估算情绪干预造成的R损耗，属启发式指标。" />
                   <p className={`text-xl font-bold ${stats.recent30RStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
                     {loading ? "..." : formatR(stats.recent30RStats.emotionalLeakageR)}
                   </p>
@@ -870,25 +897,25 @@ export default function TradeHomePage() {
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">期望值 (R)</p>
+                  <RMetricLabel label="期望值 (R)" tip="最近30笔的平均实现R。>0 代表系统在当前样本上是正期望。" />
                   <p className="text-xl font-bold text-emerald-400">{loading ? "..." : formatR(stats.recent30SimulationRStats.expectancyR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均计划RR</p>
+                  <RMetricLabel label="平均计划RR" tip="开仓前计划的平均盈亏比（Reward/Risk）。反映策略设计目标。" />
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgPlannedRR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均实现R</p>
+                  <RMetricLabel label="平均实现R" tip="实际离场后兑现出来的平均R。用于对比计划与执行结果。" />
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgRealizedR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R效率</p>
+                  <RMetricLabel label="R效率" tip="平均实现R ÷ 平均计划RR。越接近1，说明越能按计划兑现利润。" />
                   <p className="text-xl font-bold text-white">
                     {loading ? "..." : `${(stats.recent30SimulationRStats.avgREfficiency * 100).toFixed(1)}%`}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">情绪泄露R</p>
+                  <RMetricLabel label="情绪泄露R" tip="当前定义：max(0, 技术性离场 realizedR总和 - 情绪性离场 realizedR总和)。用于估算情绪干预造成的R损耗，属启发式指标。" />
                   <p className={`text-xl font-bold ${stats.recent30SimulationRStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
                     {loading ? "..." : formatR(stats.recent30SimulationRStats.emotionalLeakageR)}
                   </p>
