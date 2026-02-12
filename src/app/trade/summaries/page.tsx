@@ -1,15 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ClipboardCopy, RotateCcw, Search } from "lucide-react";
+import {
+  BarChart3,
+  ClipboardCopy,
+  LayoutDashboard,
+  ListOrdered,
+  RotateCcw,
+  Search,
+  Settings,
+  StickyNote,
+} from "lucide-react";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/components/common/alert";
-import { cn } from "@/lib/utils";
-import TradePageShell from "../components/trade-page-shell";
 import Link from "next/link";
+import { useAtomImmer } from "@/hooks/useAtomImmer";
+import { userAtom } from "@/store/user";
 
 const COPY_PROMPT_HEADER = [
   "这是我最近的交易复盘总结，请帮我：",
@@ -127,6 +136,7 @@ async function fetchSummaries(
 }
 
 export default function TradeSummariesPage() {
+  const [user] = useAtomImmer(userAtom);
   const [preSummaries, setPreSummaries] = useState<TradeSummary[]>([]);
   const [postSummaries, setPostSummaries] = useState<TradeSummary[]>([]);
   const [keyword, setKeyword] = useState("");
@@ -223,178 +233,135 @@ export default function TradeSummariesPage() {
   }, [keyword, postSummaries]);
 
   return (
-    <TradePageShell title="交易总结" showAddButton={false}>
-      <div className="flex h-full flex-1 flex-col gap-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="dark min-h-screen bg-[#000] text-[#e5e7eb] antialiased flex">
+      <aside className="hidden lg:flex fixed h-full w-64 flex-shrink-0 flex-col border-r border-[#27272a] bg-[#121212] z-20">
+        <div className="h-16 flex items-center px-6 border-b border-[#27272a]">
+          <span className="text-lg font-bold text-white flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-[#10b981]" /> Trading System
+          </span>
+        </div>
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1A1A1A] hover:text-white transition-colors" href="/trade/home"><LayoutDashboard className="h-4 w-4" />Dashboard</Link>
+          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1A1A1A] hover:text-white transition-colors" href="/trade/list"><ListOrdered className="h-4 w-4" />Transactions</Link>
+          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1A1A1A] hover:text-white transition-colors" href="/trade/home"><BarChart3 className="h-4 w-4" />Analysis</Link>
+          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md bg-[#10b981]/10 text-[#10b981]" href="/trade/summaries"><StickyNote className="h-4 w-4" />Reflection Wall</Link>
+          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1A1A1A] hover:text-white transition-colors" href="/trade/password"><Settings className="h-4 w-4" />Settings</Link>
+        </nav>
+        <div className="p-4 border-t border-[#27272a]">
+          <div className="flex items-center gap-3 w-full px-3 py-2 text-sm rounded-md text-[#9ca3af]">
+            <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center text-xs font-bold text-white border border-[#27272a]">
+              {(user.username || 'U').slice(0, 1).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user.username || 'User'}</p>
+              <p className="text-xs text-[#9ca3af] truncate">{user.role || 'Plan'}</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 lg:ml-64 min-h-screen flex flex-col bg-[#000]">
+        <header className="h-24 border-b border-[#27272a] flex items-center justify-between px-8 sticky top-0 z-30 bg-black/90 backdrop-blur">
           <div>
-            <p className="text-sm text-muted-foreground">
-              汇总交易前后总结，快速定位容易犯错的环节。
-            </p>
+            <h1 className="text-3xl italic text-white tracking-wide">Reflection Wall</h1>
+            <p className="text-xs text-[#9ca3af] mt-1 tracking-wide">Synthesize trade insights. Identify patterns. Refine edge.</p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadData}
-              disabled={loading}
-            >
-              <RotateCcw className="size-4" />
-              {loading ? "刷新中..." : "刷新"}
-            </Button>
-          </div>
-        </div>
+          <Button variant="outline" className="border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#1A1A1A]" onClick={loadData} disabled={loading}>
+            <RotateCcw className="size-4 mr-2" />{loading ? '刷新中...' : '刷新'}
+          </Button>
+        </header>
 
-        <div className="w-full sm:max-w-md">
-          <label className="text-sm font-medium text-muted-foreground">
-            快速筛选
-          </label>
-          <div className="relative mt-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="输入关键词快速查找反思"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-            />
+        <div className="p-8 space-y-10 overflow-y-auto bg-black max-w-6xl mx-auto w-full">
+          <div className="w-full max-w-2xl">
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-[#666]" />
+              <Input
+                className="pl-11 bg-[#0f0f0f] border-[#222] text-gray-200 placeholder:text-gray-600"
+                placeholder="Search summaries..."
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
-        {preError && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {preError}
-          </div>
-        )}
-        {postError && postError !== preError && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {postError}
-          </div>
-        )}
+          {preError && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{preError}</div>
+          )}
+          {postError && postError !== preError && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{postError}</div>
+          )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section className="flex flex-col gap-4 rounded-2xl border bg-background/40 p-4 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">交易前总结</h2>
-                <p className="text-xs text-muted-foreground">
-                  重点关注入场前的判断与逻辑。
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleCopyAll("pre")}
-                disabled={copying === "pre" || !preSummaries.length}
-              >
-                <ClipboardCopy className="size-4" />
-                {copying === "pre" ? "复制中..." : "复制全部"}
+          <section>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-2 h-2 rounded-full bg-[#D4AF37]" />
+              <h2 className="text-lg italic text-white tracking-wide">Pre-Trade Summaries</h2>
+              <div className="h-px bg-[#27272a] flex-1 ml-4 opacity-50" />
+              <Button variant="secondary" size="sm" onClick={() => handleCopyAll('pre')} disabled={copying === 'pre' || !preSummaries.length}>
+                <ClipboardCopy className="size-4 mr-2" />{copying === 'pre' ? '复制中...' : '复制全部'}
               </Button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-4">
               {loading ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={`pre-summary-skeleton-${index}`}
-                    className="rounded-xl border bg-background p-4 shadow-sm"
-                  >
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="mt-3 h-6 w-3/4" />
-                    <Skeleton className="mt-4 h-4 w-full" />
-                  </div>
+                Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="rounded-lg border border-[#222] bg-[#0f0f0f] p-5"><Skeleton className="h-4 w-24" /><Skeleton className="mt-3 h-4 w-full" /></div>
                 ))
               ) : filteredPreSummaries.length > 0 ? (
-                filteredPreSummaries.map((summary) => {
-                  const isImportant = (summary.importance ?? 0) >= 5;
-                  return (
-                    <Link href={`/trade/detail?id=${summary.transactionId}`} key={summary.transactionId}>
-                      <article
-                        key={summary.transactionId}
-                        className={cn(
-                          "cursor-pointer group flex flex-col rounded-xl border bg-[#121212] p-4 shadow-sm transition hover:-translate-y-0.5 ",
-                          isImportant && "border-[#00c2b2]/20 ",
-                        )}
-                      >
-                        <p className="text-xs font-medium text-muted-foreground">
-                          交易前总结
-                        </p>
-                        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
-                          {summary.text || "暂无总结"}
-                        </p>
-                      </article>
-                    </Link>
-                  );
-                })
+                filteredPreSummaries.map((summary) => (
+                  <Link href={`/trade/detail?id=${summary.transactionId}`} key={summary.transactionId}>
+                    <article className="bg-[#0f0f0f] border border-[#222] rounded-lg p-5 mb-4 hover:border-gray-700 transition-colors duration-200 relative">
+                      <div className="absolute left-0 top-4 bottom-4 w-[2px] bg-[#D4AF37]/40 rounded-r-sm" />
+                      <div className="pl-4">
+                        <div className="flex justify-between items-baseline mb-2">
+                          <span className="text-xs font-mono text-[#D4AF37] uppercase tracking-wider opacity-80">Pre-Trade</span>
+                          <span className="text-[10px] text-gray-600 font-mono">{summary.transactionId.slice(0, 8)}...</span>
+                        </div>
+                        <p className="text-sm text-gray-300 leading-relaxed font-light whitespace-pre-line">{summary.text || '暂无总结'}</p>
+                      </div>
+                    </article>
+                  </Link>
+                ))
               ) : (
-                <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
-                  {keyword
-                    ? "没有找到匹配的交易前总结，请调整筛选条件试试。"
-                    : "暂无交易前总结，稍后再试或点击上方刷新按钮。"}
-                </div>
+                <div className="rounded-xl border border-dashed border-[#333] bg-[#0f0f0f] p-6 text-center text-sm text-gray-500">{keyword ? '没有找到匹配的交易前总结。' : '暂无交易前总结。'}</div>
               )}
             </div>
           </section>
-          <section className="flex flex-col gap-4 rounded-2xl border bg-background/40 p-4 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">交易后总结</h2>
-                <p className="text-xs text-muted-foreground">
-                  聚焦交易执行与复盘复利。
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleCopyAll("post")}
-                disabled={copying === "post" || !postSummaries.length}
-              >
-                <ClipboardCopy className="size-4" />
-                {copying === "post" ? "复制中..." : "复制全部"}
+
+          <section>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-2 h-2 rounded-full bg-[#06b6d4]" />
+              <h2 className="text-lg italic text-white tracking-wide">Post-Trade Summaries</h2>
+              <div className="h-px bg-[#27272a] flex-1 ml-4 opacity-50" />
+              <Button variant="secondary" size="sm" onClick={() => handleCopyAll('post')} disabled={copying === 'post' || !postSummaries.length}>
+                <ClipboardCopy className="size-4 mr-2" />{copying === 'post' ? '复制中...' : '复制全部'}
               </Button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-4">
               {loading ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={`post-summary-skeleton-${index}`}
-                    className="rounded-xl border bg-background p-4 shadow-sm"
-                  >
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="mt-3 h-6 w-3/4" />
-                    <Skeleton className="mt-4 h-4 w-full" />
-                  </div>
+                Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="rounded-lg border border-[#222] bg-[#0f0f0f] p-5"><Skeleton className="h-4 w-24" /><Skeleton className="mt-3 h-4 w-full" /></div>
                 ))
               ) : filteredPostSummaries.length > 0 ? (
-                filteredPostSummaries.map((summary) => {
-                  const isImportant = (summary.importance ?? 0) >= 5;
-                  return (
-                    <Link href={`/trade/detail?id=${summary.transactionId}`} key={`filteredPostSummaries_${summary.transactionId}`}>
-                      <article
-                        key={summary.transactionId}
-                        className={cn(
-                          "group flex flex-col rounded-xl border bg-[#121212] p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 cursor-pointer",
-                          isImportant && "border-[#00c2b2]/20  ",
-                        )}
-                      >
-                        <p className="text-xs font-medium text-muted-foreground">
-                          交易后总结
-                        </p>
-                        <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">
-                          {summary.text || "暂无总结"}
-                        </p>
-                      </article>
-                    </Link>
-                  );
-                })
+                filteredPostSummaries.map((summary) => (
+                  <Link href={`/trade/detail?id=${summary.transactionId}`} key={`post_${summary.transactionId}`}>
+                    <article className="bg-[#0f0f0f] border border-[#222] rounded-lg p-5 mb-4 hover:border-gray-700 transition-colors duration-200 relative">
+                      <div className="absolute left-0 top-4 bottom-4 w-[2px] bg-[#06b6d4]/40 rounded-r-sm" />
+                      <div className="pl-4">
+                        <div className="flex justify-between items-baseline mb-2">
+                          <span className="text-xs font-mono text-[#06b6d4] uppercase tracking-wider opacity-80">Post-Trade</span>
+                          <span className="text-[10px] text-gray-600 font-mono">{summary.transactionId.slice(0, 8)}...</span>
+                        </div>
+                        <p className="text-sm text-gray-300 leading-relaxed font-light whitespace-pre-line">{summary.text || '暂无总结'}</p>
+                      </div>
+                    </article>
+                  </Link>
+                ))
               ) : (
-                <div className="col-span-full rounded-xl border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
-                  {keyword
-                    ? "没有找到匹配的交易后总结，请调整筛选条件试试。"
-                    : "暂无交易后总结，稍后再试或点击上方刷新按钮。"}
-                </div>
+                <div className="rounded-xl border border-dashed border-[#333] bg-[#0f0f0f] p-6 text-center text-sm text-gray-500">{keyword ? '没有找到匹配的交易后总结。' : '暂无交易后总结。'}</div>
               )}
             </div>
           </section>
         </div>
-      </div>
-    </TradePageShell>
+      </main>
+    </div>
   );
 }
