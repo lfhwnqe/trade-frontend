@@ -1,24 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  BarChart3,
-  ClipboardCopy,
-  LayoutDashboard,
-  ListOrdered,
-  RotateCcw,
-  Search,
-  Settings,
-  StickyNote,
-} from "lucide-react";
+import { ClipboardCopy, RotateCcw, Search } from "lucide-react";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/components/common/alert";
 import Link from "next/link";
-import { useAtomImmer } from "@/hooks/useAtomImmer";
-import { userAtom } from "@/store/user";
 
 const COPY_PROMPT_HEADER = [
   "这是我最近的交易复盘总结，请帮我：",
@@ -136,7 +125,6 @@ async function fetchSummaries(
 }
 
 export default function TradeSummariesPage() {
-  const [user] = useAtomImmer(userAtom);
   const [preSummaries, setPreSummaries] = useState<TradeSummary[]>([]);
   const [postSummaries, setPostSummaries] = useState<TradeSummary[]>([]);
   const [keyword, setKeyword] = useState("");
@@ -234,33 +222,7 @@ export default function TradeSummariesPage() {
 
   return (
     <div className="dark min-h-screen bg-[#000] text-[#e5e7eb] antialiased flex">
-      <aside className="hidden lg:flex fixed h-full w-64 flex-shrink-0 flex-col border-r border-[#27272a] bg-[#121212] z-20">
-        <div className="h-16 flex items-center px-6 border-b border-[#27272a]">
-          <span className="text-lg font-bold text-white flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-[#10b981]" /> Trading System
-          </span>
-        </div>
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1A1A1A] hover:text-white transition-colors" href="/trade/home"><LayoutDashboard className="h-4 w-4" />Dashboard</Link>
-          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1A1A1A] hover:text-white transition-colors" href="/trade/list"><ListOrdered className="h-4 w-4" />Transactions</Link>
-          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1A1A1A] hover:text-white transition-colors" href="/trade/home"><BarChart3 className="h-4 w-4" />Analysis</Link>
-          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md bg-[#10b981]/10 text-[#10b981]" href="/trade/summaries"><StickyNote className="h-4 w-4" />Reflection Wall</Link>
-          <Link className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1A1A1A] hover:text-white transition-colors" href="/trade/password"><Settings className="h-4 w-4" />Settings</Link>
-        </nav>
-        <div className="p-4 border-t border-[#27272a]">
-          <div className="flex items-center gap-3 w-full px-3 py-2 text-sm rounded-md text-[#9ca3af]">
-            <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center text-xs font-bold text-white border border-[#27272a]">
-              {(user.username || 'U').slice(0, 1).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user.username || 'User'}</p>
-              <p className="text-xs text-[#9ca3af] truncate">{user.role || 'Plan'}</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <main className="flex-1 lg:ml-64 min-h-screen flex flex-col bg-[#000]">
+      <main className="flex-1 min-h-screen flex flex-col bg-[#000]">
         <header className="h-24 border-b border-[#27272a] flex items-center justify-between px-8 sticky top-0 z-30 bg-black/90 backdrop-blur">
           <div>
             <h1 className="text-3xl italic text-white tracking-wide">Reflection Wall</h1>
