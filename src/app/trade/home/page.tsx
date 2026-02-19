@@ -222,6 +222,7 @@ export default function TradeHomePage() {
   const [featuredError, setFeaturedError] = React.useState<string | null>(null);
   const [winRateTooltip, setWinRateTooltip] =
     React.useState<WinRateTooltipState | null>(null);
+  const [showRGlossary, setShowRGlossary] = React.useState(false);
   const winRateContainerRef = React.useRef<HTMLDivElement | null>(null);
   const chartRef = React.useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = React.useRef<Chart | null>(null);
@@ -647,13 +648,23 @@ export default function TradeHomePage() {
     };
   }) => {
     const prompts: Array<{ kind: "good" | "warn" | "bad"; text: string }> = [];
+    const sampleCount =
+      rStats.qualityDistribution.TECHNICAL +
+      rStats.qualityDistribution.EMOTIONAL +
+      rStats.qualityDistribution.SYSTEM +
+      rStats.qualityDistribution.UNKNOWN;
+
+    if (sampleCount === 0) {
+      prompts.push({ kind: "warn", text: "暂无可计算样本，先完成离场并标注标签后再看趋势。" });
+      return prompts;
+    }
 
     if (rStats.expectancyR >= 0.5) {
-      prompts.push({ kind: "good", text: `Expectancy ${formatR(rStats.expectancyR)}R，系统当前有正期望。` });
+      prompts.push({ kind: "good", text: `期望值 ${formatR(rStats.expectancyR)}R，系统当前有正期望。` });
     } else if (rStats.expectancyR >= 0) {
-      prompts.push({ kind: "warn", text: `Expectancy ${formatR(rStats.expectancyR)}R，边际偏弱，优先优化低质量离场。` });
+      prompts.push({ kind: "warn", text: `期望值 ${formatR(rStats.expectancyR)}R，边际偏弱，优先优化低质量离场。` });
     } else {
-      prompts.push({ kind: "bad", text: `Expectancy ${formatR(rStats.expectancyR)}R，当前是负期望，建议先降频并复盘样本。` });
+      prompts.push({ kind: "bad", text: `期望值 ${formatR(rStats.expectancyR)}R，当前是负期望，建议先降频并复盘样本。` });
     }
 
     if (rStats.avgREfficiency >= 0.7) {
@@ -833,10 +844,26 @@ export default function TradeHomePage() {
                 </span>
               </h2>
             </div>
-            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9ca3af]">
-              期望值 / RR / 兑现率 / 情绪泄露
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRGlossary((v) => !v)}
+                className="rounded border border-[#2a2a2a] px-2 py-1 text-[10px] text-[#cbd5e1] hover:bg-white/5"
+              >
+                {showRGlossary ? "收起口径说明" : "查看口径说明"}
+              </button>
+              <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9ca3af]">
+                期望值 / RR / 兑现率 / 情绪泄露
+              </div>
             </div>
           </div>
+
+          {showRGlossary && (
+            <div className="border-b border-[#27272a] bg-black/20 px-6 py-4 text-xs text-[#9ca3af]">
+              <p>样本范围：最近30笔，口径为状态 ∈ [已离场, 提前离场]。</p>
+              <p className="mt-1">计划兑现率 = 平均实现R ÷ 平均计划RR；情绪泄露R为启发式估算，并配合样本数与置信度解读。</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2">
             <div className="space-y-6 border-b border-[#27272a] p-6 lg:border-b-0 lg:border-r">
