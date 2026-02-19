@@ -165,6 +165,18 @@ export default function TradeHomePage() {
         UNKNOWN: number;
       };
     };
+    recent30DisciplineStats: {
+      avgScore: number;
+      previousAvgScore: number;
+      delta: number;
+      level: "excellent" | "fair" | "needs_improvement";
+    };
+    recent30SimulationDisciplineStats: {
+      avgScore: number;
+      previousAvgScore: number;
+      delta: number;
+      level: "excellent" | "fair" | "needs_improvement";
+    };
   }>({
     thisMonthTradeCount: 0,
     lastMonthTradeCount: 0,
@@ -197,6 +209,18 @@ export default function TradeHomePage() {
       emotionalLeakageR: 0,
       emotionalLeakageConfidence: "low",
       qualityDistribution: { TECHNICAL: 0, EMOTIONAL: 0, SYSTEM: 0, UNKNOWN: 0 },
+    },
+    recent30DisciplineStats: {
+      avgScore: 0,
+      previousAvgScore: 0,
+      delta: 0,
+      level: "needs_improvement",
+    },
+    recent30SimulationDisciplineStats: {
+      avgScore: 0,
+      previousAvgScore: 0,
+      delta: 0,
+      level: "needs_improvement",
     },
   });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
@@ -237,6 +261,27 @@ export default function TradeHomePage() {
           const parsed = Number(value);
           return Number.isFinite(parsed) ? parsed : 0;
         };
+        const normalizeDisciplineStats = (raw: unknown) => {
+          const input = (raw ?? {}) as {
+            avgScore?: unknown;
+            previousAvgScore?: unknown;
+            delta?: unknown;
+            level?: unknown;
+          };
+
+          return {
+            avgScore: normalizeNumber(input.avgScore),
+            previousAvgScore: normalizeNumber(input.previousAvgScore),
+            delta: normalizeNumber(input.delta),
+            level:
+              input.level === "excellent" ||
+              input.level === "fair" ||
+              input.level === "needs_improvement"
+                ? input.level
+                : "needs_improvement",
+          };
+        };
+
         const normalizeRStats = (raw: unknown) => {
           const input = (raw ?? {}) as {
             expectancyR?: unknown;
@@ -307,6 +352,12 @@ export default function TradeHomePage() {
           ),
           recent30RStats: normalizeRStats(data.recent30RStats),
           recent30SimulationRStats: normalizeRStats(data.recent30SimulationRStats),
+          recent30DisciplineStats: normalizeDisciplineStats(
+            data.recent30DisciplineStats,
+          ),
+          recent30SimulationDisciplineStats: normalizeDisciplineStats(
+            data.recent30SimulationDisciplineStats,
+          ),
         });
         setFeaturedSummaries(
           parseFeaturedSummaries(data.summaryHighlights).slice(0, 3),
@@ -707,6 +758,8 @@ export default function TradeHomePage() {
     stats.recent30SimulationWinRate,
     stats.previous30SimulationWinRate,
   );
+  const formatScoreDelta = (value: number) =>
+    `${value > 0 ? "+" : ""}${value.toFixed(1)}分`;
 
   return (
     <TradePageShell title="主页">
@@ -828,6 +881,39 @@ export default function TradeHomePage() {
               </span>
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">最近 30 笔模拟交易</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-[#9ca3af]">纪律评分（真实）</h3>
+              <div className="p-2 bg-emerald-500/10 rounded-lg">
+                <Sigma className="h-4 w-4 text-emerald-400" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white">{loading ? "..." : stats.recent30DisciplineStats.avgScore.toFixed(1)}</span>
+              <span className={`text-sm font-medium ${stats.recent30DisciplineStats.delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {loading ? "..." : formatScoreDelta(stats.recent30DisciplineStats.delta)}
+              </span>
+            </div>
+            <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔</p>
+          </div>
+          <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-[#9ca3af]">纪律评分（模拟）</h3>
+              <div className="p-2 bg-yellow-500/10 rounded-lg">
+                <Sigma className="h-4 w-4 text-yellow-400" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white">{loading ? "..." : stats.recent30SimulationDisciplineStats.avgScore.toFixed(1)}</span>
+              <span className={`text-sm font-medium ${stats.recent30SimulationDisciplineStats.delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {loading ? "..." : formatScoreDelta(stats.recent30SimulationDisciplineStats.delta)}
+              </span>
+            </div>
+            <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔</p>
           </div>
         </div>
 
