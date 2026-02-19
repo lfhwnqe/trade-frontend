@@ -9,7 +9,8 @@ const toc = [
   { title: "如何生成 Token", href: "#create", level: 2 as const },
   { title: "如何携带 Token 调用 API", href: "#auth", level: 2 as const },
   { title: "权限范围与限制", href: "#scope", level: 2 as const },
-  { title: "常用接口（示例）", href: "#endpoints", level: 2 as const },
+  { title: "最小可执行闭环（交易详情→图片解析→下载）", href: "#endpoints", level: 2 as const },
+  { title: "常见错误与排查", href: "#errors", level: 2 as const },
   { title: "对应 Skill", href: "#skill", level: 2 as const },
 ] as const;
 
@@ -94,34 +95,73 @@ export default function ApiTokenDocPage() {
       </section>
 
       <section id="endpoints">
-        <h2>常用接口（示例）</h2>
-
-        <h3>创建交易</h3>
+        <h2>最小可执行闭环（交易详情→图片解析→下载）</h2>
         <p>
-          <code>POST /trade</code>
-        </p>
-        <CodeBlock>{`curl -X POST "https://<YOUR_API_BASE>/trade" \\\n  -H "Authorization: Bearer tc_xxx" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "symbol": "BTCUSDT",\n    "positionType": "Long",\n    "status": "Closed",\n    "profitLoss": 120.5,\n    "profitLossPercentage": 0.012\n  }'`}</CodeBlock>
-
-        <h3>更新交易</h3>
-        <p>
-          <code>PATCH /trade/:transactionId</code>
-        </p>
-        <CodeBlock>{`curl -X PATCH "https://<YOUR_API_BASE>/trade/<transactionId>" \\\n  -H "Authorization: Bearer tc_xxx" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "summary": "按计划执行，止损设置合理。"\n  }'`}</CodeBlock>
-
-        <h3>获取 dashboard</h3>
-        <p>
-          <code>GET /trade/dashboard</code>
+          推荐先按下面 3 步跑通，再接入你自己的 agent / 脚本。
         </p>
 
-        <h3>获取图片上传 URL（给 Token 用的 trade-scoped 入口）</h3>
-        <p>
-          <code>POST /trade/image/upload-url</code>
+        <h3>Step 1：获取交易详情（拿到图片 refs）</h3>
+        <CodeBlock>{`curl -X GET "https://<YOUR_API_BASE>/trade/<transactionId>" \
+  -H "Authorization: Bearer tc_xxx"`}</CodeBlock>
+        <p className="text-xs text-gray-400 mt-2">
+          从返回 data 里收集图片字段中的 key/ref（如
+          <code>marketStructureAnalysisImages[*].key</code>）。
         </p>
-        <CodeBlock>{`curl -X POST "https://<YOUR_API_BASE>/trade/image/upload-url" \\\n  -H "Authorization: Bearer tc_xxx" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "contentType": "image/png",\n    "ext": "png"\n  }'`}</CodeBlock>
-        <p className="text-xs text-gray-400">
-          说明：为了不开放 <code>/image/*</code> 给 API Token，上传 URL 走 trade
-          作用域接口。
+
+        <h3>Step 2：解析图片引用为短时下载 URL</h3>
+        <CodeBlock>{`curl -X POST "https://<YOUR_API_BASE>/trade/image/resolve" \
+  -H "Authorization: Bearer tc_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transactionId": "<transactionId>",
+    "refs": [
+      "uploads/<userId>/<transactionId>/2026-02-19/xxx.png"
+    ]
+  }'`}</CodeBlock>
+        <p className="text-xs text-gray-400 mt-2">
+          返回 <code>items[].url</code> 为短时签名 URL（默认约 300s）。
         </p>
+
+        <h3>Step 3：下载图片</h3>
+        <CodeBlock>{`curl -L "<signedUrlFromResolve>" -o trade-image.png`}</CodeBlock>
+
+        <h3>可选：获取交易域上传 URL（API Token 可用）</h3>
+        <CodeBlock>{`curl -X POST "https://<YOUR_API_BASE>/trade/image/upload-url" \
+  -H "Authorization: Bearer tc_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transactionId": "<transactionId>",
+    "fileName": "chart.png",
+    "fileType": "image/png",
+    "date": "2026-02-19",
+    "contentLength": 245678,
+    "source": "trade"
+  }'`}</CodeBlock>
+        <p className="text-xs text-gray-400 mt-2">
+          注意：API Token 不开放 <code>/image/*</code>，请使用
+          <code>/trade/image/*</code>。
+        </p>
+      </section>
+
+      <section id="errors">
+        <h2>常见错误与排查</h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            <code>401 Unauthorized</code>：Token 无效/过期。确认是否使用
+            <code>tc_</code> 前缀且请求头正确。
+          </li>
+          <li>
+            <code>403 Forbidden</code>：越权访问（例如访问非 <code>/trade/*</code>
+            或解析非本人图片 key）。
+          </li>
+          <li>
+            <code>429 Too Many Requests</code>：触发限流或配额（每日次数/字节、分钟签发速率）。
+          </li>
+          <li>
+            <code>400 Bad Request</code>：参数不完整（最常见是 upload-url 缺
+            <code>transactionId</code> 或字段类型不合法）。
+          </li>
+        </ul>
       </section>
 
       <section id="skill">
