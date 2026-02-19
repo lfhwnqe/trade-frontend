@@ -172,6 +172,11 @@ export default function TradeHomePage() {
       level: "excellent" | "fair" | "needs_improvement";
       sampleCount: number;
       scoreVersion: string;
+      breakdown: {
+        notFollowedPlan: number;
+        emotionalExit: number;
+        missingReviewNotes: number;
+      };
     };
     recent30SimulationDisciplineStats: {
       avgScore: number;
@@ -180,6 +185,11 @@ export default function TradeHomePage() {
       level: "excellent" | "fair" | "needs_improvement";
       sampleCount: number;
       scoreVersion: string;
+      breakdown: {
+        notFollowedPlan: number;
+        emotionalExit: number;
+        missingReviewNotes: number;
+      };
     };
   }>({
     thisMonthTradeCount: 0,
@@ -221,6 +231,7 @@ export default function TradeHomePage() {
       level: "needs_improvement",
       sampleCount: 0,
       scoreVersion: "v1",
+      breakdown: { notFollowedPlan: 0, emotionalExit: 0, missingReviewNotes: 0 },
     },
     recent30SimulationDisciplineStats: {
       avgScore: 0,
@@ -229,6 +240,7 @@ export default function TradeHomePage() {
       level: "needs_improvement",
       sampleCount: 0,
       scoreVersion: "v1",
+      breakdown: { notFollowedPlan: 0, emotionalExit: 0, missingReviewNotes: 0 },
     },
   });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
@@ -277,6 +289,11 @@ export default function TradeHomePage() {
             level?: unknown;
             sampleCount?: unknown;
             scoreVersion?: unknown;
+            breakdown?: {
+              notFollowedPlan?: unknown;
+              emotionalExit?: unknown;
+              missingReviewNotes?: unknown;
+            };
           };
 
           return {
@@ -294,6 +311,11 @@ export default function TradeHomePage() {
               typeof input.scoreVersion === "string" && input.scoreVersion
                 ? input.scoreVersion
                 : "v1",
+            breakdown: {
+              notFollowedPlan: normalizeNumber(input.breakdown?.notFollowedPlan),
+              emotionalExit: normalizeNumber(input.breakdown?.emotionalExit),
+              missingReviewNotes: normalizeNumber(input.breakdown?.missingReviewNotes),
+            },
           };
         };
 
@@ -937,6 +959,9 @@ export default function TradeHomePage() {
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔（规则 {stats.recent30DisciplineStats.scoreVersion}）</p>
             <p className="mt-2 text-xs text-[#9ca3af]">{disciplineSuggestion(stats.recent30DisciplineStats.level)}</p>
+            <p className="mt-1 text-[11px] text-[#6b7280]">
+              偏差分解：偏离计划 {stats.recent30DisciplineStats.breakdown.notFollowedPlan} / 情绪离场 {stats.recent30DisciplineStats.breakdown.emotionalExit} / 复盘缺失 {stats.recent30DisciplineStats.breakdown.missingReviewNotes}
+            </p>
           </div>
           <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-3">
@@ -959,6 +984,9 @@ export default function TradeHomePage() {
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔（规则 {stats.recent30SimulationDisciplineStats.scoreVersion}）</p>
             <p className="mt-2 text-xs text-[#9ca3af]">{disciplineSuggestion(stats.recent30SimulationDisciplineStats.level)}</p>
+            <p className="mt-1 text-[11px] text-[#6b7280]">
+              偏差分解：偏离计划 {stats.recent30SimulationDisciplineStats.breakdown.notFollowedPlan} / 情绪离场 {stats.recent30SimulationDisciplineStats.breakdown.emotionalExit} / 复盘缺失 {stats.recent30SimulationDisciplineStats.breakdown.missingReviewNotes}
+            </p>
           </div>
         </div>
 
