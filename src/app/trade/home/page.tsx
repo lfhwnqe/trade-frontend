@@ -783,6 +783,14 @@ export default function TradeHomePage() {
       : level === "fair"
         ? "text-yellow-300 bg-yellow-500/10"
         : "text-red-300 bg-red-500/10";
+  const disciplineSuggestion = (
+    level: "excellent" | "fair" | "needs_improvement",
+  ) =>
+    level === "excellent"
+      ? "建议：保持当前执行节奏，重点扩大高质量样本。"
+      : level === "fair"
+        ? "建议：优先减少提前离场与计划偏离，提升兑现率。"
+        : "建议：先收缩频率，严格执行止损与复盘记录。";
 
   return (
     <TradePageShell title="主页">
@@ -928,6 +936,7 @@ export default function TradeHomePage() {
               <span className="text-xs text-[#9ca3af]">样本 {stats.recent30DisciplineStats.sampleCount} 笔</span>
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔（规则 {stats.recent30DisciplineStats.scoreVersion}）</p>
+            <p className="mt-2 text-xs text-[#9ca3af]">{disciplineSuggestion(stats.recent30DisciplineStats.level)}</p>
           </div>
           <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-3">
@@ -949,6 +958,7 @@ export default function TradeHomePage() {
               <span className="text-xs text-[#9ca3af]">样本 {stats.recent30SimulationDisciplineStats.sampleCount} 笔</span>
             </div>
             <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔（规则 {stats.recent30SimulationDisciplineStats.scoreVersion}）</p>
+            <p className="mt-2 text-xs text-[#9ca3af]">{disciplineSuggestion(stats.recent30SimulationDisciplineStats.level)}</p>
           </div>
         </div>
 
