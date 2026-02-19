@@ -170,12 +170,16 @@ export default function TradeHomePage() {
       previousAvgScore: number;
       delta: number;
       level: "excellent" | "fair" | "needs_improvement";
+      sampleCount: number;
+      scoreVersion: string;
     };
     recent30SimulationDisciplineStats: {
       avgScore: number;
       previousAvgScore: number;
       delta: number;
       level: "excellent" | "fair" | "needs_improvement";
+      sampleCount: number;
+      scoreVersion: string;
     };
   }>({
     thisMonthTradeCount: 0,
@@ -215,12 +219,16 @@ export default function TradeHomePage() {
       previousAvgScore: 0,
       delta: 0,
       level: "needs_improvement",
+      sampleCount: 0,
+      scoreVersion: "v1",
     },
     recent30SimulationDisciplineStats: {
       avgScore: 0,
       previousAvgScore: 0,
       delta: 0,
       level: "needs_improvement",
+      sampleCount: 0,
+      scoreVersion: "v1",
     },
   });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
@@ -267,6 +275,8 @@ export default function TradeHomePage() {
             previousAvgScore?: unknown;
             delta?: unknown;
             level?: unknown;
+            sampleCount?: unknown;
+            scoreVersion?: unknown;
           };
 
           return {
@@ -279,6 +289,11 @@ export default function TradeHomePage() {
               input.level === "needs_improvement"
                 ? input.level
                 : "needs_improvement",
+            sampleCount: normalizeNumber(input.sampleCount),
+            scoreVersion:
+              typeof input.scoreVersion === "string" && input.scoreVersion
+                ? input.scoreVersion
+                : "v1",
           };
         };
 
@@ -760,6 +775,14 @@ export default function TradeHomePage() {
   );
   const formatScoreDelta = (value: number) =>
     `${value > 0 ? "+" : ""}${value.toFixed(1)}分`;
+  const disciplineLevelLabel = (level: "excellent" | "fair" | "needs_improvement") =>
+    level === "excellent" ? "优秀" : level === "fair" ? "一般" : "待改进";
+  const disciplineLevelClass = (level: "excellent" | "fair" | "needs_improvement") =>
+    level === "excellent"
+      ? "text-emerald-300 bg-emerald-500/10"
+      : level === "fair"
+        ? "text-yellow-300 bg-yellow-500/10"
+        : "text-red-300 bg-red-500/10";
 
   return (
     <TradePageShell title="主页">
@@ -898,7 +921,13 @@ export default function TradeHomePage() {
                 {loading ? "..." : formatScoreDelta(stats.recent30DisciplineStats.delta)}
               </span>
             </div>
-            <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className={`rounded px-2 py-0.5 text-[10px] ${disciplineLevelClass(stats.recent30DisciplineStats.level)}`}>
+                {disciplineLevelLabel(stats.recent30DisciplineStats.level)}
+              </span>
+              <span className="text-xs text-[#9ca3af]">样本 {stats.recent30DisciplineStats.sampleCount} 笔</span>
+            </div>
+            <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔（规则 {stats.recent30DisciplineStats.scoreVersion}）</p>
           </div>
           <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
             <div className="flex items-center justify-between mb-3">
@@ -913,7 +942,13 @@ export default function TradeHomePage() {
                 {loading ? "..." : formatScoreDelta(stats.recent30SimulationDisciplineStats.delta)}
               </span>
             </div>
-            <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className={`rounded px-2 py-0.5 text-[10px] ${disciplineLevelClass(stats.recent30SimulationDisciplineStats.level)}`}>
+                {disciplineLevelLabel(stats.recent30SimulationDisciplineStats.level)}
+              </span>
+              <span className="text-xs text-[#9ca3af]">样本 {stats.recent30SimulationDisciplineStats.sampleCount} 笔</span>
+            </div>
+            <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔（规则 {stats.recent30SimulationDisciplineStats.scoreVersion}）</p>
           </div>
         </div>
 
