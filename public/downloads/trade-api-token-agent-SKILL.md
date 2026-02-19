@@ -106,6 +106,42 @@ curl -X POST "https://<YOUR_API_BASE>/trade/image/resolve"   -H "Authorization: 
 curl -L "<signedUrlFromResolve>" -o trade-image.png
 ```
 
+
+
+### JavaScript (fetch) snippet
+
+```js
+const apiBase = "https://<YOUR_API_BASE>";
+const token = "tc_xxx";
+const transactionId = "<transactionId>";
+
+const tradeRes = await fetch(`${apiBase}/trade/${transactionId}`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+const tradeJson = await tradeRes.json();
+
+const refs = (tradeJson?.data?.marketStructureAnalysisImages || [])
+  .map((x) => x?.key)
+  .filter(Boolean);
+
+const resolveRes = await fetch(`${apiBase}/trade/image/resolve`, {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ transactionId, refs }),
+});
+const resolveJson = await resolveRes.json();
+
+const firstUrl = resolveJson?.data?.items?.[0]?.url || resolveJson?.items?.[0]?.url;
+if (!firstUrl) throw new Error("no downloadable image url");
+
+const fileRes = await fetch(firstUrl);
+const blob = await fileRes.blob();
+console.log("downloaded bytes:", blob.size);
+```
+
 ### Common errors
 
 - `401`：token 无效/过期

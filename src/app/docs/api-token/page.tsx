@@ -125,6 +125,43 @@ export default function ApiTokenDocPage() {
         <h3>Step 3：下载图片</h3>
         <CodeBlock>{`curl -L "<signedUrlFromResolve>" -o trade-image.png`}</CodeBlock>
 
+
+
+        <h3>JavaScript（fetch）版本</h3>
+        <CodeBlock>{`const apiBase = "https://<YOUR_API_BASE>";
+const token = "tc_xxx";
+const transactionId = "<transactionId>";
+
+// 1) 读取交易详情
+const tradeRes = await fetch(apiBase + "/trade/" + transactionId, {
+  headers: { Authorization: "Bearer " + token },
+});
+const tradeJson = await tradeRes.json();
+
+const refs = (tradeJson?.data?.marketStructureAnalysisImages || [])
+  .map((x) => x?.key)
+  .filter(Boolean);
+
+// 2) 解析 refs -> 短时 URL
+const resolveRes = await fetch(apiBase + "/trade/image/resolve", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer " + token,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ transactionId, refs }),
+});
+const resolveJson = await resolveRes.json();
+
+// 3) 下载第一张图
+const firstUrl = resolveJson?.data?.items?.[0]?.url || resolveJson?.items?.[0]?.url;
+if (!firstUrl) throw new Error("no downloadable image url");
+
+const fileRes = await fetch(firstUrl);
+const blob = await fileRes.blob();
+console.log("downloaded bytes:", blob.size);
+`}</CodeBlock>
+
         <h3>可选：获取交易域上传 URL（API Token 可用）</h3>
         <CodeBlock>{`curl -X POST "https://<YOUR_API_BASE>/trade/image/upload-url" \
   -H "Authorization: Bearer tc_xxx" \
