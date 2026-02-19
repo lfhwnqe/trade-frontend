@@ -143,6 +143,7 @@ export default function TradeHomePage() {
       avgRealizedR: number;
       avgREfficiency: number;
       emotionalLeakageR: number;
+      emotionalLeakageConfidence: "low" | "medium" | "high";
       qualityDistribution: {
         TECHNICAL: number;
         EMOTIONAL: number;
@@ -156,6 +157,7 @@ export default function TradeHomePage() {
       avgRealizedR: number;
       avgREfficiency: number;
       emotionalLeakageR: number;
+      emotionalLeakageConfidence: "low" | "medium" | "high";
       qualityDistribution: {
         TECHNICAL: number;
         EMOTIONAL: number;
@@ -184,6 +186,7 @@ export default function TradeHomePage() {
       avgRealizedR: 0,
       avgREfficiency: 0,
       emotionalLeakageR: 0,
+      emotionalLeakageConfidence: "low",
       qualityDistribution: { TECHNICAL: 0, EMOTIONAL: 0, SYSTEM: 0, UNKNOWN: 0 },
     },
     recent30SimulationRStats: {
@@ -192,6 +195,7 @@ export default function TradeHomePage() {
       avgRealizedR: 0,
       avgREfficiency: 0,
       emotionalLeakageR: 0,
+      emotionalLeakageConfidence: "low",
       qualityDistribution: { TECHNICAL: 0, EMOTIONAL: 0, SYSTEM: 0, UNKNOWN: 0 },
     },
   });
@@ -239,6 +243,7 @@ export default function TradeHomePage() {
             avgRealizedR?: unknown;
             avgREfficiency?: unknown;
             emotionalLeakageR?: unknown;
+            emotionalLeakageConfidence?: unknown;
             qualityDistribution?: {
               TECHNICAL?: unknown;
               EMOTIONAL?: unknown;
@@ -253,6 +258,12 @@ export default function TradeHomePage() {
             avgRealizedR: normalizeNumber(input.avgRealizedR),
             avgREfficiency: normalizeNumber(input.avgREfficiency),
             emotionalLeakageR: normalizeNumber(input.emotionalLeakageR),
+            emotionalLeakageConfidence:
+              input.emotionalLeakageConfidence === "high" ||
+              input.emotionalLeakageConfidence === "medium" ||
+              input.emotionalLeakageConfidence === "low"
+                ? input.emotionalLeakageConfidence
+                : "low",
             qualityDistribution: {
               TECHNICAL: normalizeNumber(input.qualityDistribution?.TECHNICAL),
               EMOTIONAL: normalizeNumber(input.qualityDistribution?.EMOTIONAL),
@@ -646,11 +657,11 @@ export default function TradeHomePage() {
     }
 
     if (rStats.avgREfficiency >= 0.7) {
-      prompts.push({ kind: "good", text: `R效率 ${formatR(rStats.avgREfficiency)}，计划兑现较好。` });
+      prompts.push({ kind: "good", text: `计划兑现率 ${formatR(rStats.avgREfficiency)}，计划兑现较好。` });
     } else if (rStats.avgREfficiency >= 0.5) {
-      prompts.push({ kind: "warn", text: `R效率 ${formatR(rStats.avgREfficiency)}，仍有提前离场/拿不住利润问题。` });
+      prompts.push({ kind: "warn", text: `计划兑现率 ${formatR(rStats.avgREfficiency)}，仍有提前离场/拿不住利润问题。` });
     } else {
-      prompts.push({ kind: "bad", text: `R效率 ${formatR(rStats.avgREfficiency)}，计划兑现不足，优先修正出场纪律。` });
+      prompts.push({ kind: "bad", text: `计划兑现率 ${formatR(rStats.avgREfficiency)}，计划兑现不足，优先修正出场纪律。` });
     }
 
     if (rStats.emotionalLeakageR > 0.5) {
@@ -823,7 +834,7 @@ export default function TradeHomePage() {
               </h2>
             </div>
             <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9ca3af]">
-              期望值 / RR / 效率 / 情绪泄露
+              期望值 / RR / 兑现率 / 情绪泄露
             </div>
           </div>
 
@@ -849,16 +860,21 @@ export default function TradeHomePage() {
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgRealizedR)}</p>
                 </div>
                 <div>
-                  <RMetricLabel label="R效率" tip="平均实现R ÷ 平均计划RR。越接近1，说明越能按计划兑现利润。" />
+                  <RMetricLabel label="计划兑现率" tip="平均实现R ÷ 平均计划RR。越接近1，说明越能按计划兑现利润。" />
                   <p className="text-xl font-bold text-white">
                     {loading ? "..." : `${(stats.recent30RStats.avgREfficiency * 100).toFixed(1)}%`}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <RMetricLabel label="情绪泄露R" tip="当前定义：max(0, 技术性离场 realizedR总和 - 情绪性离场 realizedR总和)。用于估算情绪干预造成的R损耗，属启发式指标。" />
+                  <RMetricLabel label="情绪泄露R" tip="v2定义：max(0, (技术组平均realizedR - 情绪组平均realizedR) × 情绪样本数)。用于估算情绪干预造成的R损耗，属启发式指标。" />
                   <p className={`text-xl font-bold ${stats.recent30RStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
                     {loading ? "..." : formatR(stats.recent30RStats.emotionalLeakageR)}
                   </p>
+                  {!loading && (
+                    <p className="mt-1 text-[11px] text-[#9ca3af]">
+                      置信度：{stats.recent30RStats.emotionalLeakageConfidence === "high" ? "高" : stats.recent30RStats.emotionalLeakageConfidence === "medium" ? "中" : "低"}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -909,16 +925,21 @@ export default function TradeHomePage() {
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgRealizedR)}</p>
                 </div>
                 <div>
-                  <RMetricLabel label="R效率" tip="平均实现R ÷ 平均计划RR。越接近1，说明越能按计划兑现利润。" />
+                  <RMetricLabel label="计划兑现率" tip="平均实现R ÷ 平均计划RR。越接近1，说明越能按计划兑现利润。" />
                   <p className="text-xl font-bold text-white">
                     {loading ? "..." : `${(stats.recent30SimulationRStats.avgREfficiency * 100).toFixed(1)}%`}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <RMetricLabel label="情绪泄露R" tip="当前定义：max(0, 技术性离场 realizedR总和 - 情绪性离场 realizedR总和)。用于估算情绪干预造成的R损耗，属启发式指标。" />
+                  <RMetricLabel label="情绪泄露R" tip="v2定义：max(0, (技术组平均realizedR - 情绪组平均realizedR) × 情绪样本数)。用于估算情绪干预造成的R损耗，属启发式指标。" />
                   <p className={`text-xl font-bold ${stats.recent30SimulationRStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
                     {loading ? "..." : formatR(stats.recent30SimulationRStats.emotionalLeakageR)}
                   </p>
+                  {!loading && (
+                    <p className="mt-1 text-[11px] text-[#9ca3af]">
+                      置信度：{stats.recent30SimulationRStats.emotionalLeakageConfidence === "high" ? "高" : stats.recent30SimulationRStats.emotionalLeakageConfidence === "medium" ? "中" : "低"}
+                    </p>
+                  )}
                 </div>
               </div>
 
