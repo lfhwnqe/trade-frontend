@@ -871,9 +871,14 @@ export default function TradeHomePage() {
                     {loading ? "..." : formatR(stats.recent30RStats.emotionalLeakageR)}
                   </p>
                   {!loading && (
-                    <p className="mt-1 text-[11px] text-[#9ca3af]">
-                      置信度：{stats.recent30RStats.emotionalLeakageConfidence === "high" ? "高" : stats.recent30RStats.emotionalLeakageConfidence === "medium" ? "中" : "低"}
-                    </p>
+                    <div className="mt-1 space-y-0.5 text-[11px] text-[#9ca3af]">
+                      <p>
+                        置信度：{stats.recent30RStats.emotionalLeakageConfidence === "high" ? "高" : stats.recent30RStats.emotionalLeakageConfidence === "medium" ? "中" : "低"}
+                      </p>
+                      <p>
+                        样本：技术 {stats.recent30RStats.qualityDistribution.TECHNICAL} / 情绪 {stats.recent30RStats.qualityDistribution.EMOTIONAL}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -936,9 +941,14 @@ export default function TradeHomePage() {
                     {loading ? "..." : formatR(stats.recent30SimulationRStats.emotionalLeakageR)}
                   </p>
                   {!loading && (
-                    <p className="mt-1 text-[11px] text-[#9ca3af]">
-                      置信度：{stats.recent30SimulationRStats.emotionalLeakageConfidence === "high" ? "高" : stats.recent30SimulationRStats.emotionalLeakageConfidence === "medium" ? "中" : "低"}
-                    </p>
+                    <div className="mt-1 space-y-0.5 text-[11px] text-[#9ca3af]">
+                      <p>
+                        置信度：{stats.recent30SimulationRStats.emotionalLeakageConfidence === "high" ? "高" : stats.recent30SimulationRStats.emotionalLeakageConfidence === "medium" ? "中" : "低"}
+                      </p>
+                      <p>
+                        样本：技术 {stats.recent30SimulationRStats.qualityDistribution.TECHNICAL} / 情绪 {stats.recent30SimulationRStats.qualityDistribution.EMOTIONAL}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
