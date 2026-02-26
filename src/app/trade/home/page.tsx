@@ -282,6 +282,19 @@ export default function TradeHomePage() {
           return Number.isFinite(parsed) ? parsed : 0;
         };
         const normalizeDisciplineStats = (raw: unknown) => {
+          const normalizeLevel = (
+            value: unknown,
+          ): "excellent" | "fair" | "needs_improvement" => {
+            if (
+              value === "excellent" ||
+              value === "fair" ||
+              value === "needs_improvement"
+            ) {
+              return value;
+            }
+            return "needs_improvement";
+          };
+
           const input = (raw ?? {}) as {
             avgScore?: unknown;
             previousAvgScore?: unknown;
@@ -300,12 +313,7 @@ export default function TradeHomePage() {
             avgScore: normalizeNumber(input.avgScore),
             previousAvgScore: normalizeNumber(input.previousAvgScore),
             delta: normalizeNumber(input.delta),
-            level:
-              input.level === "excellent" ||
-              input.level === "fair" ||
-              input.level === "needs_improvement"
-                ? input.level
-                : "needs_improvement",
+            level: normalizeLevel(input.level),
             sampleCount: normalizeNumber(input.sampleCount),
             scoreVersion:
               typeof input.scoreVersion === "string" && input.scoreVersion
@@ -320,6 +328,15 @@ export default function TradeHomePage() {
         };
 
         const normalizeRStats = (raw: unknown) => {
+          const normalizeConfidence = (
+            value: unknown,
+          ): "low" | "medium" | "high" => {
+            if (value === "high" || value === "medium" || value === "low") {
+              return value;
+            }
+            return "low";
+          };
+
           const input = (raw ?? {}) as {
             expectancyR?: unknown;
             avgPlannedRR?: unknown;
@@ -341,12 +358,9 @@ export default function TradeHomePage() {
             avgRealizedR: normalizeNumber(input.avgRealizedR),
             avgREfficiency: normalizeNumber(input.avgREfficiency),
             emotionalLeakageR: normalizeNumber(input.emotionalLeakageR),
-            emotionalLeakageConfidence:
-              input.emotionalLeakageConfidence === "high" ||
-              input.emotionalLeakageConfidence === "medium" ||
-              input.emotionalLeakageConfidence === "low"
-                ? input.emotionalLeakageConfidence
-                : "low",
+            emotionalLeakageConfidence: normalizeConfidence(
+              input.emotionalLeakageConfidence,
+            ),
             qualityDistribution: {
               TECHNICAL: normalizeNumber(input.qualityDistribution?.TECHNICAL),
               EMOTIONAL: normalizeNumber(input.qualityDistribution?.EMOTIONAL),
