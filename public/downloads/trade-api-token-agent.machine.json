@@ -1,0 +1,37 @@
+{
+  "name": "trade-api-token-agent",
+  "contractVersion": "2.0.0",
+  "schemaRef": "urn:trade-api-token-agent:schema:2.0.0",
+  "breakingChangeSince": "1.1.0",
+  "runtimeUrlStrategy": {
+    "mode": "origin-relative",
+    "schemaPath": "/downloads/trade-api-token-agent.schema.json",
+    "machinePath": "/downloads/trade-api-token-agent.machine.json",
+    "example": "new URL('/downloads/trade-api-token-agent.schema.json', window.location.origin).toString()"
+  },
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "format": "Bearer tc_<token>"
+  },
+  "responseEnvelope": {
+    "successField": "success",
+    "messageField": "message",
+    "dataField": "data"
+  },
+  "endpoints": [
+    { "id": "getTrade", "method": "GET", "path": "/trade/{transactionId}" },
+    { "id": "listTrades", "method": "POST", "path": "/trade/list" },
+    { "id": "createTrade", "method": "POST", "path": "/trade" },
+    { "id": "patchTrade", "method": "PATCH", "path": "/trade/{transactionId}" },
+    { "id": "tradeImageUploadUrl", "method": "POST", "path": "/trade/image/upload-url" },
+    { "id": "tradeImageResolve", "method": "POST", "path": "/trade/image/resolve" }
+  ],
+  "editable": {
+    "createRequired": ["tradeType", "status", "tradeSubject", "marketStructure", "marketStructureAnalysis", "entryPlanA"],
+    "serverControlled": [
+      "userId", "createdAt", "updatedAt", "isShareable", "shareId", "tradeShortId",
+      "plannedRiskPerUnit", "plannedRewardPerUnit", "plannedRR", "realizedR", "rEfficiency", "exitDeviationR"
+    ]
+  }
+}

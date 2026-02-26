@@ -9,6 +9,7 @@ import Chart from "chart.js/auto";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
+  CircleHelp,
   PiggyBank,
   PieChart,
   Sigma,
@@ -142,6 +143,7 @@ export default function TradeHomePage() {
       avgRealizedR: number;
       avgREfficiency: number;
       emotionalLeakageR: number;
+      emotionalLeakageConfidence: "low" | "medium" | "high";
       qualityDistribution: {
         TECHNICAL: number;
         EMOTIONAL: number;
@@ -155,11 +157,38 @@ export default function TradeHomePage() {
       avgRealizedR: number;
       avgREfficiency: number;
       emotionalLeakageR: number;
+      emotionalLeakageConfidence: "low" | "medium" | "high";
       qualityDistribution: {
         TECHNICAL: number;
         EMOTIONAL: number;
         SYSTEM: number;
         UNKNOWN: number;
+      };
+    };
+    recent30DisciplineStats: {
+      avgScore: number;
+      previousAvgScore: number;
+      delta: number;
+      level: "excellent" | "fair" | "needs_improvement";
+      sampleCount: number;
+      scoreVersion: string;
+      breakdown: {
+        notFollowedPlan: number;
+        emotionalExit: number;
+        missingReviewNotes: number;
+      };
+    };
+    recent30SimulationDisciplineStats: {
+      avgScore: number;
+      previousAvgScore: number;
+      delta: number;
+      level: "excellent" | "fair" | "needs_improvement";
+      sampleCount: number;
+      scoreVersion: string;
+      breakdown: {
+        notFollowedPlan: number;
+        emotionalExit: number;
+        missingReviewNotes: number;
       };
     };
   }>({
@@ -183,6 +212,7 @@ export default function TradeHomePage() {
       avgRealizedR: 0,
       avgREfficiency: 0,
       emotionalLeakageR: 0,
+      emotionalLeakageConfidence: "low",
       qualityDistribution: { TECHNICAL: 0, EMOTIONAL: 0, SYSTEM: 0, UNKNOWN: 0 },
     },
     recent30SimulationRStats: {
@@ -191,7 +221,26 @@ export default function TradeHomePage() {
       avgRealizedR: 0,
       avgREfficiency: 0,
       emotionalLeakageR: 0,
+      emotionalLeakageConfidence: "low",
       qualityDistribution: { TECHNICAL: 0, EMOTIONAL: 0, SYSTEM: 0, UNKNOWN: 0 },
+    },
+    recent30DisciplineStats: {
+      avgScore: 0,
+      previousAvgScore: 0,
+      delta: 0,
+      level: "needs_improvement",
+      sampleCount: 0,
+      scoreVersion: "v1",
+      breakdown: { notFollowedPlan: 0, emotionalExit: 0, missingReviewNotes: 0 },
+    },
+    recent30SimulationDisciplineStats: {
+      avgScore: 0,
+      previousAvgScore: 0,
+      delta: 0,
+      level: "needs_improvement",
+      sampleCount: 0,
+      scoreVersion: "v1",
+      breakdown: { notFollowedPlan: 0, emotionalExit: 0, missingReviewNotes: 0 },
     },
   });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
@@ -217,6 +266,7 @@ export default function TradeHomePage() {
   const [featuredError, setFeaturedError] = React.useState<string | null>(null);
   const [winRateTooltip, setWinRateTooltip] =
     React.useState<WinRateTooltipState | null>(null);
+  const [showRGlossary, setShowRGlossary] = React.useState(false);
   const winRateContainerRef = React.useRef<HTMLDivElement | null>(null);
   const chartRef = React.useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = React.useRef<Chart | null>(null);
@@ -231,6 +281,44 @@ export default function TradeHomePage() {
           const parsed = Number(value);
           return Number.isFinite(parsed) ? parsed : 0;
         };
+        const normalizeDisciplineStats = (raw: unknown) => {
+          const input = (raw ?? {}) as {
+            avgScore?: unknown;
+            previousAvgScore?: unknown;
+            delta?: unknown;
+            level?: unknown;
+            sampleCount?: unknown;
+            scoreVersion?: unknown;
+            breakdown?: {
+              notFollowedPlan?: unknown;
+              emotionalExit?: unknown;
+              missingReviewNotes?: unknown;
+            };
+          };
+
+          return {
+            avgScore: normalizeNumber(input.avgScore),
+            previousAvgScore: normalizeNumber(input.previousAvgScore),
+            delta: normalizeNumber(input.delta),
+            level:
+              input.level === "excellent" ||
+              input.level === "fair" ||
+              input.level === "needs_improvement"
+                ? input.level
+                : "needs_improvement",
+            sampleCount: normalizeNumber(input.sampleCount),
+            scoreVersion:
+              typeof input.scoreVersion === "string" && input.scoreVersion
+                ? input.scoreVersion
+                : "v1",
+            breakdown: {
+              notFollowedPlan: normalizeNumber(input.breakdown?.notFollowedPlan),
+              emotionalExit: normalizeNumber(input.breakdown?.emotionalExit),
+              missingReviewNotes: normalizeNumber(input.breakdown?.missingReviewNotes),
+            },
+          };
+        };
+
         const normalizeRStats = (raw: unknown) => {
           const input = (raw ?? {}) as {
             expectancyR?: unknown;
@@ -238,6 +326,7 @@ export default function TradeHomePage() {
             avgRealizedR?: unknown;
             avgREfficiency?: unknown;
             emotionalLeakageR?: unknown;
+            emotionalLeakageConfidence?: unknown;
             qualityDistribution?: {
               TECHNICAL?: unknown;
               EMOTIONAL?: unknown;
@@ -252,6 +341,12 @@ export default function TradeHomePage() {
             avgRealizedR: normalizeNumber(input.avgRealizedR),
             avgREfficiency: normalizeNumber(input.avgREfficiency),
             emotionalLeakageR: normalizeNumber(input.emotionalLeakageR),
+            emotionalLeakageConfidence:
+              input.emotionalLeakageConfidence === "high" ||
+              input.emotionalLeakageConfidence === "medium" ||
+              input.emotionalLeakageConfidence === "low"
+                ? input.emotionalLeakageConfidence
+                : "low",
             qualityDistribution: {
               TECHNICAL: normalizeNumber(input.qualityDistribution?.TECHNICAL),
               EMOTIONAL: normalizeNumber(input.qualityDistribution?.EMOTIONAL),
@@ -294,6 +389,12 @@ export default function TradeHomePage() {
           ),
           recent30RStats: normalizeRStats(data.recent30RStats),
           recent30SimulationRStats: normalizeRStats(data.recent30SimulationRStats),
+          recent30DisciplineStats: normalizeDisciplineStats(
+            data.recent30DisciplineStats,
+          ),
+          recent30SimulationDisciplineStats: normalizeDisciplineStats(
+            data.recent30SimulationDisciplineStats,
+          ),
         });
         setFeaturedSummaries(
           parseFeaturedSummaries(data.summaryHighlights).slice(0, 3),
@@ -595,6 +696,32 @@ export default function TradeHomePage() {
     return "text-red-300";
   };
 
+  const RMetricLabel = ({
+    label,
+    tip,
+  }: {
+    label: string;
+    tip: string;
+  }) => (
+    <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase text-[#9ca3af]">
+      <span>{label}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[#6b7280] hover:text-[#d1d5db]"
+            aria-label={`${label} 指标说明`}
+          >
+            <CircleHelp className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs text-xs leading-relaxed">
+          {tip}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+
   const buildRPrompts = (rStats: {
     expectancyR: number;
     avgPlannedRR: number;
@@ -609,21 +736,31 @@ export default function TradeHomePage() {
     };
   }) => {
     const prompts: Array<{ kind: "good" | "warn" | "bad"; text: string }> = [];
+    const sampleCount =
+      rStats.qualityDistribution.TECHNICAL +
+      rStats.qualityDistribution.EMOTIONAL +
+      rStats.qualityDistribution.SYSTEM +
+      rStats.qualityDistribution.UNKNOWN;
+
+    if (sampleCount === 0) {
+      prompts.push({ kind: "warn", text: "暂无可计算样本，先完成离场并标注标签后再看趋势。" });
+      return prompts;
+    }
 
     if (rStats.expectancyR >= 0.5) {
-      prompts.push({ kind: "good", text: `Expectancy ${formatR(rStats.expectancyR)}R，系统当前有正期望。` });
+      prompts.push({ kind: "good", text: `期望值 ${formatR(rStats.expectancyR)}R，系统当前有正期望。` });
     } else if (rStats.expectancyR >= 0) {
-      prompts.push({ kind: "warn", text: `Expectancy ${formatR(rStats.expectancyR)}R，边际偏弱，优先优化低质量离场。` });
+      prompts.push({ kind: "warn", text: `期望值 ${formatR(rStats.expectancyR)}R，边际偏弱，优先优化低质量离场。` });
     } else {
-      prompts.push({ kind: "bad", text: `Expectancy ${formatR(rStats.expectancyR)}R，当前是负期望，建议先降频并复盘样本。` });
+      prompts.push({ kind: "bad", text: `期望值 ${formatR(rStats.expectancyR)}R，当前是负期望，建议先降频并复盘样本。` });
     }
 
     if (rStats.avgREfficiency >= 0.7) {
-      prompts.push({ kind: "good", text: `R效率 ${formatR(rStats.avgREfficiency)}，计划兑现较好。` });
+      prompts.push({ kind: "good", text: `计划兑现率 ${formatR(rStats.avgREfficiency)}，计划兑现较好。` });
     } else if (rStats.avgREfficiency >= 0.5) {
-      prompts.push({ kind: "warn", text: `R效率 ${formatR(rStats.avgREfficiency)}，仍有提前离场/拿不住利润问题。` });
+      prompts.push({ kind: "warn", text: `计划兑现率 ${formatR(rStats.avgREfficiency)}，仍有提前离场/拿不住利润问题。` });
     } else {
-      prompts.push({ kind: "bad", text: `R效率 ${formatR(rStats.avgREfficiency)}，计划兑现不足，优先修正出场纪律。` });
+      prompts.push({ kind: "bad", text: `计划兑现率 ${formatR(rStats.avgREfficiency)}，计划兑现不足，优先修正出场纪律。` });
     }
 
     if (rStats.emotionalLeakageR > 0.5) {
@@ -658,6 +795,24 @@ export default function TradeHomePage() {
     stats.recent30SimulationWinRate,
     stats.previous30SimulationWinRate,
   );
+  const formatScoreDelta = (value: number) =>
+    `${value > 0 ? "+" : ""}${value.toFixed(1)}分`;
+  const disciplineLevelLabel = (level: "excellent" | "fair" | "needs_improvement") =>
+    level === "excellent" ? "优秀" : level === "fair" ? "一般" : "待改进";
+  const disciplineLevelClass = (level: "excellent" | "fair" | "needs_improvement") =>
+    level === "excellent"
+      ? "text-emerald-300 bg-emerald-500/10"
+      : level === "fair"
+        ? "text-yellow-300 bg-yellow-500/10"
+        : "text-red-300 bg-red-500/10";
+  const disciplineSuggestion = (
+    level: "excellent" | "fair" | "needs_improvement",
+  ) =>
+    level === "excellent"
+      ? "建议：保持当前执行节奏，重点扩大高质量样本。"
+      : level === "fair"
+        ? "建议：优先减少提前离场与计划偏离，提升兑现率。"
+        : "建议：先收缩频率，严格执行止损与复盘记录。";
 
   return (
     <TradePageShell title="主页">
@@ -782,6 +937,59 @@ export default function TradeHomePage() {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-[#9ca3af]">纪律评分（真实）</h3>
+              <div className="p-2 bg-emerald-500/10 rounded-lg">
+                <Sigma className="h-4 w-4 text-emerald-400" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white">{loading ? "..." : stats.recent30DisciplineStats.avgScore.toFixed(1)}</span>
+              <span className={`text-sm font-medium ${stats.recent30DisciplineStats.delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {loading ? "..." : formatScoreDelta(stats.recent30DisciplineStats.delta)}
+              </span>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <span className={`rounded px-2 py-0.5 text-[10px] ${disciplineLevelClass(stats.recent30DisciplineStats.level)}`}>
+                {disciplineLevelLabel(stats.recent30DisciplineStats.level)}
+              </span>
+              <span className="text-xs text-[#9ca3af]">样本 {stats.recent30DisciplineStats.sampleCount} 笔</span>
+            </div>
+            <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔（规则 {stats.recent30DisciplineStats.scoreVersion}）</p>
+            <p className="mt-2 text-xs text-[#9ca3af]">{disciplineSuggestion(stats.recent30DisciplineStats.level)}</p>
+            <p className="mt-1 text-[11px] text-[#6b7280]">
+              偏差分解：偏离计划 {stats.recent30DisciplineStats.breakdown.notFollowedPlan} / 情绪离场 {stats.recent30DisciplineStats.breakdown.emotionalExit} / 复盘缺失 {stats.recent30DisciplineStats.breakdown.missingReviewNotes}
+            </p>
+          </div>
+          <div className="bg-[#121212] p-5 rounded-xl border border-[#27272a] shadow-sm hover:border-emerald-400/30 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-[#9ca3af]">纪律评分（模拟）</h3>
+              <div className="p-2 bg-yellow-500/10 rounded-lg">
+                <Sigma className="h-4 w-4 text-yellow-400" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white">{loading ? "..." : stats.recent30SimulationDisciplineStats.avgScore.toFixed(1)}</span>
+              <span className={`text-sm font-medium ${stats.recent30SimulationDisciplineStats.delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {loading ? "..." : formatScoreDelta(stats.recent30SimulationDisciplineStats.delta)}
+              </span>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <span className={`rounded px-2 py-0.5 text-[10px] ${disciplineLevelClass(stats.recent30SimulationDisciplineStats.level)}`}>
+                {disciplineLevelLabel(stats.recent30SimulationDisciplineStats.level)}
+              </span>
+              <span className="text-xs text-[#9ca3af]">样本 {stats.recent30SimulationDisciplineStats.sampleCount} 笔</span>
+            </div>
+            <p className="text-xs text-[#9ca3af] mt-1">最近30笔 vs 前30笔（规则 {stats.recent30SimulationDisciplineStats.scoreVersion}）</p>
+            <p className="mt-2 text-xs text-[#9ca3af]">{disciplineSuggestion(stats.recent30SimulationDisciplineStats.level)}</p>
+            <p className="mt-1 text-[11px] text-[#6b7280]">
+              偏差分解：偏离计划 {stats.recent30SimulationDisciplineStats.breakdown.notFollowedPlan} / 情绪离场 {stats.recent30SimulationDisciplineStats.breakdown.emotionalExit} / 复盘缺失 {stats.recent30SimulationDisciplineStats.breakdown.missingReviewNotes}
+            </p>
+          </div>
+        </div>
+
         <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#121212] shadow-sm">
           <div className="flex items-center justify-between border-b border-[#27272a] bg-white/[0.02] px-6 py-4">
             <div className="flex items-center gap-2">
@@ -795,10 +1003,26 @@ export default function TradeHomePage() {
                 </span>
               </h2>
             </div>
-            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9ca3af]">
-              期望值 / RR / 效率 / 情绪泄露
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRGlossary((v) => !v)}
+                className="rounded border border-[#2a2a2a] px-2 py-1 text-[10px] text-[#cbd5e1] hover:bg-white/5"
+              >
+                {showRGlossary ? "收起口径说明" : "查看口径说明"}
+              </button>
+              <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#9ca3af]">
+                期望值 / RR / 兑现率 / 情绪泄露
+              </div>
             </div>
           </div>
+
+          {showRGlossary && (
+            <div className="border-b border-[#27272a] bg-black/20 px-6 py-4 text-xs text-[#9ca3af]">
+              <p>样本范围：最近30笔，口径为状态 ∈ [已离场, 提前离场]。</p>
+              <p className="mt-1">计划兑现率 = 平均实现R ÷ 平均计划RR；情绪泄露R为启发式估算，并配合样本数与置信度解读。</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2">
             <div className="space-y-6 border-b border-[#27272a] p-6 lg:border-b-0 lg:border-r">
@@ -810,28 +1034,38 @@ export default function TradeHomePage() {
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">期望值 (R)</p>
+                  <RMetricLabel label="期望值 (R)" tip="最近30笔的平均实现R。>0 代表系统在当前样本上是正期望。" />
                   <p className="text-xl font-bold text-emerald-400">{loading ? "..." : formatR(stats.recent30RStats.expectancyR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均计划RR</p>
+                  <RMetricLabel label="平均计划RR" tip="开仓前计划的平均盈亏比（Reward/Risk）。反映策略设计目标。" />
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgPlannedRR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均实现R</p>
+                  <RMetricLabel label="平均实现R" tip="实际离场后兑现出来的平均R。用于对比计划与执行结果。" />
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30RStats.avgRealizedR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R效率</p>
+                  <RMetricLabel label="计划兑现率" tip="平均实现R ÷ 平均计划RR。越接近1，说明越能按计划兑现利润。" />
                   <p className="text-xl font-bold text-white">
                     {loading ? "..." : `${(stats.recent30RStats.avgREfficiency * 100).toFixed(1)}%`}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">情绪泄露R</p>
+                  <RMetricLabel label="情绪泄露R" tip="v2定义：max(0, (技术组平均realizedR - 情绪组平均realizedR) × 情绪样本数)。用于估算情绪干预造成的R损耗，属启发式指标。" />
                   <p className={`text-xl font-bold ${stats.recent30RStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
                     {loading ? "..." : formatR(stats.recent30RStats.emotionalLeakageR)}
                   </p>
+                  {!loading && (
+                    <div className="mt-1 space-y-0.5 text-[11px] text-[#9ca3af]">
+                      <p>
+                        置信度：{stats.recent30RStats.emotionalLeakageConfidence === "high" ? "高" : stats.recent30RStats.emotionalLeakageConfidence === "medium" ? "中" : "低"}
+                      </p>
+                      <p>
+                        样本：技术 {stats.recent30RStats.qualityDistribution.TECHNICAL} / 情绪 {stats.recent30RStats.qualityDistribution.EMOTIONAL}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -870,28 +1104,38 @@ export default function TradeHomePage() {
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">期望值 (R)</p>
+                  <RMetricLabel label="期望值 (R)" tip="最近30笔的平均实现R。>0 代表系统在当前样本上是正期望。" />
                   <p className="text-xl font-bold text-emerald-400">{loading ? "..." : formatR(stats.recent30SimulationRStats.expectancyR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均计划RR</p>
+                  <RMetricLabel label="平均计划RR" tip="开仓前计划的平均盈亏比（Reward/Risk）。反映策略设计目标。" />
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgPlannedRR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">平均实现R</p>
+                  <RMetricLabel label="平均实现R" tip="实际离场后兑现出来的平均R。用于对比计划与执行结果。" />
                   <p className="text-xl font-bold text-white">{loading ? "..." : formatR(stats.recent30SimulationRStats.avgRealizedR)}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">R效率</p>
+                  <RMetricLabel label="计划兑现率" tip="平均实现R ÷ 平均计划RR。越接近1，说明越能按计划兑现利润。" />
                   <p className="text-xl font-bold text-white">
                     {loading ? "..." : `${(stats.recent30SimulationRStats.avgREfficiency * 100).toFixed(1)}%`}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="mb-1 text-[10px] uppercase text-[#9ca3af]">情绪泄露R</p>
+                  <RMetricLabel label="情绪泄露R" tip="v2定义：max(0, (技术组平均realizedR - 情绪组平均realizedR) × 情绪样本数)。用于估算情绪干预造成的R损耗，属启发式指标。" />
                   <p className={`text-xl font-bold ${stats.recent30SimulationRStats.emotionalLeakageR > 0 ? "text-red-400" : "text-emerald-400"}`}>
                     {loading ? "..." : formatR(stats.recent30SimulationRStats.emotionalLeakageR)}
                   </p>
+                  {!loading && (
+                    <div className="mt-1 space-y-0.5 text-[11px] text-[#9ca3af]">
+                      <p>
+                        置信度：{stats.recent30SimulationRStats.emotionalLeakageConfidence === "high" ? "高" : stats.recent30SimulationRStats.emotionalLeakageConfidence === "medium" ? "中" : "低"}
+                      </p>
+                      <p>
+                        样本：技术 {stats.recent30SimulationRStats.qualityDistribution.TECHNICAL} / 情绪 {stats.recent30SimulationRStats.qualityDistribution.EMOTIONAL}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
