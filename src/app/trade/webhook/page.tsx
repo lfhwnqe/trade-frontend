@@ -257,7 +257,7 @@ export default function TradeWebhookPage() {
             .map((it) => it.tradeTransactionId)
             .filter((v): v is string => typeof v === "string" && v.length > 0),
         ),
-      ).filter((id) => !tradeMap[id]);
+      );
 
       if (tradeIds.length > 0) {
         const results = await Promise.all(tradeIds.map(fetchTradeSummary));
@@ -275,7 +275,7 @@ export default function TradeWebhookPage() {
     } finally {
       setLoading(false);
     }
-  }, [errorAlert, fetchTradeSummary, tradeMap]);
+  }, [errorAlert, fetchTradeSummary]);
 
   React.useEffect(() => {
     loadFirstPage();
