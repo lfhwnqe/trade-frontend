@@ -164,7 +164,7 @@ export default function LoginPage() {
                   type="text"
                   id="email"
                   name="email"
-                  placeholder="name@company.com 或 test_linuo"
+                  placeholder="name@company.com 或你的用户名"
                   value={form.email}
                   autoComplete="username"
                   required
