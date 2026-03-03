@@ -276,6 +276,23 @@ export type CreateTradeDto = {
  * 保证所有字段严格对齐，类型安全转换
  */
 export function toDto(form: Partial<Trade>): CreateTradeDto {
+  const isLoadingImageKey = (key: unknown): boolean =>
+    typeof key === "string" && key.startsWith("__loading__");
+
+  const isPersistableImageResource = (
+    image: unknown,
+  ): image is ImageResource => {
+    if (!image || typeof image !== "object") return false;
+    const candidate = image as { url?: unknown; key?: unknown };
+    return (
+      typeof candidate.url === "string" &&
+      typeof candidate.key === "string" &&
+      candidate.url.length > 0 &&
+      candidate.key.length > 0 &&
+      !isLoadingImageKey(candidate.key)
+    );
+  };
+
   const parseNum = (v: string | number | undefined) =>
     v === undefined || v === "" || v === null
       ? undefined
@@ -284,9 +301,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
       : Number(v);
   const asImageArray = (val?: ImageResource[]) =>
     Array.isArray(val)
-      ? val.filter(
-          (x) => x && typeof x.url === "string" && typeof x.key === "string"
-        )
+      ? val.filter((x) => isPersistableImageResource(x))
       : [];
   const asMarketStructureImages = (
     val?: unknown,
@@ -297,11 +312,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
             if (!item || typeof item !== "object") return null;
             if ("image" in item) {
               const image = (item as { image?: ImageResource }).image;
-              if (
-                !image ||
-                typeof image.url !== "string" ||
-                typeof image.key !== "string"
-              ) {
+              if (!isPersistableImageResource(image)) {
                 return null;
               }
               const title =
@@ -323,7 +334,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
                 typeof (item as { key?: unknown }).key === "string"
                   ? (item as { key: string }).key
                   : "";
-              if (!url || !key) return null;
+              if (!url || !key || isLoadingImageKey(key)) return null;
               return { image: { url, key }, title: "", analysis: "" };
             }
             return null;

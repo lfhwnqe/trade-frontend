@@ -250,9 +250,9 @@ export function MarketStructureAnalysisImages({
   );
 
   const handleRemove = useCallback(
-    (key: string) => {
+    (indexToRemove: number) => {
       if (readOnly) return;
-      onChange(value.filter((item) => item.image.key !== key));
+      onChange(value.filter((_, index) => index !== indexToRemove));
     },
     [onChange, readOnly, value],
   );
@@ -304,7 +304,7 @@ export function MarketStructureAnalysisImages({
         const loading = isLoadingItem(item);
         return (
           <div
-            key={item.image.key || `${index}`}
+            key={`${item.image.key || "image"}-${index}`}
             className="bg-charcoal rounded-xl border border-glass-border p-4 hover:border-accent/30 transition-all duration-300 shadow-sm"
           >
             <div className="flex flex-col sm:flex-row gap-5">
@@ -333,14 +333,14 @@ export function MarketStructureAnalysisImages({
                       />
                     </>
                   )}
-                  {!readOnly && !loading && (
+                  {!readOnly && (
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                       <button
                         type="button"
                         className="bg-black/70 hover:bg-red-500/80 text-white p-1 rounded transition-colors backdrop-blur-sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRemove(item.image.key);
+                          handleRemove(index);
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
