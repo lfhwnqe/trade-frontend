@@ -4,33 +4,13 @@ import React from "react";
 import Link from "next/link";
 import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
 import {
   clearFlashcardSession,
   getFlashcardSession,
   type FlashcardDrillSession,
 } from "@/store/flashcard-session";
 import { FLASHCARD_LABELS } from "../../types";
-
-function VisuallyHidden(props: React.HTMLAttributes<HTMLSpanElement>) {
-  return (
-    <span
-      style={{
-        border: 0,
-        clip: "rect(0 0 0 0)",
-        clipPath: "inset(50%)",
-        height: 1,
-        width: 1,
-        margin: -1,
-        overflow: "hidden",
-        padding: 0,
-        position: "absolute",
-        whiteSpace: "nowrap",
-      }}
-      {...props}
-    />
-  );
-}
+import { ImagePreviewDialog } from "../../components/ImagePreviewDialog";
 
 export default function FlashcardDrillPlayPage() {
   const [session, setSession] = React.useState<FlashcardDrillSession | null>(null);
@@ -212,23 +192,7 @@ export default function FlashcardDrillPlayPage() {
         </div>
       </div>
 
-      <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
-        <DialogOverlay />
-        <DialogContent className="max-w-full border-none bg-transparent p-0 shadow-none">
-          <DialogTitle asChild>
-            <VisuallyHidden>图片预览</VisuallyHidden>
-          </DialogTitle>
-          <DialogClose className="absolute right-4 top-4 z-10" aria-label="关闭" />
-          {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewUrl}
-              alt="preview"
-              className="max-h-[85vh] max-w-[95vw] rounded border border-[#27272a] bg-black object-contain"
-            />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
     </TradePageShell>
   );
 }

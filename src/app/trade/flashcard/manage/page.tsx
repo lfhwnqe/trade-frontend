@@ -33,6 +33,7 @@ import {
   type FlashcardOrderFlowFeature,
   type FlashcardResult,
 } from "../types";
+import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 
 type Option<T extends string> = T | "all";
 
@@ -42,6 +43,7 @@ export default function FlashcardManagePage() {
   const [items, setItems] = React.useState<FlashcardCard[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
@@ -243,13 +245,13 @@ export default function FlashcardManagePage() {
                         {format(new Date(card.createdAt), "yyyy-MM-dd HH:mm")}
                       </TableCell>
                       <TableCell>
-                        <button type="button" onClick={() => window.open(card.questionImageUrl, "_blank")}>
+                        <button type="button" onClick={() => setPreviewUrl(card.questionImageUrl)}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={card.questionImageUrl} alt="question" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
                         </button>
                       </TableCell>
                       <TableCell>
-                        <button type="button" onClick={() => window.open(card.answerImageUrl, "_blank")}>
+                        <button type="button" onClick={() => setPreviewUrl(card.answerImageUrl)}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={card.answerImageUrl} alt="answer" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
                         </button>
@@ -312,6 +314,8 @@ export default function FlashcardManagePage() {
           </div>
         </div>
       </div>
+
+      <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
     </TradePageShell>
   );
 }
