@@ -70,6 +70,11 @@ const tradeNavItems: NavItem[] = [
     icon: Layers,
   },
   {
+    title: "闪卡复盘",
+    href: "/trade/flashcard/review",
+    icon: Layers,
+  },
+  {
     title: "闪卡管理",
     href: "/trade/flashcard/manage",
     icon: Layers,

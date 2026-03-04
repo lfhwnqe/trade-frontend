@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,14 @@ export default function FlashcardDrillSetupPage() {
     <TradePageShell title="闪卡练习设置" subtitle="按题源筛题并生成训练会话" showAddButton={false}>
       <div className="w-full space-y-6">
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5 shadow-sm">
+          <div className="mb-4 flex justify-end">
+            <Link
+              href="/trade/flashcard/review"
+              className="text-sm text-[#00c2b2] hover:underline"
+            >
+              前往复盘中心
+            </Link>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <div className="text-xs text-[#a7b0c0]">题源</div>
