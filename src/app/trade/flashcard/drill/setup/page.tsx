@@ -13,60 +13,43 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAlert } from "@/components/common/alert";
-import { randomFlashcardCards } from "../../request";
+import { startFlashcardDrillSession } from "../../request";
 import {
-  FLASHCARD_CONTEXTS,
-  FLASHCARD_DIRECTIONS,
   FLASHCARD_LABELS,
-  FLASHCARD_ORDER_FLOW_FEATURES,
-  FLASHCARD_RESULTS,
-  type FlashcardContext,
-  type FlashcardDirection,
-  type FlashcardFilters,
-  type FlashcardOrderFlowFeature,
-  type FlashcardResult,
+  FLASHCARD_SOURCES,
+  type FlashcardSource,
 } from "../../types";
 import { saveFlashcardSession } from "@/store/flashcard-session";
-
-type OptionValue<T extends string> = T | "all";
 
 export default function FlashcardDrillSetupPage() {
   const router = useRouter();
   const [successAlert, errorAlert] = useAlert();
 
-  const [direction, setDirection] = React.useState<OptionValue<FlashcardDirection>>("all");
-  const [context, setContext] = React.useState<OptionValue<FlashcardContext>>("all");
-  const [orderFlowFeature, setOrderFlowFeature] = React.useState<OptionValue<FlashcardOrderFlowFeature>>("all");
-  const [result, setResult] = React.useState<OptionValue<FlashcardResult>>("all");
+  const [source, setSource] = React.useState<FlashcardSource>("ALL");
   const [count, setCount] = React.useState(20);
   const [loading, setLoading] = React.useState(false);
 
   const handleStart = React.useCallback(async () => {
     setLoading(true);
     try {
-      const filters: FlashcardFilters = {};
-      if (direction !== "all") filters.direction = [direction];
-      if (context !== "all") filters.context = [context];
-      if (orderFlowFeature !== "all") filters.orderFlowFeature = [orderFlowFeature];
-      if (result !== "all") filters.result = [result];
-
-      const cards = await randomFlashcardCards({
-        filters,
+      const result = await startFlashcardDrillSession({
+        source,
         count: Math.min(Math.max(count || 20, 1), 200),
       });
 
-      if (!cards.length) {
+      if (!result.cards.length) {
         errorAlert("没有匹配的题目", "请调整筛选条件后重试");
         return;
       }
 
       saveFlashcardSession({
-        cards,
-        filters,
+        sessionId: result.sessionId,
+        source: result.source,
+        cards: result.cards,
         count,
         startedAt: new Date().toISOString(),
       });
-      successAlert(`已生成 ${cards.length} 张训练卡片`);
+      successAlert(`已生成 ${result.cards.length} 张训练卡片`);
       router.push("/trade/flashcard/drill/play");
     } catch (error) {
       const message = error instanceof Error ? error.message : "生成练习失败";
@@ -75,30 +58,26 @@ export default function FlashcardDrillSetupPage() {
       setLoading(false);
     }
   }, [
-    context,
     count,
-    direction,
     errorAlert,
-    orderFlowFeature,
-    result,
     router,
+    source,
     successAlert,
   ]);
 
   return (
-    <TradePageShell title="闪卡练习设置" subtitle="按标签筛题并生成训练会话" showAddButton={false}>
+    <TradePageShell title="闪卡练习设置" subtitle="按题源筛题并生成训练会话" showAddButton={false}>
       <div className="w-full space-y-6">
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <div className="text-xs text-[#a7b0c0]">方向</div>
-              <Select value={direction} onValueChange={(v) => setDirection(v as OptionValue<FlashcardDirection>)}>
+              <div className="text-xs text-[#a7b0c0]">题源</div>
+              <Select value={source} onValueChange={(v) => setSource(v as FlashcardSource)}>
                 <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                  <SelectValue placeholder="全部" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                  <SelectItem value="all">全部</SelectItem>
-                  {FLASHCARD_DIRECTIONS.map((item) => (
+                  {FLASHCARD_SOURCES.map((item) => (
                     <SelectItem key={item} value={item}>
                       {FLASHCARD_LABELS[item]}
                     </SelectItem>
@@ -108,60 +87,6 @@ export default function FlashcardDrillSetupPage() {
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs text-[#a7b0c0]">1H 结构</div>
-              <Select value={context} onValueChange={(v) => setContext(v as OptionValue<FlashcardContext>)}>
-                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                  <SelectValue placeholder="全部" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                  <SelectItem value="all">全部</SelectItem>
-                  {FLASHCARD_CONTEXTS.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {FLASHCARD_LABELS[item]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-xs text-[#a7b0c0]">订单流特征</div>
-              <Select
-                value={orderFlowFeature}
-                onValueChange={(v) => setOrderFlowFeature(v as OptionValue<FlashcardOrderFlowFeature>)}
-              >
-                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                  <SelectValue placeholder="全部" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                  <SelectItem value="all">全部</SelectItem>
-                  {FLASHCARD_ORDER_FLOW_FEATURES.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {FLASHCARD_LABELS[item]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-xs text-[#a7b0c0]">结果</div>
-              <Select value={result} onValueChange={(v) => setResult(v as OptionValue<FlashcardResult>)}>
-                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                  <SelectValue placeholder="全部" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                  <SelectItem value="all">全部</SelectItem>
-                  {FLASHCARD_RESULTS.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {FLASHCARD_LABELS[item]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
               <div className="text-xs text-[#a7b0c0]">抽题数量（默认 20）</div>
               <Input
                 type="number"

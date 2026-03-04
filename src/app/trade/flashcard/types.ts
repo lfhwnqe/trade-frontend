@@ -1,5 +1,6 @@
 export const FLASHCARD_DIRECTIONS = ["LONG", "SHORT", "NO_TRADE"] as const;
 export type FlashcardDirection = (typeof FLASHCARD_DIRECTIONS)[number];
+export type FlashcardAction = FlashcardDirection;
 
 export const FLASHCARD_CONTEXTS = ["TREND", "RANGE", "REVERSAL"] as const;
 export type FlashcardContext = (typeof FLASHCARD_CONTEXTS)[number];
@@ -15,6 +16,8 @@ export type FlashcardOrderFlowFeature =
 
 export const FLASHCARD_RESULTS = ["WIN", "LOSS", "BREAK_EVEN"] as const;
 export type FlashcardResult = (typeof FLASHCARD_RESULTS)[number];
+export const FLASHCARD_SOURCES = ["ALL", "WRONG_BOOK", "FAVORITES"] as const;
+export type FlashcardSource = (typeof FLASHCARD_SOURCES)[number];
 
 export type FlashcardCard = {
   id: string;
@@ -22,6 +25,7 @@ export type FlashcardCard = {
   cardId: string;
   questionImageUrl: string;
   answerImageUrl: string;
+  expectedAction?: FlashcardAction;
   direction: FlashcardDirection;
   context: FlashcardContext;
   orderFlowFeature: FlashcardOrderFlowFeature;
@@ -38,10 +42,30 @@ export type FlashcardFilters = {
   result?: FlashcardResult[];
 };
 
+export type FlashcardDrillStartResponse = {
+  sessionId: string;
+  source: FlashcardSource;
+  count: number;
+  cards: FlashcardCard[];
+};
+
+export type FlashcardDrillStats = {
+  total: number;
+  answered: number;
+  correct: number;
+  wrong: number;
+  accuracy: number;
+  score: number;
+  status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+};
+
 export const FLASHCARD_LABELS: Record<string, string> = {
   LONG: "做多",
   SHORT: "做空",
   NO_TRADE: "不交易",
+  ALL: "全部题库",
+  WRONG_BOOK: "错题集",
+  FAVORITES: "收藏库",
   TREND: "趋势",
   RANGE: "震荡",
   REVERSAL: "反转",

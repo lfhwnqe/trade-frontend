@@ -1,12 +1,18 @@
-import type { FlashcardCard, FlashcardFilters } from "@/app/trade/flashcard/types";
+import type {
+  FlashcardCard,
+  FlashcardDrillStats,
+  FlashcardSource,
+} from "@/app/trade/flashcard/types";
 
 const FLASHCARD_SESSION_KEY = "flashcard-drill-session";
 
 export type FlashcardDrillSession = {
+  sessionId: string;
   cards: FlashcardCard[];
-  filters?: FlashcardFilters;
+  source: FlashcardSource;
   count: number;
   startedAt: string;
+  stats?: FlashcardDrillStats;
 };
 
 export function saveFlashcardSession(session: FlashcardDrillSession) {

@@ -1,11 +1,15 @@
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import type {
+  FlashcardAction,
   FlashcardCard,
   FlashcardContext,
+  FlashcardDrillStartResponse,
+  FlashcardDrillStats,
   FlashcardDirection,
   FlashcardFilters,
   FlashcardOrderFlowFeature,
   FlashcardResult,
+  FlashcardSource,
 } from "./types";
 
 export const FLASHCARD_ALLOWED_IMAGE_TYPES = [
@@ -20,10 +24,11 @@ type Scope = "question" | "answer";
 type CreateFlashcardPayload = {
   questionImageUrl: string;
   answerImageUrl: string;
-  direction: FlashcardDirection;
-  context: FlashcardContext;
-  orderFlowFeature: FlashcardOrderFlowFeature;
-  result: FlashcardResult;
+  expectedAction: FlashcardAction;
+  direction?: FlashcardDirection;
+  context?: FlashcardContext;
+  orderFlowFeature?: FlashcardOrderFlowFeature;
+  result?: FlashcardResult;
   notes?: string;
 };
 
@@ -168,4 +173,143 @@ export async function deleteFlashcardCard(cardId: string): Promise<void> {
   if (!res.ok) {
     throw new Error(data.message || "删除闪卡失败");
   }
+}
+
+export async function startFlashcardDrillSession(params: {
+  source: FlashcardSource;
+  count: number;
+}): Promise<FlashcardDrillStartResponse> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "flashcard/drill/session/start",
+      actualMethod: "POST",
+    },
+    actualBody: params,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "开始练习失败");
+  }
+
+  return data.data as FlashcardDrillStartResponse;
+}
+
+export async function submitFlashcardDrillAttempt(params: {
+  sessionId: string;
+  cardId: string;
+  userAction: FlashcardAction;
+  isFavorite?: boolean;
+  note?: string;
+}): Promise<{
+  isCorrect: boolean;
+  expectedAction: FlashcardAction;
+  runningStats: FlashcardDrillStats;
+}> {
+  const { sessionId, ...body } = params;
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/drill/session/${sessionId}/attempt`,
+      actualMethod: "POST",
+    },
+    actualBody: body,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "提交作答失败");
+  }
+
+  return data.data as {
+    isCorrect: boolean;
+    expectedAction: FlashcardAction;
+    runningStats: FlashcardDrillStats;
+  };
+}
+
+export async function finishFlashcardDrillSession(
+  sessionId: string,
+): Promise<{ sessionId: string; score: number; stats: FlashcardDrillStats }> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/drill/session/${sessionId}/finish`,
+      actualMethod: "POST",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "结束练习失败");
+  }
+
+  return data.data as { sessionId: string; score: number; stats: FlashcardDrillStats };
+}
+
+export async function listFlashcardWrongBook(): Promise<FlashcardCard[]> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "flashcard/review/wrong-book",
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取错题集失败");
+  }
+
+  return (data.data || []) as FlashcardCard[];
+}
+
+export async function listFlashcardFavorites(): Promise<FlashcardCard[]> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "flashcard/review/favorites",
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取收藏库失败");
+  }
+
+  return (data.data || []) as FlashcardCard[];
+}
+
+export async function updateFlashcardNote(
+  cardId: string,
+  note: string,
+): Promise<FlashcardCard> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/cards/${cardId}/note`,
+      actualMethod: "PATCH",
+    },
+    actualBody: {
+      note,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "更新备注失败");
+  }
+
+  return data.data as FlashcardCard;
 }

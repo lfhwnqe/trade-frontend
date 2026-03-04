@@ -13,15 +13,9 @@ import {
 } from "@/components/ui/select";
 import { createFlashcardCard } from "../request";
 import {
-  FLASHCARD_CONTEXTS,
   FLASHCARD_DIRECTIONS,
   FLASHCARD_LABELS,
-  FLASHCARD_ORDER_FLOW_FEATURES,
-  FLASHCARD_RESULTS,
-  type FlashcardContext,
-  type FlashcardDirection,
-  type FlashcardOrderFlowFeature,
-  type FlashcardResult,
+  type FlashcardAction,
 } from "../types";
 import { useAlert } from "@/components/common/alert";
 import { ImageUploader } from "@/components/common/ImageUploader";
@@ -32,10 +26,7 @@ export default function FlashcardCreatePage() {
 
   const [questionImages, setQuestionImages] = React.useState<ImageResource[]>([]);
   const [answerImages, setAnswerImages] = React.useState<ImageResource[]>([]);
-  const [direction, setDirection] = React.useState<FlashcardDirection | "">("");
-  const [context, setContext] = React.useState<FlashcardContext | "">("");
-  const [orderFlowFeature, setOrderFlowFeature] = React.useState<FlashcardOrderFlowFeature | "">("");
-  const [result, setResult] = React.useState<FlashcardResult | "">("");
+  const [expectedAction, setExpectedAction] = React.useState<FlashcardAction | "">("");
   const [notes, setNotes] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -43,7 +34,7 @@ export default function FlashcardCreatePage() {
   const answerImageUrl = answerImages[0]?.url || "";
 
   const handleSubmit = React.useCallback(async () => {
-    if (!questionImageUrl || !answerImageUrl || !direction || !context || !orderFlowFeature || !result) {
+    if (!questionImageUrl || !answerImageUrl || !expectedAction) {
       errorAlert("请先填写全部必填项并上传两张图片");
       return;
     }
@@ -53,19 +44,13 @@ export default function FlashcardCreatePage() {
       await createFlashcardCard({
         questionImageUrl,
         answerImageUrl,
-        direction,
-        context,
-        orderFlowFeature,
-        result,
+        expectedAction,
         notes: notes.trim() || undefined,
       });
 
       setQuestionImages([]);
       setAnswerImages([]);
-      setDirection("");
-      setContext("");
-      setOrderFlowFeature("");
-      setResult("");
+      setExpectedAction("");
       setNotes("");
 
       successAlert("闪卡保存成功");
@@ -77,20 +62,17 @@ export default function FlashcardCreatePage() {
     }
   }, [
     answerImageUrl,
-    context,
-    direction,
     errorAlert,
+    expectedAction,
     notes,
-    orderFlowFeature,
     questionImageUrl,
-    result,
     successAlert,
   ]);
 
   return (
     <TradePageShell
       title="闪卡录入"
-      subtitle="题目图 + 答案图 + 标签，最快 15 秒/题"
+      subtitle="入场前图 + 入场后图 + 标准动作，最快 15 秒/题"
       showAddButton={false}
     >
       <div className="w-full space-y-6">
@@ -101,15 +83,15 @@ export default function FlashcardCreatePage() {
           </div>
 
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
-            <div className="mb-2 text-sm font-medium text-[#e5e7eb]">结果截图（必填）</div>
+            <div className="mb-2 text-sm font-medium text-[#e5e7eb]">入场后截图（必填）</div>
             <ImageUploader value={answerImages} onChange={setAnswerImages} max={1} />
           </div>
         </div>
 
-        <div className="grid gap-4 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:grid-cols-2 lg:grid-cols-3 shadow-sm">
+        <div className="grid gap-4 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:grid-cols-2 shadow-sm">
           <div className="space-y-2">
-            <div className="text-xs font-medium text-[#9ca3af]">方向（必填）</div>
-            <Select value={direction} onValueChange={(v) => setDirection(v as FlashcardDirection)}>
+            <div className="text-xs font-medium text-[#9ca3af]">标准动作（必填）</div>
+            <Select value={expectedAction} onValueChange={(v) => setExpectedAction(v as FlashcardAction)}>
               <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
@@ -123,59 +105,8 @@ export default function FlashcardCreatePage() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-[#9ca3af]">1H 结构（必填）</div>
-            <Select value={context} onValueChange={(v) => setContext(v as FlashcardContext)}>
-              <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                <SelectValue placeholder="请选择" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                {FLASHCARD_CONTEXTS.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {FLASHCARD_LABELS[item]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-[#9ca3af]">订单流特征（必填）</div>
-            <Select
-              value={orderFlowFeature}
-              onValueChange={(v) => setOrderFlowFeature(v as FlashcardOrderFlowFeature)}
-            >
-              <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                <SelectValue placeholder="请选择" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                {FLASHCARD_ORDER_FLOW_FEATURES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {FLASHCARD_LABELS[item]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-[#9ca3af]">最终结果（必填）</div>
-            <Select value={result} onValueChange={(v) => setResult(v as FlashcardResult)}>
-              <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                <SelectValue placeholder="请选择" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                {FLASHCARD_RESULTS.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {FLASHCARD_LABELS[item]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2 md:col-span-2 lg:col-span-3">
-            <div className="text-xs font-medium text-[#9ca3af]">复盘笔记（选填）</div>
+          <div className="space-y-2 md:col-span-2">
+            <div className="text-xs font-medium text-[#9ca3af]">题目备注（选填）</div>
             <Textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}

@@ -4,22 +4,63 @@ import React from "react";
 import Link from "next/link";
 import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   clearFlashcardSession,
   getFlashcardSession,
   type FlashcardDrillSession,
 } from "@/store/flashcard-session";
-import { FLASHCARD_LABELS } from "../../types";
+import {
+  FLASHCARD_DIRECTIONS,
+  FLASHCARD_LABELS,
+  type FlashcardAction,
+  type FlashcardDrillStats,
+} from "../../types";
 import { ImagePreviewDialog } from "../../components/ImagePreviewDialog";
+import {
+  finishFlashcardDrillSession,
+  submitFlashcardDrillAttempt,
+  updateFlashcardNote,
+} from "../../request";
+import { useAlert } from "@/components/common/alert";
 
 export default function FlashcardDrillPlayPage() {
+  const [, errorAlert] = useAlert();
+
   const [session, setSession] = React.useState<FlashcardDrillSession | null>(null);
   const [index, setIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [finishing, setFinishing] = React.useState(false);
+  const [selectedAction, setSelectedAction] = React.useState<FlashcardAction | "">("");
+  const [runningStats, setRunningStats] = React.useState<FlashcardDrillStats | null>(
+    null,
+  );
+  const [finalScore, setFinalScore] = React.useState<number | null>(null);
+  const [attemptResults, setAttemptResults] = React.useState<
+    Record<string, { isCorrect: boolean; expectedAction: FlashcardAction }>
+  >({});
+  const [favoriteMap, setFavoriteMap] = React.useState<Record<string, boolean>>({});
+  const [noteMap, setNoteMap] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
-    setSession(getFlashcardSession());
+    const loaded = getFlashcardSession();
+    if (!loaded) return;
+
+    setSession(loaded);
+    const initialNotes = loaded.cards.reduce<Record<string, string>>((acc, card) => {
+      acc[card.cardId] = card.notes || "";
+      return acc;
+    }, {});
+    setNoteMap(initialNotes);
   }, []);
 
   const cards = session?.cards || [];
@@ -27,14 +68,46 @@ export default function FlashcardDrillPlayPage() {
   const current = cards[index];
   const isCompleted = total > 0 && index >= total;
 
-  const handleAdvance = React.useCallback(() => {
-    if (!cards.length || isCompleted) return;
-
-    if (!revealed) {
-      setRevealed(true);
+  const handleSubmitCurrent = React.useCallback(async () => {
+    if (!session || !current || !selectedAction) {
+      errorAlert("请先选择本题动作");
       return;
     }
 
+    setSubmitting(true);
+    try {
+      const res = await submitFlashcardDrillAttempt({
+        sessionId: session.sessionId,
+        cardId: current.cardId,
+        userAction: selectedAction,
+        isFavorite: !!favoriteMap[current.cardId],
+        note: noteMap[current.cardId] || undefined,
+      });
+
+      setAttemptResults((prev) => ({
+        ...prev,
+        [current.cardId]: {
+          isCorrect: res.isCorrect,
+          expectedAction: res.expectedAction,
+        },
+      }));
+      setRunningStats(res.runningStats);
+      setRevealed(true);
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "提交失败");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [
+    current,
+    errorAlert,
+    favoriteMap,
+    noteMap,
+    selectedAction,
+    session,
+  ]);
+
+  const handleNext = React.useCallback(() => {
     if (index + 1 >= cards.length) {
       setIndex(cards.length);
       setRevealed(false);
@@ -43,18 +116,92 @@ export default function FlashcardDrillPlayPage() {
 
     setIndex((prev) => prev + 1);
     setRevealed(false);
-  }, [cards.length, index, isCompleted, revealed]);
+    setSelectedAction("");
+  }, [cards.length, index]);
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== "Space") return;
       event.preventDefault();
-      handleAdvance();
+
+      if (!revealed) {
+        if (!submitting) {
+          void handleSubmitCurrent();
+        }
+        return;
+      }
+
+      handleNext();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleAdvance]);
+  }, [handleNext, handleSubmitCurrent, revealed, submitting]);
+
+  React.useEffect(() => {
+    if (!session || !isCompleted || finalScore !== null || finishing) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      setFinishing(true);
+      try {
+        const res = await finishFlashcardDrillSession(session.sessionId);
+        if (cancelled) return;
+        setFinalScore(res.score);
+        setRunningStats(res.stats);
+      } catch (error) {
+        if (!cancelled) {
+          errorAlert(error instanceof Error ? error.message : "结束练习失败");
+        }
+      } finally {
+        if (!cancelled) {
+          setFinishing(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [errorAlert, finalScore, finishing, isCompleted, session]);
+
+  const handleSaveNote = React.useCallback(
+    async (cardId: string) => {
+      const nextNote = (noteMap[cardId] || "").trim();
+      try {
+        await updateFlashcardNote(cardId, nextNote);
+      } catch (error) {
+        errorAlert(error instanceof Error ? error.message : "保存备注失败");
+      }
+    },
+    [errorAlert, noteMap],
+  );
+
+  const toggleFavorite = React.useCallback(
+    async (cardId: string) => {
+      const next = !favoriteMap[cardId];
+      setFavoriteMap((prev) => ({ ...prev, [cardId]: next }));
+
+      if (!session) return;
+
+      try {
+        await submitFlashcardDrillAttempt({
+          sessionId: session.sessionId,
+          cardId,
+          userAction:
+            attemptResults[cardId]?.expectedAction || selectedAction || "NO_TRADE",
+          isFavorite: next,
+        });
+      } catch (error) {
+        errorAlert(error instanceof Error ? error.message : "更新收藏失败");
+        setFavoriteMap((prev) => ({ ...prev, [cardId]: !next }));
+      }
+    },
+    [attemptResults, errorAlert, favoriteMap, selectedAction, session],
+  );
 
   if (!session || cards.length === 0) {
     return (
@@ -74,30 +221,70 @@ export default function FlashcardDrillPlayPage() {
   if (isCompleted) {
     return (
       <TradePageShell title="闪卡练习" subtitle="本轮训练已完成" showAddButton={false}>
-        <div className="w-full rounded-xl border border-[#27272a] bg-[#121212] p-6 text-center text-[#9ca3af] shadow-sm">
-          <div className="text-lg font-semibold text-white">训练完成</div>
-          <div className="mt-2">共完成 {total} 题。</div>
-          <div className="mt-6 flex justify-center gap-3">
-            <Button
-              type="button"
-              onClick={() => {
-                clearFlashcardSession();
-                setSession(null);
-              }}
-              className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#232323]"
-            >
-              清空会话
-            </Button>
-            <Link href="/trade/flashcard/drill/setup">
-              <Button type="button" className="bg-[#00c2b2] text-black hover:bg-[#009e91]">
-                再来一组
+        <div className="w-full space-y-4">
+          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 text-center text-[#9ca3af] shadow-sm">
+            <div className="text-lg font-semibold text-white">训练完成</div>
+            <div className="mt-2">共完成 {total} 题。</div>
+            <div className="mt-2 text-[#00c2b2]">本次分数：{finalScore ?? 0} 分</div>
+            <div className="mt-2 text-sm text-[#cbd5e1]">
+              正确 {runningStats?.correct ?? 0} / {runningStats?.answered ?? 0}，正确率
+              {` ${Math.round((runningStats?.accuracy ?? 0) * 100)}%`}
+            </div>
+            <div className="mt-6 flex justify-center gap-3">
+              <Button
+                type="button"
+                onClick={() => {
+                  clearFlashcardSession();
+                  setSession(null);
+                }}
+                className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#232323]"
+              >
+                清空会话
               </Button>
-            </Link>
+              <Link href="/trade/flashcard/drill/setup">
+                <Button type="button" className="bg-[#00c2b2] text-black hover:bg-[#009e91]">
+                  再来一组
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
+            <div className="mb-3 text-sm font-medium text-white">题目备注复盘</div>
+            <div className="space-y-3">
+              {cards.map((card, i) => (
+                <div key={card.cardId} className="rounded border border-[#27272a] bg-[#1e1e1e] p-3">
+                  <div className="mb-2 text-xs text-[#9ca3af]">第 {i + 1} 题</div>
+                  <Textarea
+                    value={noteMap[card.cardId] || ""}
+                    onChange={(event) =>
+                      setNoteMap((prev) => ({
+                        ...prev,
+                        [card.cardId]: event.target.value,
+                      }))
+                    }
+                    className="min-h-20 border-[#27272a] bg-[#121212] text-[#e5e7eb]"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]"
+                      onClick={() => void handleSaveNote(card.cardId)}
+                    >
+                      保存备注
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </TradePageShell>
     );
   }
+
+  const currentAttempt = current ? attemptResults[current.cardId] : undefined;
 
   return (
     <TradePageShell
@@ -147,47 +334,102 @@ export default function FlashcardDrillPlayPage() {
               </button>
             ) : (
               <div className="flex h-[260px] items-center justify-center rounded border border-dashed border-[#27272a] text-sm text-[#9ca3af] bg-[#1e1e1e]">
-                点击 Reveal Answer 或空格键揭晓
+                先选择动作，再 Reveal
               </div>
             )}
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded bg-[#1f2937] px-2 py-1 text-[#cbd5e1]">
-              {FLASHCARD_LABELS[current.direction]}
-            </span>
-            <span className="rounded bg-[#1f2937] px-2 py-1 text-[#cbd5e1]">
-              {FLASHCARD_LABELS[current.context]}
-            </span>
+        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm space-y-3">
+          <div className="text-xs text-[#9ca3af]">你的动作</div>
+          <Select
+            value={selectedAction}
+            onValueChange={(v) => setSelectedAction(v as FlashcardAction)}
+            disabled={revealed}
+          >
+            <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]">
+              <SelectValue placeholder="请选择 LONG / SHORT / NO_TRADE" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+              {FLASHCARD_DIRECTIONS.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {FLASHCARD_LABELS[item]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
+          {revealed ? (
+            <>
+              <div className="text-sm text-[#cbd5e1]">
+                标准动作：
+                <span className="ml-1 text-[#00c2b2]">
+                  {FLASHCARD_LABELS[currentAttempt?.expectedAction || current.expectedAction || current.direction]}
+                </span>
+              </div>
+              <div className="text-sm">
+                判定：
+                <span
+                  className={`ml-1 ${currentAttempt?.isCorrect ? "text-emerald-400" : "text-rose-400"}`}
+                >
+                  {currentAttempt?.isCorrect ? "Correct" : "Wrong"}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]"
+                  onClick={() => void toggleFavorite(current.cardId)}
+                >
+                  {favoriteMap[current.cardId] ? "取消收藏" : "收藏本题"}
+                </Button>
+              </div>
+            </>
+          ) : null}
+
+          <div className="space-y-2">
+            <div className="text-xs text-[#9ca3af]">备注</div>
+            <Textarea
+              value={noteMap[current.cardId] || ""}
+              onChange={(event) =>
+                setNoteMap((prev) => ({ ...prev, [current.cardId]: event.target.value }))
+              }
+              placeholder="可记录你的复盘笔记"
+              className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+            />
             {revealed ? (
-              <>
-                <span className="rounded bg-[#1e1e1e] px-2 py-1 text-[#9ca3af] border border-[#27272a]">
-                  {FLASHCARD_LABELS[current.orderFlowFeature]}
-                </span>
-                <span className="rounded bg-[#00c2b2]/15 px-2 py-1 text-[#00c2b2] border border-[#00c2b2]/30">
-                  {FLASHCARD_LABELS[current.result]}
-                </span>
-              </>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]"
+                  onClick={() => void handleSaveNote(current.cardId)}
+                >
+                  保存备注
+                </Button>
+              </div>
             ) : null}
           </div>
-
-          {revealed && current.notes ? (
-            <div className="mt-3 rounded border border-[#27272a] bg-[#1e1e1e] p-3 text-sm text-[#e5e7eb]">
-              {current.notes}
-            </div>
-          ) : null}
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-[#9ca3af]">
+            已答 {runningStats?.answered || 0}/{runningStats?.total || total}，当前分数 {runningStats?.score || 0}
+          </div>
           <Button
             type="button"
-            onClick={handleAdvance}
+            disabled={submitting || (!revealed && !selectedAction)}
+            onClick={() => {
+              if (!revealed) {
+                void handleSubmitCurrent();
+                return;
+              }
+              handleNext();
+            }}
             className="bg-[#00c2b2] text-black hover:bg-[#009e91]"
           >
-            {revealed ? "Next Card" : "Reveal Answer"}
+            {submitting ? "提交中..." : revealed ? "Next Card" : "Reveal Answer"}
           </Button>
         </div>
       </div>
