@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { format } from "date-fns";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAlert } from "@/components/common/alert";
-import { deleteFlashcardCard, listFlashcardCards } from "../request";
+import { listFlashcardCards } from "../request";
 import {
   FLASHCARD_CONTEXTS,
   FLASHCARD_DIRECTIONS,
@@ -42,7 +41,6 @@ export default function FlashcardManagePage() {
 
   const [items, setItems] = React.useState<FlashcardCard[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
   const [page, setPage] = React.useState(1);
@@ -121,27 +119,8 @@ export default function FlashcardManagePage() {
     await fetchPage(1, { resetCursor: true, resetFilters: true });
   }, [fetchPage]);
 
-  const handleDelete = React.useCallback(
-    async (cardId: string) => {
-      const ok = window.confirm("确认删除这张闪卡吗？");
-      if (!ok) return;
-
-      setDeletingId(cardId);
-      try {
-        await deleteFlashcardCard(cardId);
-        setItems((prev) => prev.filter((it) => it.cardId !== cardId));
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : "删除失败";
-        errorAlert(msg);
-      } finally {
-        setDeletingId(null);
-      }
-    },
-    [errorAlert],
-  );
-
   return (
-    <TradePageShell title="闪卡管理" subtitle="参考交易列表：筛选、表格、分页、删除" showAddButton={false}>
+    <TradePageShell title="闪卡管理" subtitle="题目图 / 答案图 / 后续方向" showAddButton={false}>
       <div className="w-full space-y-4">
         <div className="bg-[#121212] border border-[#27272a] rounded-xl p-4 shadow-sm">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -215,35 +194,26 @@ export default function FlashcardManagePage() {
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <Table className="min-w-[980px]">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow className="bg-black/20 border-b border-[#27272a]">
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">时间</TableHead>
                   <TableHead className="text-[#9ca3af] text-xs uppercase">题目图</TableHead>
                   <TableHead className="text-[#9ca3af] text-xs uppercase">答案图</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">方向</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">结构</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">订单流</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">结果</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">备注</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">操作</TableHead>
+                  <TableHead className="text-[#9ca3af] text-xs uppercase">后续方向</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
+                    <TableCell colSpan={3} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-[#9ca3af]">暂无数据</TableCell>
+                    <TableCell colSpan={3} className="h-24 text-center text-[#9ca3af]">暂无数据</TableCell>
                   </TableRow>
                 ) : (
                   items.map((card) => (
                     <TableRow key={card.cardId} className="border-b border-[#27272a] hover:bg-[#1e1e1e]">
-                      <TableCell className="text-[#e5e7eb] text-sm min-w-[140px]">
-                        {format(new Date(card.createdAt), "yyyy-MM-dd HH:mm")}
-                      </TableCell>
                       <TableCell>
                         <button type="button" onClick={() => setPreviewUrl(card.questionImageUrl)}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -256,29 +226,8 @@ export default function FlashcardManagePage() {
                           <img src={card.answerImageUrl} alt="answer" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
                         </button>
                       </TableCell>
-                      <TableCell className="text-[#e5e7eb] text-sm">{FLASHCARD_LABELS[card.direction]}</TableCell>
-                      <TableCell className="text-[#e5e7eb] text-sm">{FLASHCARD_LABELS[card.context]}</TableCell>
-                      <TableCell className="text-[#e5e7eb] text-sm max-w-[180px] truncate" title={FLASHCARD_LABELS[card.orderFlowFeature]}>
-                        {FLASHCARD_LABELS[card.orderFlowFeature]}
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00c2b2]/15 text-[#00c2b2] border border-[#00c2b2]/30">
-                          {FLASHCARD_LABELS[card.result]}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-[#9ca3af] text-sm max-w-[220px] truncate" title={card.notes || ""}>
-                        {card.notes || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(card.cardId)}
-                          disabled={deletingId === card.cardId}
-                        >
-                          {deletingId === card.cardId ? "删除中..." : "删除"}
-                        </Button>
+                      <TableCell className="text-[#e5e7eb] text-sm">
+                        {FLASHCARD_LABELS[card.expectedAction || card.direction]}
                       </TableCell>
                     </TableRow>
                   ))

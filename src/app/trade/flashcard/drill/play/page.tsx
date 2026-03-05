@@ -6,13 +6,6 @@ import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   clearFlashcardSession,
   getFlashcardSession,
   type FlashcardDrillSession,
@@ -241,6 +234,11 @@ export default function FlashcardDrillPlayPage() {
               >
                 清空会话
               </Button>
+              <Link href="/trade/flashcard/drill/history">
+                <Button type="button" className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]">
+                  查看训练成绩
+                </Button>
+              </Link>
               <Link href="/trade/flashcard/drill/setup">
                 <Button type="button" className="bg-[#00c2b2] text-black hover:bg-[#009e91]">
                   再来一组
@@ -302,7 +300,7 @@ export default function FlashcardDrillPlayPage() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-3 shadow-sm">
-            <div className="mb-2 text-xs text-[#9ca3af]">Question Image</div>
+            <div className="mb-2 text-xs text-[#9ca3af]">题目图</div>
             <button
               type="button"
               className="w-full"
@@ -318,7 +316,7 @@ export default function FlashcardDrillPlayPage() {
           </div>
 
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-3 shadow-sm">
-            <div className="mb-2 text-xs text-[#9ca3af]">Answer Image</div>
+            <div className="mb-2 text-xs text-[#9ca3af]">答案图</div>
             {revealed ? (
               <button
                 type="button"
@@ -334,7 +332,7 @@ export default function FlashcardDrillPlayPage() {
               </button>
             ) : (
               <div className="flex h-[260px] items-center justify-center rounded border border-dashed border-[#27272a] text-sm text-[#9ca3af] bg-[#1e1e1e]">
-                先选择动作，再 Reveal
+                先选择你的动作，再揭晓答案
               </div>
             )}
           </div>
@@ -342,22 +340,26 @@ export default function FlashcardDrillPlayPage() {
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm space-y-3">
           <div className="text-xs text-[#9ca3af]">你的动作</div>
-          <Select
-            value={selectedAction}
-            onValueChange={(v) => setSelectedAction(v as FlashcardAction)}
-            disabled={revealed}
-          >
-            <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]">
-              <SelectValue placeholder="请选择 LONG / SHORT / NO_TRADE" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-              {FLASHCARD_DIRECTIONS.map((item) => (
-                <SelectItem key={item} value={item}>
+          <div className="grid grid-cols-3 gap-2">
+            {FLASHCARD_DIRECTIONS.map((item) => {
+              const isActive = selectedAction === item;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  disabled={revealed}
+                  onClick={() => setSelectedAction(item as FlashcardAction)}
+                  className={`h-10 rounded-md border text-sm font-medium transition-colors ${
+                    isActive
+                      ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
+                      : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
+                  } ${revealed ? "cursor-not-allowed opacity-60" : ""}`}
+                >
                   {FLASHCARD_LABELS[item]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </button>
+              );
+            })}
+          </div>
 
           {revealed ? (
             <>
@@ -372,7 +374,7 @@ export default function FlashcardDrillPlayPage() {
                 <span
                   className={`ml-1 ${currentAttempt?.isCorrect ? "text-emerald-400" : "text-rose-400"}`}
                 >
-                  {currentAttempt?.isCorrect ? "Correct" : "Wrong"}
+                  {currentAttempt?.isCorrect ? "正确" : "错误"}
                 </span>
               </div>
               <div className="flex gap-2">
@@ -387,30 +389,6 @@ export default function FlashcardDrillPlayPage() {
               </div>
             </>
           ) : null}
-
-          <div className="space-y-2">
-            <div className="text-xs text-[#9ca3af]">备注</div>
-            <Textarea
-              value={noteMap[current.cardId] || ""}
-              onChange={(event) =>
-                setNoteMap((prev) => ({ ...prev, [current.cardId]: event.target.value }))
-              }
-              placeholder="可记录你的复盘笔记"
-              className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
-            />
-            {revealed ? (
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]"
-                  onClick={() => void handleSaveNote(current.cardId)}
-                >
-                  保存备注
-                </Button>
-              </div>
-            ) : null}
-          </div>
         </div>
 
         <div className="flex justify-between items-center">
@@ -429,7 +407,7 @@ export default function FlashcardDrillPlayPage() {
             }}
             className="bg-[#00c2b2] text-black hover:bg-[#009e91]"
           >
-            {submitting ? "提交中..." : revealed ? "Next Card" : "Reveal Answer"}
+            {submitting ? "提交中..." : revealed ? "下一题" : "揭晓答案"}
           </Button>
         </div>
       </div>

@@ -59,6 +59,21 @@ export type FlashcardDrillStats = {
   status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
 };
 
+export type FlashcardDrillSessionHistoryItem = {
+  sessionId: string;
+  source: FlashcardSource;
+  total: number;
+  answered: number;
+  correct: number;
+  wrong: number;
+  accuracy: number;
+  score: number;
+  status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+  startedAt: string;
+  endedAt?: string;
+  updatedAt: string;
+};
+
 export const FLASHCARD_LABELS: Record<string, string> = {
   LONG: "做多",
   SHORT: "做空",

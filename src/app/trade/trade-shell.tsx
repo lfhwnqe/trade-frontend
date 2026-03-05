@@ -70,6 +70,11 @@ const tradeNavItems: NavItem[] = [
     icon: Layers,
   },
   {
+    title: "训练成绩",
+    href: "/trade/flashcard/drill/history",
+    icon: Layers,
+  },
+  {
     title: "闪卡复盘",
     href: "/trade/flashcard/review",
     icon: Layers,

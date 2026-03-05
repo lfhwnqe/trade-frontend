@@ -5,6 +5,7 @@ import type {
   FlashcardContext,
   FlashcardDrillStartResponse,
   FlashcardDrillStats,
+  FlashcardDrillSessionHistoryItem,
   FlashcardDirection,
   FlashcardFilters,
   FlashcardOrderFlowFeature,
@@ -250,6 +251,40 @@ export async function finishFlashcardDrillSession(
   }
 
   return data.data as { sessionId: string; score: number; stats: FlashcardDrillStats };
+}
+
+export async function listFlashcardDrillSessions(params?: {
+  pageSize?: number;
+  cursor?: string;
+  status?: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+}): Promise<{ items: FlashcardDrillSessionHistoryItem[]; nextCursor: string | null }> {
+  const searchParams = new URLSearchParams();
+  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params?.cursor) searchParams.set("cursor", params.cursor);
+  if (params?.status) searchParams.set("status", params.status);
+
+  const targetPath = `flashcard/drill/sessions${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取训练成绩历史失败");
+  }
+
+  return {
+    items: (data.data?.items || []) as FlashcardDrillSessionHistoryItem[],
+    nextCursor:
+      typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
+  };
 }
 
 export async function listFlashcardWrongBook(): Promise<FlashcardCard[]> {
