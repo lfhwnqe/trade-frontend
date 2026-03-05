@@ -27,7 +27,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAlert } from "@/components/common/alert";
-import { listFlashcardCards, updateFlashcardNote } from "../request";
+import {
+  deleteFlashcardCard,
+  listFlashcardCards,
+  updateFlashcardNote,
+} from "../request";
 import {
   FLASHCARD_CONTEXTS,
   FLASHCARD_DIRECTIONS,
@@ -153,6 +157,22 @@ export default function FlashcardManagePage() {
     }
   }, [editingCard, editingNote, errorAlert, successAlert]);
 
+  const handleDeleteCard = React.useCallback(
+    async (card: FlashcardCard) => {
+      const confirmed = window.confirm("确认删除这张闪卡吗？删除后不可恢复。");
+      if (!confirmed) return;
+
+      try {
+        await deleteFlashcardCard(card.cardId);
+        setItems((prev) => prev.filter((item) => item.cardId !== card.cardId));
+        successAlert("闪卡已删除");
+      } catch (error) {
+        errorAlert(error instanceof Error ? error.message : "删除闪卡失败");
+      }
+    },
+    [errorAlert, successAlert],
+  );
+
   return (
     <TradePageShell title="闪卡管理" subtitle="题目图 / 答案图 / 后续方向 / 闪卡备注" showAddButton={false}>
       <div className="w-full space-y-4">
@@ -277,6 +297,15 @@ export default function FlashcardManagePage() {
                             onClick={() => openNoteDialog(card)}
                           >
                             编辑
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-rose-700/40 bg-transparent text-rose-300 hover:bg-rose-900/20"
+                            onClick={() => void handleDeleteCard(card)}
+                          >
+                            删除
                           </Button>
                         </div>
                       </TableCell>
