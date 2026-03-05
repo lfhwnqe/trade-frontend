@@ -18,7 +18,6 @@ import { ImageUploader } from "@/components/common/ImageUploader";
 import type { ImageResource } from "../../config";
 
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
-const DEFAULT_SYMBOL_PAIR = TRADE_PERIOD_PRESETS[0] ?? "BTC/USDT";
 
 export default function FlashcardCreatePage() {
   const [successAlert, errorAlert] = useAlert();
@@ -27,7 +26,7 @@ export default function FlashcardCreatePage() {
   const [answerImages, setAnswerImages] = React.useState<ImageResource[]>([]);
   const [expectedAction, setExpectedAction] = React.useState<FlashcardAction | "">("");
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
-  const [symbolPairInfo, setSymbolPairInfo] = React.useState<string>(DEFAULT_SYMBOL_PAIR);
+  const [symbolPairInfo, setSymbolPairInfo] = React.useState<string>("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
     ...TRADE_PERIOD_PRESETS,
   ]);
@@ -50,11 +49,8 @@ export default function FlashcardCreatePage() {
         .filter(Boolean);
       const merged = Array.from(new Set([...TRADE_PERIOD_PRESETS, ...history]));
       setSymbolPairOptions(merged);
-      if (!symbolPairInfo.trim()) {
-        setSymbolPairInfo(merged[0] || DEFAULT_SYMBOL_PAIR);
-      }
     } catch {}
-  }, [symbolPairInfo]);
+  }, []);
 
   const rememberSymbolPair = React.useCallback((value: string) => {
     const nextValue = value.trim();
@@ -92,7 +88,7 @@ export default function FlashcardCreatePage() {
       setAnswerImages([]);
       setExpectedAction("");
       setMarketTimeInfo("");
-      setSymbolPairInfo(symbolPairOptions[0] || DEFAULT_SYMBOL_PAIR);
+      setSymbolPairInfo("");
       setNotes("");
 
       successAlert("闪卡保存成功");
@@ -111,7 +107,6 @@ export default function FlashcardCreatePage() {
     questionImageUrl,
     rememberSymbolPair,
     symbolPairInfo,
-    symbolPairOptions,
     successAlert,
   ]);
 
