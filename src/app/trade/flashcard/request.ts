@@ -30,6 +30,8 @@ type CreateFlashcardPayload = {
   context?: FlashcardContext;
   orderFlowFeature?: FlashcardOrderFlowFeature;
   result?: FlashcardResult;
+  marketTimeInfo?: string;
+  symbolPairInfo?: string;
   notes?: string;
 };
 
@@ -124,6 +126,8 @@ export async function listFlashcardCards(params?: {
   context?: FlashcardContext;
   orderFlowFeature?: FlashcardOrderFlowFeature;
   result?: FlashcardResult;
+  symbolPairInfo?: string;
+  marketTimeInfo?: string;
 }): Promise<{ items: FlashcardCard[]; nextCursor: string | null }> {
   const searchParams = new URLSearchParams();
   if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
@@ -134,6 +138,8 @@ export async function listFlashcardCards(params?: {
     searchParams.set("orderFlowFeature", params.orderFlowFeature);
   }
   if (params?.result) searchParams.set("result", params.result);
+  if (params?.symbolPairInfo) searchParams.set("symbolPairInfo", params.symbolPairInfo);
+  if (params?.marketTimeInfo) searchParams.set("marketTimeInfo", params.marketTimeInfo);
 
   const targetPath = `flashcard/cards${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 

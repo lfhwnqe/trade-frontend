@@ -3,8 +3,11 @@
 import React from "react";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
 import { createFlashcardCard } from "../request";
+import { TRADE_PERIOD_PRESETS } from "../../config";
 import {
   FLASHCARD_DIRECTIONS,
   FLASHCARD_LABELS,
@@ -14,17 +17,57 @@ import { useAlert } from "@/components/common/alert";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import type { ImageResource } from "../../config";
 
+const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
+const DEFAULT_SYMBOL_PAIR = TRADE_PERIOD_PRESETS[0] ?? "BTC/USDT";
+
 export default function FlashcardCreatePage() {
   const [successAlert, errorAlert] = useAlert();
 
   const [questionImages, setQuestionImages] = React.useState<ImageResource[]>([]);
   const [answerImages, setAnswerImages] = React.useState<ImageResource[]>([]);
   const [expectedAction, setExpectedAction] = React.useState<FlashcardAction | "">("");
+  const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
+  const [symbolPairInfo, setSymbolPairInfo] = React.useState(DEFAULT_SYMBOL_PAIR);
+  const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
+    ...TRADE_PERIOD_PRESETS,
+  ]);
   const [notes, setNotes] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
   const questionImageUrl = questionImages[0]?.url || "";
   const answerImageUrl = answerImages[0]?.url || "";
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(SYMBOL_PAIR_HISTORY_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return;
+      const history = parsed
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const merged = Array.from(new Set([...TRADE_PERIOD_PRESETS, ...history]));
+      setSymbolPairOptions(merged);
+      if (!symbolPairInfo.trim()) {
+        setSymbolPairInfo(merged[0] || DEFAULT_SYMBOL_PAIR);
+      }
+    } catch {}
+  }, [symbolPairInfo]);
+
+  const rememberSymbolPair = React.useCallback((value: string) => {
+    const nextValue = value.trim();
+    if (!nextValue || typeof window === "undefined") return;
+
+    setSymbolPairOptions((prev) => {
+      const merged = Array.from(
+        new Set([nextValue, ...prev, ...TRADE_PERIOD_PRESETS]),
+      ).slice(0, 20);
+      window.localStorage.setItem(SYMBOL_PAIR_HISTORY_KEY, JSON.stringify(merged));
+      return merged;
+    });
+  }, []);
 
   const handleSubmit = React.useCallback(async () => {
     if (!questionImageUrl || !answerImageUrl || !expectedAction) {
@@ -38,12 +81,18 @@ export default function FlashcardCreatePage() {
         questionImageUrl,
         answerImageUrl,
         expectedAction,
+        marketTimeInfo: marketTimeInfo.trim() || undefined,
+        symbolPairInfo: symbolPairInfo.trim() || undefined,
         notes: notes.trim() || undefined,
       });
+
+      rememberSymbolPair(symbolPairInfo);
 
       setQuestionImages([]);
       setAnswerImages([]);
       setExpectedAction("");
+      setMarketTimeInfo("");
+      setSymbolPairInfo(symbolPairOptions[0] || DEFAULT_SYMBOL_PAIR);
       setNotes("");
 
       successAlert("闪卡保存成功");
@@ -57,8 +106,12 @@ export default function FlashcardCreatePage() {
     answerImageUrl,
     errorAlert,
     expectedAction,
+    marketTimeInfo,
     notes,
     questionImageUrl,
+    rememberSymbolPair,
+    symbolPairInfo,
+    symbolPairOptions,
     successAlert,
   ]);
 
@@ -103,6 +156,33 @@ export default function FlashcardCreatePage() {
                 );
               })}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-[#9ca3af]">行情时间信息（选填）</div>
+            <DateCalendarPicker
+              analysisTime={marketTimeInfo}
+              updateForm={(patch) => setMarketTimeInfo(patch.analysisTime)}
+              showSeconds={false}
+              placeholder="选择行情时间"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-[#9ca3af]">币对信息（选填）</div>
+            <Input
+              value={symbolPairInfo}
+              onChange={(event) => setSymbolPairInfo(event.target.value)}
+              onBlur={(event) => rememberSymbolPair(event.target.value)}
+              list="flashcard-symbol-pair-presets"
+              placeholder="例：BTC/USDT"
+              className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+            />
+            <datalist id="flashcard-symbol-pair-presets">
+              {symbolPairOptions.map((item) => (
+                <option key={item} value={item} />
+              ))}
+            </datalist>
           </div>
 
           <div className="space-y-2 md:col-span-2">

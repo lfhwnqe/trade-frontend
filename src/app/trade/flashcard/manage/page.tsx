@@ -1,16 +1,11 @@
 "use client";
 
-import React from "react";
+import * as React from "react";
+import { ColumnDef, RowSelectionState, SortingState } from "@tanstack/react-table";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -18,35 +13,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DataTable } from "@/components/common/DataTable";
 import { useAlert } from "@/components/common/alert";
 import {
   deleteFlashcardCard,
   listFlashcardCards,
   updateFlashcardNote,
 } from "../request";
-import {
-  FLASHCARD_CONTEXTS,
-  FLASHCARD_DIRECTIONS,
-  FLASHCARD_LABELS,
-  FLASHCARD_ORDER_FLOW_FEATURES,
-  FLASHCARD_RESULTS,
-  type FlashcardCard,
-  type FlashcardContext,
-  type FlashcardDirection,
-  type FlashcardOrderFlowFeature,
-  type FlashcardResult,
-} from "../types";
+import { FLASHCARD_LABELS, type FlashcardCard } from "../types";
 import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 
-type Option<T extends string> = T | "all";
+type FlashcardQuery = {
+  symbolPairInfo: string;
+  marketTimeInfo: string;
+};
 
 export default function FlashcardManagePage() {
   const [successAlert, errorAlert] = useAlert();
@@ -60,20 +41,29 @@ export default function FlashcardManagePage() {
 
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
-  const [nextCursor, setNextCursor] = React.useState<string | null>(null);
+  const [totalItems, setTotalItems] = React.useState(1);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
+  const [queryForm, setQueryForm] = React.useState<FlashcardQuery>({
+    symbolPairInfo: "",
+    marketTimeInfo: "",
+  });
+  const [activeQuery, setActiveQuery] = React.useState<FlashcardQuery>({
+    symbolPairInfo: "",
+    marketTimeInfo: "",
+  });
 
   // page N 的起始 cursor 存在 index N-1；只放 ref，避免触发 useEffect 循环
   const cursorStackRef = React.useRef<(string | undefined)[]>([undefined]);
 
-  const [direction, setDirection] = React.useState<Option<FlashcardDirection>>("all");
-  const [context, setContext] = React.useState<Option<FlashcardContext>>("all");
-  const [orderFlowFeature, setOrderFlowFeature] = React.useState<Option<FlashcardOrderFlowFeature>>("all");
-  const [result, setResult] = React.useState<Option<FlashcardResult>>("all");
-
   const fetchPage = React.useCallback(
-    async (targetPage: number, opts?: { resetCursor?: boolean; resetFilters?: boolean }) => {
+    async (
+      targetPage: number,
+      query: FlashcardQuery,
+      opts?: { resetCursor?: boolean },
+    ) => {
       const resetCursor = opts?.resetCursor === true;
-      const resetFilters = opts?.resetFilters === true;
 
       setLoading(true);
       try {
@@ -84,18 +74,17 @@ export default function FlashcardManagePage() {
         const res = await listFlashcardCards({
           pageSize,
           cursor,
-          direction: resetFilters || direction === "all" ? undefined : direction,
-          context: resetFilters || context === "all" ? undefined : context,
-          orderFlowFeature:
-            resetFilters || orderFlowFeature === "all"
-              ? undefined
-              : orderFlowFeature,
-          result: resetFilters || result === "all" ? undefined : result,
+          symbolPairInfo: query.symbolPairInfo.trim() || undefined,
+          marketTimeInfo: query.marketTimeInfo.trim() || undefined,
         });
 
         setItems(res.items);
-        setNextCursor(res.nextCursor);
         setPage(targetPage);
+
+        const estimateTotal = res.nextCursor
+          ? targetPage * pageSize + 1
+          : (targetPage - 1) * pageSize + res.items.length;
+        setTotalItems(Math.max(estimateTotal, 1));
 
         if (resetCursor) {
           cursorStackRef.current = [undefined, res.nextCursor || undefined];
@@ -115,24 +104,32 @@ export default function FlashcardManagePage() {
         setLoading(false);
       }
     },
-    [context, direction, errorAlert, orderFlowFeature, pageSize, result],
+    [errorAlert, pageSize],
   );
 
   React.useEffect(() => {
-    void fetchPage(1, { resetCursor: true });
-  }, [fetchPage]);
+    void fetchPage(1, activeQuery, { resetCursor: true });
+  }, [activeQuery, fetchPage]);
 
-  const handleApplyFilters = React.useCallback(async () => {
-    await fetchPage(1, { resetCursor: true });
-  }, [fetchPage]);
+  const handleQuerySubmit = React.useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setActiveQuery({ ...queryForm });
+      cursorStackRef.current = [undefined];
+      setRowSelection({});
+      setSorting([]);
+    },
+    [queryForm],
+  );
 
-  const handleResetFilters = React.useCallback(async () => {
-    setDirection("all");
-    setContext("all");
-    setOrderFlowFeature("all");
-    setResult("all");
-    await fetchPage(1, { resetCursor: true, resetFilters: true });
-  }, [fetchPage]);
+  const handleQueryReset = React.useCallback(() => {
+    const emptyQuery = { symbolPairInfo: "", marketTimeInfo: "" };
+    setQueryForm(emptyQuery);
+    setActiveQuery(emptyQuery);
+    cursorStackRef.current = [undefined];
+    setRowSelection({});
+    setSorting([]);
+  }, []);
 
   const openNoteDialog = React.useCallback((card: FlashcardCard) => {
     setEditingCard(card);
@@ -165,6 +162,7 @@ export default function FlashcardManagePage() {
       try {
         await deleteFlashcardCard(card.cardId);
         setItems((prev) => prev.filter((item) => item.cardId !== card.cardId));
+        setTotalItems((prev) => Math.max(1, prev - 1));
         successAlert("闪卡已删除");
       } catch (error) {
         errorAlert(error instanceof Error ? error.message : "删除闪卡失败");
@@ -173,178 +171,219 @@ export default function FlashcardManagePage() {
     [errorAlert, successAlert],
   );
 
-  return (
-    <TradePageShell title="闪卡管理" subtitle="题目图 / 答案图 / 后续方向 / 闪卡备注" showAddButton={false}>
-      <div className="w-full space-y-4">
-        <div className="bg-[#121212] border border-[#27272a] rounded-xl p-4 shadow-sm">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Select value={direction} onValueChange={(v) => setDirection(v as Option<FlashcardDirection>)}>
-              <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                <SelectValue placeholder="方向" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                <SelectItem value="all">方向：全部</SelectItem>
-                {FLASHCARD_DIRECTIONS.map((item) => (
-                  <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={context} onValueChange={(v) => setContext(v as Option<FlashcardContext>)}>
-              <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                <SelectValue placeholder="结构" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                <SelectItem value="all">结构：全部</SelectItem>
-                {FLASHCARD_CONTEXTS.map((item) => (
-                  <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={orderFlowFeature} onValueChange={(v) => setOrderFlowFeature(v as Option<FlashcardOrderFlowFeature>)}>
-              <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                <SelectValue placeholder="订单流" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                <SelectItem value="all">订单流：全部</SelectItem>
-                {FLASHCARD_ORDER_FLOW_FEATURES.map((item) => (
-                  <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={result} onValueChange={(v) => setResult(v as Option<FlashcardResult>)}>
-              <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                <SelectValue placeholder="结果" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                <SelectItem value="all">结果：全部</SelectItem>
-                {FLASHCARD_RESULTS.map((item) => (
-                  <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+  const columns = React.useMemo<ColumnDef<FlashcardCard>[]>(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="选择所有"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="选择行"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      {
+        accessorKey: "questionImageUrl",
+        header: "题目图",
+        cell: ({ row }) => (
+          <button type="button" onClick={() => setPreviewUrl(row.original.questionImageUrl)}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={row.original.questionImageUrl}
+              alt="question"
+              className="h-14 w-20 rounded object-cover border border-[#27272a]"
+            />
+          </button>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "answerImageUrl",
+        header: "答案图",
+        cell: ({ row }) => (
+          <button type="button" onClick={() => setPreviewUrl(row.original.answerImageUrl)}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={row.original.answerImageUrl}
+              alt="answer"
+              className="h-14 w-20 rounded object-cover border border-[#27272a]"
+            />
+          </button>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "direction",
+        header: "后续方向",
+        cell: ({ row }) => (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/5 text-[#e5e7eb] border border-white/10">
+            {FLASHCARD_LABELS[row.original.expectedAction || row.original.direction]}
+          </span>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "symbolPairInfo",
+        header: "币对信息",
+        cell: ({ row }) => (
+          <div className="min-w-[120px] text-[#e5e7eb]">
+            {row.original.symbolPairInfo?.trim() || "-"}
           </div>
-
-          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-            <select
-              className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] px-2 rounded text-sm"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "marketTimeInfo",
+        header: "行情时间信息",
+        cell: ({ row }) => (
+          <div className="min-w-[170px] text-[#9ca3af]">
+            {row.original.marketTimeInfo?.trim() || "-"}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "notes",
+        header: "闪卡备注",
+        cell: ({ row }) => (
+          <div className="min-w-[220px] max-w-[300px] truncate text-[#9ca3af]" title={row.original.notes || ""}>
+            {row.original.notes?.trim() || "-"}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-center">操作</div>,
+        cell: ({ row }) => (
+          <div className="flex space-x-2 justify-center min-w-[180px]">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openNoteDialog(row.original)}
             >
-              {[10, 20, 50].map((sz) => (
-                <option key={sz} value={sz}>{sz}条/页</option>
-              ))}
-            </select>
-            <Button type="button" variant="outline" className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]" onClick={handleResetFilters}>
-              重置
+              编辑备注
             </Button>
-            <Button type="button" className="bg-[#00c2b2] text-black hover:bg-[#009e91]" onClick={handleApplyFilters}>
-              查询
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => void handleDeleteCard(row.original)}
+            >
+              删除
             </Button>
+          </div>
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        size: 180,
+        enablePinning: true,
+        meta: {
+          pinned: "right",
+        },
+      },
+    ],
+    [handleDeleteCard, openNoteDialog],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  return (
+    <TradePageShell title="闪卡管理" subtitle="列表、查询与操作风格对齐交易记录页" showAddButton={false}>
+      <div className="flex flex-col h-full space-y-6">
+        <div className="flex-shrink-0">
+          <div className="bg-[#121212] border border-[#27272a] rounded-xl p-4 mb-4 shadow-sm">
+            <form onSubmit={handleQuerySubmit} className="space-y-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#9ca3af] mb-1">币对信息</label>
+                  <Input
+                    value={queryForm.symbolPairInfo}
+                    onChange={(e) =>
+                      setQueryForm((prev) => ({ ...prev, symbolPairInfo: e.target.value }))
+                    }
+                    placeholder="输入币对，例如 BTC/USDT"
+                    className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#9ca3af] mb-1">行情时间信息</label>
+                  <Input
+                    value={queryForm.marketTimeInfo}
+                    onChange={(e) =>
+                      setQueryForm((prev) => ({ ...prev, marketTimeInfo: e.target.value }))
+                    }
+                    placeholder="输入时间关键字，例如 2026-03-05"
+                    className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-[#27272a]">
+                <Button
+                  type="submit"
+                  className="w-16 h-8 font-medium text-sm bg-[#00c2b2]/20 text-[#00c2b2] border border-[#00c2b2]/30 hover:bg-[#00c2b2]/30"
+                  size="sm"
+                >
+                  查询
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-16 h-8 text-sm border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]"
+                  size="sm"
+                  onClick={handleQueryReset}
+                >
+                  重置
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#27272a] bg-[#121212] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table className="min-w-[860px]">
-              <TableHeader>
-                <TableRow className="bg-black/20 border-b border-[#27272a]">
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">题目图</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">答案图</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">后续方向</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">闪卡备注</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
-                  </TableRow>
-                ) : items.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-[#9ca3af]">暂无数据</TableCell>
-                  </TableRow>
-                ) : (
-                  items.map((card) => (
-                    <TableRow key={card.cardId} className="border-b border-[#27272a] hover:bg-[#1e1e1e]">
-                      <TableCell>
-                        <button type="button" onClick={() => setPreviewUrl(card.questionImageUrl)}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={card.questionImageUrl} alt="question" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
-                        </button>
-                      </TableCell>
-                      <TableCell>
-                        <button type="button" onClick={() => setPreviewUrl(card.answerImageUrl)}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={card.answerImageUrl} alt="answer" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-[#e5e7eb] text-sm">
-                        {FLASHCARD_LABELS[card.expectedAction || card.direction]}
-                      </TableCell>
-                      <TableCell className="max-w-[320px]">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="truncate text-sm text-[#9ca3af]" title={card.notes || ""}>
-                            {card.notes?.trim() || "-"}
-                          </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-8 border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
-                            onClick={() => openNoteDialog(card)}
-                          >
-                            编辑
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-8 border-rose-700/40 bg-transparent text-rose-300 hover:bg-rose-900/20"
-                            onClick={() => void handleDeleteCard(card)}
-                          >
-                            删除
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex items-center justify-between gap-2 px-3 py-3 border-t border-[#27272a] bg-[#121212]">
-            <div className="text-sm text-[#9ca3af]">第 {page} 页</div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
-                disabled={page <= 1 || loading}
-                onClick={() => fetchPage(page - 1)}
-              >
-                上一页
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
-                disabled={!nextCursor || loading}
-                onClick={() => fetchPage(page + 1)}
-              >
-                下一页
-              </Button>
-            </div>
-          </div>
+        <div className="flex-1 min-h-0">
+          <DataTable<FlashcardCard, unknown>
+            columns={columns as ColumnDef<FlashcardCard, unknown>[]}
+            data={items}
+            sorting={sorting}
+            rowSelection={rowSelection}
+            loading={loading}
+            page={page}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            totalPages={totalPages}
+            onPageChange={(nextPage) => {
+              void fetchPage(nextPage, activeQuery);
+            }}
+            onPageSizeChange={(_, nextPageSize) => {
+              setPageSize(nextPageSize);
+              cursorStackRef.current = [undefined];
+            }}
+            onSortingChange={(nextSorting) => setSorting(nextSorting as SortingState)}
+            onRowSelectionChange={(nextSelection) =>
+              setRowSelection(nextSelection as RowSelectionState)
+            }
+            initialColumnPinning={{
+              right: ["actions"],
+            }}
+          />
         </div>
       </div>
 
       <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+
       <Dialog
         open={Boolean(editingCard)}
         onOpenChange={(open) => {
@@ -358,9 +397,7 @@ export default function FlashcardManagePage() {
             <DialogTitle>编辑闪卡备注</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <div className="text-xs text-[#9ca3af]">
-              卡片 ID：{editingCard?.cardId}
-            </div>
+            <div className="text-xs text-[#9ca3af]">卡片 ID：{editingCard?.cardId}</div>
             <Textarea
               value={editingNote}
               onChange={(event) => setEditingNote(event.target.value)}
