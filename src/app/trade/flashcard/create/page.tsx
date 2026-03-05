@@ -4,13 +4,6 @@ import React from "react";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { createFlashcardCard } from "../request";
 import {
   FLASHCARD_DIRECTIONS,
@@ -91,18 +84,25 @@ export default function FlashcardCreatePage() {
         <div className="grid gap-4 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:grid-cols-2 shadow-sm">
           <div className="space-y-2">
             <div className="text-xs font-medium text-[#9ca3af]">标准动作（必填）</div>
-            <Select value={expectedAction} onValueChange={(v) => setExpectedAction(v as FlashcardAction)}>
-              <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
-                <SelectValue placeholder="请选择" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                {FLASHCARD_DIRECTIONS.map((item) => (
-                  <SelectItem key={item} value={item}>
+            <div className="grid grid-cols-3 gap-2">
+              {FLASHCARD_DIRECTIONS.map((item) => {
+                const isActive = expectedAction === item;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setExpectedAction(item as FlashcardAction)}
+                    className={`h-10 rounded-md border text-sm font-medium transition-colors ${
+                      isActive
+                        ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
+                        : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
+                    }`}
+                  >
                     {FLASHCARD_LABELS[item]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="space-y-2 md:col-span-2">

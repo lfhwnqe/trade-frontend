@@ -3,6 +3,7 @@
 import React from "react";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -10,6 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -19,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAlert } from "@/components/common/alert";
-import { listFlashcardCards } from "../request";
+import { listFlashcardCards, updateFlashcardNote } from "../request";
 import {
   FLASHCARD_CONTEXTS,
   FLASHCARD_DIRECTIONS,
@@ -37,11 +45,14 @@ import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 type Option<T extends string> = T | "all";
 
 export default function FlashcardManagePage() {
-  const [, errorAlert] = useAlert();
+  const [successAlert, errorAlert] = useAlert();
 
   const [items, setItems] = React.useState<FlashcardCard[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [editingCard, setEditingCard] = React.useState<FlashcardCard | null>(null);
+  const [editingNote, setEditingNote] = React.useState("");
+  const [savingNote, setSavingNote] = React.useState(false);
 
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
@@ -119,8 +130,31 @@ export default function FlashcardManagePage() {
     await fetchPage(1, { resetCursor: true, resetFilters: true });
   }, [fetchPage]);
 
+  const openNoteDialog = React.useCallback((card: FlashcardCard) => {
+    setEditingCard(card);
+    setEditingNote(card.notes || "");
+  }, []);
+
+  const handleSaveNote = React.useCallback(async () => {
+    if (!editingCard) return;
+
+    setSavingNote(true);
+    try {
+      const updated = await updateFlashcardNote(editingCard.cardId, editingNote);
+      setItems((prev) =>
+        prev.map((item) => (item.cardId === updated.cardId ? { ...item, ...updated } : item)),
+      );
+      setEditingCard(null);
+      successAlert("备注已保存");
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "保存备注失败");
+    } finally {
+      setSavingNote(false);
+    }
+  }, [editingCard, editingNote, errorAlert, successAlert]);
+
   return (
-    <TradePageShell title="闪卡管理" subtitle="题目图 / 答案图 / 后续方向" showAddButton={false}>
+    <TradePageShell title="闪卡管理" subtitle="题目图 / 答案图 / 后续方向 / 闪卡备注" showAddButton={false}>
       <div className="w-full space-y-4">
         <div className="bg-[#121212] border border-[#27272a] rounded-xl p-4 shadow-sm">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -194,22 +228,23 @@ export default function FlashcardManagePage() {
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <Table className="min-w-[640px]">
+            <Table className="min-w-[860px]">
               <TableHeader>
                 <TableRow className="bg-black/20 border-b border-[#27272a]">
                   <TableHead className="text-[#9ca3af] text-xs uppercase">题目图</TableHead>
                   <TableHead className="text-[#9ca3af] text-xs uppercase">答案图</TableHead>
                   <TableHead className="text-[#9ca3af] text-xs uppercase">后续方向</TableHead>
+                  <TableHead className="text-[#9ca3af] text-xs uppercase">闪卡备注</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
+                    <TableCell colSpan={4} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-[#9ca3af]">暂无数据</TableCell>
+                    <TableCell colSpan={4} className="h-24 text-center text-[#9ca3af]">暂无数据</TableCell>
                   </TableRow>
                 ) : (
                   items.map((card) => (
@@ -228,6 +263,22 @@ export default function FlashcardManagePage() {
                       </TableCell>
                       <TableCell className="text-[#e5e7eb] text-sm">
                         {FLASHCARD_LABELS[card.expectedAction || card.direction]}
+                      </TableCell>
+                      <TableCell className="max-w-[320px]">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="truncate text-sm text-[#9ca3af]" title={card.notes || ""}>
+                            {card.notes?.trim() || "-"}
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+                            onClick={() => openNoteDialog(card)}
+                          >
+                            编辑
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -265,6 +316,51 @@ export default function FlashcardManagePage() {
       </div>
 
       <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      <Dialog
+        open={Boolean(editingCard)}
+        onOpenChange={(open) => {
+          if (!open && !savingNote) {
+            setEditingCard(null);
+          }
+        }}
+      >
+        <DialogContent className="border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+          <DialogHeader>
+            <DialogTitle>编辑闪卡备注</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <div className="text-xs text-[#9ca3af]">
+              卡片 ID：{editingCard?.cardId}
+            </div>
+            <Textarea
+              value={editingNote}
+              onChange={(event) => setEditingNote(event.target.value)}
+              placeholder="输入备注内容（留空表示清空）"
+              className="min-h-28 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+              disabled={savingNote}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+              onClick={() => setEditingCard(null)}
+              disabled={savingNote}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              className="bg-[#00c2b2] text-black hover:bg-[#009e91]"
+              onClick={() => void handleSaveNote()}
+              disabled={savingNote}
+            >
+              {savingNote ? "保存中..." : "保存备注"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TradePageShell>
   );
 }

@@ -60,6 +60,12 @@ export default function FlashcardDrillPlayPage() {
   const total = cards.length;
   const current = cards[index];
   const isCompleted = total > 0 && index >= total;
+  const answeredCount = runningStats?.answered ?? 0;
+  const correctCount = runningStats?.correct ?? 0;
+  const displayedScore =
+    finalScore ??
+    runningStats?.score ??
+    Math.round((correctCount / Math.max(answeredCount, 1)) * 100);
 
   const handleSubmitCurrent = React.useCallback(async () => {
     if (!session || !current || !selectedAction) {
@@ -218,7 +224,7 @@ export default function FlashcardDrillPlayPage() {
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 text-center text-[#9ca3af] shadow-sm">
             <div className="text-lg font-semibold text-white">训练完成</div>
             <div className="mt-2">共完成 {total} 题。</div>
-            <div className="mt-2 text-[#00c2b2]">本次分数：{finalScore ?? 0} 分</div>
+            <div className="mt-2 text-[#00c2b2]">本次分数：{displayedScore} 分</div>
             <div className="mt-2 text-sm text-[#cbd5e1]">
               正确 {runningStats?.correct ?? 0} / {runningStats?.answered ?? 0}，正确率
               {` ${Math.round((runningStats?.accuracy ?? 0) * 100)}%`}
@@ -389,6 +395,40 @@ export default function FlashcardDrillPlayPage() {
               </div>
             </>
           ) : null}
+          <div className="space-y-2">
+            <div className="text-xs text-[#9ca3af]">
+              闪卡备注{revealed ? "（可编辑）" : "（内容已隐藏，提交后显示）"}
+            </div>
+            {revealed ? (
+              <>
+                <Textarea
+                  value={noteMap[current.cardId] || ""}
+                  onChange={(event) =>
+                    setNoteMap((prev) => ({
+                      ...prev,
+                      [current.cardId]: event.target.value,
+                    }))
+                  }
+                  placeholder="记录本题复盘要点"
+                  className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+                />
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]"
+                    onClick={() => void handleSaveNote(current.cardId)}
+                  >
+                    保存备注
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-md border border-dashed border-[#27272a] bg-[#1e1e1e] px-3 py-3 text-sm text-[#9ca3af]">
+                ********（提交本题后展示）
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-between items-center">

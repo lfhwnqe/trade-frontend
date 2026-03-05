@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
@@ -40,11 +39,7 @@ function matchesKeyword(card: FlashcardCard, keyword: string) {
   if (!keyword.trim()) return true;
   const text = [
     card.cardId,
-    card.notes || "",
-    FLASHCARD_LABELS[card.direction],
-    FLASHCARD_LABELS[card.context],
-    FLASHCARD_LABELS[card.orderFlowFeature],
-    FLASHCARD_LABELS[card.result],
+    FLASHCARD_LABELS[card.expectedAction || card.direction],
   ]
     .join(" ")
     .toLowerCase();
@@ -203,7 +198,7 @@ export default function FlashcardReviewPage() {
             <Input
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              placeholder="检索 cardId / 标签 / 备注"
+              placeholder="检索 cardId / 方向性"
               className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
             />
 
@@ -219,76 +214,43 @@ export default function FlashcardReviewPage() {
           </div>
 
           <div className="overflow-x-auto border border-[#27272a] rounded-lg">
-            <Table className="min-w-[980px]">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow className="border-b border-[#27272a] bg-black/20">
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">更新时间</TableHead>
                   <TableHead className="text-[#9ca3af] text-xs uppercase">题目图</TableHead>
                   <TableHead className="text-[#9ca3af] text-xs uppercase">答案图</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">方向</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">结构</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">订单流</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">结果</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">状态</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">备注</TableHead>
+                  <TableHead className="text-[#9ca3af] text-xs uppercase">方向性</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
+                    <TableCell colSpan={3} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
                   </TableRow>
                 ) : pagedItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-[#9ca3af]">暂无匹配题目</TableCell>
+                    <TableCell colSpan={3} className="h-24 text-center text-[#9ca3af]">暂无匹配题目</TableCell>
                   </TableRow>
                 ) : (
-                  pagedItems.map((card) => {
-                    const hasNote = Boolean(card.notes?.trim());
-                    return (
-                      <TableRow key={`${activeTab}-${card.cardId}`} className="border-b border-[#27272a] hover:bg-[#1e1e1e]">
-                        <TableCell className="min-w-[140px] text-sm text-[#e5e7eb]">
-                          {format(new Date(card.updatedAt || card.createdAt), "yyyy-MM-dd HH:mm")}
-                        </TableCell>
-                        <TableCell>
-                          <button type="button" onClick={() => setPreviewUrl(card.questionImageUrl)}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={card.questionImageUrl} alt="question" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
-                          </button>
-                        </TableCell>
-                        <TableCell>
-                          <button type="button" onClick={() => setPreviewUrl(card.answerImageUrl)}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={card.answerImageUrl} alt="answer" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
-                          </button>
-                        </TableCell>
-                        <TableCell className="text-sm text-[#e5e7eb]">{FLASHCARD_LABELS[card.direction]}</TableCell>
-                        <TableCell className="text-sm text-[#e5e7eb]">{FLASHCARD_LABELS[card.context]}</TableCell>
-                        <TableCell className="max-w-[180px] truncate text-sm text-[#e5e7eb]" title={FLASHCARD_LABELS[card.orderFlowFeature]}>
-                          {FLASHCARD_LABELS[card.orderFlowFeature]}
-                        </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center rounded-full border border-[#00c2b2]/30 bg-[#00c2b2]/15 px-2 py-0.5 text-xs font-medium text-[#00c2b2]">
-                            {FLASHCARD_LABELS[card.result]}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${
-                              hasNote
-                                ? "border-emerald-400/30 bg-emerald-400/15 text-emerald-300"
-                                : "border-amber-400/30 bg-amber-400/15 text-amber-300"
-                            }`}
-                          >
-                            {hasNote ? "已备注" : "待备注"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="max-w-[220px] truncate text-sm text-[#9ca3af]" title={card.notes || ""}>
-                          {card.notes || "-"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+                  pagedItems.map((card) => (
+                    <TableRow key={`${activeTab}-${card.cardId}`} className="border-b border-[#27272a] hover:bg-[#1e1e1e]">
+                      <TableCell>
+                        <button type="button" onClick={() => setPreviewUrl(card.questionImageUrl)}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={card.questionImageUrl} alt="question" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <button type="button" onClick={() => setPreviewUrl(card.answerImageUrl)}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={card.answerImageUrl} alt="answer" className="h-14 w-20 rounded object-cover border border-[#27272a]" />
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-[#e5e7eb] text-sm">
+                        {FLASHCARD_LABELS[card.expectedAction || card.direction]}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
