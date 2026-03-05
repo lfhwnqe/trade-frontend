@@ -27,7 +27,7 @@ export default function FlashcardCreatePage() {
   const [answerImages, setAnswerImages] = React.useState<ImageResource[]>([]);
   const [expectedAction, setExpectedAction] = React.useState<FlashcardAction | "">("");
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
-  const [symbolPairInfo, setSymbolPairInfo] = React.useState(DEFAULT_SYMBOL_PAIR);
+  const [symbolPairInfo, setSymbolPairInfo] = React.useState<string>(DEFAULT_SYMBOL_PAIR);
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
     ...TRADE_PERIOD_PRESETS,
   ]);
