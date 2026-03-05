@@ -35,6 +35,16 @@ type CreateFlashcardPayload = {
   notes?: string;
 };
 
+type UpdateFlashcardPayload = {
+  questionImageUrl?: string;
+  answerImageUrl?: string;
+  expectedAction?: FlashcardAction;
+  direction?: FlashcardDirection;
+  marketTimeInfo?: string;
+  symbolPairInfo?: string;
+  notes?: string;
+};
+
 export async function getFlashcardUploadUrl(params: {
   fileName: string;
   contentType: string;
@@ -350,6 +360,28 @@ export async function updateFlashcardNote(
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.message || "更新备注失败");
+  }
+
+  return data.data as FlashcardCard;
+}
+
+export async function updateFlashcardCard(
+  cardId: string,
+  payload: UpdateFlashcardPayload,
+): Promise<FlashcardCard> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/cards/${cardId}`,
+      actualMethod: "PATCH",
+    },
+    actualBody: payload,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "更新闪卡失败");
   }
 
   return data.data as FlashcardCard;

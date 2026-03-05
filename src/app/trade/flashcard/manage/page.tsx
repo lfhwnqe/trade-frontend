@@ -15,19 +15,30 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/common/DataTable";
+import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
+import { ImageUploader } from "@/components/common/ImageUploader";
 import { useAlert } from "@/components/common/alert";
 import {
   deleteFlashcardCard,
   listFlashcardCards,
-  updateFlashcardNote,
+  updateFlashcardCard,
 } from "../request";
-import { FLASHCARD_LABELS, type FlashcardCard } from "../types";
+import {
+  FLASHCARD_DIRECTIONS,
+  FLASHCARD_LABELS,
+  type FlashcardAction,
+  type FlashcardCard,
+} from "../types";
 import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
+import type { ImageResource } from "../../config";
+import { TRADE_PERIOD_PRESETS } from "../../config";
 
 type FlashcardQuery = {
   symbolPairInfo: string;
   marketTimeInfo: string;
 };
+
+const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
 
 export default function FlashcardManagePage() {
   const [successAlert, errorAlert] = useAlert();
@@ -36,8 +47,18 @@ export default function FlashcardManagePage() {
   const [loading, setLoading] = React.useState(false);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [editingCard, setEditingCard] = React.useState<FlashcardCard | null>(null);
+  const [editingQuestionImages, setEditingQuestionImages] = React.useState<ImageResource[]>([]);
+  const [editingAnswerImages, setEditingAnswerImages] = React.useState<ImageResource[]>([]);
+  const [editingExpectedAction, setEditingExpectedAction] = React.useState<FlashcardAction | "">(
+    "",
+  );
+  const [editingMarketTimeInfo, setEditingMarketTimeInfo] = React.useState("");
+  const [editingSymbolPairInfo, setEditingSymbolPairInfo] = React.useState("");
   const [editingNote, setEditingNote] = React.useState("");
   const [savingNote, setSavingNote] = React.useState(false);
+  const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
+    ...TRADE_PERIOD_PRESETS,
+  ]);
 
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
@@ -111,6 +132,34 @@ export default function FlashcardManagePage() {
     void fetchPage(1, activeQuery, { resetCursor: true });
   }, [activeQuery, fetchPage]);
 
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(SYMBOL_PAIR_HISTORY_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return;
+      const history = parsed
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      setSymbolPairOptions(Array.from(new Set([...TRADE_PERIOD_PRESETS, ...history])));
+    } catch {}
+  }, []);
+
+  const rememberSymbolPair = React.useCallback((value: string) => {
+    const nextValue = value.trim();
+    if (!nextValue || typeof window === "undefined") return;
+
+    setSymbolPairOptions((prev) => {
+      const merged = Array.from(
+        new Set([nextValue, ...prev, ...TRADE_PERIOD_PRESETS]),
+      ).slice(0, 20);
+      window.localStorage.setItem(SYMBOL_PAIR_HISTORY_KEY, JSON.stringify(merged));
+      return merged;
+    });
+  }, []);
+
   const handleQuerySubmit = React.useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -133,26 +182,62 @@ export default function FlashcardManagePage() {
 
   const openNoteDialog = React.useCallback((card: FlashcardCard) => {
     setEditingCard(card);
+    setEditingQuestionImages(
+      card.questionImageUrl
+        ? [{ key: `${card.cardId}-question`, url: card.questionImageUrl }]
+        : [],
+    );
+    setEditingAnswerImages(
+      card.answerImageUrl
+        ? [{ key: `${card.cardId}-answer`, url: card.answerImageUrl }]
+        : [],
+    );
+    setEditingExpectedAction(card.expectedAction || card.direction);
+    setEditingMarketTimeInfo(card.marketTimeInfo || "");
+    setEditingSymbolPairInfo(card.symbolPairInfo || "");
     setEditingNote(card.notes || "");
   }, []);
 
   const handleSaveNote = React.useCallback(async () => {
     if (!editingCard) return;
+    if (!editingExpectedAction || !editingQuestionImages[0]?.url || !editingAnswerImages[0]?.url) {
+      errorAlert("请补全入场前截图、入场后截图和标准动作");
+      return;
+    }
 
     setSavingNote(true);
     try {
-      const updated = await updateFlashcardNote(editingCard.cardId, editingNote);
+      const updated = await updateFlashcardCard(editingCard.cardId, {
+        questionImageUrl: editingQuestionImages[0].url,
+        answerImageUrl: editingAnswerImages[0].url,
+        expectedAction: editingExpectedAction,
+        marketTimeInfo: editingMarketTimeInfo.trim() || undefined,
+        symbolPairInfo: editingSymbolPairInfo.trim() || undefined,
+        notes: editingNote.trim() || undefined,
+      });
+      rememberSymbolPair(editingSymbolPairInfo);
       setItems((prev) =>
         prev.map((item) => (item.cardId === updated.cardId ? { ...item, ...updated } : item)),
       );
       setEditingCard(null);
-      successAlert("备注已保存");
+      successAlert("闪卡信息已保存");
     } catch (error) {
-      errorAlert(error instanceof Error ? error.message : "保存备注失败");
+      errorAlert(error instanceof Error ? error.message : "保存闪卡失败");
     } finally {
       setSavingNote(false);
     }
-  }, [editingCard, editingNote, errorAlert, successAlert]);
+  }, [
+    editingAnswerImages,
+    editingCard,
+    editingExpectedAction,
+    editingMarketTimeInfo,
+    editingNote,
+    editingQuestionImages,
+    editingSymbolPairInfo,
+    errorAlert,
+    rememberSymbolPair,
+    successAlert,
+  ]);
 
   const handleDeleteCard = React.useCallback(
     async (card: FlashcardCard) => {
@@ -275,7 +360,7 @@ export default function FlashcardManagePage() {
               size="sm"
               onClick={() => openNoteDialog(row.original)}
             >
-              编辑备注
+              编辑
             </Button>
             <Button
               variant="destructive"
@@ -392,19 +477,97 @@ export default function FlashcardManagePage() {
           }
         }}
       >
-        <DialogContent className="border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+        <DialogContent className="max-w-3xl border-[#27272a] bg-[#121212] text-[#e5e7eb]">
           <DialogHeader>
-            <DialogTitle>编辑闪卡备注</DialogTitle>
+            <DialogTitle>编辑闪卡信息</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2">
-            <div className="text-xs text-[#9ca3af]">卡片 ID：{editingCard?.cardId}</div>
-            <Textarea
-              value={editingNote}
-              onChange={(event) => setEditingNote(event.target.value)}
-              placeholder="输入备注内容（留空表示清空）"
-              className="min-h-28 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
-              disabled={savingNote}
-            />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="space-y-1 rounded-lg border border-[#27272a] bg-[#1a1a1a] p-3">
+                <div className="text-xs text-[#9ca3af]">入场前截图（必填）</div>
+                <ImageUploader
+                  value={editingQuestionImages}
+                  onChange={setEditingQuestionImages}
+                  max={1}
+                  disabled={savingNote}
+                />
+              </div>
+              <div className="space-y-1 rounded-lg border border-[#27272a] bg-[#1a1a1a] p-3">
+                <div className="text-xs text-[#9ca3af]">入场后截图（必填）</div>
+                <ImageUploader
+                  value={editingAnswerImages}
+                  onChange={setEditingAnswerImages}
+                  max={1}
+                  disabled={savingNote}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:grid-cols-2 shadow-sm">
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-[#9ca3af]">标准动作（必填）</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {FLASHCARD_DIRECTIONS.map((item) => {
+                    const isActive = editingExpectedAction === item;
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setEditingExpectedAction(item as FlashcardAction)}
+                        disabled={savingNote}
+                        className={`h-10 rounded-md border text-sm font-medium transition-colors ${
+                          isActive
+                            ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
+                            : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
+                        } disabled:opacity-60`}
+                      >
+                        {FLASHCARD_LABELS[item]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-[#9ca3af]">行情时间信息（选填）</div>
+                <DateCalendarPicker
+                  analysisTime={editingMarketTimeInfo}
+                  updateForm={(patch) => setEditingMarketTimeInfo(patch.analysisTime)}
+                  showSeconds={false}
+                  placeholder="选择行情时间"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-[#9ca3af]">币对信息（选填）</div>
+                <Input
+                  value={editingSymbolPairInfo}
+                  onChange={(event) => setEditingSymbolPairInfo(event.target.value)}
+                  onBlur={(event) => rememberSymbolPair(event.target.value)}
+                  list="flashcard-symbol-pair-presets-manage"
+                  placeholder="例：BTC/USDT"
+                  className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+                  disabled={savingNote}
+                />
+                <datalist id="flashcard-symbol-pair-presets-manage">
+                  {symbolPairOptions.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <div className="text-xs font-medium text-[#9ca3af]">题目备注（选填）</div>
+                <Textarea
+                  value={editingNote}
+                  onChange={(event) => setEditingNote(event.target.value)}
+                  placeholder="记录触发信号、执行偏差、后续改进"
+                  className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+                  disabled={savingNote}
+                />
+              </div>
+            </div>
+            <div className="text-xs text-[#9ca3af]">卡片 ID：{editingCard?.cardId || "-"}</div>
           </div>
           <DialogFooter>
             <Button
@@ -422,7 +585,7 @@ export default function FlashcardManagePage() {
               onClick={() => void handleSaveNote()}
               disabled={savingNote}
             >
-              {savingNote ? "保存中..." : "保存备注"}
+              {savingNote ? "保存中..." : "保存"}
             </Button>
           </DialogFooter>
         </DialogContent>
