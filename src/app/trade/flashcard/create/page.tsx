@@ -5,19 +5,32 @@ import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
 import { createFlashcardCard } from "../request";
 import { TRADE_PERIOD_PRESETS } from "../../config";
 import {
+  FLASHCARD_BEHAVIOR_TYPES,
   FLASHCARD_DIRECTIONS,
+  FLASHCARD_INVALIDATION_TYPES,
   FLASHCARD_LABELS,
   type FlashcardAction,
+  type FlashcardBehaviorType,
+  type FlashcardInvalidationType,
 } from "../types";
 import { useAlert } from "@/components/common/alert";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import type { ImageResource } from "../../config";
+import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
 
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
+const EMPTY_SELECT_VALUE = "__NONE__";
 
 export default function FlashcardCreatePage() {
   const [successAlert, errorAlert] = useAlert();
@@ -25,6 +38,8 @@ export default function FlashcardCreatePage() {
   const [questionImages, setQuestionImages] = React.useState<ImageResource[]>([]);
   const [answerImages, setAnswerImages] = React.useState<ImageResource[]>([]);
   const [expectedAction, setExpectedAction] = React.useState<FlashcardAction | "">("");
+  const [behaviorType, setBehaviorType] = React.useState<FlashcardBehaviorType | "">("");
+  const [invalidationType, setInvalidationType] = React.useState<FlashcardInvalidationType | "">("");
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
   const [symbolPairInfo, setSymbolPairInfo] = React.useState<string>("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
@@ -77,6 +92,8 @@ export default function FlashcardCreatePage() {
         questionImageUrl,
         answerImageUrl,
         expectedAction,
+        behaviorType: behaviorType || undefined,
+        invalidationType: invalidationType || undefined,
         marketTimeInfo: marketTimeInfo.trim() || undefined,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
         notes: notes.trim() || undefined,
@@ -87,6 +104,8 @@ export default function FlashcardCreatePage() {
       setQuestionImages([]);
       setAnswerImages([]);
       setExpectedAction("");
+      setBehaviorType("");
+      setInvalidationType("");
       setMarketTimeInfo("");
       setSymbolPairInfo("");
       setNotes("");
@@ -100,8 +119,10 @@ export default function FlashcardCreatePage() {
     }
   }, [
     answerImageUrl,
+    behaviorType,
     errorAlert,
     expectedAction,
+    invalidationType,
     marketTimeInfo,
     notes,
     questionImageUrl,
@@ -164,6 +185,58 @@ export default function FlashcardCreatePage() {
           </div>
 
           <div className="space-y-2">
+            <div className="text-xs font-medium text-[#9ca3af]">行为类型（选填）</div>
+            <Select
+              value={behaviorType || EMPTY_SELECT_VALUE}
+              onValueChange={(value) =>
+                setBehaviorType(
+                  value === EMPTY_SELECT_VALUE
+                    ? ""
+                    : (value as FlashcardBehaviorType),
+                )
+              }
+            >
+              <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                <SelectValue placeholder="选择价格行为依据" />
+              </SelectTrigger>
+              <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
+                {FLASHCARD_BEHAVIOR_TYPES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {FLASHCARD_LABELS[item]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-[#9ca3af]">失效类型（选填）</div>
+            <Select
+              value={invalidationType || EMPTY_SELECT_VALUE}
+              onValueChange={(value) =>
+                setInvalidationType(
+                  value === EMPTY_SELECT_VALUE
+                    ? ""
+                    : (value as FlashcardInvalidationType),
+                )
+              }
+            >
+              <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                <SelectValue placeholder="选择止损/失效逻辑" />
+              </SelectTrigger>
+              <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
+                {FLASHCARD_INVALIDATION_TYPES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {FLASHCARD_LABELS[item]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <div className="text-xs font-medium text-[#9ca3af]">币对信息（选填）</div>
             <Input
               value={symbolPairInfo}
@@ -178,6 +251,13 @@ export default function FlashcardCreatePage() {
                 <option key={item} value={item} />
               ))}
             </datalist>
+          </div>
+
+          <div className="md:col-span-2">
+            <FlashcardFieldGuide
+              behaviorType={behaviorType}
+              invalidationType={invalidationType}
+            />
           </div>
 
           <div className="space-y-2 md:col-span-2">

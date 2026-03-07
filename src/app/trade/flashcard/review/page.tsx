@@ -39,7 +39,9 @@ function matchesKeyword(card: FlashcardCard, keyword: string) {
   if (!keyword.trim()) return true;
   const text = [
     card.cardId,
-    FLASHCARD_LABELS[card.expectedAction || card.direction],
+    FLASHCARD_LABELS[card.expectedAction || card.direction || "NO_TRADE"],
+    card.behaviorType ? FLASHCARD_LABELS[card.behaviorType] : "",
+    card.invalidationType ? FLASHCARD_LABELS[card.invalidationType] : "",
   ]
     .join(" ")
     .toLowerCase();
@@ -214,22 +216,24 @@ export default function FlashcardReviewPage() {
           </div>
 
           <div className="overflow-x-auto border border-[#27272a] rounded-lg">
-            <Table className="min-w-[640px]">
-              <TableHeader>
-                <TableRow className="border-b border-[#27272a] bg-black/20">
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">题目图</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">答案图</TableHead>
-                  <TableHead className="text-[#9ca3af] text-xs uppercase">方向性</TableHead>
-                </TableRow>
-              </TableHeader>
+              <Table className="min-w-[860px]">
+                <TableHeader>
+                  <TableRow className="border-b border-[#27272a] bg-black/20">
+                    <TableHead className="text-[#9ca3af] text-xs uppercase">题目图</TableHead>
+                    <TableHead className="text-[#9ca3af] text-xs uppercase">答案图</TableHead>
+                    <TableHead className="text-[#9ca3af] text-xs uppercase">标准动作</TableHead>
+                    <TableHead className="text-[#9ca3af] text-xs uppercase">行为类型</TableHead>
+                    <TableHead className="text-[#9ca3af] text-xs uppercase">失效类型</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
+                    <TableCell colSpan={5} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
                   </TableRow>
                 ) : pagedItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-[#9ca3af]">暂无匹配题目</TableCell>
+                    <TableCell colSpan={5} className="h-24 text-center text-[#9ca3af]">暂无匹配题目</TableCell>
                   </TableRow>
                 ) : (
                   pagedItems.map((card) => (
@@ -247,7 +251,15 @@ export default function FlashcardReviewPage() {
                         </button>
                       </TableCell>
                       <TableCell className="text-[#e5e7eb] text-sm">
-                        {FLASHCARD_LABELS[card.expectedAction || card.direction]}
+                        {FLASHCARD_LABELS[card.expectedAction || card.direction || "NO_TRADE"]}
+                      </TableCell>
+                      <TableCell className="text-[#9ca3af] text-sm">
+                        {card.behaviorType ? FLASHCARD_LABELS[card.behaviorType] : "-"}
+                      </TableCell>
+                      <TableCell className="text-[#9ca3af] text-sm">
+                        {card.invalidationType
+                          ? FLASHCARD_LABELS[card.invalidationType]
+                          : "-"}
                       </TableCell>
                     </TableRow>
                   ))

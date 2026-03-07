@@ -14,6 +14,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DataTable } from "@/components/common/DataTable";
 import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
 import { ImageUploader } from "@/components/common/ImageUploader";
@@ -24,14 +31,19 @@ import {
   updateFlashcardCard,
 } from "../request";
 import {
+  FLASHCARD_BEHAVIOR_TYPES,
   FLASHCARD_DIRECTIONS,
+  FLASHCARD_INVALIDATION_TYPES,
   FLASHCARD_LABELS,
   type FlashcardAction,
+  type FlashcardBehaviorType,
   type FlashcardCard,
+  type FlashcardInvalidationType,
 } from "../types";
 import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 import type { ImageResource } from "../../config";
 import { TRADE_PERIOD_PRESETS } from "../../config";
+import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
 
 type FlashcardQuery = {
   symbolPairInfo: string;
@@ -39,6 +51,7 @@ type FlashcardQuery = {
 };
 
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
+const EMPTY_SELECT_VALUE = "__NONE__";
 
 export default function FlashcardManagePage() {
   const [successAlert, errorAlert] = useAlert();
@@ -52,6 +65,12 @@ export default function FlashcardManagePage() {
   const [editingExpectedAction, setEditingExpectedAction] = React.useState<FlashcardAction | "">(
     "",
   );
+  const [editingBehaviorType, setEditingBehaviorType] = React.useState<
+    FlashcardBehaviorType | ""
+  >("");
+  const [editingInvalidationType, setEditingInvalidationType] = React.useState<
+    FlashcardInvalidationType | ""
+  >("");
   const [editingMarketTimeInfo, setEditingMarketTimeInfo] = React.useState("");
   const [editingSymbolPairInfo, setEditingSymbolPairInfo] = React.useState("");
   const [editingNote, setEditingNote] = React.useState("");
@@ -192,7 +211,9 @@ export default function FlashcardManagePage() {
         ? [{ key: `${card.cardId}-answer`, url: card.answerImageUrl }]
         : [],
     );
-    setEditingExpectedAction(card.expectedAction || card.direction);
+    setEditingExpectedAction(card.expectedAction || card.direction || "NO_TRADE");
+    setEditingBehaviorType(card.behaviorType || "");
+    setEditingInvalidationType(card.invalidationType || "");
     setEditingMarketTimeInfo(card.marketTimeInfo || "");
     setEditingSymbolPairInfo(card.symbolPairInfo || "");
     setEditingNote(card.notes || "");
@@ -211,6 +232,8 @@ export default function FlashcardManagePage() {
         questionImageUrl: editingQuestionImages[0].url,
         answerImageUrl: editingAnswerImages[0].url,
         expectedAction: editingExpectedAction,
+        behaviorType: editingBehaviorType || undefined,
+        invalidationType: editingInvalidationType || undefined,
         marketTimeInfo: editingMarketTimeInfo.trim() || undefined,
         symbolPairInfo: editingSymbolPairInfo.trim() || undefined,
         notes: editingNote.trim() || undefined,
@@ -228,8 +251,10 @@ export default function FlashcardManagePage() {
     }
   }, [
     editingAnswerImages,
+    editingBehaviorType,
     editingCard,
     editingExpectedAction,
+    editingInvalidationType,
     editingMarketTimeInfo,
     editingNote,
     editingQuestionImages,
@@ -311,12 +336,36 @@ export default function FlashcardManagePage() {
         enableSorting: false,
       },
       {
-        accessorKey: "direction",
-        header: "后续方向",
+        accessorKey: "expectedAction",
+        header: "标准动作",
         cell: ({ row }) => (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/5 text-[#e5e7eb] border border-white/10">
-            {FLASHCARD_LABELS[row.original.expectedAction || row.original.direction]}
+            {FLASHCARD_LABELS[row.original.expectedAction || row.original.direction || "NO_TRADE"]}
           </span>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "behaviorType",
+        header: "行为类型",
+        cell: ({ row }) => (
+          <div className="min-w-[120px] text-[#9ca3af]">
+            {row.original.behaviorType
+              ? FLASHCARD_LABELS[row.original.behaviorType]
+              : "-"}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "invalidationType",
+        header: "失效类型",
+        cell: ({ row }) => (
+          <div className="min-w-[120px] text-[#9ca3af]">
+            {row.original.invalidationType
+              ? FLASHCARD_LABELS[row.original.invalidationType]
+              : "-"}
+          </div>
         ),
         enableSorting: false,
       },
@@ -477,11 +526,12 @@ export default function FlashcardManagePage() {
           }
         }}
       >
-        <DialogContent className="max-w-3xl border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-          <DialogHeader>
+        <DialogContent className="w-[min(98vw,1440px)] max-w-none sm:max-w-none border-[#27272a] bg-[#121212] p-0 text-[#e5e7eb]">
+          <DialogHeader className="px-6 pt-6">
             <DialogTitle>编辑闪卡信息</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="max-h-[calc(90vh-140px)] overflow-y-auto px-6 pb-4">
+            <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="space-y-1 rounded-lg border border-[#27272a] bg-[#1a1a1a] p-3">
                 <div className="text-xs text-[#9ca3af]">入场前截图（必填）</div>
@@ -539,6 +589,58 @@ export default function FlashcardManagePage() {
               </div>
 
               <div className="space-y-2">
+                <div className="text-xs font-medium text-[#9ca3af]">行为类型（选填）</div>
+                <Select
+                  value={editingBehaviorType || EMPTY_SELECT_VALUE}
+                  onValueChange={(value) =>
+                    setEditingBehaviorType(
+                      value === EMPTY_SELECT_VALUE
+                        ? ""
+                        : (value as FlashcardBehaviorType),
+                    )
+                  }
+                >
+                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                    <SelectValue placeholder="选择价格行为依据" />
+                  </SelectTrigger>
+                  <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                    <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
+                    {FLASHCARD_BEHAVIOR_TYPES.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {FLASHCARD_LABELS[item]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-[#9ca3af]">失效类型（选填）</div>
+                <Select
+                  value={editingInvalidationType || EMPTY_SELECT_VALUE}
+                  onValueChange={(value) =>
+                    setEditingInvalidationType(
+                      value === EMPTY_SELECT_VALUE
+                        ? ""
+                        : (value as FlashcardInvalidationType),
+                    )
+                  }
+                >
+                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                    <SelectValue placeholder="选择止损/失效逻辑" />
+                  </SelectTrigger>
+                  <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                    <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
+                    {FLASHCARD_INVALIDATION_TYPES.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {FLASHCARD_LABELS[item]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <div className="text-xs font-medium text-[#9ca3af]">币对信息（选填）</div>
                 <Input
                   value={editingSymbolPairInfo}
@@ -556,6 +658,13 @@ export default function FlashcardManagePage() {
                 </datalist>
               </div>
 
+              <div className="md:col-span-2">
+                <FlashcardFieldGuide
+                  behaviorType={editingBehaviorType}
+                  invalidationType={editingInvalidationType}
+                />
+              </div>
+
               <div className="space-y-2 md:col-span-2">
                 <div className="text-xs font-medium text-[#9ca3af]">题目备注（选填）</div>
                 <Textarea
@@ -568,8 +677,9 @@ export default function FlashcardManagePage() {
               </div>
             </div>
             <div className="text-xs text-[#9ca3af]">卡片 ID：{editingCard?.cardId || "-"}</div>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t border-[#27272a] px-6 py-4">
             <Button
               type="button"
               variant="outline"

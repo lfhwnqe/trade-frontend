@@ -2,14 +2,13 @@ import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import type {
   FlashcardAction,
   FlashcardCard,
-  FlashcardContext,
+  FlashcardBehaviorType,
   FlashcardDrillStartResponse,
   FlashcardDrillStats,
   FlashcardDrillSessionHistoryItem,
   FlashcardDirection,
   FlashcardFilters,
-  FlashcardOrderFlowFeature,
-  FlashcardResult,
+  FlashcardInvalidationType,
   FlashcardSource,
 } from "./types";
 
@@ -27,9 +26,8 @@ type CreateFlashcardPayload = {
   answerImageUrl: string;
   expectedAction: FlashcardAction;
   direction?: FlashcardDirection;
-  context?: FlashcardContext;
-  orderFlowFeature?: FlashcardOrderFlowFeature;
-  result?: FlashcardResult;
+  behaviorType?: FlashcardBehaviorType;
+  invalidationType?: FlashcardInvalidationType;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
@@ -40,6 +38,8 @@ type UpdateFlashcardPayload = {
   answerImageUrl?: string;
   expectedAction?: FlashcardAction;
   direction?: FlashcardDirection;
+  behaviorType?: FlashcardBehaviorType;
+  invalidationType?: FlashcardInvalidationType;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
@@ -132,22 +132,18 @@ export async function randomFlashcardCards(params: {
 export async function listFlashcardCards(params?: {
   pageSize?: number;
   cursor?: string;
-  direction?: FlashcardDirection;
-  context?: FlashcardContext;
-  orderFlowFeature?: FlashcardOrderFlowFeature;
-  result?: FlashcardResult;
+  behaviorType?: FlashcardBehaviorType;
+  invalidationType?: FlashcardInvalidationType;
   symbolPairInfo?: string;
   marketTimeInfo?: string;
 }): Promise<{ items: FlashcardCard[]; nextCursor: string | null }> {
   const searchParams = new URLSearchParams();
   if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
   if (params?.cursor) searchParams.set("cursor", params.cursor);
-  if (params?.direction) searchParams.set("direction", params.direction);
-  if (params?.context) searchParams.set("context", params.context);
-  if (params?.orderFlowFeature) {
-    searchParams.set("orderFlowFeature", params.orderFlowFeature);
+  if (params?.behaviorType) searchParams.set("behaviorType", params.behaviorType);
+  if (params?.invalidationType) {
+    searchParams.set("invalidationType", params.invalidationType);
   }
-  if (params?.result) searchParams.set("result", params.result);
   if (params?.symbolPairInfo) searchParams.set("symbolPairInfo", params.symbolPairInfo);
   if (params?.marketTimeInfo) searchParams.set("marketTimeInfo", params.marketTimeInfo);
 

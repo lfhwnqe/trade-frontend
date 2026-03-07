@@ -372,7 +372,12 @@ export default function FlashcardDrillPlayPage() {
               <div className="text-sm text-[#cbd5e1]">
                 标准动作：
                 <span className="ml-1 text-[#00c2b2]">
-                  {FLASHCARD_LABELS[currentAttempt?.expectedAction || current.expectedAction || current.direction]}
+                  {FLASHCARD_LABELS[
+                    currentAttempt?.expectedAction ||
+                      current.expectedAction ||
+                      current.direction ||
+                      "NO_TRADE"
+                  ]}
                 </span>
               </div>
               <div className="text-sm">
@@ -383,6 +388,20 @@ export default function FlashcardDrillPlayPage() {
                   {currentAttempt?.isCorrect ? "正确" : "错误"}
                 </span>
               </div>
+              {(current.behaviorType || current.invalidationType) ? (
+                <div className="flex flex-wrap gap-2">
+                  {current.behaviorType ? (
+                    <span className="inline-flex items-center rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-0.5 text-xs text-sky-200">
+                      行为: {FLASHCARD_LABELS[current.behaviorType]}
+                    </span>
+                  ) : null}
+                  {current.invalidationType ? (
+                    <span className="inline-flex items-center rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-xs text-amber-200">
+                      失效: {FLASHCARD_LABELS[current.invalidationType]}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="flex gap-2">
                 <Button
                   type="button"
