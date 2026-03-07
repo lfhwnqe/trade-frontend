@@ -8,7 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -16,9 +19,9 @@ import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
 import { createFlashcardCard } from "../request";
 import { TRADE_PERIOD_PRESETS } from "../../config";
 import {
-  FLASHCARD_BEHAVIOR_TYPES,
+  FLASHCARD_BEHAVIOR_SELECT_OPTION_GROUPS,
   FLASHCARD_DIRECTIONS,
-  FLASHCARD_INVALIDATION_TYPES,
+  FLASHCARD_INVALIDATION_SELECT_OPTION_GROUPS,
   FLASHCARD_LABELS,
   type FlashcardAction,
   type FlashcardBehaviorType,
@@ -201,10 +204,18 @@ export default function FlashcardCreatePage() {
               </SelectTrigger>
               <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
                 <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
-                {FLASHCARD_BEHAVIOR_TYPES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {FLASHCARD_LABELS[item]}
-                  </SelectItem>
+                {FLASHCARD_BEHAVIOR_SELECT_OPTION_GROUPS.map((group) => (
+                  <React.Fragment key={group.label}>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>{group.label}</SelectLabel>
+                      {group.items.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {FLASHCARD_LABELS[item]}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </React.Fragment>
                 ))}
               </SelectContent>
             </Select>
@@ -227,10 +238,18 @@ export default function FlashcardCreatePage() {
               </SelectTrigger>
               <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
                 <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
-                {FLASHCARD_INVALIDATION_TYPES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {FLASHCARD_LABELS[item]}
-                  </SelectItem>
+                {FLASHCARD_INVALIDATION_SELECT_OPTION_GROUPS.map((group) => (
+                  <React.Fragment key={group.label}>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>{group.label}</SelectLabel>
+                      {group.items.map((item) => (
+                        <SelectItem key={item} value={item}>
+                          {FLASHCARD_LABELS[item]}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </React.Fragment>
                 ))}
               </SelectContent>
             </Select>

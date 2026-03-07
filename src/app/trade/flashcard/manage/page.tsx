@@ -17,7 +17,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -31,10 +34,12 @@ import {
   updateFlashcardCard,
 } from "../request";
 import {
-  FLASHCARD_BEHAVIOR_TYPES,
+  FLASHCARD_BEHAVIOR_SELECT_OPTION_GROUPS,
   FLASHCARD_DIRECTIONS,
-  FLASHCARD_INVALIDATION_TYPES,
+  FLASHCARD_INVALIDATION_SELECT_OPTION_GROUPS,
   FLASHCARD_LABELS,
+  isLegacyFlashcardBehaviorType,
+  isLegacyFlashcardInvalidationType,
   type FlashcardAction,
   type FlashcardBehaviorType,
   type FlashcardCard,
@@ -605,10 +610,29 @@ export default function FlashcardManagePage() {
                   </SelectTrigger>
                   <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
                     <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
-                    {FLASHCARD_BEHAVIOR_TYPES.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {FLASHCARD_LABELS[item]}
-                      </SelectItem>
+                    {isLegacyFlashcardBehaviorType(editingBehaviorType) ? (
+                      <>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel>当前旧值（仅展示）</SelectLabel>
+                          <SelectItem value={editingBehaviorType}>
+                            {FLASHCARD_LABELS[editingBehaviorType]}
+                          </SelectItem>
+                        </SelectGroup>
+                      </>
+                    ) : null}
+                    {FLASHCARD_BEHAVIOR_SELECT_OPTION_GROUPS.map((group) => (
+                      <React.Fragment key={group.label}>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel>{group.label}</SelectLabel>
+                          {group.items.map((item) => (
+                            <SelectItem key={item} value={item}>
+                              {FLASHCARD_LABELS[item]}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </React.Fragment>
                     ))}
                   </SelectContent>
                 </Select>
@@ -631,10 +655,29 @@ export default function FlashcardManagePage() {
                   </SelectTrigger>
                   <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
                     <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
-                    {FLASHCARD_INVALIDATION_TYPES.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {FLASHCARD_LABELS[item]}
-                      </SelectItem>
+                    {isLegacyFlashcardInvalidationType(editingInvalidationType) ? (
+                      <>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel>当前旧值（仅展示）</SelectLabel>
+                          <SelectItem value={editingInvalidationType}>
+                            {FLASHCARD_LABELS[editingInvalidationType]}
+                          </SelectItem>
+                        </SelectGroup>
+                      </>
+                    ) : null}
+                    {FLASHCARD_INVALIDATION_SELECT_OPTION_GROUPS.map((group) => (
+                      <React.Fragment key={group.label}>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel>{group.label}</SelectLabel>
+                          {group.items.map((item) => (
+                            <SelectItem key={item} value={item}>
+                              {FLASHCARD_LABELS[item]}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </React.Fragment>
                     ))}
                   </SelectContent>
                 </Select>
