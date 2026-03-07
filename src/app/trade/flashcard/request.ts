@@ -6,6 +6,7 @@ import type {
   FlashcardDrillStartResponse,
   FlashcardDrillStats,
   FlashcardDrillSessionHistoryItem,
+  FlashcardDrillAnalytics,
   FlashcardDirection,
   FlashcardFilters,
   FlashcardInvalidationType,
@@ -297,6 +298,34 @@ export async function listFlashcardDrillSessions(params?: {
     nextCursor:
       typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
   };
+}
+
+export async function getFlashcardDrillAnalytics(params?: {
+  recentWindow?: number;
+}): Promise<FlashcardDrillAnalytics> {
+  const searchParams = new URLSearchParams();
+  if (params?.recentWindow) {
+    searchParams.set("recentWindow", String(params.recentWindow));
+  }
+
+  const targetPath = `flashcard/drill/analytics${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取训练成绩分析失败");
+  }
+
+  return data.data as FlashcardDrillAnalytics;
 }
 
 export async function listFlashcardWrongBook(): Promise<FlashcardCard[]> {

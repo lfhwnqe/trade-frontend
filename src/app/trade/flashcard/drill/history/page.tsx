@@ -20,12 +20,121 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAlert } from "@/components/common/alert";
-import { listFlashcardDrillSessions } from "../../request";
-import { FLASHCARD_LABELS, type FlashcardDrillSessionHistoryItem } from "../../types";
+import { getFlashcardDrillAnalytics, listFlashcardDrillSessions } from "../../request";
+import {
+  FLASHCARD_LABELS,
+  type FlashcardDrillAnalytics,
+  type FlashcardDrillAnalyticsDimensionStat,
+  type FlashcardDrillAnalyticsWindow,
+  type FlashcardDrillSessionHistoryItem,
+} from "../../types";
 
 type SessionStatus = "ALL" | "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
 
 const PAGE_SIZE = 20;
+const RECENT_WINDOW = 30;
+
+function formatDelta(delta: number | null) {
+  if (delta === null) return "暂无上一组";
+  if (delta === 0) return "与上一组持平";
+  return `${delta > 0 ? "+" : ""}${delta} 分 vs 上一组`;
+}
+
+function deltaTone(delta: number | null) {
+  if (delta === null || delta === 0) return "text-[#9ca3af]";
+  return delta > 0 ? "text-emerald-300" : "text-rose-300";
+}
+
+function OverviewCard(props: { label: string; value: string | number; hint?: string }) {
+  return (
+    <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
+      <div className="text-xs text-[#9ca3af]">{props.label}</div>
+      <div className="mt-1 text-2xl font-semibold text-white">{props.value}</div>
+      {props.hint ? <div className="mt-1 text-xs text-[#6b7280]">{props.hint}</div> : null}
+    </div>
+  );
+}
+
+function WindowCard(props: { title: string; window: FlashcardDrillAnalyticsWindow }) {
+  return (
+    <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium text-white">{props.title}</div>
+          <div className="mt-1 text-xs text-[#9ca3af]">样本 {props.window.sampleSize} 轮</div>
+        </div>
+        <div className={`text-xs font-medium ${deltaTone(props.window.deltaFromPrevious)}`}>
+          {formatDelta(props.window.deltaFromPrevious)}
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <div>
+          <div className="text-xs text-[#6b7280]">均分</div>
+          <div className="mt-1 text-xl font-semibold text-white">{props.window.averageScore}</div>
+        </div>
+        <div>
+          <div className="text-xs text-[#6b7280]">最高</div>
+          <div className="mt-1 text-xl font-semibold text-white">{props.window.bestScore}</div>
+        </div>
+        <div>
+          <div className="text-xs text-[#6b7280]">最低</div>
+          <div className="mt-1 text-xl font-semibold text-white">{props.window.lowestScore}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WeaknessTable(props: {
+  title: string;
+  subtitle: string;
+  items: FlashcardDrillAnalyticsDimensionStat[];
+  unlabeledCount: number;
+}) {
+  return (
+    <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-medium text-white">{props.title}</div>
+          <div className="mt-1 text-xs text-[#9ca3af]">{props.subtitle}</div>
+        </div>
+        <div className="text-xs text-[#6b7280]">未标注样本 {props.unlabeledCount}</div>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {props.items.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-[#27272a] px-4 py-6 text-center text-sm text-[#9ca3af]">
+            当前窗口内暂无可聚合样本
+          </div>
+        ) : (
+          props.items.slice(0, 6).map((item) => (
+            <div
+              key={item.key}
+              className="rounded-lg border border-[#27272a] bg-black/20 px-4 py-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-medium text-white">
+                  {FLASHCARD_LABELS[item.key] || item.key}
+                </div>
+                <div className="text-xs text-rose-300">错 {item.wrong} / {item.total}</div>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#1f2937]">
+                <div
+                  className="h-full rounded-full bg-[#00c2b2]"
+                  style={{ width: `${Math.max(item.accuracy * 100, 6)}%` }}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-[#9ca3af]">
+                <span>命中率 {Math.round(item.accuracy * 100)}%</span>
+                <span>错因占比 {Math.round(item.wrongRate * 100)}%</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function FlashcardDrillHistoryPage() {
   const [, errorAlert] = useAlert();
@@ -33,8 +142,22 @@ export default function FlashcardDrillHistoryPage() {
   const [status, setStatus] = React.useState<SessionStatus>("COMPLETED");
   const [items, setItems] = React.useState<FlashcardDrillSessionHistoryItem[]>([]);
   const [nextCursor, setNextCursor] = React.useState<string | null>(null);
+  const [analytics, setAnalytics] = React.useState<FlashcardDrillAnalytics | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
+  const [analyticsLoading, setAnalyticsLoading] = React.useState(false);
+
+  const fetchAnalytics = React.useCallback(async () => {
+    setAnalyticsLoading(true);
+    try {
+      const res = await getFlashcardDrillAnalytics({ recentWindow: RECENT_WINDOW });
+      setAnalytics(res);
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "获取训练成绩分析失败");
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [errorAlert]);
 
   const fetchFirstPage = React.useCallback(async () => {
     setLoading(true);
@@ -71,48 +194,143 @@ export default function FlashcardDrillHistoryPage() {
   }, [errorAlert, nextCursor, status]);
 
   React.useEffect(() => {
-    void fetchFirstPage();
-  }, [fetchFirstPage, status]);
+    void fetchAnalytics();
+  }, [fetchAnalytics]);
 
-  const completedItems = items.filter((item) => item.status === "COMPLETED");
-  const avgScore =
-    completedItems.length > 0
-      ? Math.round(
-          completedItems.reduce((sum, item) => sum + item.score, 0) /
-            completedItems.length,
-        )
-      : 0;
-  const bestScore =
-    completedItems.length > 0
-      ? Math.max(...completedItems.map((item) => item.score))
-      : 0;
-  const recentScore = completedItems[0]?.score ?? 0;
+  React.useEffect(() => {
+    void fetchFirstPage();
+  }, [fetchFirstPage]);
+
+  const trendPoints = analytics?.trend.points || [];
+  const maxTrendScore = trendPoints.length
+    ? Math.max(...trendPoints.map((point) => point.score), 100)
+    : 100;
 
   return (
-    <TradePageShell title="训练成绩" subtitle="按轮次回看最终得分与统计" showAddButton={false}>
+    <TradePageShell title="训练成绩" subtitle="看全量趋势，也看最近 30 轮你具体错在哪类行为识别" showAddButton={false}>
       <div className="w-full space-y-4">
         <div className="grid gap-3 md:grid-cols-4">
+          <OverviewCard
+            label="已完成轮次（全量）"
+            value={analytics?.summary.totalCompletedSessions ?? "-"}
+            hint="不再受当前分页加载数量影响"
+          />
+          <OverviewCard
+            label="平均分（全量）"
+            value={analytics?.summary.averageScore ?? "-"}
+            hint="全部已完成训练会话"
+          />
+          <OverviewCard
+            label="最高分（全量）"
+            value={analytics?.summary.bestScore ?? "-"}
+            hint="完整历史最高记录"
+          />
+          <OverviewCard
+            label="最近一轮"
+            value={
+              analytics
+                ? `${analytics.summary.recentScore} / ${Math.round(
+                    analytics.summary.recentAccuracy * 100,
+                  )}%`
+                : "-"
+            }
+            hint="分数 / 正确率"
+          />
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
-            <div className="text-xs text-[#9ca3af]">已完成轮次</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{completedItems.length}</div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium text-white">最近 {RECENT_WINDOW} 轮分数走势</div>
+                <div className="mt-1 text-xs text-[#9ca3af]">
+                  以最近 {analytics?.weaknesses.basedOnCompletedSessions ?? 0} 个已完成会话计算
+                </div>
+              </div>
+              {analyticsLoading ? <div className="text-xs text-[#9ca3af]">加载中...</div> : null}
+            </div>
+
+            {trendPoints.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-dashed border-[#27272a] px-4 py-10 text-center text-sm text-[#9ca3af]">
+                暂无可展示的成绩趋势
+              </div>
+            ) : (
+              <div className="mt-4">
+                <div className="flex h-48 items-end gap-2">
+                  {trendPoints.map((point, index) => {
+                    const height = Math.max((point.score / maxTrendScore) * 100, 8);
+                    return (
+                      <div key={point.sessionId} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                        <div className="text-[10px] text-[#9ca3af]">{point.score}</div>
+                        <div className="flex h-36 w-full items-end">
+                          <div
+                            className="w-full rounded-t-md bg-gradient-to-t from-[#00c2b2] to-[#0ea5e9]"
+                            style={{ height: `${height}%` }}
+                            title={`${format(new Date(point.startedAt), "MM-dd HH:mm")} · ${point.score} 分`}
+                          />
+                        </div>
+                        <div className="text-[10px] text-[#6b7280]">
+                          {index === 0 || index === trendPoints.length - 1
+                            ? format(new Date(point.startedAt), "MM-dd")
+                            : ""}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
-            <div className="text-xs text-[#9ca3af]">平均分（已加载）</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{avgScore}</div>
+
+          <div className="grid gap-3">
+            <WindowCard
+              title="最近 7 轮"
+              window={
+                analytics?.windows.recent7 || {
+                  sampleSize: 0,
+                  averageScore: 0,
+                  bestScore: 0,
+                  lowestScore: 0,
+                  deltaFromPrevious: null,
+                }
+              }
+            />
+            <WindowCard
+              title="最近 30 轮"
+              window={
+                analytics?.windows.recent30 || {
+                  sampleSize: 0,
+                  averageScore: 0,
+                  bestScore: 0,
+                  lowestScore: 0,
+                  deltaFromPrevious: null,
+                }
+              }
+            />
           </div>
-          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
-            <div className="text-xs text-[#9ca3af]">最高分（已加载）</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{bestScore}</div>
-          </div>
-          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
-            <div className="text-xs text-[#9ca3af]">最近一轮分数</div>
-            <div className="mt-1 text-2xl font-semibold text-white">{recentScore}</div>
-          </div>
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-2">
+          <WeaknessTable
+            title="最近 30 轮薄弱行为识别"
+            subtitle="按 behaviorType 聚合命中率，优先把高错题量且命中率低的模式顶上来"
+            items={analytics?.weaknesses.behaviorTypes || []}
+            unlabeledCount={analytics?.weaknesses.unlabeledBehaviorAttemptCount || 0}
+          />
+          <WeaknessTable
+            title="最近 30 轮失效逻辑误判"
+            subtitle="按 invalidationType 聚合错题分布，定位你最容易理解偏差的失效框架"
+            items={analytics?.weaknesses.invalidationTypes || []}
+            unlabeledCount={analytics?.weaknesses.unlabeledInvalidationAttemptCount || 0}
+          />
         </div>
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-sm text-[#9ca3af]">会话列表（按开始时间倒序）</div>
+            <div>
+              <div className="text-sm text-[#e5e7eb]">会话列表（按开始时间倒序）</div>
+              <div className="mt-1 text-xs text-[#9ca3af]">列表继续保留分页；顶部分析使用独立全量聚合口径</div>
+            </div>
             <Select value={status} onValueChange={(v) => setStatus(v as SessionStatus)}>
               <SelectTrigger className="h-9 w-[180px] border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
                 <SelectValue />
@@ -126,7 +344,7 @@ export default function FlashcardDrillHistoryPage() {
             </Select>
           </div>
 
-          <div className="overflow-x-auto border border-[#27272a] rounded-lg">
+          <div className="overflow-x-auto rounded-lg border border-[#27272a]">
             <Table className="min-w-[980px]">
               <TableHeader>
                 <TableRow className="border-b border-[#27272a] bg-black/20">
@@ -142,11 +360,15 @@ export default function FlashcardDrillHistoryPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
+                    <TableCell colSpan={7} className="h-24 text-center text-[#9ca3af]">
+                      加载中...
+                    </TableCell>
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-[#9ca3af]">暂无训练记录</TableCell>
+                    <TableCell colSpan={7} className="h-24 text-center text-[#9ca3af]">
+                      暂无训练记录
+                    </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item) => (
@@ -158,10 +380,14 @@ export default function FlashcardDrillHistoryPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-[#e5e7eb]">{FLASHCARD_LABELS[item.source]}</TableCell>
-                      <TableCell className="text-sm text-[#00c2b2] font-semibold">{item.score}</TableCell>
+                      <TableCell className="text-sm font-semibold text-[#00c2b2]">{item.score}</TableCell>
                       <TableCell className="text-sm text-[#e5e7eb]">{Math.round(item.accuracy * 100)}%</TableCell>
-                      <TableCell className="text-sm text-[#e5e7eb]">{item.correct} / {item.wrong}</TableCell>
-                      <TableCell className="text-sm text-[#e5e7eb]">{item.answered} / {item.total}</TableCell>
+                      <TableCell className="text-sm text-[#e5e7eb]">
+                        {item.correct} / {item.wrong}
+                      </TableCell>
+                      <TableCell className="text-sm text-[#e5e7eb]">
+                        {item.answered} / {item.total}
+                      </TableCell>
                       <TableCell>
                         <span
                           className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${

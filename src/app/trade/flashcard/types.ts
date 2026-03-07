@@ -160,6 +160,57 @@ export type FlashcardDrillSessionHistoryItem = {
   updatedAt: string;
 };
 
+export type FlashcardDrillAnalyticsWindow = {
+  sampleSize: number;
+  averageScore: number;
+  bestScore: number;
+  lowestScore: number;
+  deltaFromPrevious: number | null;
+};
+
+export type FlashcardDrillAnalyticsTrendPoint = {
+  sessionId: string;
+  score: number;
+  accuracy: number;
+  startedAt: string;
+  endedAt?: string;
+};
+
+export type FlashcardDrillAnalyticsDimensionStat = {
+  key: string;
+  total: number;
+  correct: number;
+  wrong: number;
+  accuracy: number;
+  wrongRate: number;
+};
+
+export type FlashcardDrillAnalytics = {
+  summary: {
+    totalCompletedSessions: number;
+    averageScore: number;
+    bestScore: number;
+    recentScore: number;
+    recentAccuracy: number;
+  };
+  windows: {
+    recent7: FlashcardDrillAnalyticsWindow;
+    recent30: FlashcardDrillAnalyticsWindow;
+  };
+  trend: {
+    recentWindow: number;
+    points: FlashcardDrillAnalyticsTrendPoint[];
+  };
+  weaknesses: {
+    basedOnCompletedSessions: number;
+    labeledAttemptCount: number;
+    unlabeledBehaviorAttemptCount: number;
+    unlabeledInvalidationAttemptCount: number;
+    behaviorTypes: FlashcardDrillAnalyticsDimensionStat[];
+    invalidationTypes: FlashcardDrillAnalyticsDimensionStat[];
+  };
+};
+
 export const FLASHCARD_BEHAVIOR_EXPLANATIONS: Record<
   FlashcardBehaviorType,
   { summary: string; whenToUse: string }
