@@ -49,7 +49,8 @@ export default function ApiTokenDocPage() {
             Token 前缀为 <code>tc_</code>，创建时明文只返回一次，请妥善保存。
           </li>
           <li>
-            Token 仅允许访问 <code>/trade/*</code>，其它模块一律拒绝。
+            Token 默认仅允许访问 <code>/trade/*</code>；当前额外开放了一个只读闪卡统计接口：
+            <code>/flashcard/cards/today-summary</code>。
           </li>
           <li>
             Token 可以读/写交易，但禁止删除交易（
@@ -80,14 +81,17 @@ export default function ApiTokenDocPage() {
           </li>
         </ul>
 
-        <CodeBlock>{`# 示例：读取 dashboard\ncurl -X GET "https://<YOUR_API_BASE>/trade/dashboard" \\\n  -H "Authorization: Bearer tc_xxx"`}</CodeBlock>
+        <CodeBlock>{`# 示例 1：读取 dashboard\ncurl -X GET "https://<YOUR_API_BASE>/trade/dashboard" \\\n  -H "Authorization: Bearer tc_xxx"\n\n# 示例 2：读取今日闪卡新增统计\ncurl -X GET "https://<YOUR_API_BASE>/flashcard/cards/today-summary?timezone=Asia/Shanghai" \\\n  -H "Authorization: Bearer tc_xxx"`}</CodeBlock>
       </section>
 
       <section id="scope">
         <h2>权限范围与限制</h2>
         <ul>
           <li>
-            仅允许 <code>/trade/*</code>
+            默认仅允许 <code>/trade/*</code>
+          </li>
+          <li>
+            额外开放只读接口：<code>GET /flashcard/cards/today-summary</code>
           </li>
           <li>允许创建/更新/查询交易</li>
           <li>禁止删除交易</li>
@@ -98,6 +102,14 @@ export default function ApiTokenDocPage() {
         <h2>最小可执行闭环（交易详情→图片解析→下载）</h2>
         <p>
           推荐先按下面 3 步跑通，再接入你自己的 agent / 脚本。
+        </p>
+
+        <h3>可选补充：查询今天是否新增闪卡</h3>
+        <CodeBlock>{`curl -X GET "https://<YOUR_API_BASE>/flashcard/cards/today-summary?timezone=Asia/Shanghai" \\
+  -H "Authorization: Bearer tc_xxx"`}</CodeBlock>
+        <p className="text-xs text-gray-400 mt-2">
+          返回 <code>hasNewCardsToday</code>、<code>newCardsCount</code>、
+          <code>latestCreatedAt</code>，适合脚本/Agent 做日更轮询。
         </p>
 
         <h3>Step 1：获取交易详情（拿到图片 refs）</h3>
@@ -188,7 +200,7 @@ console.log("downloaded bytes:", blob.size);
             <code>tc_</code> 前缀且请求头正确。
           </li>
           <li>
-            <code>403 Forbidden</code>：越权访问（例如访问非 <code>/trade/*</code>
+            <code>403 Forbidden</code>：越权访问（例如访问未开放给 API Token 的接口，
             或解析非本人图片 key）。
           </li>
           <li>

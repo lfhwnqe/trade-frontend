@@ -683,7 +683,7 @@ export default function HomeV2() {
                       },
                       {
                         title: "权限面收敛",
-                        desc: "API Token 仅允许访问 /trade/*，并禁止删除交易。",
+                        desc: "API Token 默认仅允许访问 /trade/*，当前额外开放只读接口 /flashcard/cards/today-summary，并禁止删除交易。",
                       },
                       {
                         title: "限流与可用性",
