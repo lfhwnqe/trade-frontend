@@ -43,6 +43,8 @@ export default function FlashcardCreatePage() {
   const [expectedAction, setExpectedAction] = React.useState<FlashcardAction | "">("");
   const [behaviorType, setBehaviorType] = React.useState<FlashcardBehaviorType | "">("");
   const [invalidationType, setInvalidationType] = React.useState<FlashcardInvalidationType | "">("");
+  const [earlyExitTag, setEarlyExitTag] = React.useState(false);
+  const [earlyExitReason, setEarlyExitReason] = React.useState("");
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
   const [symbolPairInfo, setSymbolPairInfo] = React.useState<string>("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
@@ -89,6 +91,11 @@ export default function FlashcardCreatePage() {
       return;
     }
 
+    if (earlyExitTag && !earlyExitReason.trim()) {
+      errorAlert("如果标记为提前离场，请填写提前离场原因");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await createFlashcardCard({
@@ -97,6 +104,8 @@ export default function FlashcardCreatePage() {
         expectedAction,
         behaviorType: behaviorType || undefined,
         invalidationType: invalidationType || undefined,
+        earlyExitTag,
+        earlyExitReason: earlyExitTag ? earlyExitReason.trim() || undefined : undefined,
         marketTimeInfo: marketTimeInfo.trim() || undefined,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
         notes: notes.trim() || undefined,
@@ -109,6 +118,8 @@ export default function FlashcardCreatePage() {
       setExpectedAction("");
       setBehaviorType("");
       setInvalidationType("");
+      setEarlyExitTag(false);
+      setEarlyExitReason("");
       setMarketTimeInfo("");
       setSymbolPairInfo("");
       setNotes("");
@@ -123,6 +134,8 @@ export default function FlashcardCreatePage() {
   }, [
     answerImageUrl,
     behaviorType,
+    earlyExitReason,
+    earlyExitTag,
     errorAlert,
     expectedAction,
     invalidationType,
@@ -270,6 +283,38 @@ export default function FlashcardCreatePage() {
                 <option key={item} value={item} />
               ))}
             </datalist>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
+            <label className="flex items-center gap-3 text-sm text-[#e5e7eb]">
+              <input
+                type="checkbox"
+                checked={earlyExitTag}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setEarlyExitTag(checked);
+                  if (!checked) {
+                    setEarlyExitReason("");
+                  }
+                }}
+                className="h-4 w-4 rounded border-[#3f3f46] bg-[#111827]"
+              />
+              <span>标记为提前离场题</span>
+            </label>
+            <div className="text-xs text-[#9ca3af]">
+              用来记录“本来符合系统信号，但后续走势发展不如意，需要提前手动离场”的题。
+            </div>
+            {earlyExitTag ? (
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-[#9ca3af]">提前离场原因（必填）</div>
+                <Textarea
+                  value={earlyExitReason}
+                  onChange={(event) => setEarlyExitReason(event.target.value)}
+                  placeholder="例如：触发后没有扩张，回踩承接减弱，所以手动先离场"
+                  className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="md:col-span-2">

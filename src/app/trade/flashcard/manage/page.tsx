@@ -76,6 +76,8 @@ export default function FlashcardManagePage() {
   const [editingInvalidationType, setEditingInvalidationType] = React.useState<
     FlashcardInvalidationType | ""
   >("");
+  const [editingEarlyExitTag, setEditingEarlyExitTag] = React.useState(false);
+  const [editingEarlyExitReason, setEditingEarlyExitReason] = React.useState("");
   const [editingMarketTimeInfo, setEditingMarketTimeInfo] = React.useState("");
   const [editingSymbolPairInfo, setEditingSymbolPairInfo] = React.useState("");
   const [editingNote, setEditingNote] = React.useState("");
@@ -215,6 +217,8 @@ export default function FlashcardManagePage() {
     setEditingExpectedAction(card.expectedAction || card.direction || "NO_TRADE");
     setEditingBehaviorType(card.behaviorType || "");
     setEditingInvalidationType(card.invalidationType || "");
+    setEditingEarlyExitTag(card.earlyExitTag === true);
+    setEditingEarlyExitReason(card.earlyExitReason || "");
     setEditingMarketTimeInfo(card.marketTimeInfo || "");
     setEditingSymbolPairInfo(card.symbolPairInfo || "");
     setEditingNote(card.notes || "");
@@ -227,6 +231,11 @@ export default function FlashcardManagePage() {
       return;
     }
 
+    if (editingEarlyExitTag && !editingEarlyExitReason.trim()) {
+      errorAlert("如果标记为提前离场，请填写提前离场原因");
+      return;
+    }
+
     setSavingNote(true);
     try {
       const updated = await updateFlashcardCard(editingCard.cardId, {
@@ -235,6 +244,10 @@ export default function FlashcardManagePage() {
         expectedAction: editingExpectedAction,
         behaviorType: editingBehaviorType || undefined,
         invalidationType: editingInvalidationType || undefined,
+        earlyExitTag: editingEarlyExitTag,
+        earlyExitReason: editingEarlyExitTag
+          ? editingEarlyExitReason.trim() || undefined
+          : undefined,
         marketTimeInfo: editingMarketTimeInfo.trim() || undefined,
         symbolPairInfo: editingSymbolPairInfo.trim() || undefined,
         notes: editingNote.trim() || undefined,
@@ -254,6 +267,8 @@ export default function FlashcardManagePage() {
     editingAnswerImages,
     editingBehaviorType,
     editingCard,
+    editingEarlyExitReason,
+    editingEarlyExitTag,
     editingExpectedAction,
     editingInvalidationType,
     editingMarketTimeInfo,
@@ -371,6 +386,20 @@ export default function FlashcardManagePage() {
         enableSorting: false,
       },
       {
+        accessorKey: "earlyExitTag",
+        header: "订单标签",
+        cell: ({ row }) => (
+          <div className="min-w-[120px] text-[#e5e7eb]">
+            {row.original.earlyExitTag ? (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                {FLASHCARD_LABELS.FLASHCARD_EARLY_EXIT_TAG}
+              </span>
+            ) : "-"}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
         accessorKey: "symbolPairInfo",
         header: "币对信息",
         cell: ({ row }) => (
@@ -386,6 +415,19 @@ export default function FlashcardManagePage() {
         cell: ({ row }) => (
           <div className="min-w-[170px] text-[#9ca3af]">
             {row.original.marketTimeInfo?.trim() || "-"}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "earlyExitReason",
+        header: "提前离场原因",
+        cell: ({ row }) => (
+          <div
+            className="min-w-[220px] max-w-[300px] truncate text-[#9ca3af]"
+            title={row.original.earlyExitReason || ""}
+          >
+            {row.original.earlyExitReason?.trim() || "-"}
           </div>
         ),
         enableSorting: false,
@@ -695,6 +737,40 @@ export default function FlashcardManagePage() {
                     <option key={item} value={item} />
                   ))}
                 </datalist>
+              </div>
+
+              <div className="space-y-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
+                <label className="flex items-center gap-3 text-sm text-[#e5e7eb]">
+                  <input
+                    type="checkbox"
+                    checked={editingEarlyExitTag}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setEditingEarlyExitTag(checked);
+                      if (!checked) {
+                        setEditingEarlyExitReason("");
+                      }
+                    }}
+                    disabled={savingNote}
+                    className="h-4 w-4 rounded border-[#3f3f46] bg-[#111827]"
+                  />
+                  <span>标记为提前离场题</span>
+                </label>
+                <div className="text-xs text-[#9ca3af]">
+                  用来记录“本来符合系统信号，但后续走势发展不如意，需要提前手动离场”的题。
+                </div>
+                {editingEarlyExitTag ? (
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-[#9ca3af]">提前离场原因（必填）</div>
+                    <Textarea
+                      value={editingEarlyExitReason}
+                      onChange={(event) => setEditingEarlyExitReason(event.target.value)}
+                      placeholder="例如：触发后没有扩张，回踩承接减弱，所以手动先离场"
+                      className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+                      disabled={savingNote}
+                    />
+                  </div>
+                ) : null}
               </div>
 
               <div className="md:col-span-2">

@@ -115,6 +115,8 @@ export type FlashcardCard = {
   expectedAction?: FlashcardAction;
   behaviorType?: FlashcardBehaviorType;
   invalidationType?: FlashcardInvalidationType;
+  earlyExitTag?: boolean;
+  earlyExitReason?: string;
   direction?: FlashcardDirection;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
@@ -360,4 +362,5 @@ export const FLASHCARD_LABELS: Record<string, string> = {
   MICRO_STRUCTURE: "微结构失效（旧）",
   REENTER_ZONE: "重回区域失效（旧）",
   NONE: "仅方向识别",
+  FLASHCARD_EARLY_EXIT_TAG: "提前离场",
 };

@@ -29,6 +29,8 @@ type CreateFlashcardPayload = {
   direction?: FlashcardDirection;
   behaviorType?: FlashcardBehaviorType;
   invalidationType?: FlashcardInvalidationType;
+  earlyExitTag?: boolean;
+  earlyExitReason?: string;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
@@ -41,6 +43,8 @@ type UpdateFlashcardPayload = {
   direction?: FlashcardDirection;
   behaviorType?: FlashcardBehaviorType;
   invalidationType?: FlashcardInvalidationType;
+  earlyExitTag?: boolean;
+  earlyExitReason?: string;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
