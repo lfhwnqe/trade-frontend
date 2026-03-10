@@ -78,6 +78,7 @@ export default function FlashcardManagePage() {
   >("");
   const [editingEarlyExitTag, setEditingEarlyExitTag] = React.useState(false);
   const [editingEarlyExitReason, setEditingEarlyExitReason] = React.useState("");
+  const [editingEarlyExitImages, setEditingEarlyExitImages] = React.useState<ImageResource[]>([]);
   const [editingMarketTimeInfo, setEditingMarketTimeInfo] = React.useState("");
   const [editingSymbolPairInfo, setEditingSymbolPairInfo] = React.useState("");
   const [editingNote, setEditingNote] = React.useState("");
@@ -219,6 +220,12 @@ export default function FlashcardManagePage() {
     setEditingInvalidationType(card.invalidationType || "");
     setEditingEarlyExitTag(card.earlyExitTag === true);
     setEditingEarlyExitReason(card.earlyExitReason || "");
+    setEditingEarlyExitImages(
+      (card.earlyExitImageUrls || []).map((url, index) => ({
+        key: `${card.cardId}-early-exit-${index}`,
+        url,
+      })),
+    );
     setEditingMarketTimeInfo(card.marketTimeInfo || "");
     setEditingSymbolPairInfo(card.symbolPairInfo || "");
     setEditingNote(card.notes || "");
@@ -248,6 +255,9 @@ export default function FlashcardManagePage() {
         earlyExitReason: editingEarlyExitTag
           ? editingEarlyExitReason.trim() || undefined
           : undefined,
+        earlyExitImageUrls: editingEarlyExitTag
+          ? editingEarlyExitImages.map((item) => item.url).filter(Boolean)
+          : undefined,
         marketTimeInfo: editingMarketTimeInfo.trim() || undefined,
         symbolPairInfo: editingSymbolPairInfo.trim() || undefined,
         notes: editingNote.trim() || undefined,
@@ -267,6 +277,8 @@ export default function FlashcardManagePage() {
     editingAnswerImages,
     editingBehaviorType,
     editingCard,
+    editingEarlyExitImages,
+    editingEarlyExitImages,
     editingEarlyExitReason,
     editingEarlyExitTag,
     editingExpectedAction,
@@ -428,6 +440,28 @@ export default function FlashcardManagePage() {
             title={row.original.earlyExitReason || ""}
           >
             {row.original.earlyExitReason?.trim() || "-"}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "earlyExitImageUrls",
+        header: "附图数",
+        cell: ({ row }) => (
+          <div className="min-w-[80px] text-[#9ca3af]">
+            {row.original.earlyExitImageUrls?.length || 0}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "earlyExitImageUrls",
+        header: "提前离场截图",
+        cell: ({ row }) => (
+          <div className="min-w-[120px] text-[#9ca3af]">
+            {row.original.earlyExitImageUrls?.length
+              ? `${row.original.earlyExitImageUrls.length} 张`
+              : "-"}
           </div>
         ),
         enableSorting: false,
@@ -749,6 +783,7 @@ export default function FlashcardManagePage() {
                       setEditingEarlyExitTag(checked);
                       if (!checked) {
                         setEditingEarlyExitReason("");
+                        setEditingEarlyExitImages([]);
                       }
                     }}
                     disabled={savingNote}
@@ -760,15 +795,26 @@ export default function FlashcardManagePage() {
                   用来记录“本来符合系统信号，但后续走势发展不如意，需要提前手动离场”的题。
                 </div>
                 {editingEarlyExitTag ? (
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium text-[#9ca3af]">提前离场原因（必填）</div>
-                    <Textarea
-                      value={editingEarlyExitReason}
-                      onChange={(event) => setEditingEarlyExitReason(event.target.value)}
-                      placeholder="例如：触发后没有扩张，回踩承接减弱，所以手动先离场"
-                      className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
-                      disabled={savingNote}
-                    />
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-[#9ca3af]">提前离场原因（必填）</div>
+                      <Textarea
+                        value={editingEarlyExitReason}
+                        onChange={(event) => setEditingEarlyExitReason(event.target.value)}
+                        placeholder="例如：触发后没有扩张，回踩承接减弱，所以手动先离场"
+                        className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+                        disabled={savingNote}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-[#9ca3af]">提前离场截图（选填，最多 5 张）</div>
+                      <ImageUploader
+                        value={editingEarlyExitImages}
+                        onChange={setEditingEarlyExitImages}
+                        max={5}
+                        disabled={savingNote}
+                      />
+                    </div>
                   </div>
                 ) : null}
               </div>

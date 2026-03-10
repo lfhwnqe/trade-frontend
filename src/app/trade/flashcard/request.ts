@@ -31,6 +31,7 @@ type CreateFlashcardPayload = {
   invalidationType?: FlashcardInvalidationType;
   earlyExitTag?: boolean;
   earlyExitReason?: string;
+  earlyExitImageUrls?: string[];
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
@@ -45,6 +46,7 @@ type UpdateFlashcardPayload = {
   invalidationType?: FlashcardInvalidationType;
   earlyExitTag?: boolean;
   earlyExitReason?: string;
+  earlyExitImageUrls?: string[];
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;

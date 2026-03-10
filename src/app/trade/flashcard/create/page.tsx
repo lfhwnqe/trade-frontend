@@ -45,6 +45,7 @@ export default function FlashcardCreatePage() {
   const [invalidationType, setInvalidationType] = React.useState<FlashcardInvalidationType | "">("");
   const [earlyExitTag, setEarlyExitTag] = React.useState(false);
   const [earlyExitReason, setEarlyExitReason] = React.useState("");
+  const [earlyExitImages, setEarlyExitImages] = React.useState<ImageResource[]>([]);
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
   const [symbolPairInfo, setSymbolPairInfo] = React.useState<string>("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
@@ -106,6 +107,9 @@ export default function FlashcardCreatePage() {
         invalidationType: invalidationType || undefined,
         earlyExitTag,
         earlyExitReason: earlyExitTag ? earlyExitReason.trim() || undefined : undefined,
+        earlyExitImageUrls: earlyExitTag
+          ? earlyExitImages.map((item) => item.url).filter(Boolean)
+          : undefined,
         marketTimeInfo: marketTimeInfo.trim() || undefined,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
         notes: notes.trim() || undefined,
@@ -120,6 +124,7 @@ export default function FlashcardCreatePage() {
       setInvalidationType("");
       setEarlyExitTag(false);
       setEarlyExitReason("");
+      setEarlyExitImages([]);
       setMarketTimeInfo("");
       setSymbolPairInfo("");
       setNotes("");
@@ -134,6 +139,8 @@ export default function FlashcardCreatePage() {
   }, [
     answerImageUrl,
     behaviorType,
+    earlyExitImages,
+    earlyExitImages,
     earlyExitReason,
     earlyExitTag,
     errorAlert,
@@ -295,6 +302,7 @@ export default function FlashcardCreatePage() {
                   setEarlyExitTag(checked);
                   if (!checked) {
                     setEarlyExitReason("");
+                    setEarlyExitImages([]);
                   }
                 }}
                 className="h-4 w-4 rounded border-[#3f3f46] bg-[#111827]"
@@ -305,14 +313,20 @@ export default function FlashcardCreatePage() {
               用来记录“本来符合系统信号，但后续走势发展不如意，需要提前手动离场”的题。
             </div>
             {earlyExitTag ? (
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-[#9ca3af]">提前离场原因（必填）</div>
-                <Textarea
-                  value={earlyExitReason}
-                  onChange={(event) => setEarlyExitReason(event.target.value)}
-                  placeholder="例如：触发后没有扩张，回踩承接减弱，所以手动先离场"
-                  className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-[#9ca3af]">提前离场原因（必填）</div>
+                  <Textarea
+                    value={earlyExitReason}
+                    onChange={(event) => setEarlyExitReason(event.target.value)}
+                    placeholder="例如：触发后没有扩张，回踩承接减弱，所以手动先离场"
+                    className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-[#9ca3af]">提前离场截图（选填，最多 5 张）</div>
+                  <ImageUploader value={earlyExitImages} onChange={setEarlyExitImages} max={5} />
+                </div>
               </div>
             ) : null}
           </div>
