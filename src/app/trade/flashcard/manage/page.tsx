@@ -278,7 +278,6 @@ export default function FlashcardManagePage() {
     editingBehaviorType,
     editingCard,
     editingEarlyExitImages,
-    editingEarlyExitImages,
     editingEarlyExitReason,
     editingEarlyExitTag,
     editingExpectedAction,
@@ -440,16 +439,6 @@ export default function FlashcardManagePage() {
             title={row.original.earlyExitReason || ""}
           >
             {row.original.earlyExitReason?.trim() || "-"}
-          </div>
-        ),
-        enableSorting: false,
-      },
-      {
-        accessorKey: "earlyExitImageUrls",
-        header: "附图数",
-        cell: ({ row }) => (
-          <div className="min-w-[80px] text-[#9ca3af]">
-            {row.original.earlyExitImageUrls?.length || 0}
           </div>
         ),
         enableSorting: false,

@@ -140,7 +140,6 @@ export default function FlashcardCreatePage() {
     answerImageUrl,
     behaviorType,
     earlyExitImages,
-    earlyExitImages,
     earlyExitReason,
     earlyExitTag,
     errorAlert,
