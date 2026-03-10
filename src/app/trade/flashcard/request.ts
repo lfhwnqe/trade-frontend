@@ -137,7 +137,7 @@ export async function listFlashcardCards(params?: {
   invalidationType?: FlashcardInvalidationType;
   symbolPairInfo?: string;
   marketTimeInfo?: string;
-}): Promise<{ items: FlashcardCard[]; nextCursor: string | null }> {
+}): Promise<{ items: FlashcardCard[]; totalCount: number; nextCursor: string | null }> {
   const searchParams = new URLSearchParams();
   if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
   if (params?.cursor) searchParams.set("cursor", params.cursor);
@@ -167,6 +167,12 @@ export async function listFlashcardCards(params?: {
 
   return {
     items: (data.data?.items || []) as FlashcardCard[],
+    totalCount:
+      typeof data.data?.totalCount === "number" && Number.isFinite(data.data.totalCount)
+        ? data.data.totalCount
+        : Array.isArray(data.data?.items)
+          ? data.data.items.length
+          : 0,
     nextCursor:
       typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
   };

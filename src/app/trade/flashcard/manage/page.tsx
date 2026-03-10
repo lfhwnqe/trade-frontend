@@ -125,11 +125,7 @@ export default function FlashcardManagePage() {
 
         setItems(res.items);
         setPage(targetPage);
-
-        const estimateTotal = res.nextCursor
-          ? targetPage * pageSize + 1
-          : (targetPage - 1) * pageSize + res.items.length;
-        setTotalItems(Math.max(estimateTotal, 1));
+        setTotalItems(Math.max(res.totalCount, 0));
 
         if (resetCursor) {
           cursorStackRef.current = [undefined, res.nextCursor || undefined];
