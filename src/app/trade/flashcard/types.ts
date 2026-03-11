@@ -2,6 +2,9 @@ export const FLASHCARD_DIRECTIONS = ["LONG", "SHORT", "NO_TRADE"] as const;
 export type FlashcardDirection = (typeof FLASHCARD_DIRECTIONS)[number];
 export type FlashcardAction = FlashcardDirection;
 
+export const FLASHCARD_SYSTEM_OUTCOME_TYPES = ["SYSTEM_WIN", "SYSTEM_LOSS_NORMAL"] as const;
+export type FlashcardSystemOutcomeType = (typeof FLASHCARD_SYSTEM_OUTCOME_TYPES)[number];
+
 export const FLASHCARD_RECOMMENDED_BEHAVIOR_TYPES = [
   "ZONE_REJECTION",
   "ZONE_FAKE_BREAK",
@@ -115,6 +118,7 @@ export type FlashcardCard = {
   expectedAction?: FlashcardAction;
   behaviorType?: FlashcardBehaviorType;
   invalidationType?: FlashcardInvalidationType;
+  systemOutcomeType?: FlashcardSystemOutcomeType;
   earlyExitTag?: boolean;
   earlyExitReason?: string;
   earlyExitImageUrls?: string[];
@@ -363,5 +367,8 @@ export const FLASHCARD_LABELS: Record<string, string> = {
   MICRO_STRUCTURE: "微结构失效（旧）",
   REENTER_ZONE: "重回区域失效（旧）",
   NONE: "仅方向识别",
+  SYSTEM_WIN: "系统正确盈利",
+  SYSTEM_LOSS_NORMAL: "系统正确但正常亏损",
   FLASHCARD_EARLY_EXIT_TAG: "提前离场",
+  FLASHCARD_SYSTEM_OUTCOME_UNSET: "未分类",
 };

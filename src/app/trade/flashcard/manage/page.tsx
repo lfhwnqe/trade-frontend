@@ -38,12 +38,14 @@ import {
   FLASHCARD_DIRECTIONS,
   FLASHCARD_INVALIDATION_SELECT_OPTION_GROUPS,
   FLASHCARD_LABELS,
+  FLASHCARD_SYSTEM_OUTCOME_TYPES,
   isLegacyFlashcardBehaviorType,
   isLegacyFlashcardInvalidationType,
   type FlashcardAction,
   type FlashcardBehaviorType,
   type FlashcardCard,
   type FlashcardInvalidationType,
+  type FlashcardSystemOutcomeType,
 } from "../types";
 import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 import type { ImageResource } from "../../config";
@@ -75,6 +77,9 @@ export default function FlashcardManagePage() {
   >("");
   const [editingInvalidationType, setEditingInvalidationType] = React.useState<
     FlashcardInvalidationType | ""
+  >("");
+  const [editingSystemOutcomeType, setEditingSystemOutcomeType] = React.useState<
+    FlashcardSystemOutcomeType | ""
   >("");
   const [editingEarlyExitTag, setEditingEarlyExitTag] = React.useState(false);
   const [editingEarlyExitReason, setEditingEarlyExitReason] = React.useState("");
@@ -218,6 +223,7 @@ export default function FlashcardManagePage() {
     setEditingExpectedAction(card.expectedAction || card.direction || "NO_TRADE");
     setEditingBehaviorType(card.behaviorType || "");
     setEditingInvalidationType(card.invalidationType || "");
+    setEditingSystemOutcomeType(card.systemOutcomeType || "");
     setEditingEarlyExitTag(card.earlyExitTag === true);
     setEditingEarlyExitReason(card.earlyExitReason || "");
     setEditingEarlyExitImages(
@@ -251,6 +257,7 @@ export default function FlashcardManagePage() {
         expectedAction: editingExpectedAction,
         behaviorType: editingBehaviorType || undefined,
         invalidationType: editingInvalidationType || undefined,
+        systemOutcomeType: editingSystemOutcomeType || undefined,
         earlyExitTag: editingEarlyExitTag,
         earlyExitReason: editingEarlyExitTag
           ? editingEarlyExitReason.trim() || undefined
@@ -282,6 +289,7 @@ export default function FlashcardManagePage() {
     editingEarlyExitTag,
     editingExpectedAction,
     editingInvalidationType,
+    editingSystemOutcomeType,
     editingMarketTimeInfo,
     editingNote,
     editingQuestionImages,
@@ -392,6 +400,18 @@ export default function FlashcardManagePage() {
             {row.original.invalidationType
               ? FLASHCARD_LABELS[row.original.invalidationType]
               : "-"}
+          </div>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "systemOutcomeType",
+        header: "系统结果",
+        cell: ({ row }) => (
+          <div className="min-w-[160px] text-[#e5e7eb]">
+            {row.original.systemOutcomeType
+              ? FLASHCARD_LABELS[row.original.systemOutcomeType]
+              : FLASHCARD_LABELS.FLASHCARD_SYSTEM_OUTCOME_UNSET}
           </div>
         ),
         enableSorting: false,
@@ -760,6 +780,32 @@ export default function FlashcardManagePage() {
                     <option key={item} value={item} />
                   ))}
                 </datalist>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-[#9ca3af]">系统结果分类（选填）</div>
+                <Select
+                  value={editingSystemOutcomeType || EMPTY_SELECT_VALUE}
+                  onValueChange={(value) =>
+                    setEditingSystemOutcomeType(
+                      value === EMPTY_SELECT_VALUE
+                        ? ""
+                        : (value as FlashcardSystemOutcomeType),
+                    )
+                  }
+                >
+                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                    <SelectValue placeholder="未分类" />
+                  </SelectTrigger>
+                  <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                    <SelectItem value={EMPTY_SELECT_VALUE}>未分类</SelectItem>
+                    {FLASHCARD_SYSTEM_OUTCOME_TYPES.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {FLASHCARD_LABELS[item]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">

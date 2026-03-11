@@ -11,6 +11,7 @@ import type {
   FlashcardFilters,
   FlashcardInvalidationType,
   FlashcardSource,
+  FlashcardSystemOutcomeType,
 } from "./types";
 
 export const FLASHCARD_ALLOWED_IMAGE_TYPES = [
@@ -29,6 +30,7 @@ type CreateFlashcardPayload = {
   direction?: FlashcardDirection;
   behaviorType?: FlashcardBehaviorType;
   invalidationType?: FlashcardInvalidationType;
+  systemOutcomeType?: FlashcardSystemOutcomeType;
   earlyExitTag?: boolean;
   earlyExitReason?: string;
   earlyExitImageUrls?: string[];
@@ -44,6 +46,7 @@ type UpdateFlashcardPayload = {
   direction?: FlashcardDirection;
   behaviorType?: FlashcardBehaviorType;
   invalidationType?: FlashcardInvalidationType;
+  systemOutcomeType?: FlashcardSystemOutcomeType;
   earlyExitTag?: boolean;
   earlyExitReason?: string;
   earlyExitImageUrls?: string[];

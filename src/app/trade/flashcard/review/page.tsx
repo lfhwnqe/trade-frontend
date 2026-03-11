@@ -224,16 +224,17 @@ export default function FlashcardReviewPage() {
                     <TableHead className="text-[#9ca3af] text-xs uppercase">标准动作</TableHead>
                     <TableHead className="text-[#9ca3af] text-xs uppercase">行为类型</TableHead>
                     <TableHead className="text-[#9ca3af] text-xs uppercase">失效类型</TableHead>
+                    <TableHead className="text-[#9ca3af] text-xs uppercase">系统结果</TableHead>
                   </TableRow>
                 </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
+                    <TableCell colSpan={6} className="h-24 text-center text-[#9ca3af]">加载中...</TableCell>
                   </TableRow>
                 ) : pagedItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-[#9ca3af]">暂无匹配题目</TableCell>
+                    <TableCell colSpan={6} className="h-24 text-center text-[#9ca3af]">暂无匹配题目</TableCell>
                   </TableRow>
                 ) : (
                   pagedItems.map((card) => (
@@ -260,6 +261,11 @@ export default function FlashcardReviewPage() {
                         {card.invalidationType
                           ? FLASHCARD_LABELS[card.invalidationType]
                           : "-"}
+                      </TableCell>
+                      <TableCell className="text-[#9ca3af] text-sm">
+                        {card.systemOutcomeType
+                          ? FLASHCARD_LABELS[card.systemOutcomeType]
+                          : FLASHCARD_LABELS.FLASHCARD_SYSTEM_OUTCOME_UNSET}
                       </TableCell>
                     </TableRow>
                   ))

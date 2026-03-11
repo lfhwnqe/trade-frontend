@@ -388,7 +388,7 @@ export default function FlashcardDrillPlayPage() {
                   {currentAttempt?.isCorrect ? "正确" : "错误"}
                 </span>
               </div>
-              {(current.behaviorType || current.invalidationType) ? (
+              {(current.behaviorType || current.invalidationType || current.systemOutcomeType) ? (
                 <div className="flex flex-wrap gap-2">
                   {current.behaviorType ? (
                     <span className="inline-flex items-center rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-0.5 text-xs text-sky-200">
@@ -400,6 +400,9 @@ export default function FlashcardDrillPlayPage() {
                       失效: {FLASHCARD_LABELS[current.invalidationType]}
                     </span>
                   ) : null}
+                  <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-200">
+                    系统结果: {current.systemOutcomeType ? FLASHCARD_LABELS[current.systemOutcomeType] : FLASHCARD_LABELS.FLASHCARD_SYSTEM_OUTCOME_UNSET}
+                  </span>
                 </div>
               ) : null}
               <div className="flex gap-2">
