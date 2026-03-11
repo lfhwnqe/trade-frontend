@@ -66,6 +66,7 @@ export default function FlashcardManagePage() {
   const [items, setItems] = React.useState<FlashcardCard[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [viewingCard, setViewingCard] = React.useState<FlashcardCard | null>(null);
   const [editingCard, setEditingCard] = React.useState<FlashcardCard | null>(null);
   const [editingQuestionImages, setEditingQuestionImages] = React.useState<ImageResource[]>([]);
   const [editingAnswerImages, setEditingAnswerImages] = React.useState<ImageResource[]>([]);
@@ -206,6 +207,10 @@ export default function FlashcardManagePage() {
     cursorStackRef.current = [undefined];
     setRowSelection({});
     setSorting([]);
+  }, []);
+
+  const openViewDialog = React.useCallback((card: FlashcardCard) => {
+    setViewingCard(card);
   }, []);
 
   const openNoteDialog = React.useCallback((card: FlashcardCard) => {
@@ -489,7 +494,14 @@ export default function FlashcardManagePage() {
         id: "actions",
         header: () => <div className="text-center">操作</div>,
         cell: ({ row }) => (
-          <div className="flex space-x-2 justify-center min-w-[180px]">
+          <div className="flex flex-wrap gap-2 justify-center min-w-[260px]">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openViewDialog(row.original)}
+            >
+              详情
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -508,14 +520,14 @@ export default function FlashcardManagePage() {
         ),
         enableSorting: false,
         enableHiding: false,
-        size: 180,
+        size: 260,
         enablePinning: true,
         meta: {
           pinned: "right",
         },
       },
     ],
-    [handleDeleteCard, openNoteDialog],
+    [handleDeleteCard, openNoteDialog, openViewDialog],
   );
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -603,6 +615,130 @@ export default function FlashcardManagePage() {
       </div>
 
       <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+
+      <Dialog open={Boolean(viewingCard)} onOpenChange={(open) => !open && setViewingCard(null)}>
+        <DialogContent className="w-[min(98vw,1440px)] max-w-none sm:max-w-none border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+          <DialogHeader>
+            <DialogTitle>闪卡详情</DialogTitle>
+          </DialogHeader>
+          {viewingCard ? (
+            <div className="max-h-[80vh] overflow-y-auto pr-1">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs font-medium text-[#9ca3af]">入场前截图</div>
+                    <button type="button" className="block w-full" onClick={() => setPreviewUrl(viewingCard.questionImageUrl)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={viewingCard.questionImageUrl}
+                        alt="question"
+                        className="max-h-[360px] w-full rounded border border-[#27272a] bg-black object-contain"
+                      />
+                    </button>
+                  </div>
+                  <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs font-medium text-[#9ca3af]">入场后截图</div>
+                    <button type="button" className="block w-full" onClick={() => setPreviewUrl(viewingCard.answerImageUrl)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={viewingCard.answerImageUrl}
+                        alt="answer"
+                        className="max-h-[360px] w-full rounded border border-[#27272a] bg-black object-contain"
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs text-[#9ca3af]">标准动作</div>
+                    <div className="mt-1 text-sm text-[#e5e7eb]">{FLASHCARD_LABELS[viewingCard.expectedAction || viewingCard.direction || "NO_TRADE"]}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs text-[#9ca3af]">行为类型</div>
+                    <div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.behaviorType ? FLASHCARD_LABELS[viewingCard.behaviorType] : "-"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs text-[#9ca3af]">失效类型</div>
+                    <div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.invalidationType ? FLASHCARD_LABELS[viewingCard.invalidationType] : "-"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs text-[#9ca3af]">系统结果</div>
+                    <div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.systemOutcomeType ? FLASHCARD_LABELS[viewingCard.systemOutcomeType] : FLASHCARD_LABELS.FLASHCARD_SYSTEM_OUTCOME_UNSET}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs text-[#9ca3af]">订单标签</div>
+                    <div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.earlyExitTag ? FLASHCARD_LABELS.FLASHCARD_EARLY_EXIT_TAG : "-"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs text-[#9ca3af]">币对信息</div>
+                    <div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.symbolPairInfo?.trim() || "-"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2 xl:col-span-1">
+                    <div className="text-xs text-[#9ca3af]">行情时间信息</div>
+                    <div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.marketTimeInfo?.trim() || "-"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2 xl:col-span-2">
+                    <div className="text-xs text-[#9ca3af]">提前离场原因</div>
+                    <div className="mt-1 whitespace-pre-wrap text-sm text-[#e5e7eb]">{viewingCard.earlyExitReason?.trim() || "-"}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                  <div className="text-xs font-medium text-[#9ca3af]">题目备注</div>
+                  <div className="min-h-20 whitespace-pre-wrap text-sm text-[#e5e7eb]">{viewingCard.notes?.trim() || "-"}</div>
+                </div>
+
+                {viewingCard.earlyExitImageUrls?.length ? (
+                  <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs font-medium text-[#9ca3af]">提前离场截图</div>
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                      {viewingCard.earlyExitImageUrls.map((url, index) => (
+                        <button
+                          key={`${viewingCard.cardId}-detail-early-exit-${index}`}
+                          type="button"
+                          className="overflow-hidden rounded border border-[#27272a] bg-black"
+                          onClick={() => setPreviewUrl(url)}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={`early-exit-${index + 1}`} className="h-32 w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 gap-3 text-xs text-[#9ca3af] md:grid-cols-3">
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">卡片 ID：{viewingCard.cardId}</div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">创建时间：{viewingCard.createdAt || "-"}</div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">更新时间：{viewingCard.updatedAt || "-"}</div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+              onClick={() => setViewingCard(null)}
+            >
+              关闭
+            </Button>
+            <Button
+              type="button"
+              className="bg-[#00c2b2] text-black hover:bg-[#009e91]"
+              onClick={() => {
+                if (!viewingCard) return;
+                openNoteDialog(viewingCard);
+                setViewingCard(null);
+              }}
+            >
+              去编辑
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(editingCard)}
