@@ -6,6 +6,7 @@ import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,25 @@ type FlashcardQuery = {
   symbolPairInfo: string;
   marketTimeInfo: string;
 };
+
+function HoverText({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className={className}>{text}</div>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs whitespace-pre-wrap break-words border border-[#27272a] bg-[#111827] px-3 py-2 text-xs leading-relaxed text-[#e5e7eb]">
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
 const EMPTY_SELECT_VALUE = "__NONE__";
@@ -388,37 +408,34 @@ export default function FlashcardManagePage() {
       {
         accessorKey: "behaviorType",
         header: "行为类型",
-        cell: ({ row }) => (
-          <div className="min-w-[120px] text-[#9ca3af]">
-            {row.original.behaviorType
-              ? FLASHCARD_LABELS[row.original.behaviorType]
-              : "-"}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const text = row.original.behaviorType
+            ? FLASHCARD_LABELS[row.original.behaviorType]
+            : "-";
+          return <HoverText text={text} className="min-w-[120px] text-[#9ca3af]" />;
+        },
         enableSorting: false,
       },
       {
         accessorKey: "invalidationType",
         header: "失效类型",
-        cell: ({ row }) => (
-          <div className="min-w-[120px] text-[#9ca3af]">
-            {row.original.invalidationType
-              ? FLASHCARD_LABELS[row.original.invalidationType]
-              : "-"}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const text = row.original.invalidationType
+            ? FLASHCARD_LABELS[row.original.invalidationType]
+            : "-";
+          return <HoverText text={text} className="min-w-[120px] text-[#9ca3af]" />;
+        },
         enableSorting: false,
       },
       {
         accessorKey: "systemOutcomeType",
         header: "系统结果",
-        cell: ({ row }) => (
-          <div className="min-w-[160px] text-[#e5e7eb]">
-            {row.original.systemOutcomeType
-              ? FLASHCARD_LABELS[row.original.systemOutcomeType]
-              : FLASHCARD_LABELS.FLASHCARD_SYSTEM_OUTCOME_UNSET}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const text = row.original.systemOutcomeType
+            ? FLASHCARD_LABELS[row.original.systemOutcomeType]
+            : FLASHCARD_LABELS.FLASHCARD_SYSTEM_OUTCOME_UNSET;
+          return <HoverText text={text} className="min-w-[160px] text-[#e5e7eb]" />;
+        },
         enableSorting: false,
       },
       {
@@ -438,34 +455,33 @@ export default function FlashcardManagePage() {
       {
         accessorKey: "symbolPairInfo",
         header: "币对信息",
-        cell: ({ row }) => (
-          <div className="min-w-[120px] text-[#e5e7eb]">
-            {row.original.symbolPairInfo?.trim() || "-"}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const text = row.original.symbolPairInfo?.trim() || "-";
+          return <HoverText text={text} className="min-w-[120px] text-[#e5e7eb]" />;
+        },
         enableSorting: false,
       },
       {
         accessorKey: "marketTimeInfo",
         header: "行情时间信息",
-        cell: ({ row }) => (
-          <div className="min-w-[170px] text-[#9ca3af]">
-            {row.original.marketTimeInfo?.trim() || "-"}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const text = row.original.marketTimeInfo?.trim() || "-";
+          return <HoverText text={text} className="min-w-[170px] text-[#9ca3af]" />;
+        },
         enableSorting: false,
       },
       {
         accessorKey: "earlyExitReason",
         header: "提前离场原因",
-        cell: ({ row }) => (
-          <div
-            className="min-w-[220px] max-w-[300px] truncate text-[#9ca3af]"
-            title={row.original.earlyExitReason || ""}
-          >
-            {row.original.earlyExitReason?.trim() || "-"}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const text = row.original.earlyExitReason?.trim() || "-";
+          return (
+            <HoverText
+              text={text}
+              className="min-w-[220px] max-w-[300px] truncate text-[#9ca3af]"
+            />
+          );
+        },
         enableSorting: false,
       },
       {
@@ -483,11 +499,15 @@ export default function FlashcardManagePage() {
       {
         accessorKey: "notes",
         header: "闪卡备注",
-        cell: ({ row }) => (
-          <div className="min-w-[220px] max-w-[300px] truncate text-[#9ca3af]" title={row.original.notes || ""}>
-            {row.original.notes?.trim() || "-"}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const text = row.original.notes?.trim() || "-";
+          return (
+            <HoverText
+              text={text}
+              className="min-w-[220px] max-w-[300px] truncate text-[#9ca3af]"
+            />
+          );
+        },
         enableSorting: false,
       },
       {
