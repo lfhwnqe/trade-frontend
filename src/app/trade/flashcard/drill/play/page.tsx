@@ -24,6 +24,126 @@ import {
 } from "../../request";
 import { useAlert } from "@/components/common/alert";
 
+const WHEEL_REVEAL_STEP = 0.0011;
+const REVEAL_EPSILON = 0.001;
+
+function clampRevealProgress(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function FlashcardQuestionReveal({
+  src,
+  onPreview,
+}: {
+  src: string;
+  onPreview: () => void;
+}) {
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const maskRef = React.useRef<HTMLDivElement | null>(null);
+  const frameRef = React.useRef<number | null>(null);
+  const currentRevealRef = React.useRef(0);
+  const targetRevealRef = React.useRef(0);
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [revealProgress, setRevealProgress] = React.useState(0);
+
+  const syncMask = React.useCallback((progress: number) => {
+    const maskNode = maskRef.current;
+    if (!maskNode) return;
+    const hiddenRatio = 1 - progress;
+    maskNode.style.transform = `scaleX(${Math.max(hiddenRatio, 0)})`;
+    setRevealProgress(progress);
+  }, []);
+
+  const animateReveal = React.useCallback(() => {
+    const current = currentRevealRef.current;
+    const target = targetRevealRef.current;
+    const delta = target - current;
+
+    if (Math.abs(delta) <= REVEAL_EPSILON) {
+      currentRevealRef.current = target;
+      syncMask(target);
+      frameRef.current = null;
+      return;
+    }
+
+    const next = current + delta * 0.18;
+    currentRevealRef.current = next;
+    syncMask(next);
+    frameRef.current = window.requestAnimationFrame(animateReveal);
+  }, [syncMask]);
+
+  const ensureAnimation = React.useCallback(() => {
+    if (frameRef.current !== null) return;
+    frameRef.current = window.requestAnimationFrame(animateReveal);
+  }, [animateReveal]);
+
+  React.useEffect(() => {
+    currentRevealRef.current = 0;
+    targetRevealRef.current = 0;
+    syncMask(0);
+  }, [src, syncMask]);
+
+  React.useEffect(() => {
+    return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (!isHovered) return;
+      event.preventDefault();
+      const direction = Math.sign(event.deltaY);
+      if (!direction) return;
+
+      const nextTarget = clampRevealProgress(
+        targetRevealRef.current + direction * WHEEL_REVEAL_STEP * Math.max(Math.abs(event.deltaY), 12),
+      );
+      targetRevealRef.current = nextTarget;
+      ensureAnimation();
+    };
+
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, [ensureAnimation, isHovered]);
+
+  return (
+    <div className="space-y-2">
+      <button type="button" className="w-full" onClick={onPreview}>
+        <div
+          ref={containerRef}
+          className="group relative overflow-hidden rounded bg-[#050816]"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="question" className="max-h-[70vh] w-full rounded object-contain" />
+          <div
+            ref={maskRef}
+            className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816] shadow-[-12px_0_24px_rgba(5,8,22,0.85)]"
+            style={{ width: "100%", transform: "scaleX(1)", willChange: "transform" }}
+          >
+            <div className="absolute inset-0 bg-[linear-gradient(270deg,rgba(5,8,22,0.98)_0%,rgba(5,8,22,0.98)_86%,rgba(5,8,22,0.35)_100%)]" />
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-3 text-xs text-white/85">
+            <span>{isHovered ? "滚轮向下逐步揭开，向上重新遮住" : "悬停后可滚轮推演 K 线"}</span>
+            <span>{Math.round(revealProgress * 100)}%</span>
+          </div>
+        </div>
+      </button>
+      <div className="flex items-center justify-between text-xs text-[#6b7280]">
+        <span>从左到右逐步显示真实图片，适合按时间顺序训练盘感</span>
+        <span>点击图片可放大</span>
+      </div>
+    </div>
+  );
+}
+
 export default function FlashcardDrillPlayPage() {
   const [, errorAlert] = useAlert();
 
@@ -307,18 +427,10 @@ export default function FlashcardDrillPlayPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-3 shadow-sm">
             <div className="mb-2 text-xs text-[#9ca3af]">题目图</div>
-            <button
-              type="button"
-              className="w-full"
-              onClick={() => setPreviewUrl(current.questionImageUrl)}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={current.questionImageUrl}
-                alt="question"
-                className="max-h-[70vh] w-full rounded object-contain"
-              />
-            </button>
+            <FlashcardQuestionReveal
+              src={current.questionImageUrl}
+              onPreview={() => setPreviewUrl(current.questionImageUrl)}
+            />
           </div>
 
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-3 shadow-sm">
