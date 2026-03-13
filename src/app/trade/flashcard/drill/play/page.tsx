@@ -33,26 +33,32 @@ function clampRevealProgress(value: number) {
 
 function FlashcardQuestionReveal({
   src,
+  revealProgress,
+  onRevealProgressChange,
   onPreview,
 }: {
   src: string;
+  revealProgress: number;
+  onRevealProgressChange: (next: number) => void;
   onPreview: () => void;
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const maskRef = React.useRef<HTMLDivElement | null>(null);
   const frameRef = React.useRef<number | null>(null);
-  const currentRevealRef = React.useRef(0);
-  const targetRevealRef = React.useRef(0);
+  const currentRevealRef = React.useRef(revealProgress);
+  const targetRevealRef = React.useRef(revealProgress);
   const [isHovered, setIsHovered] = React.useState(false);
-  const [revealProgress, setRevealProgress] = React.useState(0);
 
-  const syncMask = React.useCallback((progress: number) => {
-    const maskNode = maskRef.current;
-    if (!maskNode) return;
-    const hiddenRatio = 1 - progress;
-    maskNode.style.transform = `scaleX(${Math.max(hiddenRatio, 0)})`;
-    setRevealProgress(progress);
-  }, []);
+  const syncMask = React.useCallback(
+    (progress: number) => {
+      const maskNode = maskRef.current;
+      if (!maskNode) return;
+      const hiddenRatio = 1 - progress;
+      maskNode.style.transform = `scaleX(${Math.max(hiddenRatio, 0)})`;
+      onRevealProgressChange(progress);
+    },
+    [onRevealProgressChange],
+  );
 
   const animateReveal = React.useCallback(() => {
     const current = currentRevealRef.current;
@@ -82,6 +88,12 @@ function FlashcardQuestionReveal({
     targetRevealRef.current = 0;
     syncMask(0);
   }, [src, syncMask]);
+
+  React.useEffect(() => {
+    currentRevealRef.current = revealProgress;
+    targetRevealRef.current = revealProgress;
+    syncMask(revealProgress);
+  }, [revealProgress, syncMask]);
 
   React.useEffect(() => {
     return () => {
@@ -150,7 +162,11 @@ export default function FlashcardDrillPlayPage() {
   const [session, setSession] = React.useState<FlashcardDrillSession | null>(null);
   const [index, setIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [questionRevealProgress, setQuestionRevealProgress] = React.useState(0);
+  const [previewState, setPreviewState] = React.useState<{
+    url: string;
+    revealEnabled: boolean;
+  } | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [finishing, setFinishing] = React.useState(false);
   const [selectedAction, setSelectedAction] = React.useState<FlashcardAction | "">("");
@@ -175,6 +191,11 @@ export default function FlashcardDrillPlayPage() {
     }, {});
     setNoteMap(initialNotes);
   }, []);
+
+  React.useEffect(() => {
+    setQuestionRevealProgress(0);
+    setPreviewState(null);
+  }, [index]);
 
   const cards = session?.cards || [];
   const total = cards.length;
@@ -429,7 +450,14 @@ export default function FlashcardDrillPlayPage() {
             <div className="mb-2 text-xs text-[#9ca3af]">题目图</div>
             <FlashcardQuestionReveal
               src={current.questionImageUrl}
-              onPreview={() => setPreviewUrl(current.questionImageUrl)}
+              revealProgress={questionRevealProgress}
+              onRevealProgressChange={setQuestionRevealProgress}
+              onPreview={() =>
+                setPreviewState({
+                  url: current.questionImageUrl,
+                  revealEnabled: true,
+                })
+              }
             />
           </div>
 
@@ -439,7 +467,12 @@ export default function FlashcardDrillPlayPage() {
               <button
                 type="button"
                 className="w-full"
-                onClick={() => setPreviewUrl(current.answerImageUrl)}
+                onClick={() =>
+                  setPreviewState({
+                    url: current.answerImageUrl,
+                    revealEnabled: false,
+                  })
+                }
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -586,7 +619,12 @@ export default function FlashcardDrillPlayPage() {
         </div>
       </div>
 
-      <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      <ImagePreviewDialog
+        previewUrl={previewState?.url ?? null}
+        onClose={() => setPreviewState(null)}
+        revealProgress={previewState?.revealEnabled ? questionRevealProgress : undefined}
+        onRevealProgressChange={previewState?.revealEnabled ? setQuestionRevealProgress : undefined}
+      />
     </TradePageShell>
   );
 }

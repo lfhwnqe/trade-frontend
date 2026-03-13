@@ -26,23 +26,74 @@ function VisuallyHidden(props: React.HTMLAttributes<HTMLSpanElement>) {
 type ImagePreviewDialogProps = {
   previewUrl: string | null;
   onClose: () => void;
+  revealProgress?: number;
+  onRevealProgressChange?: (next: number) => void;
 };
 
-export function ImagePreviewDialog({ previewUrl, onClose }: ImagePreviewDialogProps) {
+const PREVIEW_WHEEL_REVEAL_STEP = 0.0011;
+
+function clampRevealProgress(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+export function ImagePreviewDialog({
+  previewUrl,
+  onClose,
+  revealProgress,
+  onRevealProgressChange,
+}: ImagePreviewDialogProps) {
+  const revealEnabled =
+    typeof revealProgress === "number" && typeof onRevealProgressChange === "function";
+
+  const handleWheel = React.useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (!revealEnabled) return;
+      event.preventDefault();
+      const direction = Math.sign(event.deltaY);
+      if (!direction) return;
+
+      const nextProgress = clampRevealProgress(
+        revealProgress + direction * PREVIEW_WHEEL_REVEAL_STEP * Math.max(Math.abs(event.deltaY), 12),
+      );
+      onRevealProgressChange(nextProgress);
+    },
+    [onRevealProgressChange, revealEnabled, revealProgress],
+  );
+
   return (
     <Dialog open={!!previewUrl} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-auto max-w-[95vw] border-none bg-transparent p-0 shadow-none sm:max-w-[95vw] flex items-center justify-center">
+      <DialogContent className="flex w-auto max-w-[95vw] items-center justify-center border-none bg-transparent p-0 shadow-none sm:max-w-[95vw]">
         <DialogTitle asChild>
           <VisuallyHidden>图片预览</VisuallyHidden>
         </DialogTitle>
         <DialogClose className="absolute right-4 top-4 z-20" aria-label="关闭" />
         {previewUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={previewUrl}
-            alt="preview"
-            className="max-h-[85vh] max-w-[95vw] rounded border border-[#27272a] bg-black object-contain"
-          />
+          <div className="relative" onWheel={handleWheel}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrl}
+              alt="preview"
+              className="max-h-[85vh] max-w-[95vw] rounded border border-[#27272a] bg-black object-contain"
+            />
+            {revealEnabled ? (
+              <>
+                <div
+                  className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816] shadow-[-12px_0_24px_rgba(5,8,22,0.85)]"
+                  style={{
+                    width: "100%",
+                    transform: `scaleX(${Math.max(1 - revealProgress, 0)})`,
+                    willChange: "transform",
+                  }}
+                >
+                  <div className="absolute inset-0 bg-[linear-gradient(270deg,rgba(5,8,22,0.98)_0%,rgba(5,8,22,0.98)_86%,rgba(5,8,22,0.35)_100%)]" />
+                </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-3 text-xs text-white/85">
+                  <span>滚轮向下逐步揭开，向上重新遮住</span>
+                  <span>{Math.round(revealProgress * 100)}%</span>
+                </div>
+              </>
+            ) : null}
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>
