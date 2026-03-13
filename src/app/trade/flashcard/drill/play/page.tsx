@@ -165,6 +165,7 @@ export default function FlashcardDrillPlayPage() {
   const [questionRevealProgress, setQuestionRevealProgress] = React.useState(0);
   const [previewState, setPreviewState] = React.useState<{
     url: string;
+    answerUrl?: string | null;
     revealEnabled: boolean;
     priceLineEditorEnabled: boolean;
   } | null>(null);
@@ -263,6 +264,7 @@ export default function FlashcardDrillPlayPage() {
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== "Space") return;
+      if (previewState) return;
       event.preventDefault();
 
       if (!revealed) {
@@ -277,7 +279,7 @@ export default function FlashcardDrillPlayPage() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleNext, handleSubmitCurrent, revealed, submitting]);
+  }, [handleNext, handleSubmitCurrent, previewState, revealed, submitting]);
 
   React.useEffect(() => {
     if (!session || !isCompleted || finalScore !== null || finishing) return;
@@ -456,6 +458,7 @@ export default function FlashcardDrillPlayPage() {
               onPreview={() =>
                 setPreviewState({
                   url: current.questionImageUrl,
+                  answerUrl: current.answerImageUrl,
                   revealEnabled: true,
                   priceLineEditorEnabled: true,
                 })
@@ -624,6 +627,7 @@ export default function FlashcardDrillPlayPage() {
 
       <ImagePreviewDialog
         previewUrl={previewState?.url ?? null}
+        answerPreviewUrl={previewState?.answerUrl ?? null}
         onClose={() => setPreviewState(null)}
         revealProgress={previewState?.revealEnabled ? questionRevealProgress : undefined}
         onRevealProgressChange={previewState?.revealEnabled ? setQuestionRevealProgress : undefined}

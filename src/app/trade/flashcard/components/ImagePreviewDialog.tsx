@@ -29,6 +29,7 @@ function VisuallyHidden(props: React.HTMLAttributes<HTMLSpanElement>) {
 
 type ImagePreviewDialogProps = {
   previewUrl: string | null;
+  answerPreviewUrl?: string | null;
   onClose: () => void;
   revealProgress?: number;
   onRevealProgressChange?: (next: number) => void;
@@ -43,12 +44,14 @@ function clampRevealProgress(value: number) {
 
 export function ImagePreviewDialog({
   previewUrl,
+  answerPreviewUrl,
   onClose,
   revealProgress,
   onRevealProgressChange,
   priceLineEditorEnabled = false,
 }: ImagePreviewDialogProps) {
   const [priceLineValue, setPriceLineValue] = React.useState<FlashcardPriceLineValue>({});
+  const [showAnswerPreview, setShowAnswerPreview] = React.useState(false);
 
   const revealEnabled =
     typeof revealProgress === "number" && typeof onRevealProgressChange === "function";
@@ -58,6 +61,28 @@ export function ImagePreviewDialog({
       setPriceLineValue({});
     }
   }, [previewUrl, priceLineEditorEnabled]);
+
+  React.useEffect(() => {
+    setShowAnswerPreview(false);
+  }, [previewUrl, answerPreviewUrl]);
+
+  React.useEffect(() => {
+    if (!previewUrl || !answerPreviewUrl) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName;
+      if (tagName === "INPUT" || tagName === "TEXTAREA" || target?.isContentEditable) {
+        return;
+      }
+      if (event.code !== "Space") return;
+      event.preventDefault();
+      setShowAnswerPreview((prev) => !prev);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [answerPreviewUrl, previewUrl]);
 
   const handleWheel = React.useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
@@ -83,15 +108,47 @@ export function ImagePreviewDialog({
         <DialogClose className="absolute right-4 top-4 z-20" aria-label="关闭" />
         {previewUrl ? (
           priceLineEditorEnabled ? (
-            <div className="w-full max-w-[1100px]">
-              <FlashcardPriceLineEditor
-                imageUrl={previewUrl}
-                value={priceLineValue}
-                onChange={setPriceLineValue}
-                title="盈亏比辅助线（预览态）"
-                revealProgress={revealEnabled ? revealProgress : undefined}
-                onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
-              />
+            <div className="w-full max-w-[1400px] space-y-3">
+              {answerPreviewUrl ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-[#27272a] bg-[#111827]/70 px-3 py-2 text-xs text-[#cbd5e1]">
+                  <div>
+                    {showAnswerPreview
+                      ? "当前是答案图预览；可用按钮或空格键切回问题图。"
+                      : "当前是问题图预览；可用按钮或空格键切到答案图。"}
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-md border border-[#27272a] bg-[#1e1e1e] px-3 py-1.5 text-[#e5e7eb] hover:bg-[#242424]"
+                    onClick={() => setShowAnswerPreview((prev) => !prev)}
+                  >
+                    {showAnswerPreview ? "返回问题图（空格）" : "显示答案图（空格）"}
+                  </button>
+                </div>
+              ) : null}
+
+              {showAnswerPreview && answerPreviewUrl ? (
+                <div className="space-y-2 rounded-xl border border-[#27272a] bg-[#18181b] p-3">
+                  <div className="text-sm font-medium text-[#e5e7eb]">答案图</div>
+                  <div className="text-xs text-[#9ca3af]">答案图以独立大框展示，会覆盖当前的问题图预览视图。</div>
+                  <div className="overflow-hidden rounded-lg border border-[#27272a] bg-black">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={answerPreviewUrl}
+                      alt="answer-preview"
+                      className="max-h-[82vh] w-full object-contain"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <FlashcardPriceLineEditor
+                  imageUrl={previewUrl}
+                  value={priceLineValue}
+                  onChange={setPriceLineValue}
+                  title="问题图：盈亏比辅助线"
+                  revealProgress={revealEnabled ? revealProgress : undefined}
+                  onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
+                />
+              )}
             </div>
           ) : (
             <div className="relative" onWheel={handleWheel}>

@@ -13,20 +13,20 @@ const LINE_META: Record<
   { label: string; shortLabel: string; color: string; buttonClassName: string }
 > = {
   entry: {
-    label: "Entry 入场线",
-    shortLabel: "Entry",
+    label: "入场线",
+    shortLabel: "入场",
     color: "#22d3ee",
     buttonClassName: "border-cyan-400/40 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400/20",
   },
   stopLoss: {
-    label: "Stop 止损线",
-    shortLabel: "Stop",
+    label: "止损线",
+    shortLabel: "止损",
     color: "#ef4444",
     buttonClassName: "border-red-400/40 bg-red-400/10 text-red-300 hover:bg-red-400/20",
   },
   takeProfit: {
-    label: "Target 止盈线",
-    shortLabel: "Target",
+    label: "止盈线",
+    shortLabel: "止盈",
     color: "#22c55e",
     buttonClassName: "border-green-400/40 bg-green-400/10 text-green-300 hover:bg-green-400/20",
   },
@@ -163,9 +163,12 @@ export function FlashcardPriceLineEditor({
 
   const handleImageClick = React.useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      if (typeof value[activeType] === "number") {
+        return;
+      }
       updateLineByClientY(activeType, event.clientY);
     },
-    [activeType, updateLineByClientY],
+    [activeType, updateLineByClientY, value],
   );
 
   const handleWheel = React.useCallback(
@@ -214,7 +217,7 @@ export function FlashcardPriceLineEditor({
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium text-[#e5e7eb]">{title || "价格线原型"}</div>
-          <div className="text-xs text-[#9ca3af]">点击图片落线，拖动横线可上下调整；以 Entry 为基准自动判断多空并计算 RR。</div>
+          <div className="text-xs text-[#9ca3af]">未设置的线可点击图片直接落线；已设置的线只能拖动横线调整位置。以入场线为基准自动判断多空并计算 RR。</div>
         </div>
         <div className="text-right">
           {tradeSide ? <div className="text-xs text-[#9ca3af]">{tradeSide === "LONG" ? "多单结构" : "空单结构"}</div> : null}
@@ -328,7 +331,7 @@ export function FlashcardPriceLineEditor({
                       <div>
                         <div className="text-sm font-medium text-[#e5e7eb]">{meta.shortLabel}</div>
                         <div className="text-xs text-[#9ca3af]">
-                          {exists ? `已设置 · ${formatPercent(value[type])}` : "未设置"}
+                          {exists ? `已设置 · 位于图片高度 ${formatPercent(value[type])}（从上往下）` : "未设置"}
                         </div>
                       </div>
                       <Button
@@ -353,7 +356,7 @@ export function FlashcardPriceLineEditor({
               {rr !== null ? rr.toFixed(2) : "--"}
             </div>
             <div className="mt-1 text-xs text-[#9ca3af]">
-              以 Entry 为起点：若 Target 在上、Stop 在下则判为多单；若 Target 在下、Stop 在上则判为空单；再按对应方向计算 reward / risk。
+              以入场线为起点：若止盈线在上、止损线在下则判为多单；若止盈线在下、止损线在上则判为空单；再按对应方向计算 reward / risk。
             </div>
           </div>
 
