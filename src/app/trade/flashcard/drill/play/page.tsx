@@ -166,6 +166,7 @@ export default function FlashcardDrillPlayPage() {
   const [previewState, setPreviewState] = React.useState<{
     url: string;
     revealEnabled: boolean;
+    priceLineEditorEnabled: boolean;
   } | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [finishing, setFinishing] = React.useState(false);
@@ -456,6 +457,7 @@ export default function FlashcardDrillPlayPage() {
                 setPreviewState({
                   url: current.questionImageUrl,
                   revealEnabled: true,
+                  priceLineEditorEnabled: true,
                 })
               }
             />
@@ -471,6 +473,7 @@ export default function FlashcardDrillPlayPage() {
                   setPreviewState({
                     url: current.answerImageUrl,
                     revealEnabled: false,
+                    priceLineEditorEnabled: false,
                   })
                 }
               >
@@ -624,6 +627,7 @@ export default function FlashcardDrillPlayPage() {
         onClose={() => setPreviewState(null)}
         revealProgress={previewState?.revealEnabled ? questionRevealProgress : undefined}
         onRevealProgressChange={previewState?.revealEnabled ? setQuestionRevealProgress : undefined}
+        priceLineEditorEnabled={previewState?.priceLineEditorEnabled}
       />
     </TradePageShell>
   );
