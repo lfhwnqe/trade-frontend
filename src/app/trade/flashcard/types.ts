@@ -58,6 +58,12 @@ export type FlashcardInvalidationType =
 export const FLASHCARD_SOURCES = ["ALL", "WRONG_BOOK", "FAVORITES"] as const;
 export type FlashcardSource = (typeof FLASHCARD_SOURCES)[number];
 
+export const FLASHCARD_CARD_SORT_BYS = ["CREATED_AT", "QUALITY_SCORE_AVG"] as const;
+export type FlashcardCardSortBy = (typeof FLASHCARD_CARD_SORT_BYS)[number];
+
+export const FLASHCARD_CARD_SORT_ORDERS = ["asc", "desc"] as const;
+export type FlashcardCardSortOrder = (typeof FLASHCARD_CARD_SORT_ORDERS)[number];
+
 export const FLASHCARD_BEHAVIOR_OPTION_GROUPS: ReadonlyArray<{
   label: string;
   items: readonly FlashcardBehaviorType[];
@@ -126,6 +132,13 @@ export type FlashcardCard = {
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
+  simulationAttemptCount?: number;
+  simulationSuccessCount?: number;
+  simulationFailureCount?: number;
+  simulationSuccessRate?: number;
+  qualityScoreAvg?: number;
+  qualityScoreCount?: number;
+  lastSimulationAt?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -216,6 +229,62 @@ export type FlashcardDrillAnalytics = {
     behaviorTypes: FlashcardDrillAnalyticsDimensionStat[];
     invalidationTypes: FlashcardDrillAnalyticsDimensionStat[];
   };
+};
+
+export type FlashcardSimulationSessionStartResponse = {
+  simulationSessionId: string;
+  count: number;
+  cards: FlashcardCard[];
+};
+
+export type FlashcardSimulationRunningStats = {
+  completedCount: number;
+  successCount: number;
+  failureCount: number;
+  successRate: number;
+};
+
+export type FlashcardSimulationCardMetrics = {
+  simulationAttemptCount: number;
+  simulationSuccessCount: number;
+  simulationFailureCount: number;
+  simulationSuccessRate: number;
+  qualityScoreAvg: number;
+  qualityScoreCount: number;
+  lastSimulationAt?: string | null;
+};
+
+export type FlashcardSimulationSessionHistoryItem = {
+  simulationSessionId: string;
+  source: "ALL" | "FILTERED";
+  count: number;
+  totalCards: number;
+  successCount: number;
+  failureCount: number;
+  successRate: number;
+  status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+  startedAt: string;
+  endedAt?: string;
+  updatedAt: string;
+};
+
+export type FlashcardSimulationCardHistoryItem = {
+  attemptId: string;
+  simulationSessionId: string;
+  result: "SUCCESS" | "FAILURE";
+  failureNote?: string;
+  entryReason: string;
+  rrReason: string;
+  cardQualityScore: number;
+  rrValue: number;
+  createdAt: string;
+};
+
+export type FlashcardSimulationCardHistoryResponse = {
+  cardId: string;
+  summary: FlashcardSimulationCardMetrics;
+  items: FlashcardSimulationCardHistoryItem[];
+  nextCursor: string | null;
 };
 
 export const FLASHCARD_BEHAVIOR_EXPLANATIONS: Record<
@@ -371,4 +440,6 @@ export const FLASHCARD_LABELS: Record<string, string> = {
   SYSTEM_LOSS_NORMAL: "系统正确但正常亏损",
   FLASHCARD_EARLY_EXIT_TAG: "提前离场",
   FLASHCARD_SYSTEM_OUTCOME_UNSET: "未分类",
+  CREATED_AT: "创建时间",
+  QUALITY_SCORE_AVG: "平均评分",
 };

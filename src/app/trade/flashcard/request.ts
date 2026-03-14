@@ -3,6 +3,8 @@ import type {
   FlashcardAction,
   FlashcardCard,
   FlashcardBehaviorType,
+  FlashcardCardSortBy,
+  FlashcardCardSortOrder,
   FlashcardDrillStartResponse,
   FlashcardDrillStats,
   FlashcardDrillSessionHistoryItem,
@@ -10,6 +12,11 @@ import type {
   FlashcardDirection,
   FlashcardFilters,
   FlashcardInvalidationType,
+  FlashcardSimulationCardHistoryResponse,
+  FlashcardSimulationCardMetrics,
+  FlashcardSimulationRunningStats,
+  FlashcardSimulationSessionHistoryItem,
+  FlashcardSimulationSessionStartResponse,
   FlashcardSource,
   FlashcardSystemOutcomeType,
 } from "./types";
@@ -146,6 +153,8 @@ export async function listFlashcardCards(params?: {
   invalidationType?: FlashcardInvalidationType;
   symbolPairInfo?: string;
   marketTimeInfo?: string;
+  sortBy?: FlashcardCardSortBy;
+  sortOrder?: FlashcardCardSortOrder;
 }): Promise<{ items: FlashcardCard[]; totalCount: number; nextCursor: string | null }> {
   const searchParams = new URLSearchParams();
   if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
@@ -156,6 +165,8 @@ export async function listFlashcardCards(params?: {
   }
   if (params?.symbolPairInfo) searchParams.set("symbolPairInfo", params.symbolPairInfo);
   if (params?.marketTimeInfo) searchParams.set("marketTimeInfo", params.marketTimeInfo);
+  if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
+  if (params?.sortOrder) searchParams.set("sortOrder", params.sortOrder);
 
   const targetPath = `flashcard/cards${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
@@ -425,4 +436,154 @@ export async function updateFlashcardCard(
   }
 
   return data.data as FlashcardCard;
+}
+
+export async function startFlashcardSimulationSession(params: {
+  count: number;
+  filters?: FlashcardFilters;
+}): Promise<FlashcardSimulationSessionStartResponse> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: "flashcard/simulation/session/start",
+      actualMethod: "POST",
+    },
+    actualBody: params,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "开始模拟盘训练失败");
+  }
+
+  return data.data as FlashcardSimulationSessionStartResponse;
+}
+
+export async function submitFlashcardSimulationAttempt(params: {
+  sessionId: string;
+  cardId: string;
+  entryLineYPercent: number;
+  stopLossLineYPercent: number;
+  takeProfitLineYPercent: number;
+  rrValue: number;
+  entryDirection: "LONG" | "SHORT";
+  entryReason: string;
+  rrReason: string;
+  result: "SUCCESS" | "FAILURE";
+  failureNote?: string;
+  cardQualityScore?: 1 | 2 | 3 | 4 | 5;
+}): Promise<{
+  attemptId: string;
+  runningStats: FlashcardSimulationRunningStats;
+  cardMetrics: FlashcardSimulationCardMetrics;
+}> {
+  const { sessionId, ...body } = params;
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/simulation/session/${sessionId}/attempt`,
+      actualMethod: "POST",
+    },
+    actualBody: body,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "提交模拟盘记录失败");
+  }
+
+  return data.data as {
+    attemptId: string;
+    runningStats: FlashcardSimulationRunningStats;
+    cardMetrics: FlashcardSimulationCardMetrics;
+  };
+}
+
+export async function finishFlashcardSimulationSession(sessionId: string): Promise<{
+  simulationSessionId: string;
+  totalCards: number;
+  successCount: number;
+  failureCount: number;
+  successRate: number;
+  status: "COMPLETED" | "IN_PROGRESS" | "ABANDONED";
+}> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/simulation/session/${sessionId}/finish`,
+      actualMethod: "POST",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "结束模拟盘训练失败");
+  }
+
+  return data.data;
+}
+
+export async function listFlashcardSimulationSessions(params?: {
+  pageSize?: number;
+  cursor?: string;
+  status?: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+}): Promise<{ items: FlashcardSimulationSessionHistoryItem[]; nextCursor: string | null }> {
+  const searchParams = new URLSearchParams();
+  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params?.cursor) searchParams.set("cursor", params.cursor);
+  if (params?.status) searchParams.set("status", params.status);
+
+  const targetPath = `flashcard/simulation/sessions${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取模拟盘训练历史失败");
+  }
+
+  return {
+    items: (data.data?.items || []) as FlashcardSimulationSessionHistoryItem[],
+    nextCursor: typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
+  };
+}
+
+export async function getFlashcardSimulationCardHistory(params: {
+  cardId: string;
+  pageSize?: number;
+  cursor?: string;
+}): Promise<FlashcardSimulationCardHistoryResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params.cursor) searchParams.set("cursor", params.cursor);
+  const targetPath = `flashcard/simulation/cards/${params.cardId}/history${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取闪卡模拟盘历史失败");
+  }
+
+  return data.data as FlashcardSimulationCardHistoryResponse;
 }

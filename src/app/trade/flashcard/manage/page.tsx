@@ -36,6 +36,8 @@ import {
 } from "../request";
 import {
   FLASHCARD_BEHAVIOR_SELECT_OPTION_GROUPS,
+  FLASHCARD_CARD_SORT_BYS,
+  FLASHCARD_CARD_SORT_ORDERS,
   FLASHCARD_DIRECTIONS,
   FLASHCARD_INVALIDATION_SELECT_OPTION_GROUPS,
   FLASHCARD_LABELS,
@@ -45,6 +47,8 @@ import {
   type FlashcardAction,
   type FlashcardBehaviorType,
   type FlashcardCard,
+  type FlashcardCardSortBy,
+  type FlashcardCardSortOrder,
   type FlashcardInvalidationType,
   type FlashcardSystemOutcomeType,
 } from "../types";
@@ -56,6 +60,8 @@ import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
 type FlashcardQuery = {
   symbolPairInfo: string;
   marketTimeInfo: string;
+  sortBy: FlashcardCardSortBy;
+  sortOrder: FlashcardCardSortOrder;
 };
 
 function HoverText({
@@ -122,10 +128,14 @@ export default function FlashcardManagePage() {
   const [queryForm, setQueryForm] = React.useState<FlashcardQuery>({
     symbolPairInfo: "",
     marketTimeInfo: "",
+    sortBy: "CREATED_AT",
+    sortOrder: "desc",
   });
   const [activeQuery, setActiveQuery] = React.useState<FlashcardQuery>({
     symbolPairInfo: "",
     marketTimeInfo: "",
+    sortBy: "CREATED_AT",
+    sortOrder: "desc",
   });
 
   // page N 的起始 cursor 存在 index N-1；只放 ref，避免触发 useEffect 循环
@@ -150,6 +160,8 @@ export default function FlashcardManagePage() {
           cursor,
           symbolPairInfo: query.symbolPairInfo.trim() || undefined,
           marketTimeInfo: query.marketTimeInfo.trim() || undefined,
+          sortBy: query.sortBy,
+          sortOrder: query.sortOrder,
         });
 
         setItems(res.items);
@@ -221,7 +233,7 @@ export default function FlashcardManagePage() {
   );
 
   const handleQueryReset = React.useCallback(() => {
-    const emptyQuery = { symbolPairInfo: "", marketTimeInfo: "" };
+    const emptyQuery = { symbolPairInfo: "", marketTimeInfo: "", sortBy: "CREATED_AT" as FlashcardCardSortBy, sortOrder: "desc" as FlashcardCardSortOrder };
     setQueryForm(emptyQuery);
     setActiveQuery(emptyQuery);
     cursorStackRef.current = [undefined];
@@ -497,6 +509,24 @@ export default function FlashcardManagePage() {
         enableSorting: false,
       },
       {
+        accessorKey: "qualityScoreAvg",
+        header: "平均评分",
+        cell: ({ row }) => {
+          const score = typeof row.original.qualityScoreAvg === "number" ? row.original.qualityScoreAvg.toFixed(2) : "5.00";
+          return <div className="min-w-[100px] text-[#e5e7eb]">{score}</div>;
+        },
+        enableSorting: false,
+      },
+      {
+        accessorKey: "simulationFailureCount",
+        header: "模拟失败数",
+        cell: ({ row }) => {
+          const count = typeof row.original.simulationFailureCount === "number" ? row.original.simulationFailureCount : 0;
+          return <div className="min-w-[100px] text-[#9ca3af]">{count}</div>;
+        },
+        enableSorting: false,
+      },
+      {
         accessorKey: "notes",
         header: "闪卡备注",
         cell: ({ row }) => {
@@ -558,7 +588,7 @@ export default function FlashcardManagePage() {
         <div className="flex-shrink-0">
           <div className="bg-[#121212] border border-[#27272a] rounded-xl p-4 mb-4 shadow-sm">
             <form onSubmit={handleQuerySubmit} className="space-y-3">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-[#9ca3af] mb-1">币对信息</label>
                   <Input
@@ -580,6 +610,28 @@ export default function FlashcardManagePage() {
                     placeholder="输入时间关键字，例如 2026-03-05"
                     className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#9ca3af] mb-1">排序字段</label>
+                  <Select value={queryForm.sortBy} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, sortBy: value as FlashcardCardSortBy }))}>
+                    <SelectTrigger className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                      {FLASHCARD_CARD_SORT_BYS.map((item) => (
+                        <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#9ca3af] mb-1">排序方向</label>
+                  <Select value={queryForm.sortOrder} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, sortOrder: value as FlashcardCardSortOrder }))}>
+                    <SelectTrigger className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                      {FLASHCARD_CARD_SORT_ORDERS.map((item) => (
+                        <SelectItem key={item} value={item}>{item}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

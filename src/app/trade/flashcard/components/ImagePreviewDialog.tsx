@@ -34,6 +34,8 @@ type ImagePreviewDialogProps = {
   revealProgress?: number;
   onRevealProgressChange?: (next: number) => void;
   priceLineEditorEnabled?: boolean;
+  priceLineValue?: FlashcardPriceLineValue;
+  onPriceLineChange?: (next: FlashcardPriceLineValue) => void;
 };
 
 const PREVIEW_WHEEL_REVEAL_STEP = 0.0011;
@@ -49,18 +51,23 @@ export function ImagePreviewDialog({
   revealProgress,
   onRevealProgressChange,
   priceLineEditorEnabled = false,
+  priceLineValue,
+  onPriceLineChange,
 }: ImagePreviewDialogProps) {
-  const [priceLineValue, setPriceLineValue] = React.useState<FlashcardPriceLineValue>({});
+  const [internalPriceLineValue, setInternalPriceLineValue] = React.useState<FlashcardPriceLineValue>({});
   const [showAnswerPreview, setShowAnswerPreview] = React.useState(false);
 
   const revealEnabled =
     typeof revealProgress === "number" && typeof onRevealProgressChange === "function";
 
+  const resolvedPriceLineValue = priceLineValue ?? internalPriceLineValue;
+  const resolvedSetPriceLineValue = onPriceLineChange ?? setInternalPriceLineValue;
+
   React.useEffect(() => {
     if (!previewUrl || !priceLineEditorEnabled) {
-      setPriceLineValue({});
+      resolvedSetPriceLineValue({});
     }
-  }, [previewUrl, priceLineEditorEnabled]);
+  }, [previewUrl, priceLineEditorEnabled, resolvedSetPriceLineValue]);
 
   React.useEffect(() => {
     setShowAnswerPreview(false);
@@ -142,8 +149,8 @@ export function ImagePreviewDialog({
               ) : (
                 <FlashcardPriceLineEditor
                   imageUrl={previewUrl}
-                  value={priceLineValue}
-                  onChange={setPriceLineValue}
+                  value={resolvedPriceLineValue}
+                  onChange={resolvedSetPriceLineValue}
                   title="问题图：盈亏比辅助线"
                   revealProgress={revealEnabled ? revealProgress : undefined}
                   onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
