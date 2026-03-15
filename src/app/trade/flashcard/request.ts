@@ -590,6 +590,39 @@ export async function listFlashcardSimulationSessions(params?: {
   };
 }
 
+export async function listFlashcardSimulationAttempts(params?: {
+  pageSize?: number;
+  cursor?: string;
+  result?: "ALL" | "SUCCESS" | "FAILURE";
+}): Promise<{ items: import("./types").FlashcardSimulationAttemptDetail[]; nextCursor: string | null }> {
+  const searchParams = new URLSearchParams();
+  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params?.cursor) searchParams.set("cursor", params.cursor);
+  if (params?.result) searchParams.set("result", params.result);
+
+  const targetPath = `flashcard/simulation/attempts${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取模拟盘训练记录失败");
+  }
+
+  return {
+    items: (data.data?.items || []) as import("./types").FlashcardSimulationAttemptDetail[],
+    nextCursor: typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
+  };
+}
+
 export async function getFlashcardSimulationCardHistory(params: {
   cardId: string;
   pageSize?: number;
