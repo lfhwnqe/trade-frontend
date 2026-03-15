@@ -80,6 +80,8 @@ export default function FlashcardSimulationPlayPage() {
   const [index, setIndex] = React.useState(0);
   const [questionRevealProgress, setQuestionRevealProgress] = React.useState(0);
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [answerVisible, setAnswerVisible] = React.useState(false);
+  const [answerPreviewOpen, setAnswerPreviewOpen] = React.useState(false);
   const [entryReasonInput, setEntryReasonInput] = React.useState("");
   const [linesByCard, setLinesByCard] = React.useState<Record<string, FlashcardPriceLineValue>>({});
   const [attemptsByCard, setAttemptsByCard] = React.useState<Record<string, FlashcardSimulationAttemptDetail[]>>({});
@@ -105,6 +107,8 @@ export default function FlashcardSimulationPlayPage() {
   React.useEffect(() => {
     setQuestionRevealProgress(0);
     setPreviewOpen(false);
+    setAnswerVisible(false);
+    setAnswerPreviewOpen(false);
     setEntryReasonInput("");
   }, [index]);
 
@@ -305,9 +309,14 @@ export default function FlashcardSimulationPlayPage() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="text-sm font-medium text-[#e5e7eb]">主页面默认只展示带蒙层的问题图</div>
-              <div className="mt-1 text-xs text-[#9ca3af]">滚轮推演到合适时机后，点击图片放大，在弹窗里保存一次入场尝试。</div>
+              <div className="mt-1 text-xs text-[#9ca3af]">滚轮推演到合适时机后，点击图片放大，在弹窗里保存一次入场尝试。结果图片默认隐藏，手动点开再看。</div>
             </div>
-            <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPreviewOpen(true)}>放大并保存入场</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setAnswerVisible((prev) => !prev)}>
+                {answerVisible ? "隐藏结果图" : "查看结果图"}
+              </Button>
+              <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPreviewOpen(true)}>放大并保存入场</Button>
+            </div>
           </div>
 
           <button type="button" className="relative w-full overflow-hidden rounded border border-[#27272a] bg-black" onClick={() => setPreviewOpen(true)} onWheel={handleMainImageWheel}>
@@ -322,6 +331,28 @@ export default function FlashcardSimulationPlayPage() {
               <span>{Math.round(questionRevealProgress * 100)}%</span>
             </div>
           </button>
+
+          {answerVisible ? (
+            <div className="mt-4 rounded-xl border border-[#27272a] bg-[#18181b] p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium text-[#e5e7eb]">结果图片</div>
+                  <div className="mt-1 text-xs text-[#9ca3af]">默认隐藏；需要时手动展开查看，可再次放大。</div>
+                </div>
+                <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setAnswerPreviewOpen(true)}>
+                  放大查看结果图
+                </Button>
+              </div>
+              <button
+                type="button"
+                className="relative w-full overflow-hidden rounded border border-[#27272a] bg-black"
+                onClick={() => setAnswerPreviewOpen(true)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={current.answerImageUrl} alt="answer" className="max-h-[45vh] w-full object-contain" />
+              </button>
+            </div>
+          ) : null}
 
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
@@ -422,22 +453,26 @@ export default function FlashcardSimulationPlayPage() {
           priceLineEditorEnabled
           priceLineValue={currentLines}
           onPriceLineChange={handleCurrentPriceLineChange}
+          footer={
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+              <div className="flex-1">
+                <div className="mb-2 text-sm font-medium text-[#e5e7eb]">本次入场理由</div>
+                <Textarea value={entryReasonInput} onChange={(e) => setEntryReasonInput(e.target.value)} className="min-h-[100px] border-[#27272a] bg-[#18181b] text-[#e5e7eb]" placeholder="这一次为什么在这个蒙层位置入场？" />
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPreviewOpen(false)}>关闭弹窗</Button>
+                <Button className="bg-[#00c2b2] text-black hover:bg-[#009e91]" onClick={handleSaveAttempt} disabled={savingAttempt}>{savingAttempt ? "保存中..." : "保存入场"}</Button>
+              </div>
+            </div>
+          }
         />
       ) : null}
 
-      {previewOpen ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#27272a] bg-[#0b0b0b]/96 p-4 backdrop-blur md:left-64">
-          <div className="mx-auto flex max-w-5xl flex-col gap-3 md:flex-row md:items-end">
-            <div className="flex-1">
-              <div className="mb-2 text-sm font-medium text-[#e5e7eb]">本次入场理由</div>
-              <Textarea value={entryReasonInput} onChange={(e) => setEntryReasonInput(e.target.value)} className="min-h-[110px] border-[#27272a] bg-[#18181b] text-[#e5e7eb]" placeholder="这一次为什么在这个蒙层位置入场？" />
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPreviewOpen(false)}>关闭弹窗</Button>
-              <Button className="bg-[#00c2b2] text-black hover:bg-[#009e91]" onClick={handleSaveAttempt} disabled={savingAttempt}>{savingAttempt ? "保存中..." : "保存入场"}</Button>
-            </div>
-          </div>
-        </div>
+      {answerPreviewOpen ? (
+        <ImagePreviewDialog
+          previewUrl={current.answerImageUrl}
+          onClose={() => setAnswerPreviewOpen(false)}
+        />
       ) : null}
     </TradePageShell>
   );

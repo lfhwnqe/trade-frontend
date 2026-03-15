@@ -103,6 +103,8 @@ export function FlashcardPriceLineEditor({
   title,
   revealProgress,
   onRevealProgressChange,
+  className,
+  imageViewportClassName,
 }: {
   imageUrl: string;
   value: FlashcardPriceLineValue;
@@ -110,6 +112,8 @@ export function FlashcardPriceLineEditor({
   title?: string;
   revealProgress?: number;
   onRevealProgressChange?: (next: number) => void;
+  className?: string;
+  imageViewportClassName?: string;
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const maskRef = React.useRef<HTMLDivElement | null>(null);
@@ -213,7 +217,7 @@ export function FlashcardPriceLineEditor({
   }, [onChange]);
 
   return (
-    <div className="space-y-3 rounded-xl border border-[#27272a] bg-[#18181b] p-3">
+    <div className={`space-y-3 rounded-xl border border-[#27272a] bg-[#18181b] p-3 ${className || ""}`}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium text-[#e5e7eb]">{title || "价格线原型"}</div>
@@ -229,14 +233,14 @@ export function FlashcardPriceLineEditor({
         <div>
           <div
             ref={containerRef}
-            className="group relative overflow-hidden rounded-lg border border-[#27272a] bg-black"
+            className={`group relative overflow-hidden rounded-lg border border-[#27272a] bg-black ${imageViewportClassName || ""}`}
             onPointerDown={handleImageClick}
             onWheel={handleWheel}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageUrl} alt="price-line-preview" className="block h-auto w-full select-none" draggable={false} />
+            <img src={imageUrl} alt="price-line-preview" className="block h-full w-full select-none object-contain" draggable={false} />
 
             {revealEnabled ? (
               <>

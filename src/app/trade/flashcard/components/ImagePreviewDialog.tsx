@@ -36,6 +36,7 @@ type ImagePreviewDialogProps = {
   priceLineEditorEnabled?: boolean;
   priceLineValue?: FlashcardPriceLineValue;
   onPriceLineChange?: (next: FlashcardPriceLineValue) => void;
+  footer?: React.ReactNode;
 };
 
 const PREVIEW_WHEEL_REVEAL_STEP = 0.0011;
@@ -53,6 +54,7 @@ export function ImagePreviewDialog({
   priceLineEditorEnabled = false,
   priceLineValue,
   onPriceLineChange,
+  footer,
 }: ImagePreviewDialogProps) {
   const [internalPriceLineValue, setInternalPriceLineValue] = React.useState<FlashcardPriceLineValue>({});
   const [showAnswerPreview, setShowAnswerPreview] = React.useState(false);
@@ -119,14 +121,14 @@ export function ImagePreviewDialog({
 
   return (
     <Dialog open={!!previewUrl} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex w-[min(100vw-24px,1200px)] max-w-none items-center justify-center border-none bg-black/92 p-4 shadow-none sm:w-[min(100vw-48px,1200px)] sm:max-w-none">
+      <DialogContent className="flex h-[min(92vh,980px)] w-[min(100vw-24px,1400px)] max-w-none flex-col border-none bg-black/92 p-3 shadow-none sm:w-[min(100vw-48px,1400px)] sm:max-w-none">
         <DialogTitle asChild>
           <VisuallyHidden>图片预览</VisuallyHidden>
         </DialogTitle>
         <DialogClose className="absolute right-4 top-4 z-20" aria-label="关闭" />
         {previewUrl ? (
           priceLineEditorEnabled ? (
-            <div className="w-full max-w-[1400px] space-y-3">
+            <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden">
               {answerPreviewUrl ? (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-[#27272a] bg-[#111827]/70 px-3 py-2 text-xs text-[#cbd5e1]">
                   <div>
@@ -144,29 +146,34 @@ export function ImagePreviewDialog({
                 </div>
               ) : null}
 
-              {showAnswerPreview && answerPreviewUrl ? (
-                <div className="space-y-2 rounded-xl border border-[#27272a] bg-[#18181b] p-3">
-                  <div className="text-sm font-medium text-[#e5e7eb]">答案图</div>
-                  <div className="text-xs text-[#9ca3af]">答案图以独立大框展示，会覆盖当前的问题图预览视图。</div>
-                  <div className="overflow-hidden rounded-lg border border-[#27272a] bg-black">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={answerPreviewUrl}
-                      alt="answer-preview"
-                      className="max-h-[82vh] w-full object-contain"
-                    />
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {showAnswerPreview && answerPreviewUrl ? (
+                  <div className="flex h-full flex-col space-y-2 rounded-xl border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="shrink-0 text-sm font-medium text-[#e5e7eb]">答案图</div>
+                    <div className="shrink-0 text-xs text-[#9ca3af]">答案图以独立大框展示，会覆盖当前的问题图预览视图。</div>
+                    <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-[#27272a] bg-black">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={answerPreviewUrl}
+                        alt="answer-preview"
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <FlashcardPriceLineEditor
-                  imageUrl={previewUrl}
-                  value={resolvedPriceLineValue}
-                  onChange={resolvedSetPriceLineValue}
-                  title="问题图：盈亏比辅助线"
-                  revealProgress={revealEnabled ? revealProgress : undefined}
-                  onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
-                />
-              )}
+                ) : (
+                  <FlashcardPriceLineEditor
+                    imageUrl={previewUrl}
+                    value={resolvedPriceLineValue}
+                    onChange={resolvedSetPriceLineValue}
+                    title="问题图：盈亏比辅助线"
+                    revealProgress={revealEnabled ? revealProgress : undefined}
+                    onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
+                    className="flex h-full min-h-0 flex-col overflow-hidden"
+                    imageViewportClassName="h-[520px] lg:h-[560px]"
+                  />
+                )}
+              </div>
+              {footer ? <div className="shrink-0 border-t border-[#27272a] pt-3">{footer}</div> : null}
             </div>
           ) : (
             <div className="relative" onWheel={handleWheel}>
