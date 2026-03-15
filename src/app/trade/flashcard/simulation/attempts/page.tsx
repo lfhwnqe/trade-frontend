@@ -170,7 +170,7 @@ export default function FlashcardSimulationAttemptsPage() {
         {loading ? (
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 text-sm text-[#9ca3af]">正在加载训练记录...</div>
         ) : !items.length ? (
-          <div className="rounded-xl border border-dashed border-[#27272a] bg-[#121212] p-6 text-sm text-[#9ca3af]">当前筛选下还没有 simulation attempts。</div>
+          <div className="rounded-xl border border-dashed border-[#27272a] bg-[#121212] p-6 text-sm text-[#9ca3af]">当前筛选下还没有模拟盘训练记录。</div>
         ) : (
           <div className="space-y-4">
             {items.map((attempt) => {
