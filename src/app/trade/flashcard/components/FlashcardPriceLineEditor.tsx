@@ -105,6 +105,8 @@ export function FlashcardPriceLineEditor({
   onRevealProgressChange,
   className,
   imageViewportClassName,
+  readOnly = false,
+  readOnlyHint,
 }: {
   imageUrl: string;
   value: FlashcardPriceLineValue;
@@ -114,6 +116,8 @@ export function FlashcardPriceLineEditor({
   onRevealProgressChange?: (next: number) => void;
   className?: string;
   imageViewportClassName?: string;
+  readOnly?: boolean;
+  readOnlyHint?: string;
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const maskRef = React.useRef<HTMLDivElement | null>(null);
@@ -134,7 +138,7 @@ export function FlashcardPriceLineEditor({
 
   React.useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
-      if (!draggingTypeRef.current) return;
+      if (readOnly || !draggingTypeRef.current) return;
       updateLineByClientY(draggingTypeRef.current, event.clientY);
     };
 
@@ -152,7 +156,7 @@ export function FlashcardPriceLineEditor({
       window.removeEventListener("pointerup", stopDragging);
       window.removeEventListener("pointercancel", stopDragging);
     };
-  }, [updateLineByClientY]);
+  }, [readOnly, updateLineByClientY]);
 
   const rr = React.useMemo(() => getRr(value), [value]);
   const tradeSide = React.useMemo(() => getTradeSide(value), [value]);
@@ -167,12 +171,12 @@ export function FlashcardPriceLineEditor({
 
   const handleImageClick = React.useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (typeof value[activeType] === "number") {
+      if (readOnly || typeof value[activeType] === "number") {
         return;
       }
       updateLineByClientY(activeType, event.clientY);
     },
-    [activeType, updateLineByClientY, value],
+    [activeType, readOnly, updateLineByClientY, value],
   );
 
   const handleWheel = React.useCallback(
@@ -193,6 +197,7 @@ export function FlashcardPriceLineEditor({
 
   const handleLinePointerDown = React.useCallback(
     (type: FlashcardPriceLineType, event: React.PointerEvent<HTMLButtonElement>) => {
+      if (readOnly) return;
       event.preventDefault();
       event.stopPropagation();
       draggingTypeRef.current = type;
@@ -200,28 +205,30 @@ export function FlashcardPriceLineEditor({
       setActiveType(type);
       updateLineByClientY(type, event.clientY);
     },
-    [updateLineByClientY],
+    [readOnly, updateLineByClientY],
   );
 
   const deleteLine = React.useCallback(
     (type: FlashcardPriceLineType) => {
+      if (readOnly) return;
       const nextValue = { ...value };
       delete nextValue[type];
       onChange(nextValue);
     },
-    [onChange, value],
+    [onChange, readOnly, value],
   );
 
   const clearAll = React.useCallback(() => {
+    if (readOnly) return;
     onChange({});
-  }, [onChange]);
+  }, [onChange, readOnly]);
 
   return (
     <div className={`space-y-3 rounded-xl border border-[#27272a] bg-[#18181b] p-3 ${className || ""}`}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium text-[#e5e7eb]">{title || "价格线原型"}</div>
-          <div className="text-xs text-[#9ca3af]">未设置的线可点击图片直接落线；已设置的线只能拖动横线调整位置。以入场线为基准自动判断多空并计算 RR。</div>
+          <div className="text-xs text-[#9ca3af]">{readOnlyHint || (readOnly ? "只读回放：直接复用训练页同一套画板展示三条线、蒙层与 x 轴位置。" : "未设置的线可点击图片直接落线；已设置的线只能拖动横线调整位置。以入场线为基准自动判断多空并计算 RR。")}</div>
         </div>
         <div className="text-right">
           {tradeSide ? <div className="text-xs text-[#9ca3af]">{tradeSide === "LONG" ? "多单结构" : "空单结构"}</div> : null}
@@ -245,9 +252,17 @@ export function FlashcardPriceLineEditor({
             {revealEnabled ? (
               <>
                 <div
+                  className="pointer-events-none absolute inset-y-0 w-0 border-l-2 border-dashed border-[#fbbf24]"
+                  style={{ left: `${revealProgress * 100}%`, zIndex: 2 }}
+                >
+                  <div className="absolute -top-1 left-1 -translate-y-full rounded bg-[#fbbf24] px-2 py-1 text-[11px] font-medium text-black">
+                    当前推演位置 / x轴
+                  </div>
+                </div>
+                <div
                   ref={maskRef}
                   className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816]"
-                  style={{ width: "100%", transform: `scaleX(${Math.max(1 - revealProgress, 0)})`, willChange: "transform" }}
+                  style={{ width: "100%", transform: `scaleX(${Math.max(1 - revealProgress, 0)})`, willChange: "transform", zIndex: 1 }}
                 >
                 </div>
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-3 text-xs text-white/85">
@@ -314,6 +329,7 @@ export function FlashcardPriceLineEditor({
                       isActive ? meta.buttonClassName : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
                     }`}
                     onClick={() => setActiveType(type)}
+                    disabled={readOnly}
                   >
                     {meta.label}
                   </Button>
@@ -342,7 +358,7 @@ export function FlashcardPriceLineEditor({
                         variant="ghost"
                         className="h-8 px-2 text-xs text-[#9ca3af] hover:bg-[#242424] hover:text-white"
                         onClick={() => deleteLine(type)}
-                        disabled={!exists}
+                        disabled={!exists || readOnly}
                       >
                         删除
                       </Button>
@@ -368,6 +384,7 @@ export function FlashcardPriceLineEditor({
             variant="outline"
             className="w-full border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
             onClick={clearAll}
+            disabled={readOnly}
           >
             清空全部
           </Button>

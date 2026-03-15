@@ -36,14 +36,11 @@ type ImagePreviewDialogProps = {
   priceLineEditorEnabled?: boolean;
   priceLineValue?: FlashcardPriceLineValue;
   onPriceLineChange?: (next: FlashcardPriceLineValue) => void;
+  priceLineEditorReadOnly?: boolean;
+  priceLineEditorReadOnlyHint?: string;
   footer?: React.ReactNode;
 };
 
-const PREVIEW_WHEEL_REVEAL_STEP = 0.00033;
-
-function clampRevealProgress(value: number) {
-  return Math.min(1, Math.max(0, value));
-}
 
 export function ImagePreviewDialog({
   previewUrl,
@@ -54,6 +51,8 @@ export function ImagePreviewDialog({
   priceLineEditorEnabled = false,
   priceLineValue,
   onPriceLineChange,
+  priceLineEditorReadOnly = false,
+  priceLineEditorReadOnlyHint,
   footer,
 }: ImagePreviewDialogProps) {
   const [internalPriceLineValue, setInternalPriceLineValue] = React.useState<FlashcardPriceLineValue>({});
@@ -103,21 +102,6 @@ export function ImagePreviewDialog({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [answerPreviewUrl, previewUrl]);
-
-  const handleWheel = React.useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
-      if (!revealEnabled) return;
-      event.preventDefault();
-      const direction = Math.sign(event.deltaY);
-      if (!direction) return;
-
-      const nextProgress = clampRevealProgress(
-        revealProgress + direction * PREVIEW_WHEEL_REVEAL_STEP * Math.max(Math.abs(event.deltaY), 12),
-      );
-      onRevealProgressChange(nextProgress);
-    },
-    [onRevealProgressChange, revealEnabled, revealProgress],
-  );
 
   return (
     <Dialog open={!!previewUrl} onOpenChange={(open) => !open && onClose()}>
@@ -170,36 +154,29 @@ export function ImagePreviewDialog({
                     onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
                     className="flex h-full min-h-0 flex-col overflow-hidden"
                     imageViewportClassName="h-[520px] lg:h-[560px]"
+                    readOnly={priceLineEditorReadOnly}
+                    readOnlyHint={priceLineEditorReadOnlyHint}
                   />
                 )}
               </div>
               {footer ? <div className="shrink-0 border-t border-[#27272a] pt-3">{footer}</div> : null}
             </div>
           ) : (
-            <div className="relative" onWheel={handleWheel}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt="preview"
-                className="max-h-[85vh] max-w-[95vw] rounded border border-[#27272a] bg-black object-contain"
-              />
-              {revealEnabled ? (
-                <>
-                  <div
-                    className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816]"
-                    style={{
-                      width: "100%",
-                      transform: `scaleX(${Math.max(1 - revealProgress, 0)})`,
-                      willChange: "transform",
-                    }}
-                  >
-                  </div>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-3 text-xs text-white/85">
-                    <span>滚轮向下逐步揭开，向上重新遮住</span>
-                    <span>{Math.round(revealProgress * 100)}%</span>
-                  </div>
-                </>
-              ) : null}
+            <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-3 overflow-hidden">
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <FlashcardPriceLineEditor
+                  imageUrl={previewUrl}
+                  value={resolvedPriceLineValue}
+                  onChange={resolvedSetPriceLineValue}
+                  title="问题图：盈亏比辅助线"
+                  revealProgress={revealEnabled ? revealProgress : undefined}
+                  onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
+                  className="flex h-full min-h-0 flex-col overflow-hidden"
+                  imageViewportClassName="h-[520px] lg:h-[560px]"
+                  readOnly={priceLineEditorReadOnly}
+                  readOnlyHint={priceLineEditorReadOnlyHint}
+                />
+              </div>
             </div>
           )
         ) : null}

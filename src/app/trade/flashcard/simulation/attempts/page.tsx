@@ -104,7 +104,7 @@ export default function FlashcardSimulationAttemptsPage() {
   const [loading, setLoading] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [previewAttempt, setPreviewAttempt] = React.useState<FlashcardSimulationAttemptDetail | null>(null);
   const [answerPreviewUrl, setAnswerPreviewUrl] = React.useState<string | null>(null);
 
   const loadAttempts = React.useCallback(async (reset: boolean, cursor?: string | null) => {
@@ -207,10 +207,10 @@ export default function FlashcardSimulationAttemptsPage() {
                   {expanded ? (
                     <div className="mt-5 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
                       <div className="space-y-4">
-                        <ReviewOverlay attempt={attempt} onOpenQuestion={() => setPreviewUrl(attempt.questionImageUrlSnapshot || null)} />
+                        <ReviewOverlay attempt={attempt} onOpenQuestion={() => setPreviewAttempt(attempt)} />
 
                         <div className="grid gap-4 md:grid-cols-2">
-                          <button type="button" className="overflow-hidden rounded-lg border border-[#27272a] bg-black text-left" onClick={() => setPreviewUrl(attempt.questionImageUrlSnapshot || null)}>
+                          <button type="button" className="overflow-hidden rounded-lg border border-[#27272a] bg-black text-left" onClick={() => setPreviewAttempt(attempt)}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={attempt.questionImageUrlSnapshot} alt="question" className="h-[200px] w-full object-contain" />
                             <div className="border-t border-[#27272a] px-3 py-2 text-xs text-[#9ca3af]">题目图原图 · 点击放大</div>
@@ -281,8 +281,20 @@ export default function FlashcardSimulationAttemptsPage() {
         ) : null}
       </div>
 
-      {previewUrl ? (
-        <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      {previewAttempt ? (
+        <ImagePreviewDialog
+          previewUrl={previewAttempt.questionImageUrlSnapshot ?? null}
+          revealProgress={previewAttempt.revealProgress}
+          priceLineEditorEnabled
+          priceLineEditorReadOnly
+          priceLineEditorReadOnlyHint="只读回放：这里直接复用模拟盘训练页同一套放大画板，按保存时的三条线和 x 轴位置展示。"
+          priceLineValue={{
+            entry: previewAttempt.entryLineYPercent,
+            stopLoss: previewAttempt.stopLossLineYPercent,
+            takeProfit: previewAttempt.takeProfitLineYPercent,
+          }}
+          onClose={() => setPreviewAttempt(null)}
+        />
       ) : null}
       {answerPreviewUrl ? (
         <ImagePreviewDialog previewUrl={answerPreviewUrl} onClose={() => setAnswerPreviewUrl(null)} />

@@ -185,7 +185,6 @@ export default function FlashcardSimulationPlayPage() {
       }));
       setCardMetricsMap((prev) => ({ ...prev, [currentCardId]: res.cardMetrics }));
       setEntryReasonInput("");
-      setPreviewOpen(false);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "保存模拟盘入场失败");
     } finally {
