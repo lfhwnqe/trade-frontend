@@ -64,6 +64,17 @@ type FlashcardQuery = {
   sortOrder: FlashcardCardSortOrder;
 };
 
+function formatDateTime(value?: string) {
+  if (!value) return "--";
+  return new Date(value).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function HoverText({
   text,
   className,
@@ -803,13 +814,13 @@ export default function FlashcardManagePage() {
                   <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">simulation 已闭环</div><div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.simulationResolvedCount ?? 0}</div></div>
                   <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">simulation 成功率</div><div className="mt-1 text-sm text-[#e5e7eb]">{Math.round((viewingCard.simulationSuccessRate ?? 0) * 100)}%</div></div>
                   <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">simulation 平均RR</div><div className="mt-1 text-sm text-[#e5e7eb]">{(viewingCard.simulationAvgRr ?? 0).toFixed(2)}</div></div>
-                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">最近 simulation</div><div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.lastSimulationAt || "-"}</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">最近 simulation</div><div className="mt-1 text-sm text-[#e5e7eb]">{formatDateTime(viewingCard.lastSimulationAt)}</div></div>
                   <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">卡片 ID</div><div className="mt-1 break-all text-sm text-[#e5e7eb]">{viewingCard.cardId}</div></div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 text-xs text-[#9ca3af] md:grid-cols-2">
-                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">创建时间：{viewingCard.createdAt || "-"}</div>
-                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">更新时间：{viewingCard.updatedAt || "-"}</div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">创建时间：{formatDateTime(viewingCard.createdAt)}</div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">更新时间：{formatDateTime(viewingCard.updatedAt)}</div>
                 </div>
               </div>
             </div>

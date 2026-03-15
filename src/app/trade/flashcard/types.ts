@@ -58,7 +58,7 @@ export type FlashcardInvalidationType =
 export const FLASHCARD_SOURCES = ["ALL", "WRONG_BOOK", "FAVORITES"] as const;
 export type FlashcardSource = (typeof FLASHCARD_SOURCES)[number];
 
-export const FLASHCARD_CARD_SORT_BYS = ["CREATED_AT", "QUALITY_SCORE_AVG"] as const;
+export const FLASHCARD_CARD_SORT_BYS = ["CREATED_AT", "QUALITY_SCORE_AVG", "SIMULATION_RESOLVED_COUNT", "SIMULATION_AVG_RR"] as const;
 export type FlashcardCardSortBy = (typeof FLASHCARD_CARD_SORT_BYS)[number];
 
 export const FLASHCARD_CARD_SORT_ORDERS = ["asc", "desc"] as const;
@@ -483,4 +483,6 @@ export const FLASHCARD_LABELS: Record<string, string> = {
   FLASHCARD_SYSTEM_OUTCOME_UNSET: "未分类",
   CREATED_AT: "创建时间",
   QUALITY_SCORE_AVG: "平均评分",
+  SIMULATION_RESOLVED_COUNT: "模拟闭环数",
+  SIMULATION_AVG_RR: "模拟平均RR",
 };
