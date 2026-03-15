@@ -233,6 +233,7 @@ export type FlashcardDrillAnalytics = {
 
 export type FlashcardSimulationSessionStartResponse = {
   simulationSessionId: string;
+  mode?: "STANDARD" | "ATTEMPT_REPLAY";
   count: number;
   cards: FlashcardCard[];
 };
@@ -246,19 +247,46 @@ export type FlashcardSimulationRunningStats = {
 
 export type FlashcardSimulationCardMetrics = {
   simulationAttemptCount: number;
+  simulationResolvedCount?: number;
   simulationSuccessCount: number;
   simulationFailureCount: number;
   simulationSuccessRate: number;
+  simulationAvgRr?: number;
   qualityScoreAvg: number;
   qualityScoreCount: number;
   lastSimulationAt?: string | null;
 };
 
+export type FlashcardSimulationAttemptDetail = {
+  attemptId: string;
+  simulationSessionId: string;
+  cardId: string;
+  status: "ENTRY_SAVED" | "RESOLVED";
+  revealProgress: number;
+  entryLineYPercent: number;
+  stopLossLineYPercent: number;
+  takeProfitLineYPercent: number;
+  rrValue: number;
+  entryDirection: "LONG" | "SHORT";
+  entryReason: string;
+  result?: "SUCCESS" | "FAILURE";
+  failureReason?: string;
+  cardQualityScore?: number;
+  questionImageUrlSnapshot?: string;
+  answerImageUrlSnapshot?: string;
+  entrySavedAt: string;
+  resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type FlashcardSimulationSessionHistoryItem = {
   simulationSessionId: string;
-  source: "ALL" | "FILTERED";
+  mode?: "STANDARD" | "ATTEMPT_REPLAY";
+  source: "ALL" | "FILTERED" | "ATTEMPT_REPLAY";
   count: number;
   totalCards: number;
+  completedAttemptCount?: number;
   successCount: number;
   failureCount: number;
   successRate: number;
@@ -271,13 +299,15 @@ export type FlashcardSimulationSessionHistoryItem = {
 export type FlashcardSimulationCardHistoryItem = {
   attemptId: string;
   simulationSessionId: string;
-  result: "SUCCESS" | "FAILURE";
-  failureNote?: string;
+  status: "ENTRY_SAVED" | "RESOLVED";
+  revealProgress: number;
+  result?: "SUCCESS" | "FAILURE";
+  failureReason?: string;
   entryReason: string;
-  rrReason: string;
-  cardQualityScore: number;
+  cardQualityScore?: number;
   rrValue: number;
   createdAt: string;
+  resolvedAt?: string;
 };
 
 export type FlashcardSimulationCardHistoryResponse = {

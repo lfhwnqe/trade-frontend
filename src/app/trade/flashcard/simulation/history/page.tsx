@@ -106,11 +106,12 @@ export default function FlashcardSimulationHistoryPage() {
 
           {cardHistory ? (
             <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-4">
-                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">总训练次数</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{cardHistory.summary.simulationAttemptCount}</div></div>
+              <div className="grid gap-4 md:grid-cols-5">
+                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">总尝试数</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{cardHistory.summary.simulationAttemptCount}</div></div>
+                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">已闭环</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{cardHistory.summary.simulationResolvedCount ?? 0}</div></div>
                 <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">成功次数</div><div className="mt-2 text-lg font-semibold text-[#22c55e]">{cardHistory.summary.simulationSuccessCount}</div></div>
                 <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">失败次数</div><div className="mt-2 text-lg font-semibold text-[#ef4444]">{cardHistory.summary.simulationFailureCount}</div></div>
-                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">平均评分</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{cardHistory.summary.qualityScoreAvg.toFixed(2)}</div></div>
+                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">平均 RR / 评分</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{(cardHistory.summary.simulationAvgRr ?? 0).toFixed(2)} / {cardHistory.summary.qualityScoreAvg.toFixed(2)}</div></div>
               </div>
               <div className="space-y-3">
                 {cardHistory.items.length === 0 ? (
@@ -118,13 +119,16 @@ export default function FlashcardSimulationHistoryPage() {
                 ) : cardHistory.items.map((item) => (
                   <div key={item.attemptId} className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-medium text-[#e5e7eb]">{item.result === "SUCCESS" ? "成功" : "失败"}</div>
+                      <div className="text-sm font-medium text-[#e5e7eb]">
+                        {item.status === "ENTRY_SAVED" ? "仅保存入场" : item.result === "SUCCESS" ? "成功" : "失败"}
+                      </div>
                       <div className="text-xs text-[#9ca3af]">{item.createdAt}</div>
                     </div>
                     <div className="mt-3 space-y-2 text-sm">
                       <div><span className="text-[#9ca3af]">入场原因：</span><span className="text-[#e5e7eb]">{item.entryReason}</span></div>
-                      <div><span className="text-[#9ca3af]">RR 原因：</span><span className="text-[#e5e7eb]">{item.rrReason}</span></div>
-                      <div><span className="text-[#9ca3af]">失败备注：</span><span className="text-[#e5e7eb]">{item.failureNote || "-"}</span></div>
+                      <div><span className="text-[#9ca3af]">保存点位：</span><span className="text-[#e5e7eb]">{Math.round(item.revealProgress * 100)}%</span></div>
+                      <div><span className="text-[#9ca3af]">RR：</span><span className="text-[#e5e7eb]">{item.rrValue.toFixed(2)}</span></div>
+                      <div><span className="text-[#9ca3af]">失败原因：</span><span className="text-[#e5e7eb]">{item.failureReason || "-"}</span></div>
                     </div>
                   </div>
                 ))}

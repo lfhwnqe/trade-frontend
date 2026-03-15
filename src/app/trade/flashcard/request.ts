@@ -460,22 +460,21 @@ export async function startFlashcardSimulationSession(params: {
   return data.data as FlashcardSimulationSessionStartResponse;
 }
 
-export async function submitFlashcardSimulationAttempt(params: {
+export async function createFlashcardSimulationAttempt(params: {
   sessionId: string;
   cardId: string;
+  revealProgress: number;
   entryLineYPercent: number;
   stopLossLineYPercent: number;
   takeProfitLineYPercent: number;
   rrValue: number;
   entryDirection: "LONG" | "SHORT";
   entryReason: string;
-  rrReason: string;
-  result: "SUCCESS" | "FAILURE";
-  failureNote?: string;
-  cardQualityScore?: 1 | 2 | 3 | 4 | 5;
+  replaySourceAttemptId?: string;
 }): Promise<{
   attemptId: string;
-  runningStats: FlashcardSimulationRunningStats;
+  status: "ENTRY_SAVED" | "RESOLVED";
+  attempt: import("./types").FlashcardSimulationAttemptDetail;
   cardMetrics: FlashcardSimulationCardMetrics;
 }> {
   const { sessionId, ...body } = params;
@@ -483,7 +482,7 @@ export async function submitFlashcardSimulationAttempt(params: {
     method: "POST",
     credentials: "include",
     proxyParams: {
-      targetPath: `flashcard/simulation/session/${sessionId}/attempt`,
+      targetPath: `flashcard/simulation/session/${sessionId}/attempts`,
       actualMethod: "POST",
     },
     actualBody: body,
@@ -491,19 +490,47 @@ export async function submitFlashcardSimulationAttempt(params: {
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.message || "提交模拟盘记录失败");
+    throw new Error(data.message || "保存模拟盘入场失败");
   }
 
-  return data.data as {
-    attemptId: string;
-    runningStats: FlashcardSimulationRunningStats;
-    cardMetrics: FlashcardSimulationCardMetrics;
-  };
+  return data.data;
+}
+
+export async function resolveFlashcardSimulationAttempt(params: {
+  attemptId: string;
+  result: "SUCCESS" | "FAILURE";
+  failureReason?: string;
+  cardQualityScore?: 1 | 2 | 3 | 4 | 5;
+}): Promise<{
+  attemptId: string;
+  status: "RESOLVED" | "ENTRY_SAVED";
+  result?: "SUCCESS" | "FAILURE";
+  runningStats: FlashcardSimulationRunningStats;
+  cardMetrics: FlashcardSimulationCardMetrics;
+}> {
+  const { attemptId, ...body } = params;
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/simulation/attempts/${attemptId}/resolve`,
+      actualMethod: "POST",
+    },
+    actualBody: body,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "保存模拟盘结果失败");
+  }
+
+  return data.data;
 }
 
 export async function finishFlashcardSimulationSession(sessionId: string): Promise<{
   simulationSessionId: string;
   totalCards: number;
+  completedAttemptCount?: number;
   successCount: number;
   failureCount: number;
   successRate: number;

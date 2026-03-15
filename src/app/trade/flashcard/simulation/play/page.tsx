@@ -14,20 +14,23 @@ import {
   type FlashcardSimulationSession,
 } from "@/store/flashcard-simulation-session";
 import {
+  createFlashcardSimulationAttempt,
   finishFlashcardSimulationSession,
-  submitFlashcardSimulationAttempt,
+  resolveFlashcardSimulationAttempt,
 } from "../../request";
 import type {
+  FlashcardSimulationAttemptDetail,
   FlashcardSimulationCardMetrics,
   FlashcardSimulationRunningStats,
 } from "../../types";
+import { FLASHCARD_LABELS } from "../../types";
 import {
-  FLASHCARD_LABELS,
-} from "../../types";
-import {
-  FLASHCARD_PRICE_LINE_TYPES,
   type FlashcardPriceLineValue,
 } from "../../components/FlashcardPriceLineEditor";
+
+function clampRevealProgress(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
 
 function getTradeSide(lines: FlashcardPriceLineValue) {
   const entry = lines.entry;
@@ -49,6 +52,7 @@ function getRr(lines: FlashcardPriceLineValue) {
   if (typeof entry !== "number" || typeof stopLoss !== "number" || typeof takeProfit !== "number" || !side) {
     return null;
   }
+
   let risk = 0;
   let reward = 0;
   if (side === "LONG") {
@@ -62,25 +66,31 @@ function getRr(lines: FlashcardPriceLineValue) {
   return reward / risk;
 }
 
+const PREVIEW_WHEEL_REVEAL_STEP = 0.0011;
+
+type AttemptResolutionDraft = {
+  result: "SUCCESS" | "FAILURE" | "";
+  failureReason: string;
+  cardQualityScore: number;
+};
+
 export default function FlashcardSimulationPlayPage() {
   const [, errorAlert] = useAlert();
   const [session, setSession] = React.useState<FlashcardSimulationSession | null>(null);
   const [index, setIndex] = React.useState(0);
   const [questionRevealProgress, setQuestionRevealProgress] = React.useState(0);
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [entryReasonInput, setEntryReasonInput] = React.useState("");
   const [linesByCard, setLinesByCard] = React.useState<Record<string, FlashcardPriceLineValue>>({});
-  const [entryReasonMap, setEntryReasonMap] = React.useState<Record<string, string>>({});
-  const [rrReasonMap, setRrReasonMap] = React.useState<Record<string, string>>({});
-  const [revealedMap, setRevealedMap] = React.useState<Record<string, boolean>>({});
-  const [resultMap, setResultMap] = React.useState<Record<string, "SUCCESS" | "FAILURE" | "">>({});
-  const [failureNoteMap, setFailureNoteMap] = React.useState<Record<string, string>>({});
-  const [qualityScoreMap, setQualityScoreMap] = React.useState<Record<string, number>>({});
-  const [attemptedMap, setAttemptedMap] = React.useState<Record<string, boolean>>({});
+  const [attemptsByCard, setAttemptsByCard] = React.useState<Record<string, FlashcardSimulationAttemptDetail[]>>({});
+  const [resolutionDrafts, setResolutionDrafts] = React.useState<Record<string, AttemptResolutionDraft>>({});
   const [runningStats, setRunningStats] = React.useState<FlashcardSimulationRunningStats | null>(null);
   const [cardMetricsMap, setCardMetricsMap] = React.useState<Record<string, FlashcardSimulationCardMetrics>>({});
-  const [submitting, setSubmitting] = React.useState(false);
+  const [savingAttempt, setSavingAttempt] = React.useState(false);
+  const [resolvingAttemptId, setResolvingAttemptId] = React.useState<string | null>(null);
   const [finishing, setFinishing] = React.useState(false);
   const [finalStats, setFinalStats] = React.useState<{
+    completedAttemptCount?: number;
     successCount: number;
     failureCount: number;
     successRate: number;
@@ -90,16 +100,12 @@ export default function FlashcardSimulationPlayPage() {
     const loaded = getFlashcardSimulationSession();
     if (!loaded) return;
     setSession(loaded);
-    const defaultScores = loaded.cards.reduce<Record<string, number>>((acc, card) => {
-      acc[card.cardId] = 5;
-      return acc;
-    }, {});
-    setQualityScoreMap(defaultScores);
   }, []);
 
   React.useEffect(() => {
     setQuestionRevealProgress(0);
     setPreviewOpen(false);
+    setEntryReasonInput("");
   }, [index]);
 
   const cards = session?.cards || [];
@@ -109,6 +115,9 @@ export default function FlashcardSimulationPlayPage() {
   const currentLines = currentCardId ? linesByCard[currentCardId] || {} : {};
   const currentTradeSide = getTradeSide(currentLines);
   const currentRr = getRr(currentLines);
+  const currentAttempts = currentCardId ? attemptsByCard[currentCardId] || [] : [];
+  const currentMetrics = currentCardId ? cardMetricsMap[currentCardId] : undefined;
+
   const handleCurrentPriceLineChange = React.useCallback(
     (next: FlashcardPriceLineValue) => {
       if (!currentCardId) return;
@@ -117,90 +126,136 @@ export default function FlashcardSimulationPlayPage() {
     [currentCardId],
   );
 
-  const handleReveal = React.useCallback(() => {
-    if (!current) return;
-    const lines = linesByCard[current.cardId] || {};
-    const rr = getRr(lines);
-    const tradeSide = getTradeSide(lines);
-    if (!tradeSide || rr === null || FLASHCARD_PRICE_LINE_TYPES.some((type) => typeof lines[type] !== "number")) {
+  const handleMainImageWheel = React.useCallback((event: React.WheelEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const direction = Math.sign(event.deltaY);
+    if (!direction) return;
+    setQuestionRevealProgress((prev) =>
+      clampRevealProgress(prev + direction * PREVIEW_WHEEL_REVEAL_STEP * Math.max(Math.abs(event.deltaY), 12)),
+    );
+  }, []);
+
+  const updateResolutionDraft = React.useCallback((attemptId: string, patch: Partial<AttemptResolutionDraft>) => {
+    setResolutionDrafts((prev) => ({
+      ...prev,
+      [attemptId]: {
+        result: prev[attemptId]?.result || "",
+        failureReason: prev[attemptId]?.failureReason || "",
+        cardQualityScore: prev[attemptId]?.cardQualityScore || 5,
+        ...patch,
+      },
+    }));
+  }, []);
+
+  const handleSaveAttempt = React.useCallback(async () => {
+    if (!session || !current || !currentCardId) return;
+    const rr = getRr(currentLines);
+    const tradeSide = getTradeSide(currentLines);
+    if (!tradeSide || rr === null) {
       errorAlert("请先完整设置入场 / 止损 / 止盈三条线，且线位要能构成有效 RR");
       return;
     }
-    if (!(entryReasonMap[current.cardId] || "").trim()) {
-      errorAlert("请先填写入场原因");
-      return;
-    }
-    if (!(rrReasonMap[current.cardId] || "").trim()) {
-      errorAlert("请先填写盈亏比设置原因");
-      return;
-    }
-    setRevealedMap((prev) => ({ ...prev, [current.cardId]: true }));
-  }, [current, entryReasonMap, errorAlert, linesByCard, rrReasonMap]);
-
-  const handleSubmit = React.useCallback(async () => {
-    if (!session || !current) return;
-    const result = resultMap[current.cardId];
-    const lines = linesByCard[current.cardId] || {};
-    const rr = getRr(lines);
-    const tradeSide = getTradeSide(lines);
-    if (!revealedMap[current.cardId]) {
-      errorAlert("请先揭晓答案，再提交本题结果");
-      return;
-    }
-    if (!tradeSide || rr === null) {
-      errorAlert("当前三条线设置无效，请重新调整");
-      return;
-    }
-    if (!result) {
-      errorAlert("请先选择本题是成功还是失败");
-      return;
-    }
-    if (result === "FAILURE" && !(failureNoteMap[current.cardId] || "").trim()) {
-      errorAlert("失败题请补充失败备注");
+    if (!entryReasonInput.trim()) {
+      errorAlert("请先填写本次入场理由");
       return;
     }
 
-    setSubmitting(true);
+    setSavingAttempt(true);
     try {
-      const res = await submitFlashcardSimulationAttempt({
+      const res = await createFlashcardSimulationAttempt({
         sessionId: session.simulationSessionId,
-        cardId: current.cardId,
-        entryLineYPercent: lines.entry!,
-        stopLossLineYPercent: lines.stopLoss!,
-        takeProfitLineYPercent: lines.takeProfit!,
+        cardId: currentCardId,
+        revealProgress: questionRevealProgress,
+        entryLineYPercent: currentLines.entry!,
+        stopLossLineYPercent: currentLines.stopLoss!,
+        takeProfitLineYPercent: currentLines.takeProfit!,
         rrValue: Number(rr.toFixed(4)),
         entryDirection: tradeSide,
-        entryReason: (entryReasonMap[current.cardId] || "").trim(),
-        rrReason: (rrReasonMap[current.cardId] || "").trim(),
-        result,
-        failureNote: result === "FAILURE" ? (failureNoteMap[current.cardId] || "").trim() : undefined,
-        cardQualityScore: (qualityScoreMap[current.cardId] || 5) as 1 | 2 | 3 | 4 | 5,
+        entryReason: entryReasonInput.trim(),
       });
 
-      setAttemptedMap((prev) => ({ ...prev, [current.cardId]: true }));
-      setRunningStats(res.runningStats);
-      setCardMetricsMap((prev) => ({ ...prev, [current.cardId]: res.cardMetrics }));
-
-      if (index + 1 >= cards.length) {
-        setFinishing(true);
-        const finished = await finishFlashcardSimulationSession(session.simulationSessionId);
-        setFinalStats({
-          successCount: finished.successCount,
-          failureCount: finished.failureCount,
-          successRate: finished.successRate,
-        });
-        clearFlashcardSimulationSession();
-        setIndex(cards.length);
-      } else {
-        setIndex((prev) => prev + 1);
-      }
+      setAttemptsByCard((prev) => ({
+        ...prev,
+        [currentCardId]: [...(prev[currentCardId] || []), res.attempt],
+      }));
+      setCardMetricsMap((prev) => ({ ...prev, [currentCardId]: res.cardMetrics }));
+      setEntryReasonInput("");
+      setPreviewOpen(false);
     } catch (error) {
-      errorAlert(error instanceof Error ? error.message : "提交模拟盘结果失败");
+      errorAlert(error instanceof Error ? error.message : "保存模拟盘入场失败");
     } finally {
-      setSubmitting(false);
+      setSavingAttempt(false);
+    }
+  }, [current, currentCardId, currentLines, entryReasonInput, errorAlert, questionRevealProgress, session]);
+
+  const handleResolveAttempt = React.useCallback(async (attemptId: string) => {
+    if (!currentCardId) return;
+    const draft = resolutionDrafts[attemptId] || {
+      result: "",
+      failureReason: "",
+      cardQualityScore: 5,
+    };
+    if (!draft.result) {
+      errorAlert("请先选择这次尝试是成功还是失败");
+      return;
+    }
+    if (draft.result === "FAILURE" && !draft.failureReason.trim()) {
+      errorAlert("失败时必须填写失败原因");
+      return;
+    }
+
+    setResolvingAttemptId(attemptId);
+    try {
+      const res = await resolveFlashcardSimulationAttempt({
+        attemptId,
+        result: draft.result,
+        failureReason: draft.result === "FAILURE" ? draft.failureReason.trim() : undefined,
+        cardQualityScore: draft.cardQualityScore as 1 | 2 | 3 | 4 | 5,
+      });
+
+      setAttemptsByCard((prev) => ({
+        ...prev,
+        [currentCardId]: (prev[currentCardId] || []).map((attempt) =>
+          attempt.attemptId === attemptId
+            ? {
+                ...attempt,
+                status: "RESOLVED",
+                result: res.result,
+                failureReason: draft.result === "FAILURE" ? draft.failureReason.trim() : undefined,
+                cardQualityScore: draft.cardQualityScore,
+                resolvedAt: new Date().toISOString(),
+              }
+            : attempt,
+        ),
+      }));
+      setRunningStats(res.runningStats);
+      setCardMetricsMap((prev) => ({ ...prev, [currentCardId]: res.cardMetrics }));
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "保存模拟盘结果失败");
+    } finally {
+      setResolvingAttemptId(null);
+    }
+  }, [currentCardId, errorAlert, resolutionDrafts]);
+
+  const handleFinish = React.useCallback(async () => {
+    if (!session) return;
+    setFinishing(true);
+    try {
+      const finished = await finishFlashcardSimulationSession(session.simulationSessionId);
+      setFinalStats({
+        completedAttemptCount: finished.completedAttemptCount,
+        successCount: finished.successCount,
+        failureCount: finished.failureCount,
+        successRate: finished.successRate,
+      });
+      clearFlashcardSimulationSession();
+      setIndex(cards.length);
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "结束模拟盘训练失败");
+    } finally {
       setFinishing(false);
     }
-  }, [cards.length, current, entryReasonMap, errorAlert, failureNoteMap, index, linesByCard, qualityScoreMap, resultMap, revealedMap, rrReasonMap, session]);
+  }, [cards.length, errorAlert, session]);
 
   if (!session) {
     return (
@@ -214,9 +269,13 @@ export default function FlashcardSimulationPlayPage() {
 
   if (isCompleted || !current) {
     return (
-      <TradePageShell title="闪卡模拟盘训练完成" subtitle="这一轮的成功/失败统计已经收口" showAddButton={false}>
+      <TradePageShell title="闪卡模拟盘训练完成" subtitle="标准模式最小闭环已完成" showAddButton={false}>
         <div className="space-y-4 rounded-xl border border-[#27272a] bg-[#121212] p-6">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
+              <div className="text-xs text-[#9ca3af]">已闭环尝试数</div>
+              <div className="mt-2 text-2xl font-semibold text-[#e5e7eb]">{finalStats?.completedAttemptCount ?? runningStats?.completedCount ?? 0}</div>
+            </div>
             <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
               <div className="text-xs text-[#9ca3af]">成功数</div>
               <div className="mt-2 text-2xl font-semibold text-[#22c55e]">{finalStats?.successCount ?? runningStats?.successCount ?? 0}</div>
@@ -239,30 +298,34 @@ export default function FlashcardSimulationPlayPage() {
     );
   }
 
-  const currentRevealed = !!revealedMap[current.cardId];
-  const currentResult = resultMap[current.cardId] || "";
-  const currentMetrics = cardMetricsMap[current.cardId];
-
   return (
-    <TradePageShell title="闪卡模拟盘训练" subtitle={`第 ${index + 1} / ${cards.length} 题`} showAddButton={false}>
+    <TradePageShell title="闪卡模拟盘训练" subtitle={`第 ${index + 1} / ${cards.length} 题 · 标准模式最小闭环`} showAddButton={false}>
       <div className="space-y-6">
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-medium text-[#e5e7eb]">先推进 K 线，再在放大图里设置三条线</div>
-              <div className="mt-1 text-xs text-[#9ca3af]">点击题目图放大后，可直接复用现有盈亏比辅助线工具。</div>
+              <div className="text-sm font-medium text-[#e5e7eb]">主页面默认只展示带蒙层的问题图</div>
+              <div className="mt-1 text-xs text-[#9ca3af]">滚轮推演到合适时机后，点击图片放大，在弹窗里保存一次入场尝试。</div>
             </div>
-            <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPreviewOpen(true)}>放大并设置三条线</Button>
+            <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPreviewOpen(true)}>放大并保存入场</Button>
           </div>
 
-          <button type="button" className="w-full" onClick={() => setPreviewOpen(true)}>
+          <button type="button" className="relative w-full overflow-hidden rounded border border-[#27272a] bg-black" onClick={() => setPreviewOpen(true)} onWheel={handleMainImageWheel}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={current.questionImageUrl} alt="question" className="max-h-[60vh] w-full rounded border border-[#27272a] bg-black object-contain" />
+            <img src={current.questionImageUrl} alt="question" className="max-h-[60vh] w-full object-contain" />
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 origin-right bg-[#050816]"
+              style={{ width: "100%", transform: `scaleX(${Math.max(1 - questionRevealProgress, 0)})` }}
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent px-3 py-3 text-xs text-white/85">
+              <span>滚轮向下逐步揭开，向上重新遮住；点击放大图进入入场编辑</span>
+              <span>{Math.round(questionRevealProgress * 100)}%</span>
+            </div>
           </button>
 
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
-              <div className="text-xs text-[#9ca3af]">结构方向</div>
+              <div className="text-xs text-[#9ca3af]">当前结构方向</div>
               <div className="mt-2 text-sm font-medium text-[#e5e7eb]">{currentTradeSide ? FLASHCARD_LABELS[currentTradeSide] : "未形成有效结构"}</div>
             </div>
             <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
@@ -270,64 +333,81 @@ export default function FlashcardSimulationPlayPage() {
               <div className="mt-2 text-sm font-medium text-[#e5e7eb]">{currentRr !== null ? currentRr.toFixed(2) : "--"}</div>
             </div>
             <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
-              <div className="text-xs text-[#9ca3af]">卡片平均评分</div>
+              <div className="text-xs text-[#9ca3af]">卡片平均质量分</div>
               <div className="mt-2 text-sm font-medium text-[#e5e7eb]">{typeof currentMetrics?.qualityScoreAvg === "number" && currentMetrics.qualityScoreAvg > 0 ? currentMetrics.qualityScoreAvg.toFixed(2) : (typeof current.qualityScoreAvg === "number" ? current.qualityScoreAvg.toFixed(2) : "5.00")}</div>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5 space-y-4">
+        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5 space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <div className="mb-2 text-sm font-medium text-[#e5e7eb]">入场原因</div>
-              <Textarea value={entryReasonMap[current.cardId] || ""} onChange={(e) => setEntryReasonMap((prev) => ({ ...prev, [current.cardId]: e.target.value }))} className="min-h-[140px] border-[#27272a] bg-[#18181b] text-[#e5e7eb]" placeholder="为什么你会在这里入场？" />
+              <div className="text-sm font-medium text-[#e5e7eb]">当前卡已保存 attempts</div>
+              <div className="mt-1 text-xs text-[#9ca3af]">先在弹窗里保存入场，再在这里为某条 attempt 保存最终结果。</div>
             </div>
-            <div>
-              <div className="mb-2 text-sm font-medium text-[#e5e7eb]">盈亏比设置原因</div>
-              <Textarea value={rrReasonMap[current.cardId] || ""} onChange={(e) => setRrReasonMap((prev) => ({ ...prev, [current.cardId]: e.target.value }))} className="min-h-[140px] border-[#27272a] bg-[#18181b] text-[#e5e7eb]" placeholder="为什么止损放这里、止盈看哪里？" />
+            <div className="flex gap-2">
+              <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setIndex((prev) => Math.min(prev + 1, cards.length))}>下一题</Button>
+              <Button className="bg-[#00c2b2] text-black hover:bg-[#009e91]" onClick={handleFinish} disabled={finishing}>{finishing ? "结束中..." : "结束本轮训练"}</Button>
             </div>
-            {!currentRevealed ? (
-              <Button onClick={handleReveal} className="bg-[#00c2b2] text-black hover:bg-[#009e91]">揭晓答案</Button>
-            ) : null}
           </div>
 
-          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5 space-y-4">
-            {currentRevealed ? (
-              <>
-                <div>
-                  <div className="mb-2 text-sm font-medium text-[#e5e7eb]">答案图</div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={current.answerImageUrl} alt="answer" className="max-h-[40vh] w-full rounded border border-[#27272a] bg-black object-contain" />
-                </div>
-                <div className="flex gap-2">
-                  <Button type="button" variant={currentResult === "SUCCESS" ? "default" : "outline"} className={currentResult === "SUCCESS" ? "bg-[#22c55e] text-black hover:bg-[#16a34a]" : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"} onClick={() => setResultMap((prev) => ({ ...prev, [current.cardId]: "SUCCESS" }))}>成功</Button>
-                  <Button type="button" variant={currentResult === "FAILURE" ? "default" : "outline"} className={currentResult === "FAILURE" ? "bg-[#ef4444] text-white hover:bg-[#dc2626]" : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"} onClick={() => setResultMap((prev) => ({ ...prev, [current.cardId]: "FAILURE" }))}>失败</Button>
-                </div>
-                {currentResult === "FAILURE" ? (
-                  <div>
-                    <div className="mb-2 text-sm font-medium text-[#e5e7eb]">失败备注</div>
-                    <Textarea value={failureNoteMap[current.cardId] || ""} onChange={(e) => setFailureNoteMap((prev) => ({ ...prev, [current.cardId]: e.target.value }))} className="min-h-[120px] border-[#27272a] bg-[#18181b] text-[#e5e7eb]" placeholder="这次为什么失败？" />
+          {!currentAttempts.length ? (
+            <div className="rounded-lg border border-dashed border-[#27272a] p-6 text-sm text-[#9ca3af]">
+              这张卡还没有保存任何 attempt。先滚动主图，再放大图保存一条入场尝试。
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {currentAttempts.map((attempt, idx) => {
+                const draft = resolutionDrafts[attempt.attemptId] || { result: "", failureReason: "", cardQualityScore: 5 };
+                const isResolved = attempt.status === "RESOLVED";
+                return (
+                  <div key={attempt.attemptId} className="rounded-lg border border-[#27272a] bg-[#18181b] p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-[#e5e7eb]">Attempt #{idx + 1}</div>
+                        <div className="mt-1 text-xs text-[#9ca3af]">保存点位 {Math.round(attempt.revealProgress * 100)}% · RR {attempt.rrValue.toFixed(2)} · {FLASHCARD_LABELS[attempt.entryDirection]}</div>
+                      </div>
+                      <div className={`text-xs font-medium ${isResolved ? (attempt.result === "SUCCESS" ? "text-[#22c55e]" : "text-[#ef4444]") : "text-[#fbbf24]"}`}>
+                        {isResolved ? (attempt.result === "SUCCESS" ? "已判定成功" : "已判定失败") : "待保存结果"}
+                      </div>
+                    </div>
+
+                    <div className="rounded-md border border-[#27272a] bg-[#121212] p-3 text-sm text-[#cbd5e1] whitespace-pre-wrap">{attempt.entryReason}</div>
+
+                    {isResolved ? (
+                      <div className="space-y-2 text-sm">
+                        <div className="text-[#e5e7eb]">结果：{attempt.result === "SUCCESS" ? "成功" : "失败"}</div>
+                        {attempt.failureReason ? <div className="text-[#9ca3af]">失败原因：{attempt.failureReason}</div> : null}
+                        <div className="text-[#9ca3af]">质量评分：{attempt.cardQualityScore ?? 5}</div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Button type="button" variant={draft.result === "SUCCESS" ? "default" : "outline"} className={draft.result === "SUCCESS" ? "bg-[#22c55e] text-black hover:bg-[#16a34a]" : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"} onClick={() => updateResolutionDraft(attempt.attemptId, { result: "SUCCESS" })}>成功</Button>
+                          <Button type="button" variant={draft.result === "FAILURE" ? "default" : "outline"} className={draft.result === "FAILURE" ? "bg-[#ef4444] text-white hover:bg-[#dc2626]" : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"} onClick={() => updateResolutionDraft(attempt.attemptId, { result: "FAILURE" })}>失败</Button>
+                        </div>
+                        {draft.result === "FAILURE" ? (
+                          <Textarea value={draft.failureReason} onChange={(e) => updateResolutionDraft(attempt.attemptId, { failureReason: e.target.value })} className="min-h-[110px] border-[#27272a] bg-[#121212] text-[#e5e7eb]" placeholder="失败原因" />
+                        ) : null}
+                        <div>
+                          <div className="mb-2 text-sm font-medium text-[#e5e7eb]">题目质量评分（默认 5）</div>
+                          <Input type="number" min={1} max={5} value={draft.cardQualityScore} onChange={(e) => updateResolutionDraft(attempt.attemptId, { cardQualityScore: Math.min(5, Math.max(1, Number(e.target.value || 5))) })} className="w-28 border-[#27272a] bg-[#121212] text-[#e5e7eb]" />
+                        </div>
+                        <Button onClick={() => handleResolveAttempt(attempt.attemptId)} disabled={resolvingAttemptId === attempt.attemptId} className="bg-[#00c2b2] text-black hover:bg-[#009e91]">
+                          {resolvingAttemptId === attempt.attemptId ? "保存中..." : "保存本次结果"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                ) : null}
-                <div>
-                  <div className="mb-2 text-sm font-medium text-[#e5e7eb]">题目质量评分（默认 5）</div>
-                  <Input type="number" min={1} max={5} value={qualityScoreMap[current.cardId] || 5} onChange={(e) => setQualityScoreMap((prev) => ({ ...prev, [current.cardId]: Math.min(5, Math.max(1, Number(e.target.value || 5))) }))} className="w-28 border-[#27272a] bg-[#18181b] text-[#e5e7eb]" />
-                </div>
-                <Button onClick={handleSubmit} disabled={submitting || finishing || attemptedMap[current.cardId]} className="bg-[#00c2b2] text-black hover:bg-[#009e91]">
-                  {submitting || finishing ? "提交中..." : attemptedMap[current.cardId] ? "本题已提交" : index + 1 >= cards.length ? "提交并完成训练" : "提交并进入下一题"}
-                </Button>
-              </>
-            ) : (
-              <div className="rounded-lg border border-dashed border-[#27272a] p-6 text-sm text-[#9ca3af]">
-                先完成三条线设置、写入场原因和 RR 原因，再揭晓答案。
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {runningStats ? (
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 text-sm text-[#9ca3af]">
-            当前已完成 {runningStats.completedCount} / {cards.length} 题，成功 {runningStats.successCount}，失败 {runningStats.failureCount}，成功率 {Math.round(runningStats.successRate * 100)}%
+            当前已闭环 {runningStats.completedCount} 次尝试，成功 {runningStats.successCount}，失败 {runningStats.failureCount}，成功率 {Math.round(runningStats.successRate * 100)}%
           </div>
         ) : null}
       </div>
@@ -343,6 +423,21 @@ export default function FlashcardSimulationPlayPage() {
           priceLineValue={currentLines}
           onPriceLineChange={handleCurrentPriceLineChange}
         />
+      ) : null}
+
+      {previewOpen ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#27272a] bg-[#0b0b0b]/96 p-4 backdrop-blur md:left-64">
+          <div className="mx-auto flex max-w-5xl flex-col gap-3 md:flex-row md:items-end">
+            <div className="flex-1">
+              <div className="mb-2 text-sm font-medium text-[#e5e7eb]">本次入场理由</div>
+              <Textarea value={entryReasonInput} onChange={(e) => setEntryReasonInput(e.target.value)} className="min-h-[110px] border-[#27272a] bg-[#18181b] text-[#e5e7eb]" placeholder="这一次为什么在这个蒙层位置入场？" />
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPreviewOpen(false)}>关闭弹窗</Button>
+              <Button className="bg-[#00c2b2] text-black hover:bg-[#009e91]" onClick={handleSaveAttempt} disabled={savingAttempt}>{savingAttempt ? "保存中..." : "保存入场"}</Button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </TradePageShell>
   );
