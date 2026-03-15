@@ -182,7 +182,7 @@ export function FlashcardPriceLineEditor({
       const direction = Math.sign(event.deltaY);
       if (!direction) return;
       const nextProgress = clamp(
-        revealProgress + direction * 0.0011 * Math.max(Math.abs(event.deltaY), 12),
+        revealProgress + direction * 0.00033 * Math.max(Math.abs(event.deltaY), 12),
         0,
         1,
       );
@@ -246,10 +246,9 @@ export function FlashcardPriceLineEditor({
               <>
                 <div
                   ref={maskRef}
-                  className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816] shadow-[-12px_0_24px_rgba(5,8,22,0.85)]"
+                  className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816]"
                   style={{ width: "100%", transform: `scaleX(${Math.max(1 - revealProgress, 0)})`, willChange: "transform" }}
                 >
-                  <div className="absolute inset-0 bg-[linear-gradient(270deg,rgba(5,8,22,0.98)_0%,rgba(5,8,22,0.98)_86%,rgba(5,8,22,0.35)_100%)]" />
                 </div>
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-3 text-xs text-white/85">
                   <span>{isHovered ? "滚轮向下逐步揭开，向上重新遮住" : "悬停后可滚轮推演 K 线"}</span>

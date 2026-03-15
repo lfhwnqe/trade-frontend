@@ -24,7 +24,7 @@ import {
 } from "../../request";
 import { useAlert } from "@/components/common/alert";
 
-const WHEEL_REVEAL_STEP = 0.0011;
+const WHEEL_REVEAL_STEP = 0.00033;
 const REVEAL_EPSILON = 0.001;
 
 function clampRevealProgress(value: number) {
@@ -137,10 +137,9 @@ function FlashcardQuestionReveal({
           <img src={src} alt="question" className="max-h-[70vh] w-full rounded object-contain" />
           <div
             ref={maskRef}
-            className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816] shadow-[-12px_0_24px_rgba(5,8,22,0.85)]"
+            className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816]"
             style={{ width: "100%", transform: "scaleX(1)", willChange: "transform" }}
           >
-            <div className="absolute inset-0 bg-[linear-gradient(270deg,rgba(5,8,22,0.98)_0%,rgba(5,8,22,0.98)_86%,rgba(5,8,22,0.35)_100%)]" />
           </div>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-3 text-xs text-white/85">
             <span>{isHovered ? "滚轮向下逐步揭开，向上重新遮住" : "悬停后可滚轮推演 K 线"}</span>

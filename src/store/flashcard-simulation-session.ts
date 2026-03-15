@@ -4,6 +4,7 @@ const FLASHCARD_SIMULATION_SESSION_KEY = "flashcard-simulation-session";
 
 export type FlashcardSimulationSession = {
   simulationSessionId: string;
+  mode?: "STANDARD" | "ATTEMPT_REPLAY";
   cards: FlashcardCard[];
   count: number;
   startedAt: string;

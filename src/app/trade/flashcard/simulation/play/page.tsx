@@ -66,7 +66,7 @@ function getRr(lines: FlashcardPriceLineValue) {
   return reward / risk;
 }
 
-const PREVIEW_WHEEL_REVEAL_STEP = 0.0011;
+const PREVIEW_WHEEL_REVEAL_STEP = 0.00033;
 
 type AttemptResolutionDraft = {
   result: "SUCCESS" | "FAILURE" | "";
@@ -104,14 +104,6 @@ export default function FlashcardSimulationPlayPage() {
     setSession(loaded);
   }, []);
 
-  React.useEffect(() => {
-    setQuestionRevealProgress(0);
-    setPreviewOpen(false);
-    setAnswerVisible(false);
-    setAnswerPreviewOpen(false);
-    setEntryReasonInput("");
-  }, [index]);
-
   const cards = session?.cards || [];
   const current = cards[index];
   const currentCardId = current?.cardId ?? null;
@@ -121,6 +113,14 @@ export default function FlashcardSimulationPlayPage() {
   const currentRr = getRr(currentLines);
   const currentAttempts = currentCardId ? attemptsByCard[currentCardId] || [] : [];
   const currentMetrics = currentCardId ? cardMetricsMap[currentCardId] : undefined;
+
+  React.useEffect(() => {
+    setQuestionRevealProgress(current?.prefilledRevealProgress ?? 0);
+    setPreviewOpen(false);
+    setAnswerVisible(false);
+    setAnswerPreviewOpen(false);
+    setEntryReasonInput("");
+  }, [current?.prefilledRevealProgress, index]);
 
   const handleCurrentPriceLineChange = React.useCallback(
     (next: FlashcardPriceLineValue) => {
@@ -176,6 +176,7 @@ export default function FlashcardSimulationPlayPage() {
         rrValue: Number(rr.toFixed(4)),
         entryDirection: tradeSide,
         entryReason: entryReasonInput.trim(),
+        replaySourceAttemptId: current.replaySourceAttemptId,
       });
 
       setAttemptsByCard((prev) => ({
@@ -303,13 +304,72 @@ export default function FlashcardSimulationPlayPage() {
   }
 
   return (
-    <TradePageShell title="闪卡模拟盘训练" subtitle={`第 ${index + 1} / ${cards.length} 题 · 标准模式最小闭环`} showAddButton={false}>
+    <TradePageShell title="闪卡模拟盘训练" subtitle={`第 ${index + 1} / ${cards.length} 题 · ${session.mode === "ATTEMPT_REPLAY" ? "历史点位快速复训" : "标准推演模式"}`} showAddButton={false}>
       <div className="space-y-6">
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5">
+          {session.mode === "ATTEMPT_REPLAY" ? (
+            <div className="mb-4 rounded-xl border border-[#00c2b2]/30 bg-[#0f1f1d] p-4">
+              <div className="text-sm font-medium text-[#e5e7eb]">当前是历史点位快速复训模式</div>
+              <div className="mt-1 text-xs text-[#9ca3af]">
+                已自动把题目定位到历史保存的蒙层点位。你可以直接基于这个位置继续推演、重画三条线，并保存新的 attempt。
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-4">
+                <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                  <div className="text-xs text-[#9ca3af]">历史保存点位</div>
+                  <div className="mt-2 text-sm font-medium text-[#e5e7eb]">
+                    {typeof current.prefilledRevealProgress === "number"
+                      ? `${Math.round(current.prefilledRevealProgress * 100)}%`
+                      : "--"}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                  <div className="text-xs text-[#9ca3af]">历史方向</div>
+                  <div className="mt-2 text-sm font-medium text-[#e5e7eb]">
+                    {current.previousEntryDirection ? FLASHCARD_LABELS[current.previousEntryDirection] : "--"}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                  <div className="text-xs text-[#9ca3af]">历史 RR</div>
+                  <div className="mt-2 text-sm font-medium text-[#e5e7eb]">
+                    {typeof current.previousRrValue === "number" ? current.previousRrValue.toFixed(2) : "--"}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                  <div className="text-xs text-[#9ca3af]">历史结果</div>
+                  <div className={`mt-2 text-sm font-medium ${current.previousAttemptResult === "SUCCESS" ? "text-[#22c55e]" : current.previousAttemptResult === "FAILURE" ? "text-[#ef4444]" : "text-[#e5e7eb]"}`}>
+                    {current.previousAttemptResult === "SUCCESS"
+                      ? "成功"
+                      : current.previousAttemptResult === "FAILURE"
+                        ? "失败"
+                        : "--"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                  <div className="text-xs text-[#9ca3af]">历史入场理由</div>
+                  <div className="mt-2 whitespace-pre-wrap text-sm text-[#e5e7eb]">
+                    {current.previousEntryReason?.trim() || "--"}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                  <div className="text-xs text-[#9ca3af]">历史失败原因 / 来源 attemptId</div>
+                  <div className="mt-2 whitespace-pre-wrap text-sm text-[#e5e7eb]">
+                    {current.previousFailureReason?.trim() || "无失败原因记录"}
+                  </div>
+                  <div className="mt-3 break-all text-xs text-[#9ca3af]">
+                    source: {current.replaySourceAttemptId || "--"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="text-sm font-medium text-[#e5e7eb]">主页面默认只展示带蒙层的问题图</div>
-              <div className="mt-1 text-xs text-[#9ca3af]">滚轮推演到合适时机后，点击图片放大，在弹窗里保存一次入场尝试。结果图片默认隐藏，手动点开再看。</div>
+              <div className="mt-1 text-xs text-[#9ca3af]">{session.mode === "ATTEMPT_REPLAY" ? "当前默认停在历史保存点位；你可以直接在这个位置继续复训，也可以继续滚轮微调后再入场。结果图片默认隐藏，手动点开再看。" : "滚轮推演到合适时机后，点击图片放大，在弹窗里保存一次入场尝试。结果图片默认隐藏，手动点开再看。"}</div>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setAnswerVisible((prev) => !prev)}>
@@ -396,7 +456,7 @@ export default function FlashcardSimulationPlayPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-medium text-[#e5e7eb]">Attempt #{idx + 1}</div>
-                        <div className="mt-1 text-xs text-[#9ca3af]">保存点位 {Math.round(attempt.revealProgress * 100)}% · RR {attempt.rrValue.toFixed(2)} · {FLASHCARD_LABELS[attempt.entryDirection]}</div>
+                        <div className="mt-1 text-xs text-[#9ca3af]">保存点位 {Math.round(attempt.revealProgress * 100)}% · RR {attempt.rrValue.toFixed(2)} · {FLASHCARD_LABELS[attempt.entryDirection]}{attempt.replaySourceAttemptId ? " · 基于历史点位复训" : ""}</div>
                       </div>
                       <div className={`text-xs font-medium ${isResolved ? (attempt.result === "SUCCESS" ? "text-[#22c55e]" : "text-[#ef4444]") : "text-[#fbbf24]"}`}>
                         {isResolved ? (attempt.result === "SUCCESS" ? "已判定成功" : "已判定失败") : "待保存结果"}
@@ -457,7 +517,7 @@ export default function FlashcardSimulationPlayPage() {
             <div className="flex flex-col gap-3 md:flex-row md:items-end">
               <div className="flex-1">
                 <div className="mb-2 text-sm font-medium text-[#e5e7eb]">本次入场理由</div>
-                <Textarea value={entryReasonInput} onChange={(e) => setEntryReasonInput(e.target.value)} className="min-h-[100px] border-[#27272a] bg-[#18181b] text-[#e5e7eb]" placeholder="这一次为什么在这个蒙层位置入场？" />
+                <Textarea value={entryReasonInput} onChange={(e) => setEntryReasonInput(e.target.value)} className="min-h-[100px] border-[#27272a] bg-[#18181b] text-[#e5e7eb]" placeholder={session.mode === "ATTEMPT_REPLAY" ? "基于这个历史点位，这次你为什么还会 / 不会这么入场？" : "这一次为什么在这个蒙层位置入场？"} />
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPreviewOpen(false)}>关闭弹窗</Button>

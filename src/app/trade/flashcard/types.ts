@@ -119,6 +119,13 @@ export type FlashcardCard = {
   id: string;
   userId: string;
   cardId: string;
+  prefilledRevealProgress?: number;
+  replaySourceAttemptId?: string;
+  previousAttemptResult?: "SUCCESS" | "FAILURE";
+  previousEntryDirection?: "LONG" | "SHORT";
+  previousEntryReason?: string;
+  previousRrValue?: number;
+  previousFailureReason?: string;
   questionImageUrl: string;
   answerImageUrl: string;
   expectedAction?: FlashcardAction;
@@ -146,6 +153,7 @@ export type FlashcardCard = {
 export type FlashcardFilters = {
   behaviorType?: FlashcardBehaviorType[];
   invalidationType?: FlashcardInvalidationType[];
+  result?: Array<"SUCCESS" | "FAILURE">;
 };
 
 export type FlashcardDrillStartResponse = {
@@ -263,6 +271,7 @@ export type FlashcardSimulationAttemptDetail = {
   cardId: string;
   status: "ENTRY_SAVED" | "RESOLVED";
   revealProgress: number;
+  replaySourceAttemptId?: string;
   entryLineYPercent: number;
   stopLossLineYPercent: number;
   takeProfitLineYPercent: number;

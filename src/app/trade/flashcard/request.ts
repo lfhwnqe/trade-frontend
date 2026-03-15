@@ -440,7 +440,10 @@ export async function updateFlashcardCard(
 
 export async function startFlashcardSimulationSession(params: {
   count: number;
-  filters?: FlashcardFilters;
+  mode?: "STANDARD" | "ATTEMPT_REPLAY";
+  filters?: FlashcardFilters & {
+    result?: Array<"SUCCESS" | "FAILURE">;
+  };
 }): Promise<FlashcardSimulationSessionStartResponse> {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
