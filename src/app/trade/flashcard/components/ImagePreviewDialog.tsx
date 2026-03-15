@@ -62,11 +62,22 @@ export function ImagePreviewDialog({
 
   const resolvedPriceLineValue = priceLineValue ?? internalPriceLineValue;
   const resolvedSetPriceLineValue = onPriceLineChange ?? setInternalPriceLineValue;
+  const hadOpenPreviewRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (!previewUrl || !priceLineEditorEnabled) {
-      resolvedSetPriceLineValue({});
+    const hasOpenPreview = !!previewUrl;
+
+    if (priceLineEditorEnabled && hasOpenPreview) {
+      hadOpenPreviewRef.current = true;
+      return;
     }
+
+    if (!hadOpenPreviewRef.current) {
+      return;
+    }
+
+    hadOpenPreviewRef.current = false;
+    resolvedSetPriceLineValue({});
   }, [previewUrl, priceLineEditorEnabled, resolvedSetPriceLineValue]);
 
   React.useEffect(() => {

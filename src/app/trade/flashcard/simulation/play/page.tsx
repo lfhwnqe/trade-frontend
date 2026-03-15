@@ -104,10 +104,18 @@ export default function FlashcardSimulationPlayPage() {
 
   const cards = session?.cards || [];
   const current = cards[index];
+  const currentCardId = current?.cardId ?? null;
   const isCompleted = cards.length > 0 && index >= cards.length;
-  const currentLines = current ? linesByCard[current.cardId] || {} : {};
+  const currentLines = currentCardId ? linesByCard[currentCardId] || {} : {};
   const currentTradeSide = getTradeSide(currentLines);
   const currentRr = getRr(currentLines);
+  const handleCurrentPriceLineChange = React.useCallback(
+    (next: FlashcardPriceLineValue) => {
+      if (!currentCardId) return;
+      setLinesByCard((prev) => ({ ...prev, [currentCardId]: next }));
+    },
+    [currentCardId],
+  );
 
   const handleReveal = React.useCallback(() => {
     if (!current) return;
@@ -324,18 +332,18 @@ export default function FlashcardSimulationPlayPage() {
         ) : null}
       </div>
 
-      <ImagePreviewDialog
-        previewUrl={previewOpen ? current.questionImageUrl : null}
-        answerPreviewUrl={current.answerImageUrl}
-        onClose={() => setPreviewOpen(false)}
-        revealProgress={questionRevealProgress}
-        onRevealProgressChange={setQuestionRevealProgress}
-        priceLineEditorEnabled
-        priceLineValue={currentLines}
-        onPriceLineChange={(next) =>
-          setLinesByCard((prev) => ({ ...prev, [current.cardId]: next }))
-        }
-      />
+      {previewOpen ? (
+        <ImagePreviewDialog
+          previewUrl={current.questionImageUrl}
+          answerPreviewUrl={current.answerImageUrl}
+          onClose={() => setPreviewOpen(false)}
+          revealProgress={questionRevealProgress}
+          onRevealProgressChange={setQuestionRevealProgress}
+          priceLineEditorEnabled
+          priceLineValue={currentLines}
+          onPriceLineChange={handleCurrentPriceLineChange}
+        />
+      ) : null}
     </TradePageShell>
   );
 }
