@@ -518,6 +518,24 @@ export default function FlashcardManagePage() {
         enableSorting: false,
       },
       {
+        accessorKey: "simulationResolvedCount",
+        header: "模拟闭环数",
+        cell: ({ row }) => {
+          const count = typeof row.original.simulationResolvedCount === "number" ? row.original.simulationResolvedCount : 0;
+          return <div className="min-w-[100px] text-[#9ca3af]">{count}</div>;
+        },
+        enableSorting: false,
+      },
+      {
+        accessorKey: "simulationAvgRr",
+        header: "模拟平均RR",
+        cell: ({ row }) => {
+          const value = typeof row.original.simulationAvgRr === "number" ? row.original.simulationAvgRr.toFixed(2) : "0.00";
+          return <div className="min-w-[100px] text-[#e5e7eb]">{value}</div>;
+        },
+        enableSorting: false,
+      },
+      {
         accessorKey: "simulationFailureCount",
         header: "模拟失败数",
         cell: ({ row }) => {
@@ -780,8 +798,16 @@ export default function FlashcardManagePage() {
                   </div>
                 ) : null}
 
-                <div className="grid grid-cols-1 gap-3 text-xs text-[#9ca3af] md:grid-cols-3">
-                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">卡片 ID：{viewingCard.cardId}</div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">simulation 总尝试</div><div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.simulationAttemptCount ?? 0}</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">simulation 已闭环</div><div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.simulationResolvedCount ?? 0}</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">simulation 成功率</div><div className="mt-1 text-sm text-[#e5e7eb]">{Math.round((viewingCard.simulationSuccessRate ?? 0) * 100)}%</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">simulation 平均RR</div><div className="mt-1 text-sm text-[#e5e7eb]">{(viewingCard.simulationAvgRr ?? 0).toFixed(2)}</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">最近 simulation</div><div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.lastSimulationAt || "-"}</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">卡片 ID</div><div className="mt-1 break-all text-sm text-[#e5e7eb]">{viewingCard.cardId}</div></div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 text-xs text-[#9ca3af] md:grid-cols-2">
                   <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">创建时间：{viewingCard.createdAt || "-"}</div>
                   <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">更新时间：{viewingCard.updatedAt || "-"}</div>
                 </div>

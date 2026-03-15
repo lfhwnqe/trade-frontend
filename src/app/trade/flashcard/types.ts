@@ -140,9 +140,11 @@ export type FlashcardCard = {
   symbolPairInfo?: string;
   notes?: string;
   simulationAttemptCount?: number;
+  simulationResolvedCount?: number;
   simulationSuccessCount?: number;
   simulationFailureCount?: number;
   simulationSuccessRate?: number;
+  simulationAvgRr?: number;
   qualityScoreAvg?: number;
   qualityScoreCount?: number;
   lastSimulationAt?: string;

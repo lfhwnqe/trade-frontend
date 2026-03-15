@@ -15,6 +15,17 @@ import type {
   FlashcardSimulationSessionHistoryItem,
 } from "../../types";
 
+function formatDateTime(value?: string) {
+  if (!value) return "--";
+  return new Date(value).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function FlashcardSimulationHistoryPage() {
   const [, errorAlert] = useAlert();
   const [sessions, setSessions] = React.useState<FlashcardSimulationSessionHistoryItem[]>([]);
@@ -52,16 +63,36 @@ export default function FlashcardSimulationHistoryPage() {
     }
   }, [cardId, errorAlert]);
 
+  const sessionSummary = React.useMemo(() => {
+    const completedCount = sessions.length;
+    const totalAttempts = sessions.reduce((sum, item) => sum + (item.completedAttemptCount ?? 0), 0);
+    const totalSuccess = sessions.reduce((sum, item) => sum + item.successCount, 0);
+    const totalFailure = sessions.reduce((sum, item) => sum + item.failureCount, 0);
+    const successRate = totalAttempts > 0 ? totalSuccess / totalAttempts : 0;
+    return { completedCount, totalAttempts, totalSuccess, totalFailure, successRate };
+  }, [sessions]);
+
   return (
-    <TradePageShell title="闪卡模拟盘训练历史" subtitle="看每轮结果，也可以按卡片查询失败备注" showAddButton={false}>
+    <TradePageShell title="闪卡模拟盘训练历史" subtitle="M6：同时看 session 维度统计与 card 维度聚合，和 attempts / manage 页口径保持一致" showAddButton={false}>
       <div className="space-y-6">
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="text-sm font-medium text-[#e5e7eb]">最近训练轮次</div>
-              <div className="mt-1 text-xs text-[#9ca3af]">先把整轮统计沉淀下来，后面再细看某张卡的失败备注。</div>
+              <div className="mt-1 text-xs text-[#9ca3af]">按 session 聚合回看每轮训练效果，再继续下钻到单卡历史与 attempts 明细。</div>
             </div>
-            <Link href="/trade/flashcard/simulation/setup" className="text-sm text-[#00c2b2] hover:underline">再开一轮训练</Link>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <Link href="/trade/flashcard/simulation/setup" className="text-[#00c2b2] hover:underline">再开一轮训练</Link>
+              <Link href="/trade/flashcard/simulation/attempts" className="text-[#00c2b2] hover:underline">查看训练记录管理</Link>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-5">
+            <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">已完成 session</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{sessionSummary.completedCount}</div></div>
+            <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">已闭环 attempts</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{sessionSummary.totalAttempts}</div></div>
+            <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">总成功数</div><div className="mt-2 text-lg font-semibold text-[#22c55e]">{sessionSummary.totalSuccess}</div></div>
+            <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">总失败数</div><div className="mt-2 text-lg font-semibold text-[#ef4444]">{sessionSummary.totalFailure}</div></div>
+            <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">聚合成功率</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{Math.round(sessionSummary.successRate * 100)}%</div></div>
           </div>
 
           <div className="mt-4 overflow-x-auto">
@@ -69,24 +100,29 @@ export default function FlashcardSimulationHistoryPage() {
               <thead>
                 <tr className="text-left text-[#9ca3af]">
                   <th className="py-2 pr-4">Session</th>
-                  <th className="py-2 pr-4">成功</th>
-                  <th className="py-2 pr-4">失败</th>
+                  <th className="py-2 pr-4">模式</th>
+                  <th className="py-2 pr-4">题量 / 闭环</th>
+                  <th className="py-2 pr-4">成功 / 失败</th>
                   <th className="py-2 pr-4">成功率</th>
-                  <th className="py-2 pr-4">开始时间</th>
+                  <th className="py-2 pr-4">开始 / 结束</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5} className="py-6 text-[#9ca3af]">加载中...</td></tr>
+                  <tr><td colSpan={6} className="py-6 text-[#9ca3af]">加载中...</td></tr>
                 ) : sessions.length === 0 ? (
-                  <tr><td colSpan={5} className="py-6 text-[#9ca3af]">还没有已完成的模拟盘训练记录</td></tr>
+                  <tr><td colSpan={6} className="py-6 text-[#9ca3af]">还没有已完成的模拟盘训练记录</td></tr>
                 ) : sessions.map((item) => (
-                  <tr key={item.simulationSessionId} className="border-t border-[#27272a] text-[#e5e7eb]">
-                    <td className="py-3 pr-4">{item.simulationSessionId}</td>
-                    <td className="py-3 pr-4">{item.successCount}</td>
-                    <td className="py-3 pr-4">{item.failureCount}</td>
+                  <tr key={item.simulationSessionId} className="border-t border-[#27272a] text-[#e5e7eb] align-top">
+                    <td className="py-3 pr-4 break-all">{item.simulationSessionId}</td>
+                    <td className="py-3 pr-4">{item.mode === "ATTEMPT_REPLAY" ? "历史点位复训" : "标准推演"}</td>
+                    <td className="py-3 pr-4">{item.totalCards} / {item.completedAttemptCount ?? 0}</td>
+                    <td className="py-3 pr-4">{item.successCount} / {item.failureCount}</td>
                     <td className="py-3 pr-4">{Math.round(item.successRate * 100)}%</td>
-                    <td className="py-3 pr-4">{item.startedAt}</td>
+                    <td className="py-3 pr-4 text-xs text-[#9ca3af]">
+                      <div>{formatDateTime(item.startedAt)}</div>
+                      <div className="mt-1">{formatDateTime(item.endedAt)}</div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -96,8 +132,8 @@ export default function FlashcardSimulationHistoryPage() {
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5 space-y-4">
           <div>
-            <div className="text-sm font-medium text-[#e5e7eb]">按卡片查询失败备注</div>
-            <div className="mt-1 text-xs text-[#9ca3af]">输入 cardId，就能看到这张题历史上被怎么做错过。</div>
+            <div className="text-sm font-medium text-[#e5e7eb]">按卡片查询 simulation 聚合</div>
+            <div className="mt-1 text-xs text-[#9ca3af]">输入 cardId，就能看到这张题的 simulation 聚合统计与历史 attempt 摘要。</div>
           </div>
           <div className="flex gap-3">
             <Input value={cardId} onChange={(e) => setCardId(e.target.value)} placeholder="输入 cardId，例如 7d5d..." className="border-[#27272a] bg-[#18181b] text-[#e5e7eb]" />
@@ -106,12 +142,13 @@ export default function FlashcardSimulationHistoryPage() {
 
           {cardHistory ? (
             <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-5">
+              <div className="grid gap-4 md:grid-cols-6">
                 <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">总尝试数</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{cardHistory.summary.simulationAttemptCount}</div></div>
                 <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">已闭环</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{cardHistory.summary.simulationResolvedCount ?? 0}</div></div>
                 <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">成功次数</div><div className="mt-2 text-lg font-semibold text-[#22c55e]">{cardHistory.summary.simulationSuccessCount}</div></div>
                 <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">失败次数</div><div className="mt-2 text-lg font-semibold text-[#ef4444]">{cardHistory.summary.simulationFailureCount}</div></div>
-                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">平均 RR / 评分</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{(cardHistory.summary.simulationAvgRr ?? 0).toFixed(2)} / {cardHistory.summary.qualityScoreAvg.toFixed(2)}</div></div>
+                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">平均 RR</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{(cardHistory.summary.simulationAvgRr ?? 0).toFixed(2)}</div></div>
+                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">平均评分</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{cardHistory.summary.qualityScoreAvg.toFixed(2)}</div></div>
               </div>
               <div className="space-y-3">
                 {cardHistory.items.length === 0 ? (
@@ -122,9 +159,9 @@ export default function FlashcardSimulationHistoryPage() {
                       <div className="text-sm font-medium text-[#e5e7eb]">
                         {item.status === "ENTRY_SAVED" ? "仅保存入场" : item.result === "SUCCESS" ? "成功" : "失败"}
                       </div>
-                      <div className="text-xs text-[#9ca3af]">{item.createdAt}</div>
+                      <div className="text-xs text-[#9ca3af]">{formatDateTime(item.createdAt)}</div>
                     </div>
-                    <div className="mt-3 space-y-2 text-sm">
+                    <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
                       <div><span className="text-[#9ca3af]">入场原因：</span><span className="text-[#e5e7eb]">{item.entryReason}</span></div>
                       <div><span className="text-[#9ca3af]">保存点位：</span><span className="text-[#e5e7eb]">{Math.round(item.revealProgress * 100)}%</span></div>
                       <div><span className="text-[#9ca3af]">RR：</span><span className="text-[#e5e7eb]">{item.rrValue.toFixed(2)}</span></div>
