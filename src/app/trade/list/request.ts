@@ -10,6 +10,7 @@ import type {
   MarketStructure,
   ImageResource,
   MarketStructureAnalysisImage,
+  DictionaryTagItem,
 } from "../config";
 
 // 允许的图片类型
@@ -86,6 +87,24 @@ function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
     }
     return undefined;
   };
+  const normalizeTagItems = (value: unknown): DictionaryTagItem[] | undefined => {
+    if (!Array.isArray(value)) return undefined;
+    const items: DictionaryTagItem[] = [];
+    value.forEach((item) => {
+      if (!item || typeof item !== "object") return;
+      const record = item as Record<string, unknown>;
+      const code = typeof record.code === "string" ? record.code : "";
+      const label = typeof record.label === "string" ? record.label : code;
+      if (!code) return;
+      items.push({
+        code,
+        label,
+        color: typeof record.color === "string" ? record.color : undefined,
+        status: typeof record.status === "string" ? record.status : undefined,
+      });
+    });
+    return items.length ? items : undefined;
+  };
 
   const entryFromPayload = normalizeEntry(rest.entry);
   const entryFromPrice = normalizeEntry(entryPrice);
@@ -95,6 +114,8 @@ function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
     // 详情接口返回 entryPrice，但表单字段使用 entry，缺省时回填 entryPrice
     entry: entryFromPayload ?? entryFromPrice,
     tradeTags: normalizeTags(rest.tradeTags),
+    tagCodes: normalizeTags((rest as Record<string, unknown>).tagCodes),
+    tagItems: normalizeTagItems((rest as Record<string, unknown>).tagItems),
   };
 }
 
@@ -203,6 +224,7 @@ export type CreateTradeDto = {
   preEntrySummary?: string;
   preEntrySummaryImportance?: number;
   tradeTags?: string[];
+  tagCodes?: string[];
   expectedPathImages?: ImageResource[];
   expectedPathImagesDetailed?: MarketStructureAnalysisImage[];
   expectedPathAnalysis?: string;
@@ -388,6 +410,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     preEntrySummary: form.preEntrySummary,
     preEntrySummaryImportance: parseNum(form.preEntrySummaryImportance),
     tradeTags: normalizeTags(form.tradeTags),
+    tagCodes: normalizeTags(form.tagCodes),
     expectedPathImages: asImageArray(form.expectedPathImages),
     expectedPathImagesDetailed: asMarketStructureImages(
       form.expectedPathImagesDetailed,

@@ -148,6 +148,13 @@ export const TRADE_PERIOD_PRESETS = [
   "ETH/USDT",
 ] as const;
 export const TRADE_TAG_PRESETS = ["头脑发热", "严谨", "交易系统v1"] as const;
+
+export type DictionaryTagItem = {
+  code: string;
+  label: string;
+  color?: string;
+  status?: string;
+};
 /**
  * Trade 前端完整类型定义，对齐后端 CreateTradeDto
  */
@@ -166,6 +173,8 @@ export type Trade = {
   preEntrySummaryImportance?: number;
   signalType?: string;
   tradeTags?: string[];
+  tagCodes?: string[];
+  tagItems?: DictionaryTagItem[];
 
   // 图片相关（用数组类型）
   volumeProfileImages?: ImageResource[]; // 旧字段

@@ -266,6 +266,37 @@ export default function TradeListPage() {
         ),
         enableHiding: true,
       },
+      {
+        accessorKey: "tagItems",
+        header: "字典标签",
+        cell: ({ row }) => {
+          const tagItems = row.original.tagItems || [];
+          if (!tagItems.length) {
+            return <div className="min-w-[120px] text-[#9ca3af]">-</div>;
+          }
+          return (
+            <div className="flex min-w-[180px] max-w-[260px] flex-wrap gap-1.5">
+              {tagItems.map((tag) => (
+                <span
+                  key={tag.code}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/90"
+                  style={{ backgroundColor: tag.color ? `${tag.color}22` : undefined }}
+                  title={tag.code}
+                >
+                  {tag.color ? (
+                    <span
+                      className="inline-block h-2 w-2 rounded-full border border-white/20"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                  ) : null}
+                  {tag.label}
+                </span>
+              ))}
+            </div>
+          );
+        },
+        enableHiding: true,
+      },
       // 中优先级：分析时间
       {
         accessorKey: "analysisTime",

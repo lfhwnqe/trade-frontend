@@ -4,6 +4,7 @@ import * as React from "react";
 import { DateCalendarPicker } from "../../../../components/common/DateCalendarPicker";
 import { MarketStructureAnalysisImages } from "./MarketStructureAnalysisImages";
 import type {
+  DictionaryTagItem,
   ImageResource,
   MarketStructureAnalysisImage,
   Trade,
@@ -40,6 +41,7 @@ import { Textarea as BaseTextarea } from "@/components/ui/textarea";
 import { useAlert } from "@/components/common/alert";
 import { Star } from "lucide-react";
 import TagSelectInput from "@/components/common/TagSelectInput";
+import { fetchTradeTagOptions } from "../../dictionary";
 
 export interface TradeFormProps {
   editTrade: Trade | null;
@@ -185,6 +187,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     ref,
   ) => {
     const [, errorAlert] = useAlert();
+    const [tradeTagOptions, setTradeTagOptions] = React.useState<DictionaryTagItem[]>([]);
     const inputProps = React.useMemo(
       () => (readOnly ? { readOnly: true } : {}),
       [readOnly],
@@ -261,6 +264,39 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         });
       },
       [form.checklist, handleFormUpdate, readOnly],
+    );
+
+    React.useEffect(() => {
+      let mounted = true;
+      fetchTradeTagOptions()
+        .then((items) => {
+          if (mounted) setTradeTagOptions(items);
+        })
+        .catch((error) => {
+          console.warn("加载交易标签字典失败", error);
+        });
+      return () => {
+        mounted = false;
+      };
+    }, []);
+
+    const selectedDictionaryTagItems = React.useMemo(() => {
+      const selectedCodes = Array.isArray(form.tagCodes) ? form.tagCodes : [];
+      const optionMap = new Map(tradeTagOptions.map((item) => [item.code, item]));
+      const fallbackMap = new Map((form.tagItems || []).map((item) => [item.code, item]));
+      return selectedCodes.map((code) => optionMap.get(code) || fallbackMap.get(code) || { code, label: code });
+    }, [form.tagCodes, form.tagItems, tradeTagOptions]);
+
+    const handleDictionaryTagToggle = React.useCallback(
+      (code: string) => {
+        if (readOnly) return;
+        const current = Array.isArray(form.tagCodes) ? form.tagCodes : [];
+        const next = current.includes(code)
+          ? current.filter((item) => item !== code)
+          : [...current, code];
+        handleFormUpdate({ tagCodes: next });
+      },
+      [form.tagCodes, handleFormUpdate, readOnly],
     );
 
     const isDistributed = formMode === "distributed";
@@ -457,10 +493,67 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
-          {/* 交易标签 */}
+          {/* 字典标签 */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              交易标签:
+              字典标签:
+            </label>
+            <div className="rounded-xl border border-white/10 p-3 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {tradeTagOptions.length === 0 ? (
+                  <span className="text-xs text-muted-foreground">暂无可用字典标签，可先到后台字典管理中维护 trade_tag</span>
+                ) : (
+                  tradeTagOptions.map((item) => {
+                    const active = (form.tagCodes || []).includes(item.code);
+                    return (
+                      <button
+                        key={item.code}
+                        type="button"
+                        disabled={analyzedSection.readOnly}
+                        onClick={() => handleDictionaryTagToggle(item.code)}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
+                          active
+                            ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-300"
+                            : "border-white/10 bg-white/5 text-foreground"
+                        } ${analyzedSection.readOnly ? "cursor-default" : "cursor-pointer hover:border-white/20"}`}
+                      >
+                        {item.color ? (
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full border border-white/20"
+                            style={{ backgroundColor: item.color }}
+                          />
+                        ) : null}
+                        {item.label}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {selectedDictionaryTagItems.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedDictionaryTagItems.map((item) => (
+                    <span
+                      key={item.code}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-foreground"
+                    >
+                      {item.color ? (
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full border border-white/20"
+                          style={{ backgroundColor: item.color }}
+                        />
+                      ) : null}
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* 旧自定义交易标签 */}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              自定义标签（兼容旧字段）:
             </label>
             <TagSelectInput
               value={form.tradeTags}

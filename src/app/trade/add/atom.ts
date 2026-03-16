@@ -17,6 +17,8 @@ export const formInitialState: FormState = {
   expectedPathImages: [],
   expectedPathImagesDetailed: [],
   tradeTags: [],
+  tagCodes: [],
+  tagItems: [],
   entryAnalysisImages: [],
   entryAnalysisImagesDetailed: [],
   actualPathImages: [],
