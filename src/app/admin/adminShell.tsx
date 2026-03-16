@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, Home, ReceiptText, Menu, Image as ImageIcon } from "lucide-react";
+import { ChevronDown, Home, ReceiptText, Menu, Image as ImageIcon, Tags, ListTree } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -41,6 +41,16 @@ const tradeNavItems = [
     title: "管理员图床",
     href: "/admin/image-bed",
     icon: ImageIcon,
+  },
+  {
+    title: "字典分类",
+    href: "/admin/dictionary/categories",
+    icon: Tags,
+  },
+  {
+    title: "字典项",
+    href: "/admin/dictionary/items",
+    icon: ListTree,
   },
 ];
 
