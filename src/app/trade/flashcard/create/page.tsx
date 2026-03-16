@@ -33,6 +33,7 @@ import { useAlert } from "@/components/common/alert";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import type { ImageResource } from "../../config";
 import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
+import { fetchFlashcardTagOptions } from "../../dictionary";
 
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
 const EMPTY_SELECT_VALUE = "__NONE__";
@@ -55,6 +56,8 @@ export default function FlashcardCreatePage() {
     ...TRADE_PERIOD_PRESETS,
   ]);
   const [notes, setNotes] = React.useState("");
+  const [tagOptions, setTagOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
+  const [tagCodes, setTagCodes] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
 
   const questionImageUrl = questionImages[0]?.url || "";
@@ -74,6 +77,20 @@ export default function FlashcardCreatePage() {
       const merged = Array.from(new Set([...TRADE_PERIOD_PRESETS, ...history]));
       setSymbolPairOptions(merged);
     } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+    fetchFlashcardTagOptions()
+      .then((items) => {
+        if (mounted) setTagOptions(items);
+      })
+      .catch(() => {
+        if (mounted) setTagOptions([]);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const rememberSymbolPair = React.useCallback((value: string) => {
@@ -117,6 +134,7 @@ export default function FlashcardCreatePage() {
         marketTimeInfo: marketTimeInfo.trim() || undefined,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
         notes: notes.trim() || undefined,
+        tagCodes: tagCodes.length ? tagCodes : undefined,
       });
 
       rememberSymbolPair(symbolPairInfo);
@@ -133,6 +151,7 @@ export default function FlashcardCreatePage() {
       setMarketTimeInfo("");
       setSymbolPairInfo("");
       setNotes("");
+      setTagCodes([]);
 
       successAlert("闪卡保存成功");
     } catch (error) {
@@ -295,6 +314,45 @@ export default function FlashcardCreatePage() {
                 <option key={item} value={item} />
               ))}
             </datalist>
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <div className="text-xs font-medium text-[#9ca3af]">字典标签（选填）</div>
+            <div className="flex flex-wrap gap-2 rounded-xl border border-[#27272a] bg-[#1e1e1e] p-3">
+              {tagOptions.length === 0 ? (
+                <span className="text-xs text-[#9ca3af]">暂无可用 flashcard_tag，可先到后台字典管理中维护</span>
+              ) : (
+                tagOptions.map((item) => {
+                  const active = tagCodes.includes(item.code);
+                  return (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() =>
+                        setTagCodes((prev) =>
+                          prev.includes(item.code)
+                            ? prev.filter((code) => code !== item.code)
+                            : [...prev, item.code],
+                        )
+                      }
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
+                        active
+                          ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
+                          : "border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424]"
+                      }`}
+                    >
+                      {item.color ? (
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full border border-white/20"
+                          style={{ backgroundColor: item.color }}
+                        />
+                      ) : null}
+                      {item.label}
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

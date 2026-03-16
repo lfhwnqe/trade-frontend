@@ -115,6 +115,13 @@ export function isLegacyFlashcardInvalidationType(
   );
 }
 
+export type FlashcardDictionaryTagItem = {
+  code: string;
+  label: string;
+  color?: string;
+  status?: string;
+};
+
 export type FlashcardCard = {
   id: string;
   userId: string;
@@ -139,6 +146,8 @@ export type FlashcardCard = {
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
+  tagCodes?: string[];
+  tagItems?: FlashcardDictionaryTagItem[];
   simulationAttemptCount?: number;
   simulationResolvedCount?: number;
   simulationSuccessCount?: number;

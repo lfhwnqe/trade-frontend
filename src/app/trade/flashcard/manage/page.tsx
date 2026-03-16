@@ -56,6 +56,7 @@ import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 import type { ImageResource } from "../../config";
 import { TRADE_PERIOD_PRESETS } from "../../config";
 import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
+import { fetchFlashcardTagOptions } from "../../dictionary";
 
 type FlashcardQuery = {
   symbolPairInfo: string;
@@ -125,6 +126,8 @@ export default function FlashcardManagePage() {
   const [editingMarketTimeInfo, setEditingMarketTimeInfo] = React.useState("");
   const [editingSymbolPairInfo, setEditingSymbolPairInfo] = React.useState("");
   const [editingNote, setEditingNote] = React.useState("");
+  const [editingTagCodes, setEditingTagCodes] = React.useState<string[]>([]);
+  const [flashcardTagOptions, setFlashcardTagOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
   const [savingNote, setSavingNote] = React.useState(false);
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
     ...TRADE_PERIOD_PRESETS,
@@ -219,6 +222,20 @@ export default function FlashcardManagePage() {
     } catch {}
   }, []);
 
+  React.useEffect(() => {
+    let mounted = true;
+    fetchFlashcardTagOptions()
+      .then((items) => {
+        if (mounted) setFlashcardTagOptions(items);
+      })
+      .catch(() => {
+        if (mounted) setFlashcardTagOptions([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const rememberSymbolPair = React.useCallback((value: string) => {
     const nextValue = value.trim();
     if (!nextValue || typeof window === "undefined") return;
@@ -283,6 +300,7 @@ export default function FlashcardManagePage() {
     setEditingMarketTimeInfo(card.marketTimeInfo || "");
     setEditingSymbolPairInfo(card.symbolPairInfo || "");
     setEditingNote(card.notes || "");
+    setEditingTagCodes(card.tagCodes || []);
   }, []);
 
   const handleSaveNote = React.useCallback(async () => {
@@ -316,6 +334,7 @@ export default function FlashcardManagePage() {
         marketTimeInfo: editingMarketTimeInfo.trim() || undefined,
         symbolPairInfo: editingSymbolPairInfo.trim() || undefined,
         notes: editingNote.trim() || undefined,
+        tagCodes: editingTagCodes,
       });
       rememberSymbolPair(editingSymbolPairInfo);
       setItems((prev) =>
@@ -458,6 +477,36 @@ export default function FlashcardManagePage() {
             ? FLASHCARD_LABELS[row.original.systemOutcomeType]
             : FLASHCARD_LABELS.FLASHCARD_SYSTEM_OUTCOME_UNSET;
           return <HoverText text={text} className="min-w-[160px] text-[#e5e7eb]" />;
+        },
+        enableSorting: false,
+      },
+      {
+        accessorKey: "tagItems",
+        header: "字典标签",
+        cell: ({ row }) => {
+          const tagItems = row.original.tagItems || [];
+          if (!tagItems.length) {
+            return <div className="min-w-[140px] text-[#9ca3af]">-</div>;
+          }
+          return (
+            <div className="flex min-w-[180px] max-w-[280px] flex-wrap gap-1.5">
+              {tagItems.map((tag) => (
+                <span
+                  key={tag.code}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/90"
+                  style={{ backgroundColor: tag.color ? `${tag.color}22` : undefined }}
+                >
+                  {tag.color ? (
+                    <span
+                      className="inline-block h-2 w-2 rounded-full border border-white/20"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                  ) : null}
+                  {tag.label}
+                </span>
+              ))}
+            </div>
+          );
         },
         enableSorting: false,
       },
@@ -1025,6 +1074,46 @@ export default function FlashcardManagePage() {
                     <option key={item} value={item} />
                   ))}
                 </datalist>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <div className="text-xs font-medium text-[#9ca3af]">字典标签（选填）</div>
+                <div className="flex flex-wrap gap-2 rounded-xl border border-[#27272a] bg-[#1e1e1e] p-3">
+                  {flashcardTagOptions.length === 0 ? (
+                    <span className="text-xs text-[#9ca3af]">暂无可用 flashcard_tag</span>
+                  ) : (
+                    flashcardTagOptions.map((item) => {
+                      const active = editingTagCodes.includes(item.code);
+                      return (
+                        <button
+                          key={item.code}
+                          type="button"
+                          disabled={savingNote}
+                          onClick={() =>
+                            setEditingTagCodes((prev) =>
+                              prev.includes(item.code)
+                                ? prev.filter((code) => code !== item.code)
+                                : [...prev, item.code],
+                            )
+                          }
+                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
+                            active
+                              ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
+                              : "border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424]"
+                          } disabled:opacity-60`}
+                        >
+                          {item.color ? (
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-full border border-white/20"
+                              style={{ backgroundColor: item.color }}
+                            />
+                          ) : null}
+                          {item.label}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">

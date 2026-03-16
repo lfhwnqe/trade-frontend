@@ -1,12 +1,12 @@
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import type { DictionaryTagItem } from "./config";
 
-export async function fetchTradeTagOptions(): Promise<DictionaryTagItem[]> {
+async function fetchDictionaryOptions(categoryCode: string): Promise<DictionaryTagItem[]> {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     proxyParams: {
-      targetPath: "dictionary/options/trade_tag",
+      targetPath: `dictionary/options/${categoryCode}`,
       actualMethod: "GET",
     },
     actualBody: {},
@@ -16,7 +16,7 @@ export async function fetchTradeTagOptions(): Promise<DictionaryTagItem[]> {
   if (!res.ok) {
     throw new Error(
       (data && (data.userMessage || data.message || data.error)) ||
-        "获取交易标签字典失败",
+        "获取字典失败",
     );
   }
 
@@ -46,4 +46,12 @@ export async function fetchTradeTagOptions(): Promise<DictionaryTagItem[]> {
       status: "ACTIVE",
     }))
     .filter((item) => item.code);
+}
+
+export async function fetchTradeTagOptions(): Promise<DictionaryTagItem[]> {
+  return fetchDictionaryOptions("trade_tag");
+}
+
+export async function fetchFlashcardTagOptions(): Promise<DictionaryTagItem[]> {
+  return fetchDictionaryOptions("flashcard_tag");
 }

@@ -44,6 +44,7 @@ type CreateFlashcardPayload = {
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
+  tagCodes?: string[];
 };
 
 type UpdateFlashcardPayload = {
@@ -60,6 +61,7 @@ type UpdateFlashcardPayload = {
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   notes?: string;
+  tagCodes?: string[];
 };
 
 export async function getFlashcardUploadUrl(params: {
