@@ -374,8 +374,11 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
       riskRewardCheck: !!value.riskRewardCheck,
     };
   };
-  const normalizeTags = (value?: unknown): string[] | undefined => {
-    if (!value) return undefined;
+  const normalizeTags = (
+    value?: unknown,
+    options?: { preserveEmptyArray?: boolean },
+  ): string[] | undefined => {
+    if (value === undefined || value === null) return undefined;
     const raw =
       typeof value === "string"
         ? value.split(/[,，]/)
@@ -385,7 +388,9 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     const tags = raw
       .map((item) => `${item}`.trim())
       .filter((item) => item.length > 0);
-    if (tags.length === 0) return undefined;
+    if (tags.length === 0) {
+      return options?.preserveEmptyArray && Array.isArray(value) ? [] : undefined;
+    }
     return Array.from(new Set(tags));
   };
 
@@ -410,7 +415,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     preEntrySummary: form.preEntrySummary,
     preEntrySummaryImportance: parseNum(form.preEntrySummaryImportance),
     tradeTags: normalizeTags(form.tradeTags),
-    tagCodes: normalizeTags(form.tagCodes),
+    tagCodes: normalizeTags(form.tagCodes, { preserveEmptyArray: true }),
     expectedPathImages: asImageArray(form.expectedPathImages),
     expectedPathImagesDetailed: asMarketStructureImages(
       form.expectedPathImagesDetailed,

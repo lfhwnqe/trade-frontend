@@ -608,8 +608,13 @@ export default function TradeAddPage({
   // 提交函数 - 添加节流控制避免重复提交
   const submittingRef = useRef(false);
   const saveModeRef = useRef<SaveMode>("redirect");
+  const latestFormRef = useRef(form);
   // 创建对表单组件的引用
   const formRef = useRef<TradeFormRef>(null);
+
+  useEffect(() => {
+    latestFormRef.current = form;
+  }, [form]);
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -625,12 +630,13 @@ export default function TradeAddPage({
 
       const id = transactionId;
       const saveMode = saveModeRef.current;
+      const currentForm = latestFormRef.current;
       try {
         if (id) {
-          await updateTrade(id, toDto(form));
+          await updateTrade(id, toDto(currentForm));
           success("更新成功");
         } else {
-          const response = await createTrade(toDto(form));
+          const response = await createTrade(toDto(currentForm));
           const createdId = extractTransactionId(response);
           success(saveMode === "stay" ? "保存成功" : "新建成功");
           if (saveMode === "stay" && createdId) {

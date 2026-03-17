@@ -27,6 +27,7 @@ import {
 } from "../../config";
 import { Input as BaseInput } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiSelectDropdown } from "@/components/common/MultiSelectDropdown";
 import {
   Select as BaseSelect,
   SelectContent,
@@ -287,18 +288,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       return selectedCodes.map((code) => optionMap.get(code) || fallbackMap.get(code) || { code, label: code });
     }, [form.tagCodes, form.tagItems, tradeTagOptions]);
 
-    const handleDictionaryTagToggle = React.useCallback(
-      (code: string) => {
-        if (readOnly) return;
-        const current = Array.isArray(form.tagCodes) ? form.tagCodes : [];
-        const next = current.includes(code)
-          ? current.filter((item) => item !== code)
-          : [...current, code];
-        handleFormUpdate({ tagCodes: next });
-      },
-      [form.tagCodes, handleFormUpdate, readOnly],
-    );
-
     const isDistributed = formMode === "distributed";
     const statusRank: Record<TradeStatus, number> = {
       [TradeStatus.ANALYZED]: 1,
@@ -499,36 +488,18 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               字典标签:
             </label>
             <div className="rounded-xl border border-white/10 p-3 space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {tradeTagOptions.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">暂无可用字典标签，可先到后台字典管理中维护 trade_tag</span>
-                ) : (
-                  tradeTagOptions.map((item) => {
-                    const active = (form.tagCodes || []).includes(item.code);
-                    return (
-                      <button
-                        key={item.code}
-                        type="button"
-                        disabled={analyzedSection.readOnly}
-                        onClick={() => handleDictionaryTagToggle(item.code)}
-                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
-                          active
-                            ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-300"
-                            : "border-white/10 bg-white/5 text-foreground"
-                        } ${analyzedSection.readOnly ? "cursor-default" : "cursor-pointer hover:border-white/20"}`}
-                      >
-                        {item.color ? (
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full border border-white/20"
-                            style={{ backgroundColor: item.color }}
-                          />
-                        ) : null}
-                        {item.label}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+              <MultiSelectDropdown
+                options={tradeTagOptions.map((item) => ({
+                  value: item.code,
+                  label: item.label,
+                  color: item.color,
+                }))}
+                value={Array.isArray(form.tagCodes) ? form.tagCodes : []}
+                onChange={(next) => handleFormUpdate({ tagCodes: next })}
+                disabled={analyzedSection.readOnly}
+                placeholder="展开选择字典标签"
+                emptyText="暂无可用字典标签，可先到后台字典管理中维护 trade_tag"
+              />
               {selectedDictionaryTagItems.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {selectedDictionaryTagItems.map((item) => (

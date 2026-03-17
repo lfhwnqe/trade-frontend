@@ -33,6 +33,8 @@ import { useTradeList } from "./useTradeList";
 import { format } from "date-fns";
 import { useAlert } from "@/components/common/alert";
 import TradePageShell from "../components/trade-page-shell";
+import { fetchTradeTagOptions, getDictionaryItemLabelByCode } from "../dictionary";
+import type { DictionaryTagItem } from "../config";
 
 export default function TradeListPage() {
   const router = useRouter();
@@ -60,6 +62,25 @@ export default function TradeListPage() {
   // 复制交易记录相关状态
   const [copyId, setCopyId] = useState<string | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
+  const [tradeTagOptions, setTradeTagOptions] = useState<DictionaryTagItem[]>([]);
+  const tradeTagOptionMap = useMemo(
+    () => new Map(tradeTagOptions.map((item) => [item.code, item])),
+    [tradeTagOptions],
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    fetchTradeTagOptions()
+      .then((items) => {
+        if (mounted) setTradeTagOptions(items);
+      })
+      .catch(() => {
+        if (mounted) setTradeTagOptions([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // 处理复制交易记录
   const handleCopy = async () => {
@@ -137,6 +158,12 @@ export default function TradeListPage() {
         return "bg-white/5 text-[#9ca3af] border border-white/10";
     }
   };
+
+  const latestDialogFormRef = React.useRef(dialog.form);
+
+  useEffect(() => {
+    latestDialogFormRef.current = dialog.form;
+  }, [dialog.form]);
 
   const columns = useMemo<ColumnDef<Trade>[]>(
     () => [
@@ -270,13 +297,27 @@ export default function TradeListPage() {
         accessorKey: "tagItems",
         header: "字典标签",
         cell: ({ row }) => {
-          const tagItems = row.original.tagItems || [];
-          if (!tagItems.length) {
+          const hasTagCodes = Array.isArray(row.original.tagCodes);
+          const resolvedTagItems = hasTagCodes
+            ? (row.original.tagCodes || [])
+                .map((code) => {
+                  const matched = tradeTagOptionMap.get(code) || getDictionaryItemLabelByCode(tradeTagOptions, code);
+                  return {
+                    code,
+                    label: matched?.label || code,
+                    color: matched?.color,
+                  };
+                })
+                .filter((item) => item.code)
+            : row.original.tagItems && row.original.tagItems.length > 0
+              ? row.original.tagItems
+              : [];
+          if (!resolvedTagItems.length) {
             return <div className="min-w-[120px] text-[#9ca3af]">-</div>;
           }
           return (
             <div className="flex min-w-[180px] max-w-[260px] flex-wrap gap-1.5">
-              {tagItems.map((tag) => (
+              {resolvedTagItems.map((tag) => (
                 <span
                   key={tag.code}
                   className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/90"
@@ -446,17 +487,18 @@ export default function TradeListPage() {
         },
       },
     ],
-    [router, setCopyId, setDeleteId],
+    [router, setCopyId, setDeleteId, tradeTagOptionMap, tradeTagOptions],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const currentForm = latestDialogFormRef.current;
     try {
       if (dialog.editTrade?.transactionId) {
-        await updateTrade(dialog.editTrade.transactionId, toDto(dialog.form));
+        await updateTrade(dialog.editTrade.transactionId, toDto(currentForm));
         success("交易更新成功");
       } else {
-        await createTrade(toDto(dialog.form));
+        await createTrade(toDto(currentForm));
         success("交易创建成功");
       }
       closeDialog();

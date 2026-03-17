@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiSelectDropdown } from "@/components/common/MultiSelectDropdown";
 import {
   Select,
   SelectContent,
@@ -56,7 +57,7 @@ import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 import type { ImageResource } from "../../config";
 import { TRADE_PERIOD_PRESETS } from "../../config";
 import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
-import { fetchFlashcardTagOptions } from "../../dictionary";
+import { fetchFlashcardTagOptions, getDictionaryItemLabelByCode } from "../../dictionary";
 
 type FlashcardQuery = {
   symbolPairInfo: string;
@@ -128,6 +129,10 @@ export default function FlashcardManagePage() {
   const [editingNote, setEditingNote] = React.useState("");
   const [editingTagCodes, setEditingTagCodes] = React.useState<string[]>([]);
   const [flashcardTagOptions, setFlashcardTagOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
+  const flashcardTagOptionMap = React.useMemo(
+    () => new Map(flashcardTagOptions.map((item) => [item.code, item])),
+    [flashcardTagOptions],
+  );
   const [savingNote, setSavingNote] = React.useState(false);
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
     ...TRADE_PERIOD_PRESETS,
@@ -300,7 +305,11 @@ export default function FlashcardManagePage() {
     setEditingMarketTimeInfo(card.marketTimeInfo || "");
     setEditingSymbolPairInfo(card.symbolPairInfo || "");
     setEditingNote(card.notes || "");
-    setEditingTagCodes(card.tagCodes || []);
+    setEditingTagCodes(
+      Array.isArray(card.tagCodes) && card.tagCodes.length > 0
+        ? card.tagCodes
+        : (card.tagItems || []).map((item) => item.code).filter(Boolean),
+    );
   }, []);
 
   const handleSaveNote = React.useCallback(async () => {
@@ -340,6 +349,7 @@ export default function FlashcardManagePage() {
       setItems((prev) =>
         prev.map((item) => (item.cardId === updated.cardId ? { ...item, ...updated } : item)),
       );
+      await fetchPage(page, activeQuery);
       setEditingCard(null);
       successAlert("闪卡信息已保存");
     } catch (error) {
@@ -361,7 +371,11 @@ export default function FlashcardManagePage() {
     editingNote,
     editingQuestionImages,
     editingSymbolPairInfo,
+    editingTagCodes,
+    activeQuery,
     errorAlert,
+    fetchPage,
+    page,
     rememberSymbolPair,
     successAlert,
   ]);
@@ -484,13 +498,25 @@ export default function FlashcardManagePage() {
         accessorKey: "tagItems",
         header: "字典标签",
         cell: ({ row }) => {
-          const tagItems = row.original.tagItems || [];
-          if (!tagItems.length) {
+          const resolvedTagItems =
+            row.original.tagItems && row.original.tagItems.length > 0
+              ? row.original.tagItems
+              : (row.original.tagCodes || [])
+                  .map((code) => {
+                    const matched = flashcardTagOptionMap.get(code) || getDictionaryItemLabelByCode(flashcardTagOptions, code);
+                    return {
+                      code,
+                      label: matched?.label || code,
+                      color: matched?.color,
+                    };
+                  })
+                  .filter((item) => item.code);
+          if (!resolvedTagItems.length) {
             return <div className="min-w-[140px] text-[#9ca3af]">-</div>;
           }
           return (
             <div className="flex min-w-[180px] max-w-[280px] flex-wrap gap-1.5">
-              {tagItems.map((tag) => (
+              {resolvedTagItems.map((tag) => (
                 <span
                   key={tag.code}
                   className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/90"
@@ -655,7 +681,13 @@ export default function FlashcardManagePage() {
         },
       },
     ],
-    [handleDeleteCard, openNoteDialog, openViewDialog],
+    [
+      flashcardTagOptionMap,
+      flashcardTagOptions,
+      handleDeleteCard,
+      openNoteDialog,
+      openViewDialog,
+    ],
   );
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -1078,41 +1110,21 @@ export default function FlashcardManagePage() {
 
               <div className="space-y-2 md:col-span-2">
                 <div className="text-xs font-medium text-[#9ca3af]">字典标签（选填）</div>
-                <div className="flex flex-wrap gap-2 rounded-xl border border-[#27272a] bg-[#1e1e1e] p-3">
-                  {flashcardTagOptions.length === 0 ? (
-                    <span className="text-xs text-[#9ca3af]">暂无可用 flashcard_tag</span>
-                  ) : (
-                    flashcardTagOptions.map((item) => {
-                      const active = editingTagCodes.includes(item.code);
-                      return (
-                        <button
-                          key={item.code}
-                          type="button"
-                          disabled={savingNote}
-                          onClick={() =>
-                            setEditingTagCodes((prev) =>
-                              prev.includes(item.code)
-                                ? prev.filter((code) => code !== item.code)
-                                : [...prev, item.code],
-                            )
-                          }
-                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
-                            active
-                              ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
-                              : "border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424]"
-                          } disabled:opacity-60`}
-                        >
-                          {item.color ? (
-                            <span
-                              className="inline-block h-2.5 w-2.5 rounded-full border border-white/20"
-                              style={{ backgroundColor: item.color }}
-                            />
-                          ) : null}
-                          {item.label}
-                        </button>
-                      );
-                    })
-                  )}
+                <div className="rounded-xl border border-[#27272a] bg-[#1e1e1e] p-3">
+                  <MultiSelectDropdown
+                    options={flashcardTagOptions.map((item) => ({
+                      value: item.code,
+                      label: item.label,
+                      color: item.color,
+                    }))}
+                    value={editingTagCodes}
+                    onChange={setEditingTagCodes}
+                    disabled={savingNote}
+                    placeholder="展开选择字典标签"
+                    emptyText="暂无可用 flashcard_tag"
+                    className="border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#1a1a1a]"
+                    contentClassName="border-[#27272a] bg-[#121212] text-[#e5e7eb]"
+                  />
                 </div>
               </div>
 
