@@ -33,10 +33,12 @@ export async function POST(request: NextRequest) {
       message: "登录成功",
       ...data,
     });
+    const isSecureCookie = process.env.NODE_ENV === "production";
+
     if (data.accessToken) {
       response.cookies.set("token", data.accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isSecureCookie,
         sameSite: "lax",
         path: "/",
         // maxAge: 可定制
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (data.refreshToken) {
       response.cookies.set("refreshToken", data.refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: isSecureCookie,
         sameSite: "lax",
         path: "/",
         // maxAge: 可定制（通常 refresh token 生命周期更长）
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (data.idToken) {
       response.cookies.set("idToken", data.idToken, {
         httpOnly: true,
-        secure: true,
+        secure: isSecureCookie,
         sameSite: "lax",
         path: "/",
       });
