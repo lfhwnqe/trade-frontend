@@ -38,6 +38,7 @@ export function MultiSelectDropdown({
     () => options.filter((item) => selectedSet.has(item.value)),
     [options, selectedSet],
   );
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
   const summary =
     selectedOptions.length === 0
@@ -45,6 +46,34 @@ export function MultiSelectDropdown({
       : selectedOptions.length <= 2
         ? selectedOptions.map((item) => item.label).join("、")
         : `已选择 ${selectedOptions.length} 项`;
+
+  const handleWheel = React.useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const { deltaY } = event;
+    const canScroll = container.scrollHeight > container.clientHeight;
+    if (!canScroll) return;
+
+    const nextScrollTop = container.scrollTop + deltaY;
+    const maxScrollTop = container.scrollHeight - container.clientHeight;
+    const clampedScrollTop = Math.max(0, Math.min(nextScrollTop, maxScrollTop));
+
+    if (clampedScrollTop !== container.scrollTop) {
+      event.preventDefault();
+      event.stopPropagation();
+      container.scrollTop = clampedScrollTop;
+      return;
+    }
+
+    const isTryingScrollUpPastTop = deltaY < 0 && container.scrollTop <= 0;
+    const isTryingScrollDownPastBottom = deltaY > 0 && container.scrollTop >= maxScrollTop;
+
+    if (isTryingScrollUpPastTop || isTryingScrollDownPastBottom) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, []);
 
   return (
     <Popover>
@@ -76,7 +105,11 @@ export function MultiSelectDropdown({
         {options.length === 0 ? (
           <div className="px-2 py-3 text-sm text-muted-foreground">{emptyText}</div>
         ) : (
-          <div className="max-h-72 space-y-1 overflow-y-auto">
+          <div
+            ref={scrollRef}
+            onWheel={handleWheel}
+            className="max-h-72 space-y-1 overflow-y-auto overscroll-contain pr-1"
+          >
             {options.map((item) => {
               const checked = selectedSet.has(item.value);
               return (
