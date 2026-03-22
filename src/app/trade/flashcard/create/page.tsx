@@ -26,6 +26,7 @@ import {
   FLASHCARD_SYSTEM_OUTCOME_TYPES,
   type FlashcardAction,
   type FlashcardBehaviorType,
+  type FlashcardDictionaryOptionItem,
   type FlashcardInvalidationType,
   type FlashcardSystemOutcomeType,
 } from "../types";
@@ -33,7 +34,7 @@ import { useAlert } from "@/components/common/alert";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import type { ImageResource } from "../../config";
 import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
-import { fetchFlashcardTagOptions } from "../../dictionary";
+import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
 const EMPTY_SELECT_VALUE = "__NONE__";
@@ -55,8 +56,10 @@ export default function FlashcardCreatePage() {
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
     ...TRADE_PERIOD_PRESETS,
   ]);
+  const [playbookType, setPlaybookType] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [tagOptions, setTagOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
+  const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<FlashcardDictionaryOptionItem[]>([]);
   const [tagCodes, setTagCodes] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -87,6 +90,13 @@ export default function FlashcardCreatePage() {
       })
       .catch(() => {
         if (mounted) setTagOptions([]);
+      });
+    fetchPlaybookTypeOptions()
+      .then((items) => {
+        if (mounted) setPlaybookTypeOptions(items);
+      })
+      .catch(() => {
+        if (mounted) setPlaybookTypeOptions([]);
       });
     return () => {
       mounted = false;
@@ -133,6 +143,7 @@ export default function FlashcardCreatePage() {
           : undefined,
         marketTimeInfo: marketTimeInfo.trim() || undefined,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
+        playbookType: playbookType || undefined,
         notes: notes.trim() || undefined,
         tagCodes: tagCodes.length ? tagCodes : undefined,
       });
@@ -150,6 +161,7 @@ export default function FlashcardCreatePage() {
       setEarlyExitImages([]);
       setMarketTimeInfo("");
       setSymbolPairInfo("");
+      setPlaybookType("");
       setNotes("");
       setTagCodes([]);
 
@@ -172,10 +184,12 @@ export default function FlashcardCreatePage() {
     systemOutcomeType,
     marketTimeInfo,
     notes,
+    playbookType,
     questionImageUrl,
     rememberSymbolPair,
     symbolPairInfo,
     successAlert,
+    tagCodes,
   ]);
 
   return (
@@ -314,6 +328,26 @@ export default function FlashcardCreatePage() {
                 <option key={item} value={item} />
               ))}
             </datalist>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-[#9ca3af]">剧本类型（选填）</div>
+            <Select
+              value={playbookType || EMPTY_SELECT_VALUE}
+              onValueChange={(value) => setPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}
+            >
+              <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                <SelectValue placeholder="选择剧本类型" />
+              </SelectTrigger>
+              <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
+                {playbookTypeOptions.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2 md:col-span-2">

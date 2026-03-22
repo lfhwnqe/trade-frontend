@@ -50,6 +50,7 @@ import {
   type FlashcardCard,
   type FlashcardCardSortBy,
   type FlashcardCardSortOrder,
+  type FlashcardDictionaryOptionItem,
   type FlashcardInvalidationType,
   type FlashcardSystemOutcomeType,
 } from "../types";
@@ -57,10 +58,11 @@ import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 import type { ImageResource } from "../../config";
 import { TRADE_PERIOD_PRESETS } from "../../config";
 import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
-import { fetchFlashcardTagOptions, getDictionaryItemLabelByCode } from "../../dictionary";
+import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions, getDictionaryItemLabelByCode } from "../../dictionary";
 
 type FlashcardQuery = {
   symbolPairInfo: string;
+  playbookType: string;
   marketTimeInfo: string;
   sortBy: FlashcardCardSortBy;
   sortOrder: FlashcardCardSortOrder;
@@ -126,9 +128,11 @@ export default function FlashcardManagePage() {
   const [editingEarlyExitImages, setEditingEarlyExitImages] = React.useState<ImageResource[]>([]);
   const [editingMarketTimeInfo, setEditingMarketTimeInfo] = React.useState("");
   const [editingSymbolPairInfo, setEditingSymbolPairInfo] = React.useState("");
+  const [editingPlaybookType, setEditingPlaybookType] = React.useState("");
   const [editingNote, setEditingNote] = React.useState("");
   const [editingTagCodes, setEditingTagCodes] = React.useState<string[]>([]);
   const [flashcardTagOptions, setFlashcardTagOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
+  const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<FlashcardDictionaryOptionItem[]>([]);
   const flashcardTagOptionMap = React.useMemo(
     () => new Map(flashcardTagOptions.map((item) => [item.code, item])),
     [flashcardTagOptions],
@@ -146,12 +150,14 @@ export default function FlashcardManagePage() {
 
   const [queryForm, setQueryForm] = React.useState<FlashcardQuery>({
     symbolPairInfo: "",
+    playbookType: "",
     marketTimeInfo: "",
     sortBy: "CREATED_AT",
     sortOrder: "desc",
   });
   const [activeQuery, setActiveQuery] = React.useState<FlashcardQuery>({
     symbolPairInfo: "",
+    playbookType: "",
     marketTimeInfo: "",
     sortBy: "CREATED_AT",
     sortOrder: "desc",
@@ -178,6 +184,7 @@ export default function FlashcardManagePage() {
           pageSize,
           cursor,
           symbolPairInfo: query.symbolPairInfo.trim() || undefined,
+          playbookType: query.playbookType || undefined,
           marketTimeInfo: query.marketTimeInfo.trim() || undefined,
           sortBy: query.sortBy,
           sortOrder: query.sortOrder,
@@ -236,6 +243,13 @@ export default function FlashcardManagePage() {
       .catch(() => {
         if (mounted) setFlashcardTagOptions([]);
       });
+    fetchPlaybookTypeOptions()
+      .then((items) => {
+        if (mounted) setPlaybookTypeOptions(items);
+      })
+      .catch(() => {
+        if (mounted) setPlaybookTypeOptions([]);
+      });
     return () => {
       mounted = false;
     };
@@ -266,7 +280,7 @@ export default function FlashcardManagePage() {
   );
 
   const handleQueryReset = React.useCallback(() => {
-    const emptyQuery = { symbolPairInfo: "", marketTimeInfo: "", sortBy: "CREATED_AT" as FlashcardCardSortBy, sortOrder: "desc" as FlashcardCardSortOrder };
+    const emptyQuery = { symbolPairInfo: "", playbookType: "", marketTimeInfo: "", sortBy: "CREATED_AT" as FlashcardCardSortBy, sortOrder: "desc" as FlashcardCardSortOrder };
     setQueryForm(emptyQuery);
     setActiveQuery(emptyQuery);
     cursorStackRef.current = [undefined];
@@ -304,6 +318,7 @@ export default function FlashcardManagePage() {
     );
     setEditingMarketTimeInfo(card.marketTimeInfo || "");
     setEditingSymbolPairInfo(card.symbolPairInfo || "");
+    setEditingPlaybookType(card.playbookType || "");
     setEditingNote(card.notes || "");
     setEditingTagCodes(
       Array.isArray(card.tagCodes) && card.tagCodes.length > 0
@@ -342,6 +357,7 @@ export default function FlashcardManagePage() {
           : undefined,
         marketTimeInfo: editingMarketTimeInfo.trim() || undefined,
         symbolPairInfo: editingSymbolPairInfo.trim() || undefined,
+        playbookType: editingPlaybookType || undefined,
         notes: editingNote.trim() || undefined,
         tagCodes: editingTagCodes,
       });
@@ -369,6 +385,7 @@ export default function FlashcardManagePage() {
     editingSystemOutcomeType,
     editingMarketTimeInfo,
     editingNote,
+    editingPlaybookType,
     editingQuestionImages,
     editingSymbolPairInfo,
     editingTagCodes,
@@ -560,6 +577,16 @@ export default function FlashcardManagePage() {
         enableSorting: false,
       },
       {
+        accessorKey: "playbookType",
+        header: "剧本类型",
+        cell: ({ row }) => {
+          const matched = playbookTypeOptions.find((item) => item.code === row.original.playbookType);
+          const text = matched?.label || row.original.playbookType || "-";
+          return <HoverText text={text} className="min-w-[140px] text-[#e5e7eb]" />;
+        },
+        enableSorting: false,
+      },
+      {
         accessorKey: "marketTimeInfo",
         header: "行情时间信息",
         cell: ({ row }) => {
@@ -687,6 +714,7 @@ export default function FlashcardManagePage() {
       handleDeleteCard,
       openNoteDialog,
       openViewDialog,
+      playbookTypeOptions,
     ],
   );
 
@@ -698,7 +726,7 @@ export default function FlashcardManagePage() {
         <div className="flex-shrink-0">
           <div className="bg-[#121212] border border-[#27272a] rounded-xl p-4 mb-4 shadow-sm">
             <form onSubmit={handleQuerySubmit} className="space-y-3">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-[#9ca3af] mb-1">币对信息</label>
                   <Input
@@ -709,6 +737,26 @@ export default function FlashcardManagePage() {
                     placeholder="输入币对，例如 BTC/USDT"
                     className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#9ca3af] mb-1">剧本类型</label>
+                  <Select
+                    value={queryForm.playbookType || EMPTY_SELECT_VALUE}
+                    onValueChange={(value) =>
+                      setQueryForm((prev) => ({
+                        ...prev,
+                        playbookType: value === EMPTY_SELECT_VALUE ? "" : value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue placeholder="全部剧本类型" /></SelectTrigger>
+                    <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                      <SelectItem value={EMPTY_SELECT_VALUE}>全部剧本类型</SelectItem>
+                      {playbookTypeOptions.map((item) => (
+                        <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-[#9ca3af] mb-1">行情时间信息</label>
@@ -855,6 +903,10 @@ export default function FlashcardManagePage() {
                   <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
                     <div className="text-xs text-[#9ca3af]">币对信息</div>
                     <div className="mt-1 text-sm text-[#e5e7eb]">{viewingCard.symbolPairInfo?.trim() || "-"}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs text-[#9ca3af]">剧本类型</div>
+                    <div className="mt-1 text-sm text-[#e5e7eb]">{playbookTypeOptions.find((item) => item.code === viewingCard.playbookType)?.label || viewingCard.playbookType || "-"}</div>
                   </div>
                   <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2 xl:col-span-1">
                     <div className="text-xs text-[#9ca3af]">行情时间信息</div>
@@ -1106,6 +1158,26 @@ export default function FlashcardManagePage() {
                     <option key={item} value={item} />
                   ))}
                 </datalist>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-[#9ca3af]">剧本类型（选填）</div>
+                <Select
+                  value={editingPlaybookType || EMPTY_SELECT_VALUE}
+                  onValueChange={(value) => setEditingPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}
+                >
+                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                    <SelectValue placeholder="选择剧本类型" />
+                  </SelectTrigger>
+                  <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                    <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
+                    {playbookTypeOptions.map((item) => (
+                      <SelectItem key={item.code} value={item.code}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2 md:col-span-2">

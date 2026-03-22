@@ -43,6 +43,7 @@ type CreateFlashcardPayload = {
   earlyExitImageUrls?: string[];
   marketTimeInfo?: string;
   symbolPairInfo?: string;
+  playbookType?: string;
   notes?: string;
   tagCodes?: string[];
 };
@@ -60,6 +61,7 @@ type UpdateFlashcardPayload = {
   earlyExitImageUrls?: string[];
   marketTimeInfo?: string;
   symbolPairInfo?: string;
+  playbookType?: string;
   notes?: string;
   tagCodes?: string[];
 };
@@ -154,6 +156,7 @@ export async function listFlashcardCards(params?: {
   behaviorType?: FlashcardBehaviorType;
   invalidationType?: FlashcardInvalidationType;
   symbolPairInfo?: string;
+  playbookType?: string;
   marketTimeInfo?: string;
   sortBy?: FlashcardCardSortBy;
   sortOrder?: FlashcardCardSortOrder;
@@ -166,6 +169,7 @@ export async function listFlashcardCards(params?: {
     searchParams.set("invalidationType", params.invalidationType);
   }
   if (params?.symbolPairInfo) searchParams.set("symbolPairInfo", params.symbolPairInfo);
+  if (params?.playbookType) searchParams.set("playbookType", params.playbookType);
   if (params?.marketTimeInfo) searchParams.set("marketTimeInfo", params.marketTimeInfo);
   if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
   if (params?.sortOrder) searchParams.set("sortOrder", params.sortOrder);

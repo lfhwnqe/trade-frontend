@@ -120,3 +120,7 @@ export async function fetchTradeTagOptions(): Promise<DictionaryTagItem[]> {
 export async function fetchFlashcardTagOptions(): Promise<DictionaryTagItem[]> {
   return fetchDictionaryOptions("flashcard_tag");
 }
+
+export async function fetchPlaybookTypeOptions(): Promise<DictionaryTagItem[]> {
+  return fetchDictionaryOptions("playbook_type");
+}

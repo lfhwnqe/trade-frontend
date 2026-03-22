@@ -122,6 +122,8 @@ export type FlashcardDictionaryTagItem = {
   status?: string;
 };
 
+export type FlashcardDictionaryOptionItem = FlashcardDictionaryTagItem;
+
 export type FlashcardCard = {
   id: string;
   userId: string;
@@ -145,6 +147,7 @@ export type FlashcardCard = {
   direction?: FlashcardDirection;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
+  playbookType?: string;
   notes?: string;
   tagCodes?: string[];
   tagItems?: FlashcardDictionaryTagItem[];
