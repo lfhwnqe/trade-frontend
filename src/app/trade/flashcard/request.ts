@@ -629,6 +629,34 @@ export async function listFlashcardSimulationAttempts(params?: {
   };
 }
 
+export async function getFlashcardSimulationPlaybookAnalytics(params?: {
+  recentWindow?: number;
+  minResolved?: number;
+}): Promise<import("./types").FlashcardSimulationPlaybookAnalyticsResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.recentWindow) searchParams.set("recentWindow", String(params.recentWindow));
+  if (params?.minResolved) searchParams.set("minResolved", String(params.minResolved));
+
+  const targetPath = `flashcard/simulation/analytics/playbooks${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取薄弱剧本统计失败");
+  }
+
+  return data.data as import("./types").FlashcardSimulationPlaybookAnalyticsResponse;
+}
+
 export async function getFlashcardSimulationCardHistory(params: {
   cardId: string;
   pageSize?: number;

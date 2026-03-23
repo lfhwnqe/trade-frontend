@@ -340,6 +340,39 @@ export type FlashcardSimulationCardHistoryResponse = {
   nextCursor: string | null;
 };
 
+export type FlashcardSimulationPlaybookFailureReasonStat = {
+  reason: string;
+  count: number;
+  share: number;
+};
+
+export type FlashcardSimulationPlaybookAnalyticsItem = {
+  playbookType: string;
+  label: string;
+  attemptCount: number;
+  resolvedCount: number;
+  successCount: number;
+  failureCount: number;
+  successRate: number;
+  avgRr: number;
+  qualityScoreAvg: number;
+  topFailureReasons: FlashcardSimulationPlaybookFailureReasonStat[];
+  weaknessScore: number;
+  flags: string[];
+};
+
+export type FlashcardSimulationPlaybookAnalyticsResponse = {
+  summary: {
+    totalPlaybooks: number;
+    rankedPlaybooks: number;
+    minResolved: number;
+    recentWindow: number;
+    totalResolvedAttempts: number;
+  };
+  weakest: FlashcardSimulationPlaybookAnalyticsItem[];
+  items: FlashcardSimulationPlaybookAnalyticsItem[];
+};
+
 export const FLASHCARD_BEHAVIOR_EXPLANATIONS: Record<
   FlashcardBehaviorType,
   { summary: string; whenToUse: string }
