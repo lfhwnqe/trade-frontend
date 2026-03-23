@@ -43,9 +43,7 @@ export function MultiSelectDropdown({
   const summary =
     selectedOptions.length === 0
       ? placeholder
-      : selectedOptions.length <= 2
-        ? selectedOptions.map((item) => item.label).join("、")
-        : `已选择 ${selectedOptions.length} 项`;
+      : selectedOptions.map((item) => item.label).join("、");
 
   const handleWheel = React.useCallback((event: React.WheelEvent<HTMLDivElement>) => {
     const container = scrollRef.current;

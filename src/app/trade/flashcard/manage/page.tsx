@@ -320,12 +320,14 @@ export default function FlashcardManagePage() {
     setEditingSymbolPairInfo(card.symbolPairInfo || "");
     setEditingPlaybookType(card.playbookType || "");
     setEditingNote(card.notes || "");
-    setEditingTagCodes(
+    const validTagCodeSet = new Set(flashcardTagOptions.map((item) => item.code));
+    const initialTagCodes = (
       Array.isArray(card.tagCodes) && card.tagCodes.length > 0
         ? card.tagCodes
-        : (card.tagItems || []).map((item) => item.code).filter(Boolean),
-    );
-  }, []);
+        : (card.tagItems || []).map((item) => item.code).filter(Boolean)
+    ).filter((code) => validTagCodeSet.has(code));
+    setEditingTagCodes(initialTagCodes);
+  }, [flashcardTagOptions]);
 
   const handleSaveNote = React.useCallback(async () => {
     if (!editingCard) return;
@@ -466,6 +468,16 @@ export default function FlashcardManagePage() {
             />
           </button>
         ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "playbookType",
+        header: "剧本类型",
+        cell: ({ row }) => {
+          const matched = playbookTypeOptions.find((item) => item.code === row.original.playbookType);
+          const text = matched?.label || row.original.playbookType || "-";
+          return <HoverText text={text} className="min-w-[140px] text-[#e5e7eb]" />;
+        },
         enableSorting: false,
       },
       {
