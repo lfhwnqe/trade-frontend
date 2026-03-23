@@ -58,6 +58,7 @@ import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 import type { ImageResource } from "../../config";
 import { TRADE_PERIOD_PRESETS } from "../../config";
 import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
+import { FlashcardChecklistGuide } from "../components/FlashcardChecklistGuide";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions, getDictionaryItemLabelByCode } from "../../dictionary";
 
 type FlashcardQuery = {
@@ -1289,6 +1290,10 @@ export default function FlashcardManagePage() {
                   behaviorType={editingBehaviorType}
                   invalidationType={editingInvalidationType}
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <FlashcardChecklistGuide />
               </div>
 
               <div className="space-y-2 md:col-span-2">

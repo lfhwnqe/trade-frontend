@@ -34,6 +34,7 @@ import { useAlert } from "@/components/common/alert";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import type { ImageResource } from "../../config";
 import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
+import { FlashcardChecklistGuide } from "../components/FlashcardChecklistGuide";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
@@ -459,6 +460,10 @@ export default function FlashcardCreatePage() {
               behaviorType={behaviorType}
               invalidationType={invalidationType}
             />
+          </div>
+
+          <div className="md:col-span-2">
+            <FlashcardChecklistGuide />
           </div>
 
           <div className="space-y-2 md:col-span-2">
