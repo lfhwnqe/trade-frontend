@@ -5,6 +5,7 @@ import Link from "next/link";
 import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAlert } from "@/components/common/alert";
 import {
   getFlashcardSimulationCardHistory,
@@ -13,6 +14,7 @@ import {
 } from "../../request";
 import type {
   FlashcardSimulationCardHistoryResponse,
+  FlashcardSimulationPlaybookAnalyticsItem,
   FlashcardSimulationPlaybookAnalyticsResponse,
   FlashcardSimulationSessionHistoryItem,
 } from "../../types";
@@ -37,6 +39,7 @@ export default function FlashcardSimulationHistoryPage() {
   const [playbookLoading, setPlaybookLoading] = React.useState(true);
   const [recentWindow, setRecentWindow] = React.useState("30");
   const [minResolved, setMinResolved] = React.useState("5");
+  const [selectedPlaybook, setSelectedPlaybook] = React.useState<FlashcardSimulationPlaybookAnalyticsItem | null>(null);
   const [cardId, setCardId] = React.useState("");
   const [cardHistory, setCardHistory] = React.useState<FlashcardSimulationCardHistoryResponse | null>(null);
   const [historyLoading, setHistoryLoading] = React.useState(false);
@@ -100,6 +103,20 @@ export default function FlashcardSimulationHistoryPage() {
     return { completedCount, totalAttempts, totalSuccess, totalFailure, successRate };
   }, [sessions]);
 
+  const selectedPlaybookSuggestion = React.useMemo(() => {
+    if (!selectedPlaybook) return "";
+    if (selectedPlaybook.flags.includes("LOW_SAMPLE")) {
+      return "这个剧本当前更像是样本不足，建议先补足训练次数，再判断是否真的是稳定弱点。";
+    }
+    if (selectedPlaybook.flags.includes("REPEATED_FAILURE") && selectedPlaybook.topFailureReasons[0]) {
+      return `这个剧本当前不是随机出错，而是在“${selectedPlaybook.topFailureReasons[0].reason}”上重复犯错，建议优先围绕这个失败点做定向复训。`;
+    }
+    if (selectedPlaybook.avgRr < 1.5) {
+      return "这个剧本当前成功率和 RR 都偏弱，更像是入场质量或结构筛选问题，建议先收紧出手条件。";
+    }
+    return "这个剧本已经形成可观察弱点，建议结合失败原因分布继续复盘最近样本。";
+  }, [selectedPlaybook?.playbookType, selectedPlaybook?.flags, selectedPlaybook?.topFailureReasons, selectedPlaybook?.avgRr]);
+
   return (
     <TradePageShell title="闪卡模拟盘训练历史" subtitle="一边回看 session / card 历史，一边看主剧本薄弱项统计" showAddButton={false}>
       <div className="space-y-6">
@@ -160,7 +177,7 @@ export default function FlashcardSimulationHistoryPage() {
                 ) : !playbookAnalytics || playbookAnalytics.weakest.length === 0 ? (
                   <div className="text-sm text-[#9ca3af]">当前没有达到上榜阈值的剧本</div>
                 ) : playbookAnalytics.weakest.map((item) => (
-                  <div key={item.playbookType} className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
+                  <button key={item.playbookType} type="button" onClick={() => setSelectedPlaybook(item)} className="rounded-lg border border-[#27272a] bg-[#18181b] p-4 text-left transition hover:border-[#00c2b2]/50 hover:bg-[#1a1a1d]">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold text-[#e5e7eb]">{item.label}</div>
@@ -176,14 +193,14 @@ export default function FlashcardSimulationHistoryPage() {
                     </div>
                     <div className="mt-3 text-xs text-[#9ca3af]">主失败原因：<span className="text-[#e5e7eb]">{item.topFailureReasons[0] ? `${item.topFailureReasons[0].reason}（${Math.round(item.topFailureReasons[0].share * 100)}%）` : "-"}</span></div>
                     <div className="mt-3 flex flex-wrap gap-2">{item.flags.map((flag) => <span key={flag} className="rounded-full border border-[#3f3f46] px-2 py-1 text-[11px] text-[#d4d4d8]">{flag}</span>)}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
 
             <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5">
               <div className="text-sm font-medium text-[#e5e7eb]">全量剧本明细</div>
-              <div className="mt-1 text-xs text-[#9ca3af]">低样本剧本会保留在列表中，但不会进入 Top 3 排行。</div>
+              <div className="mt-1 text-xs text-[#9ca3af]">低样本剧本会保留在列表中，但不会进入 Top 3 排行。点击行可查看这个剧本为什么弱。</div>
               <div className="mt-4 overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
@@ -203,7 +220,7 @@ export default function FlashcardSimulationHistoryPage() {
                     ) : !playbookAnalytics || playbookAnalytics.items.length === 0 ? (
                       <tr><td colSpan={7} className="py-6 text-[#9ca3af]">还没有可用于聚合的 simulation 数据</td></tr>
                     ) : playbookAnalytics.items.map((item) => (
-                      <tr key={item.playbookType} className="border-t border-[#27272a] text-[#e5e7eb] align-top">
+                      <tr key={item.playbookType} className="border-t border-[#27272a] text-[#e5e7eb] align-top cursor-pointer hover:bg-[#18181b]" onClick={() => setSelectedPlaybook(item)}>
                         <td className="py-3 pr-4">
                           <div className="font-medium">{item.label}</div>
                           <div className="mt-1 text-xs text-[#9ca3af] break-all">{item.playbookType}</div>
@@ -222,6 +239,62 @@ export default function FlashcardSimulationHistoryPage() {
             </div>
           </div>
         ) : null}
+
+        <Dialog open={Boolean(selectedPlaybook)} onOpenChange={(open) => { if (!open) setSelectedPlaybook(null); }}>
+          <DialogContent className="w-[min(96vw,900px)] max-w-none border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+            <DialogHeader>
+              <DialogTitle>{selectedPlaybook?.label || "剧本详情"}</DialogTitle>
+              <DialogDescription className="text-[#9ca3af]">{selectedPlaybook?.playbookType || ""}</DialogDescription>
+            </DialogHeader>
+            {selectedPlaybook ? (
+              <div className="space-y-5">
+                <div className="grid gap-4 md:grid-cols-5">
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">弱点分</div><div className="mt-2 text-lg font-semibold text-[#f59e0b]">{selectedPlaybook.weaknessScore.toFixed(0)}</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">闭环数</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{selectedPlaybook.resolvedCount}</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">成功率</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{Math.round(selectedPlaybook.successRate * 100)}%</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">平均 RR</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{selectedPlaybook.avgRr.toFixed(2)}</div></div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3"><div className="text-xs text-[#9ca3af]">平均评分</div><div className="mt-2 text-lg font-semibold text-[#e5e7eb]">{selectedPlaybook.qualityScoreAvg.toFixed(2)}</div></div>
+                </div>
+
+                <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
+                  <div className="text-sm font-medium text-[#e5e7eb]">失败原因分布</div>
+                  <div className="mt-3 space-y-3">
+                    {selectedPlaybook.topFailureReasons.length === 0 ? (
+                      <div className="text-sm text-[#9ca3af]">当前没有可用的失败原因样本</div>
+                    ) : selectedPlaybook.topFailureReasons.map((reason) => (
+                      <div key={reason.reason}>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-[#e5e7eb]">{reason.reason}</span>
+                          <span className="text-[#9ca3af]">{reason.count} 次 / {Math.round(reason.share * 100)}%</span>
+                        </div>
+                        <div className="mt-2 h-2 rounded-full bg-[#27272a]">
+                          <div className="h-2 rounded-full bg-[#00c2b2]" style={{ width: `${Math.max(6, Math.round(reason.share * 100))}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
+                    <div className="text-sm font-medium text-[#e5e7eb]">复训建议</div>
+                    <div className="mt-3 text-sm leading-6 text-[#d4d4d8]">{selectedPlaybookSuggestion}</div>
+                  </div>
+                  <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
+                    <div className="text-sm font-medium text-[#e5e7eb]">当前标签</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedPlaybook.flags.length === 0 ? (
+                        <span className="text-sm text-[#9ca3af]">暂无标签</span>
+                      ) : selectedPlaybook.flags.map((flag) => (
+                        <span key={flag} className="rounded-full border border-[#3f3f46] px-2 py-1 text-[11px] text-[#d4d4d8]">{flag}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </DialogContent>
+        </Dialog>
 
         {activeTab === "sessions" ? (
           <>
