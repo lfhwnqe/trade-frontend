@@ -92,6 +92,15 @@ function HoverText({
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
 const EMPTY_SELECT_VALUE = "__NONE__";
 
+function encodeOffsetCursor(offset: number) {
+  if (offset <= 0) return undefined;
+  const json = JSON.stringify({ offset });
+  if (typeof window !== "undefined" && typeof window.btoa === "function") {
+    return window.btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+  return undefined;
+}
+
 export default function FlashcardManagePage() {
   const [successAlert, errorAlert] = useAlert();
 
@@ -149,8 +158,6 @@ export default function FlashcardManagePage() {
   });
 
   // page N 的起始 cursor 存在 index N-1；只放 ref，避免触发 useEffect 循环
-  const cursorStackRef = React.useRef<(string | undefined)[]>([undefined]);
-
   const fetchPage = React.useCallback(
     async (
       targetPage: number,
@@ -163,7 +170,7 @@ export default function FlashcardManagePage() {
       try {
         const cursor = resetCursor
           ? undefined
-          : cursorStackRef.current[targetPage - 1];
+          : encodeOffsetCursor((targetPage - 1) * pageSize);
 
         const res = await listFlashcardCards({
           pageSize,
@@ -178,18 +185,6 @@ export default function FlashcardManagePage() {
         setItems(res.items);
         setPage(targetPage);
         setTotalItems(Math.max(res.totalCount, 0));
-
-        if (resetCursor) {
-          cursorStackRef.current = [undefined, res.nextCursor || undefined];
-        } else {
-          const nextStack = [...cursorStackRef.current];
-          if (res.nextCursor) {
-            nextStack[targetPage] = res.nextCursor;
-          } else {
-            nextStack.length = targetPage;
-          }
-          cursorStackRef.current = nextStack;
-        }
       } catch (error) {
         const msg = error instanceof Error ? error.message : "查询失败";
         errorAlert(msg);
@@ -257,7 +252,6 @@ export default function FlashcardManagePage() {
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       setActiveQuery({ ...queryForm });
-      cursorStackRef.current = [undefined];
       setRowSelection({});
       setSorting([]);
     },
@@ -268,7 +262,6 @@ export default function FlashcardManagePage() {
     const emptyQuery = { symbolPairInfo: "", playbookType: "", marketTimeInfo: "", sortBy: "CREATED_AT" as FlashcardCardSortBy, sortOrder: "desc" as FlashcardCardSortOrder };
     setQueryForm(emptyQuery);
     setActiveQuery(emptyQuery);
-    cursorStackRef.current = [undefined];
     setRowSelection({});
     setSorting([]);
   }, []);
@@ -822,7 +815,6 @@ export default function FlashcardManagePage() {
             }}
             onPageSizeChange={(_, nextPageSize) => {
               setPageSize(nextPageSize);
-              cursorStackRef.current = [undefined];
             }}
             onSortingChange={(nextSorting) => setSorting(nextSorting as SortingState)}
             onRowSelectionChange={(nextSelection) =>
