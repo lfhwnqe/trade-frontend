@@ -19,10 +19,7 @@ import { MultiSelectDropdown } from "@/components/common/MultiSelectDropdown";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -36,28 +33,21 @@ import {
   updateFlashcardCard,
 } from "../request";
 import {
-  FLASHCARD_BEHAVIOR_SELECT_OPTION_GROUPS,
   FLASHCARD_CARD_SORT_BYS,
   FLASHCARD_CARD_SORT_ORDERS,
   FLASHCARD_DIRECTIONS,
-  FLASHCARD_INVALIDATION_SELECT_OPTION_GROUPS,
   FLASHCARD_LABELS,
   FLASHCARD_SYSTEM_OUTCOME_TYPES,
-  isLegacyFlashcardBehaviorType,
-  isLegacyFlashcardInvalidationType,
   type FlashcardAction,
-  type FlashcardBehaviorType,
   type FlashcardCard,
   type FlashcardCardSortBy,
   type FlashcardCardSortOrder,
   type FlashcardDictionaryOptionItem,
-  type FlashcardInvalidationType,
   type FlashcardSystemOutcomeType,
 } from "../types";
 import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 import type { ImageResource } from "../../config";
 import { TRADE_PERIOD_PRESETS } from "../../config";
-import { FlashcardFieldGuide } from "../components/FlashcardFieldGuide";
 import { FlashcardChecklistGuide } from "../components/FlashcardChecklistGuide";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions, getDictionaryItemLabelByCode } from "../../dictionary";
 
@@ -115,12 +105,6 @@ export default function FlashcardManagePage() {
   const [editingExpectedAction, setEditingExpectedAction] = React.useState<FlashcardAction | "">(
     "",
   );
-  const [editingBehaviorType, setEditingBehaviorType] = React.useState<
-    FlashcardBehaviorType | ""
-  >("");
-  const [editingInvalidationType, setEditingInvalidationType] = React.useState<
-    FlashcardInvalidationType | ""
-  >("");
   const [editingSystemOutcomeType, setEditingSystemOutcomeType] = React.useState<
     FlashcardSystemOutcomeType | ""
   >("");
@@ -306,8 +290,6 @@ export default function FlashcardManagePage() {
         : [],
     );
     setEditingExpectedAction(card.expectedAction || card.direction || "NO_TRADE");
-    setEditingBehaviorType(card.behaviorType || "");
-    setEditingInvalidationType(card.invalidationType || "");
     setEditingSystemOutcomeType(card.systemOutcomeType || "");
     setEditingEarlyExitTag(card.earlyExitTag === true);
     setEditingEarlyExitReason(card.earlyExitReason || "");
@@ -348,8 +330,6 @@ export default function FlashcardManagePage() {
         questionImageUrl: editingQuestionImages[0].url,
         answerImageUrl: editingAnswerImages[0].url,
         expectedAction: editingExpectedAction,
-        behaviorType: editingBehaviorType || undefined,
-        invalidationType: editingInvalidationType || undefined,
         systemOutcomeType: editingSystemOutcomeType || undefined,
         earlyExitTag: editingEarlyExitTag,
         earlyExitReason: editingEarlyExitTag
@@ -378,13 +358,11 @@ export default function FlashcardManagePage() {
     }
   }, [
     editingAnswerImages,
-    editingBehaviorType,
     editingCard,
     editingEarlyExitImages,
     editingEarlyExitReason,
     editingEarlyExitTag,
     editingExpectedAction,
-    editingInvalidationType,
     editingSystemOutcomeType,
     editingMarketTimeInfo,
     editingNote,
@@ -1066,96 +1044,6 @@ export default function FlashcardManagePage() {
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-medium text-[#9ca3af]">行为类型（选填）</div>
-                <Select
-                  value={editingBehaviorType || EMPTY_SELECT_VALUE}
-                  onValueChange={(value) =>
-                    setEditingBehaviorType(
-                      value === EMPTY_SELECT_VALUE
-                        ? ""
-                        : (value as FlashcardBehaviorType),
-                    )
-                  }
-                >
-                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
-                    <SelectValue placeholder="选择价格行为依据" />
-                  </SelectTrigger>
-                  <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-                    <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
-                    {isLegacyFlashcardBehaviorType(editingBehaviorType) ? (
-                      <>
-                        <SelectSeparator />
-                        <SelectGroup>
-                          <SelectLabel>当前旧值（仅展示）</SelectLabel>
-                          <SelectItem value={editingBehaviorType}>
-                            {FLASHCARD_LABELS[editingBehaviorType]}
-                          </SelectItem>
-                        </SelectGroup>
-                      </>
-                    ) : null}
-                    {FLASHCARD_BEHAVIOR_SELECT_OPTION_GROUPS.map((group) => (
-                      <React.Fragment key={group.label}>
-                        <SelectSeparator />
-                        <SelectGroup>
-                          <SelectLabel>{group.label}</SelectLabel>
-                          {group.items.map((item) => (
-                            <SelectItem key={item} value={item}>
-                              {FLASHCARD_LABELS[item]}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </React.Fragment>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-[#9ca3af]">失效类型（选填）</div>
-                <Select
-                  value={editingInvalidationType || EMPTY_SELECT_VALUE}
-                  onValueChange={(value) =>
-                    setEditingInvalidationType(
-                      value === EMPTY_SELECT_VALUE
-                        ? ""
-                        : (value as FlashcardInvalidationType),
-                    )
-                  }
-                >
-                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
-                    <SelectValue placeholder="选择止损/失效逻辑" />
-                  </SelectTrigger>
-                  <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-                    <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
-                    {isLegacyFlashcardInvalidationType(editingInvalidationType) ? (
-                      <>
-                        <SelectSeparator />
-                        <SelectGroup>
-                          <SelectLabel>当前旧值（仅展示）</SelectLabel>
-                          <SelectItem value={editingInvalidationType}>
-                            {FLASHCARD_LABELS[editingInvalidationType]}
-                          </SelectItem>
-                        </SelectGroup>
-                      </>
-                    ) : null}
-                    {FLASHCARD_INVALIDATION_SELECT_OPTION_GROUPS.map((group) => (
-                      <React.Fragment key={group.label}>
-                        <SelectSeparator />
-                        <SelectGroup>
-                          <SelectLabel>{group.label}</SelectLabel>
-                          {group.items.map((item) => (
-                            <SelectItem key={item} value={item}>
-                              {FLASHCARD_LABELS[item]}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </React.Fragment>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
                 <div className="text-xs font-medium text-[#9ca3af]">币对信息（选填）</div>
                 <Input
                   value={editingSymbolPairInfo}
@@ -1283,13 +1171,6 @@ export default function FlashcardManagePage() {
                     </div>
                   </div>
                 ) : null}
-              </div>
-
-              <div className="md:col-span-2">
-                <FlashcardFieldGuide
-                  behaviorType={editingBehaviorType}
-                  invalidationType={editingInvalidationType}
-                />
               </div>
 
               <div className="md:col-span-2">
