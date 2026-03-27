@@ -57,7 +57,7 @@ export function FlashcardChecklistGuide({ className }: FlashcardChecklistGuidePr
             <button
               type="button"
               onClick={() => void handleCopy()}
-              className="rounded-md border border-[#27272a] bg-[#121212] px-2.5 py-1 text-xs text-[#e5e7eb] transition hover:bg-[#1f2937]"
+              className="cursor-pointer rounded-md border border-[#27272a] bg-[#121212] px-2.5 py-1 text-xs text-[#e5e7eb] transition hover:bg-[#1f2937]"
             >
               {copied ? "已复制" : "点击复制"}
             </button>
