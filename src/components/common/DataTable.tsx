@@ -11,7 +11,6 @@ import {
 } from "@tanstack/react-table";
 
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -19,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -145,9 +145,9 @@ export function DataTable<TData, TValue>({
             loading ? "opacity-50 pointer-events-none" : ""
           }`}
         > */}
-          {/* 横向和纵向都可滚动的表格容器，支持固定列 */}
+          {/* 横向和纵向都可滚动的表格容器，支持固定列 + 固定表头 */}
           <div ref={scrollContainerRef} className="overflow-auto h-full relative">
-            <Table className="min-w-max">
+            <table className="w-full min-w-max caption-bottom text-sm">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow
@@ -159,12 +159,14 @@ export function DataTable<TData, TValue>({
                       return (
                         <TableHead
                           key={header.id}
-                          className={`whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-[#9ca3af] ${
+                          className={cn(
+                            "whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-[#9ca3af] bg-[#121212] shadow-[0_1px_0_0_#27272a]",
                             isPinned === "right"
-                              ? "sticky right-0 bg-black/20 border-l border-[#27272a] z-10"
-                              : ""
-                          }`}
+                              ? "sticky right-0 top-0 border-l border-[#27272a] z-30"
+                              : "sticky top-0 z-20"
+                          )}
                           style={{
+                            top: 0,
                             ...(isPinned === "right" && {
                               right: 0,
                             }),
@@ -207,11 +209,12 @@ export function DataTable<TData, TValue>({
                         return (
                           <TableCell
                             key={cell.id}
-                            className={`whitespace-nowrap text-[#e5e7eb] ${
+                            className={cn(
+                              "whitespace-nowrap text-[#e5e7eb]",
                               isPinned === "right"
                                 ? "sticky right-0 bg-[#121212]/95 border-l border-[#27272a] z-10"
                                 : ""
-                            }`}
+                            )}
                             style={{
                               ...(isPinned === "right" && {
                                 right: 0,
@@ -238,7 +241,7 @@ export function DataTable<TData, TValue>({
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
+            </table>
           </div>
 
           {/* Loading overlay for existing data */}
