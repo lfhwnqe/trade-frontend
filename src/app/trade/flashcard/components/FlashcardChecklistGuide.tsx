@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useAlert } from "@/components/common/alert";
 
 type FlashcardChecklistGuideProps = {
   className?: string;
@@ -15,17 +16,20 @@ const NOTE_TEMPLATE = [
 ].join("\n");
 
 export function FlashcardChecklistGuide({ className }: FlashcardChecklistGuideProps) {
+  const [successAlert, errorAlert] = useAlert();
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = React.useCallback(async () => {
     try {
       await navigator.clipboard.writeText(NOTE_TEMPLATE);
       setCopied(true);
+      successAlert("已复制到剪贴板");
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
       setCopied(false);
+      errorAlert("复制失败，请稍后重试");
     }
-  }, []);
+  }, [errorAlert, successAlert]);
 
   return (
     <div className={["space-y-4 rounded-lg border border-[#27272a] bg-[#18181b] p-4", className]
