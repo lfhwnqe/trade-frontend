@@ -218,7 +218,7 @@ export default function FlashcardCreatePage() {
                     key={item}
                     type="button"
                     onClick={() => setExpectedAction(item as FlashcardAction)}
-                    className={`h-10 rounded-md border text-sm font-medium transition-colors ${
+                    className={`cursor-pointer h-10 rounded-md border text-sm font-medium transition-colors ${
                       isActive
                         ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
                         : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
@@ -264,7 +264,7 @@ export default function FlashcardCreatePage() {
               value={playbookType}
               onValueChange={setPlaybookType}
             >
-              <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+              <SelectTrigger className="cursor-pointer h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
                 <SelectValue placeholder="选择剧本类型" />
               </SelectTrigger>
               <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
@@ -296,7 +296,7 @@ export default function FlashcardCreatePage() {
                             : [...prev, item.code],
                         )
                       }
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
+                      className={`cursor-pointer inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
                         active
                           ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
                           : "border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424]"
@@ -324,7 +324,7 @@ export default function FlashcardCreatePage() {
                 setSystemOutcomeType(value as FlashcardSystemOutcomeType)
               }
             >
-              <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+              <SelectTrigger className="cursor-pointer h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
                 <SelectValue placeholder="选择系统结果分类" />
               </SelectTrigger>
               <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
@@ -338,7 +338,7 @@ export default function FlashcardCreatePage() {
           </div>
 
           <div className="space-y-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
-            <label className="flex items-center gap-3 text-sm text-[#e5e7eb]">
+            <label className="cursor-pointer flex items-center gap-3 text-sm text-[#e5e7eb]">
               <input
                 type="checkbox"
                 checked={earlyExitTag}
@@ -350,7 +350,7 @@ export default function FlashcardCreatePage() {
                     setEarlyExitImages([]);
                   }
                 }}
-                className="h-4 w-4 rounded border-[#3f3f46] bg-[#111827]"
+                className="cursor-pointer h-4 w-4 rounded border-[#3f3f46] bg-[#111827]"
               />
               <span>标记为提前离场题</span>
             </label>

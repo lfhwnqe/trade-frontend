@@ -714,7 +714,7 @@ export default function FlashcardManagePage() {
                       }))
                     }
                   >
-                    <SelectTrigger className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue placeholder="全部剧本类型" /></SelectTrigger>
+                    <SelectTrigger className="cursor-pointer h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue placeholder="全部剧本类型" /></SelectTrigger>
                     <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
                       <SelectItem value={EMPTY_SELECT_VALUE}>全部剧本类型</SelectItem>
                       {playbookTypeOptions.map((item) => (
@@ -737,7 +737,7 @@ export default function FlashcardManagePage() {
                 <div>
                   <label className="block text-xs font-medium text-[#9ca3af] mb-1">排序字段</label>
                   <Select value={queryForm.sortBy} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, sortBy: value as FlashcardCardSortBy }))}>
-                    <SelectTrigger className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="cursor-pointer h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
                       {FLASHCARD_CARD_SORT_BYS.map((item) => (
                         <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>
@@ -748,7 +748,7 @@ export default function FlashcardManagePage() {
                 <div>
                   <label className="block text-xs font-medium text-[#9ca3af] mb-1">排序方向</label>
                   <Select value={queryForm.sortOrder} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, sortOrder: value as FlashcardCardSortOrder }))}>
-                    <SelectTrigger className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="cursor-pointer h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
                       {FLASHCARD_CARD_SORT_ORDERS.map((item) => (
                         <SelectItem key={item} value={item}>{item}</SelectItem>
@@ -821,7 +821,7 @@ export default function FlashcardManagePage() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
                     <div className="text-xs font-medium text-[#9ca3af]">入场前截图</div>
-                    <button type="button" className="block w-full" onClick={() => setPreviewUrl(viewingCard.questionImageUrl)}>
+                    <button type="button" className="block w-full cursor-pointer" onClick={() => setPreviewUrl(viewingCard.questionImageUrl)}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={viewingCard.questionImageUrl}
@@ -832,7 +832,7 @@ export default function FlashcardManagePage() {
                   </div>
                   <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
                     <div className="text-xs font-medium text-[#9ca3af]">入场后截图</div>
-                    <button type="button" className="block w-full" onClick={() => setPreviewUrl(viewingCard.answerImageUrl)}>
+                    <button type="button" className="block w-full cursor-pointer" onClick={() => setPreviewUrl(viewingCard.answerImageUrl)}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={viewingCard.answerImageUrl}
@@ -895,7 +895,7 @@ export default function FlashcardManagePage() {
                         <button
                           key={`${viewingCard.cardId}-detail-early-exit-${index}`}
                           type="button"
-                          className="overflow-hidden rounded border border-[#27272a] bg-black"
+                          className="cursor-pointer overflow-hidden rounded border border-[#27272a] bg-black"
                           onClick={() => setPreviewUrl(url)}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -993,7 +993,7 @@ export default function FlashcardManagePage() {
                         type="button"
                         onClick={() => setEditingExpectedAction(item as FlashcardAction)}
                         disabled={savingNote}
-                        className={`h-10 rounded-md border text-sm font-medium transition-colors ${
+                        className={`cursor-pointer h-10 rounded-md border text-sm font-medium transition-colors ${
                           isActive
                             ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
                             : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
@@ -1040,7 +1040,7 @@ export default function FlashcardManagePage() {
                   value={editingPlaybookType}
                   onValueChange={setEditingPlaybookType}
                 >
-                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                  <SelectTrigger className="cursor-pointer h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
                     <SelectValue placeholder="选择剧本类型" />
                   </SelectTrigger>
                   <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
@@ -1067,7 +1067,7 @@ export default function FlashcardManagePage() {
                     disabled={savingNote}
                     placeholder="展开选择字典标签"
                     emptyText="暂无可用 flashcard_tag"
-                    className="border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#1a1a1a]"
+                    className="cursor-pointer border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#1a1a1a]"
                     contentClassName="border-[#27272a] bg-[#121212] text-[#e5e7eb]"
                   />
                 </div>
@@ -1081,7 +1081,7 @@ export default function FlashcardManagePage() {
                     setEditingSystemOutcomeType(value as FlashcardSystemOutcomeType)
                   }
                 >
-                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                  <SelectTrigger className="cursor-pointer h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
                     <SelectValue placeholder="选择系统结果分类" />
                   </SelectTrigger>
                   <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
@@ -1095,7 +1095,7 @@ export default function FlashcardManagePage() {
               </div>
 
               <div className="space-y-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
-                <label className="flex items-center gap-3 text-sm text-[#e5e7eb]">
+                <label className="cursor-pointer flex items-center gap-3 text-sm text-[#e5e7eb]">
                   <input
                     type="checkbox"
                     checked={editingEarlyExitTag}
@@ -1108,7 +1108,7 @@ export default function FlashcardManagePage() {
                       }
                     }}
                     disabled={savingNote}
-                    className="h-4 w-4 rounded border-[#3f3f46] bg-[#111827]"
+                    className="cursor-pointer h-4 w-4 rounded border-[#3f3f46] bg-[#111827]"
                   />
                   <span>标记为提前离场题</span>
                 </label>
