@@ -74,6 +74,12 @@ export function DataTable<TData, TValue>({
   toolbarSlot,
   showPagination = true,
 }: DataTableProps<TData, TValue>) {
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [page]);
+
   const table = useReactTable({
     data,
     columns,
@@ -140,7 +146,7 @@ export function DataTable<TData, TValue>({
           }`}
         > */}
           {/* 横向和纵向都可滚动的表格容器，支持固定列 */}
-          <div className="overflow-auto h-full relative">
+          <div ref={scrollContainerRef} className="overflow-auto h-full relative">
             <Table className="min-w-max">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
