@@ -307,16 +307,18 @@ export default function FlashcardManagePage() {
 
   const handleSaveNote = React.useCallback(async () => {
     if (!editingCard) return;
-    if (
-      !editingExpectedAction ||
-      !editingQuestionImages[0]?.url ||
-      !editingAnswerImages[0]?.url ||
-      !editingSystemOutcomeType ||
-      !editingMarketTimeInfo.trim() ||
-      !editingSymbolPairInfo.trim() ||
-      !editingPlaybookType
-    ) {
-      errorAlert("请补全入场前截图、入场后截图和全部必填项");
+
+    const missingFields: string[] = [];
+    if (!editingQuestionImages[0]?.url) missingFields.push("入场前截图");
+    if (!editingAnswerImages[0]?.url) missingFields.push("入场后截图");
+    if (!editingExpectedAction) missingFields.push("标准动作");
+    if (!editingSystemOutcomeType) missingFields.push("系统结果分类");
+    if (!editingMarketTimeInfo.trim()) missingFields.push("行情时间信息");
+    if (!editingSymbolPairInfo.trim()) missingFields.push("币对信息");
+    if (!editingPlaybookType) missingFields.push("剧本类型");
+
+    if (missingFields.length > 0) {
+      errorAlert(`请补全：${missingFields.join("、")}`);
       return;
     }
 
@@ -325,13 +327,16 @@ export default function FlashcardManagePage() {
       return;
     }
 
+    const nextExpectedAction = editingExpectedAction as FlashcardAction;
+    const nextSystemOutcomeType = editingSystemOutcomeType as FlashcardSystemOutcomeType;
+
     setSavingNote(true);
     try {
       const updated = await updateFlashcardCard(editingCard.cardId, {
         questionImageUrl: editingQuestionImages[0].url,
         answerImageUrl: editingAnswerImages[0].url,
-        expectedAction: editingExpectedAction,
-        systemOutcomeType: editingSystemOutcomeType || undefined,
+        expectedAction: nextExpectedAction,
+        systemOutcomeType: nextSystemOutcomeType,
         earlyExitTag: editingEarlyExitTag,
         earlyExitReason: editingEarlyExitTag
           ? editingEarlyExitReason.trim() || undefined

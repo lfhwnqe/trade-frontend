@@ -107,16 +107,17 @@ export default function FlashcardCreatePage() {
   }, []);
 
   const handleSubmit = React.useCallback(async () => {
-    if (
-      !questionImageUrl ||
-      !answerImageUrl ||
-      !expectedAction ||
-      !systemOutcomeType ||
-      !marketTimeInfo.trim() ||
-      !symbolPairInfo.trim() ||
-      !playbookType
-    ) {
-      errorAlert("请先填写全部必填项并上传两张图片");
+    const missingFields: string[] = [];
+    if (!questionImageUrl) missingFields.push("入场前截图");
+    if (!answerImageUrl) missingFields.push("入场后截图");
+    if (!expectedAction) missingFields.push("标准动作");
+    if (!systemOutcomeType) missingFields.push("系统结果分类");
+    if (!marketTimeInfo.trim()) missingFields.push("行情时间信息");
+    if (!symbolPairInfo.trim()) missingFields.push("币对信息");
+    if (!playbookType) missingFields.push("剧本类型");
+
+    if (missingFields.length > 0) {
+      errorAlert(`请补全：${missingFields.join("、")}`);
       return;
     }
 
@@ -125,13 +126,16 @@ export default function FlashcardCreatePage() {
       return;
     }
 
+    const nextExpectedAction = expectedAction as FlashcardAction;
+    const nextSystemOutcomeType = systemOutcomeType as FlashcardSystemOutcomeType;
+
     setSubmitting(true);
     try {
       await createFlashcardCard({
         questionImageUrl,
         answerImageUrl,
-        expectedAction,
-        systemOutcomeType: systemOutcomeType || undefined,
+        expectedAction: nextExpectedAction,
+        systemOutcomeType: nextSystemOutcomeType,
         earlyExitTag,
         earlyExitReason: earlyExitTag ? earlyExitReason.trim() || undefined : undefined,
         earlyExitImageUrls: earlyExitTag
