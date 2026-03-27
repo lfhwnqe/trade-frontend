@@ -30,7 +30,6 @@ import { FlashcardChecklistGuide } from "../components/FlashcardChecklistGuide";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
-const EMPTY_SELECT_VALUE = "__NONE__";
 
 export default function FlashcardCreatePage() {
   const [successAlert, errorAlert] = useAlert();
@@ -108,7 +107,15 @@ export default function FlashcardCreatePage() {
   }, []);
 
   const handleSubmit = React.useCallback(async () => {
-    if (!questionImageUrl || !answerImageUrl || !expectedAction) {
+    if (
+      !questionImageUrl ||
+      !answerImageUrl ||
+      !expectedAction ||
+      !systemOutcomeType ||
+      !marketTimeInfo.trim() ||
+      !symbolPairInfo.trim() ||
+      !playbookType
+    ) {
       errorAlert("请先填写全部必填项并上传两张图片");
       return;
     }
@@ -221,7 +228,7 @@ export default function FlashcardCreatePage() {
           </div>
 
           <div className="space-y-2">
-            <div className="text-xs font-medium text-[#9ca3af]">行情时间信息（选填）</div>
+            <div className="text-xs font-medium text-[#9ca3af]">行情时间信息（必填）</div>
             <DateCalendarPicker
               analysisTime={marketTimeInfo}
               updateForm={(patch) => setMarketTimeInfo(patch.analysisTime)}
@@ -231,7 +238,7 @@ export default function FlashcardCreatePage() {
           </div>
 
           <div className="space-y-2">
-            <div className="text-xs font-medium text-[#9ca3af]">币对信息（选填）</div>
+            <div className="text-xs font-medium text-[#9ca3af]">币对信息（必填）</div>
             <Input
               value={symbolPairInfo}
               onChange={(event) => setSymbolPairInfo(event.target.value)}
@@ -248,16 +255,15 @@ export default function FlashcardCreatePage() {
           </div>
 
           <div className="space-y-2">
-            <div className="text-xs font-medium text-[#9ca3af]">剧本类型（选填）</div>
+            <div className="text-xs font-medium text-[#9ca3af]">剧本类型（必填）</div>
             <Select
-              value={playbookType || EMPTY_SELECT_VALUE}
-              onValueChange={(value) => setPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}
+              value={playbookType}
+              onValueChange={setPlaybookType}
             >
               <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
                 <SelectValue placeholder="选择剧本类型" />
               </SelectTrigger>
               <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-                <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
                 {playbookTypeOptions.map((item) => (
                   <SelectItem key={item.code} value={item.code}>
                     {item.label}
@@ -307,22 +313,17 @@ export default function FlashcardCreatePage() {
           </div>
 
           <div className="space-y-2">
-            <div className="text-xs font-medium text-[#9ca3af]">系统结果分类（选填）</div>
+            <div className="text-xs font-medium text-[#9ca3af]">系统结果分类（必填）</div>
             <Select
-              value={systemOutcomeType || EMPTY_SELECT_VALUE}
+              value={systemOutcomeType}
               onValueChange={(value) =>
-                setSystemOutcomeType(
-                  value === EMPTY_SELECT_VALUE
-                    ? ""
-                    : (value as FlashcardSystemOutcomeType),
-                )
+                setSystemOutcomeType(value as FlashcardSystemOutcomeType)
               }
             >
               <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
-                <SelectValue placeholder="未分类" />
+                <SelectValue placeholder="选择系统结果分类" />
               </SelectTrigger>
               <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-                <SelectItem value={EMPTY_SELECT_VALUE}>未分类</SelectItem>
                 {FLASHCARD_SYSTEM_OUTCOME_TYPES.map((item) => (
                   <SelectItem key={item} value={item}>
                     {FLASHCARD_LABELS[item]}

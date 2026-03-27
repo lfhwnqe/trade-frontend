@@ -307,8 +307,16 @@ export default function FlashcardManagePage() {
 
   const handleSaveNote = React.useCallback(async () => {
     if (!editingCard) return;
-    if (!editingExpectedAction || !editingQuestionImages[0]?.url || !editingAnswerImages[0]?.url) {
-      errorAlert("请补全入场前截图、入场后截图和标准动作");
+    if (
+      !editingExpectedAction ||
+      !editingQuestionImages[0]?.url ||
+      !editingAnswerImages[0]?.url ||
+      !editingSystemOutcomeType ||
+      !editingMarketTimeInfo.trim() ||
+      !editingSymbolPairInfo.trim() ||
+      !editingPlaybookType
+    ) {
+      errorAlert("请补全入场前截图、入场后截图和全部必填项");
       return;
     }
 
@@ -463,28 +471,6 @@ export default function FlashcardManagePage() {
         enableSorting: false,
       },
       {
-        accessorKey: "behaviorType",
-        header: "行为类型",
-        cell: ({ row }) => {
-          const text = row.original.behaviorType
-            ? FLASHCARD_LABELS[row.original.behaviorType]
-            : "-";
-          return <HoverText text={text} className="min-w-[120px] text-[#9ca3af]" />;
-        },
-        enableSorting: false,
-      },
-      {
-        accessorKey: "invalidationType",
-        header: "失效类型",
-        cell: ({ row }) => {
-          const text = row.original.invalidationType
-            ? FLASHCARD_LABELS[row.original.invalidationType]
-            : "-";
-          return <HoverText text={text} className="min-w-[120px] text-[#9ca3af]" />;
-        },
-        enableSorting: false,
-      },
-      {
         accessorKey: "systemOutcomeType",
         header: "系统结果",
         cell: ({ row }) => {
@@ -557,16 +543,6 @@ export default function FlashcardManagePage() {
         cell: ({ row }) => {
           const text = row.original.symbolPairInfo?.trim() || "-";
           return <HoverText text={text} className="min-w-[120px] text-[#e5e7eb]" />;
-        },
-        enableSorting: false,
-      },
-      {
-        accessorKey: "playbookType",
-        header: "剧本类型",
-        cell: ({ row }) => {
-          const matched = playbookTypeOptions.find((item) => item.code === row.original.playbookType);
-          const text = matched?.label || row.original.playbookType || "-";
-          return <HoverText text={text} className="min-w-[140px] text-[#e5e7eb]" />;
         },
         enableSorting: false,
       },
@@ -1026,7 +1002,7 @@ export default function FlashcardManagePage() {
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-medium text-[#9ca3af]">行情时间信息（选填）</div>
+                <div className="text-xs font-medium text-[#9ca3af]">行情时间信息（必填）</div>
                 <DateCalendarPicker
                   analysisTime={editingMarketTimeInfo}
                   updateForm={(patch) => setEditingMarketTimeInfo(patch.analysisTime)}
@@ -1036,7 +1012,7 @@ export default function FlashcardManagePage() {
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-medium text-[#9ca3af]">币对信息（选填）</div>
+                <div className="text-xs font-medium text-[#9ca3af]">币对信息（必填）</div>
                 <Input
                   value={editingSymbolPairInfo}
                   onChange={(event) => setEditingSymbolPairInfo(event.target.value)}
@@ -1054,16 +1030,15 @@ export default function FlashcardManagePage() {
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-medium text-[#9ca3af]">剧本类型（选填）</div>
+                <div className="text-xs font-medium text-[#9ca3af]">剧本类型（必填）</div>
                 <Select
-                  value={editingPlaybookType || EMPTY_SELECT_VALUE}
-                  onValueChange={(value) => setEditingPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}
+                  value={editingPlaybookType}
+                  onValueChange={setEditingPlaybookType}
                 >
                   <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
                     <SelectValue placeholder="选择剧本类型" />
                   </SelectTrigger>
                   <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-                    <SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>
                     {playbookTypeOptions.map((item) => (
                       <SelectItem key={item.code} value={item.code}>
                         {item.label}
@@ -1094,22 +1069,17 @@ export default function FlashcardManagePage() {
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-medium text-[#9ca3af]">系统结果分类（选填）</div>
+                <div className="text-xs font-medium text-[#9ca3af]">系统结果分类（必填）</div>
                 <Select
-                  value={editingSystemOutcomeType || EMPTY_SELECT_VALUE}
+                  value={editingSystemOutcomeType}
                   onValueChange={(value) =>
-                    setEditingSystemOutcomeType(
-                      value === EMPTY_SELECT_VALUE
-                        ? ""
-                        : (value as FlashcardSystemOutcomeType),
-                    )
+                    setEditingSystemOutcomeType(value as FlashcardSystemOutcomeType)
                   }
                 >
                   <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
-                    <SelectValue placeholder="未分类" />
+                    <SelectValue placeholder="选择系统结果分类" />
                   </SelectTrigger>
                   <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-                    <SelectItem value={EMPTY_SELECT_VALUE}>未分类</SelectItem>
                     {FLASHCARD_SYSTEM_OUTCOME_TYPES.map((item) => (
                       <SelectItem key={item} value={item}>
                         {FLASHCARD_LABELS[item]}

@@ -1,3 +1,7 @@
+"use client";
+
+import * as React from "react";
+
 type FlashcardChecklistGuideProps = {
   className?: string;
 };
@@ -11,6 +15,18 @@ const NOTE_TEMPLATE = [
 ].join("\n");
 
 export function FlashcardChecklistGuide({ className }: FlashcardChecklistGuideProps) {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = React.useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(NOTE_TEMPLATE);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  }, []);
+
   return (
     <div className={["space-y-4 rounded-lg border border-[#27272a] bg-[#18181b] p-4", className]
       .filter(Boolean)
@@ -32,7 +48,16 @@ export function FlashcardChecklistGuide({ className }: FlashcardChecklistGuidePr
         </div>
 
         <div>
-          <div className="text-xs font-medium text-[#9ca3af]">题目备注建议模板</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-xs font-medium text-[#9ca3af]">题目备注建议模板</div>
+            <button
+              type="button"
+              onClick={() => void handleCopy()}
+              className="rounded-md border border-[#27272a] bg-[#121212] px-2.5 py-1 text-xs text-[#e5e7eb] transition hover:bg-[#1f2937]"
+            >
+              {copied ? "已复制" : "点击复制"}
+            </button>
+          </div>
           <pre className="mt-2 whitespace-pre-wrap rounded-md border border-[#27272a] bg-[#121212] p-3 text-sm leading-6 text-[#d4d4d8]">{NOTE_TEMPLATE}</pre>
         </div>
       </div>
