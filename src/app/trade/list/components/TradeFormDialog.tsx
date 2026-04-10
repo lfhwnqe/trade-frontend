@@ -42,7 +42,10 @@ import { Textarea as BaseTextarea } from "@/components/ui/textarea";
 import { useAlert } from "@/components/common/alert";
 import { Star } from "lucide-react";
 import TagSelectInput from "@/components/common/TagSelectInput";
-import { fetchTradeTagOptions } from "../../dictionary";
+import {
+  fetchFlashcardTagOptions,
+  fetchPlaybookTypeOptions,
+} from "../../dictionary";
 
 export interface TradeFormProps {
   editTrade: Trade | null;
@@ -65,6 +68,7 @@ export interface TradeFormRef {
 }
 
 interface EntryPlan {
+  playbookType?: string;
   entryReason?: string;
   entrySignal?: string;
   exitSignal?: string;
@@ -74,13 +78,36 @@ function EntryPlanForm({
   value,
   onChange,
   readOnly,
+  playbookTypeOptions,
 }: {
   value?: EntryPlan;
   onChange: (v: EntryPlan) => void;
   readOnly?: boolean;
+  playbookTypeOptions: DictionaryTagItem[];
 }) {
   return (
     <div className="space-y-2">
+      <div className="flex flex-col gap-1">
+        <label className="block pb-1 text-sm font-medium text-muted-foreground">
+          剧本类型
+        </label>
+        <BaseSelect
+          disabled={readOnly}
+          value={value?.playbookType ?? ""}
+          onValueChange={(next) => onChange({ ...value, playbookType: next })}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="选择计划剧本类型" />
+          </SelectTrigger>
+          <SelectContent>
+            {playbookTypeOptions.map((option) => (
+              <SelectItem key={option.code} value={option.code}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </BaseSelect>
+      </div>
       <div className="flex flex-col gap-1">
         <label className="block pb-1 text-sm font-medium text-muted-foreground">
           入场理由
@@ -188,7 +215,8 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     ref,
   ) => {
     const [, errorAlert] = useAlert();
-    const [tradeTagOptions, setTradeTagOptions] = React.useState<DictionaryTagItem[]>([]);
+    const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<DictionaryTagItem[]>([]);
+    const [entryTagOptions, setEntryTagOptions] = React.useState<DictionaryTagItem[]>([]);
     const inputProps = React.useMemo(
       () => (readOnly ? { readOnly: true } : {}),
       [readOnly],
@@ -269,24 +297,29 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
     React.useEffect(() => {
       let mounted = true;
-      fetchTradeTagOptions()
-        .then((items) => {
-          if (mounted) setTradeTagOptions(items);
+      Promise.all([
+        fetchPlaybookTypeOptions(),
+        fetchFlashcardTagOptions(),
+      ])
+        .then(([playbookItems, entryItems]) => {
+          if (!mounted) return;
+          setPlaybookTypeOptions(playbookItems);
+          setEntryTagOptions(entryItems);
         })
         .catch((error) => {
-          console.warn("加载交易标签字典失败", error);
+          console.warn("加载交易表单字典失败", error);
         });
       return () => {
         mounted = false;
       };
     }, []);
 
-    const selectedDictionaryTagItems = React.useMemo(() => {
-      const selectedCodes = Array.isArray(form.tagCodes) ? form.tagCodes : [];
-      const optionMap = new Map(tradeTagOptions.map((item) => [item.code, item]));
-      const fallbackMap = new Map((form.tagItems || []).map((item) => [item.code, item]));
+    const selectedEntryTagItems = React.useMemo(() => {
+      const selectedCodes = Array.isArray(form.entryTagCodes) ? form.entryTagCodes : [];
+      const optionMap = new Map(entryTagOptions.map((item) => [item.code, item]));
+      const fallbackMap = new Map((form.entryTagItems || []).map((item) => [item.code, item]));
       return selectedCodes.map((code) => optionMap.get(code) || fallbackMap.get(code) || { code, label: code });
-    }, [form.tagCodes, form.tagItems, tradeTagOptions]);
+    }, [entryTagOptions, form.entryTagCodes, form.entryTagItems]);
 
     const isDistributed = formMode === "distributed";
     const statusRank: Record<TradeStatus, number> = {
@@ -482,29 +515,30 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               </p>
             )}
           </div>
-          {/* 字典标签 */}
-          <div className="col-span-2">
+          <div className="col-span-4">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              字典标签:
+              可能剧本类型<span className="ml-0.5 text-destructive">*</span>:
             </label>
             <div className="rounded-xl border border-white/10 p-3 space-y-3">
               <MultiSelectDropdown
-                options={tradeTagOptions.map((item) => ({
+                options={playbookTypeOptions.map((item) => ({
                   value: item.code,
                   label: item.label,
                   color: item.color,
                 }))}
-                value={Array.isArray(form.tagCodes) ? form.tagCodes : []}
-                onChange={(next) => handleFormUpdate({ tagCodes: next })}
+                value={Array.isArray(form.possiblePlaybookTypes) ? form.possiblePlaybookTypes : []}
+                onChange={(next) => handleFormUpdate({ possiblePlaybookTypes: next })}
                 disabled={analyzedSection.readOnly}
-                placeholder="展开选择字典标签"
-                emptyText="暂无可用字典标签，可先到后台字典管理中维护 trade_tag"
+                placeholder="展开选择可能剧本类型"
+                emptyText="暂无可用 playbook_type，可先到字典管理维护"
               />
-              {selectedDictionaryTagItems.length > 0 ? (
+              {(Array.isArray(form.possiblePlaybookTypes) ? form.possiblePlaybookTypes : []).length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {selectedDictionaryTagItems.map((item) => (
+                  {(Array.isArray(form.possiblePlaybookTypes) ? form.possiblePlaybookTypes : []).map((code) => {
+                    const item = playbookTypeOptions.find((option) => option.code === code) || { code, label: code };
+                    return (
                     <span
-                      key={item.code}
+                      key={code}
                       className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-foreground"
                     >
                       {item.color ? (
@@ -515,10 +549,14 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                       ) : null}
                       {item.label}
                     </span>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : null}
             </div>
+            {errors.possiblePlaybookTypes && (
+              <p className="text-sm text-destructive mt-1">{errors.possiblePlaybookTypes}</p>
+            )}
           </div>
 
           {/* 旧自定义交易标签 */}
@@ -737,6 +775,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               value={form.entryPlanA as EntryPlan}
               onChange={(v) => handlePlanChange("entryPlanA", v)}
               readOnly={waitingSection.readOnly}
+              playbookTypeOptions={playbookTypeOptions}
             />
           </div>
           {/* 入场计划B */}
@@ -748,6 +787,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               value={form.entryPlanB as EntryPlan}
               onChange={(v) => handlePlanChange("entryPlanB", v)}
               readOnly={waitingSection.readOnly}
+              playbookTypeOptions={playbookTypeOptions}
             />
           </div>
           {/* 入场计划C */}
@@ -759,6 +799,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               value={form.entryPlanC as EntryPlan}
               onChange={(v) => handlePlanChange("entryPlanC", v)}
               readOnly={waitingSection.readOnly}
+              playbookTypeOptions={playbookTypeOptions}
             />
           </div>
         </div>
@@ -1068,6 +1109,86 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               <BaseInput value={(form.plannedRR as string) ?? ""} readOnly />
             </div>
           ) : null}
+          <div className="col-span-2">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场剧本类型
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <BaseSelect
+              {...enteredSection.selectProps}
+              value={form.entryPlaybookType ?? ""}
+              onValueChange={(value) =>
+                handleFormSelectChange("entryPlaybookType" as keyof Trade, value)
+              }
+            >
+              <SelectTrigger
+                className={`w-full ${errors.entryPlaybookType ? "border-destructive" : ""}`}
+              >
+                <SelectValue placeholder="选择入场剧本类型" />
+              </SelectTrigger>
+              <SelectContent>
+                {playbookTypeOptions.map((option) => (
+                  <SelectItem key={option.code} value={option.code}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </BaseSelect>
+            {errors.entryPlaybookType && (
+              <p className="text-sm text-destructive mt-1">{errors.entryPlaybookType}</p>
+            )}
+          </div>
+          <div className="col-span-6">
+            <label className="block pb-1 text-sm font-medium text-muted-foreground">
+              入场字典标签
+              {(form.status === TradeStatus.ENTERED ||
+                form.status === TradeStatus.EXITED ||
+                form.status === TradeStatus.EARLY_EXITED) && (
+                <span className="ml-0.5 text-destructive">*</span>
+              )}
+              :
+            </label>
+            <div className="rounded-xl border border-white/10 p-3 space-y-3">
+              <MultiSelectDropdown
+                options={entryTagOptions.map((item) => ({
+                  value: item.code,
+                  label: item.label,
+                  color: item.color,
+                }))}
+                value={Array.isArray(form.entryTagCodes) ? form.entryTagCodes : []}
+                onChange={(next) => handleFormUpdate({ entryTagCodes: next })}
+                disabled={enteredSection.readOnly}
+                placeholder="展开选择入场字典标签"
+                emptyText="暂无可用 flashcard_tag，可先到字典管理维护"
+              />
+              {selectedEntryTagItems.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedEntryTagItems.map((item) => (
+                    <span
+                      key={item.code}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-foreground"
+                    >
+                      {item.color ? (
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full border border-white/20"
+                          style={{ backgroundColor: item.color }}
+                        />
+                      ) : null}
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            {errors.entryTagCodes && (
+              <p className="text-sm text-destructive mt-1">{errors.entryTagCodes}</p>
+            )}
+          </div>
           {/* 是否遵守交易系统 */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -1747,11 +1868,15 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         }
 
         if (!form.tradeSubject) {
-          newErrors.tradeType = "交易标的为必填项";
+          newErrors.tradeSubject = "交易标的为必填项";
         }
 
         if (!form.tradeType) {
           newErrors.tradeType = "交易类型为必填项";
+        }
+
+        if (!Array.isArray(form.possiblePlaybookTypes) || form.possiblePlaybookTypes.length === 0) {
+          newErrors.possiblePlaybookTypes = "可能剧本类型为必填项";
         }
 
         if (!form.marketStructure) {
@@ -1790,6 +1915,14 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
 
         if (!form.takeProfit) {
           newErrors.takeProfit = "止盈点为必填项";
+        }
+
+        if (!Array.isArray(form.entryTagCodes) || form.entryTagCodes.length === 0) {
+          newErrors.entryTagCodes = "入场字典标签为必填项";
+        }
+
+        if (!form.entryPlaybookType) {
+          newErrors.entryPlaybookType = "入场剧本类型为必填项";
         }
 
         if (

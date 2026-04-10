@@ -103,6 +103,7 @@ export interface MarketStructureAnalysisImage {
 }
 
 export interface EntryPlan {
+  playbookType?: string;
   entryReason?: string;
   entrySignal?: string;
   exitSignal?: string;
@@ -170,6 +171,7 @@ export type Trade = {
   marketStructure?: MarketStructure;
   marketStructureAnalysis?: string;
   preEntrySummary?: string;
+  possiblePlaybookTypes?: string[];
   preEntrySummaryImportance?: number;
   signalType?: string;
   tradeTags?: string[];
@@ -204,6 +206,9 @@ export type Trade = {
   stopLoss?: string;
   takeProfit?: string;
   entryReason?: string;
+  entryPlaybookType?: string;
+  entryTagCodes?: string[];
+  entryTagItems?: DictionaryTagItem[];
   entryAnalysisImages?: ImageResource[]; // 旧字段
   entryAnalysisImagesDetailed?: MarketStructureAnalysisImage[]; // 新字段
   followedSystemStrictly?: boolean;

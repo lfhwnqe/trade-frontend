@@ -113,9 +113,16 @@ function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
     ...rest,
     // 详情接口返回 entryPrice，但表单字段使用 entry，缺省时回填 entryPrice
     entry: entryFromPayload ?? entryFromPrice,
+    possiblePlaybookTypes: normalizeTags(
+      (rest as Record<string, unknown>).possiblePlaybookTypes,
+    ),
     tradeTags: normalizeTags(rest.tradeTags),
-    tagCodes: normalizeTags((rest as Record<string, unknown>).tagCodes),
-    tagItems: normalizeTagItems((rest as Record<string, unknown>).tagItems),
+    entryPlaybookType:
+      typeof (rest as Record<string, unknown>).entryPlaybookType === "string"
+        ? ((rest as Record<string, unknown>).entryPlaybookType as string)
+        : undefined,
+    entryTagCodes: normalizeTags((rest as Record<string, unknown>).entryTagCodes),
+    entryTagItems: normalizeTagItems((rest as Record<string, unknown>).entryTagItems),
   };
 }
 
@@ -222,9 +229,9 @@ export type CreateTradeDto = {
   marketStructure: MarketStructure;
   marketStructureAnalysis: string;
   preEntrySummary?: string;
+  possiblePlaybookTypes: string[];
   preEntrySummaryImportance?: number;
   tradeTags?: string[];
-  tagCodes?: string[];
   expectedPathImages?: ImageResource[];
   expectedPathImagesDetailed?: MarketStructureAnalysisImage[];
   expectedPathAnalysis?: string;
@@ -240,6 +247,8 @@ export type CreateTradeDto = {
   stopLoss?: number;
   takeProfit?: number;
   entryReason?: string;
+  entryPlaybookType?: string;
+  entryTagCodes?: string[];
   entryAnalysisImages?: ImageResource[];
   entryAnalysisImagesDetailed?: MarketStructureAnalysisImage[];
   followedSystemStrictly?: boolean;
@@ -413,9 +422,9 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     marketStructure: form.marketStructure!,
     marketStructureAnalysis: form.marketStructureAnalysis || "",
     preEntrySummary: form.preEntrySummary,
+    possiblePlaybookTypes: normalizeTags(form.possiblePlaybookTypes, { preserveEmptyArray: true }) || [],
     preEntrySummaryImportance: parseNum(form.preEntrySummaryImportance),
     tradeTags: normalizeTags(form.tradeTags),
-    tagCodes: normalizeTags(form.tagCodes, { preserveEmptyArray: true }),
     expectedPathImages: asImageArray(form.expectedPathImages),
     expectedPathImagesDetailed: asMarketStructureImages(
       form.expectedPathImagesDetailed,
@@ -441,6 +450,8 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     stopLoss: parseNum(form.stopLoss),
     takeProfit: parseNum(form.takeProfit),
     entryReason: form.entryReason,
+    entryPlaybookType: form.entryPlaybookType,
+    entryTagCodes: normalizeTags(form.entryTagCodes, { preserveEmptyArray: true }),
     entryAnalysisImages: asImageArray(form.entryAnalysisImages),
     entryAnalysisImagesDetailed: asMarketStructureImages(
       form.entryAnalysisImagesDetailed,
