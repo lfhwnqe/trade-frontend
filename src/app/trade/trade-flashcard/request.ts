@@ -35,6 +35,17 @@ type CreateTradeFlashcardPayload = {
 
 type UpdateTradeFlashcardPayload = Partial<CreateTradeFlashcardPayload>;
 
+function sanitizeTradeFlashcardPayload<T extends Partial<CreateTradeFlashcardPayload>>(payload: T): T {
+  const entries = Object.entries(payload).filter(([, value]) => {
+    if (value === undefined) return false;
+    if (typeof value === 'string') return value.trim() !== '';
+    if (Array.isArray(value)) return value.length > 0;
+    return true;
+  });
+
+  return Object.fromEntries(entries) as T;
+}
+
 export async function getTradeFlashcardUploadUrl(params: {
   fileName: string;
   contentType: string;
@@ -67,7 +78,7 @@ export async function createTradeFlashcardCard(payload: CreateTradeFlashcardPayl
       targetPath: 'trade-flashcard/cards',
       actualMethod: 'POST',
     },
-    actualBody: payload,
+    actualBody: sanitizeTradeFlashcardPayload(payload),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '创建交易闪卡失败');
@@ -120,7 +131,7 @@ export async function updateTradeFlashcardCard(cardId: string, payload: UpdateTr
       targetPath: `trade-flashcard/cards/${cardId}`,
       actualMethod: 'PATCH',
     },
-    actualBody: payload,
+    actualBody: sanitizeTradeFlashcardPayload(payload),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '更新交易闪卡失败');
@@ -131,9 +142,7 @@ export async function convertTradeFlashcardToFlashcard(
   cardId: string,
   payload: {
     expectedAction: 'LONG' | 'SHORT' | 'NO_TRADE';
-    systemOutcomeType: 'SYSTEM_WIN' | 'SYSTEM_LOSS_NORMAL';
-    behaviorType?: string;
-    invalidationType?: string;
+    systemOutcomeType: 'SYSTEM_WIN' | 'SYSTEM_LOSS_NORMAL' | 'NO_ENTRY';
     notes?: string;
   },
 ): Promise<FlashcardCard> {

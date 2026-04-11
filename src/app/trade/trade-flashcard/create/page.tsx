@@ -10,6 +10,7 @@ import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/components/common/alert";
 import type { ImageResource } from "../../config";
+import { TRADE_PERIOD_PRESETS } from "../../config";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 import { createTradeFlashcardCard } from "../request";
 import {
@@ -37,6 +38,7 @@ const NOTE_TEMPLATE = `【交易前】
 - 可以改进的地方：`;
 
 const EMPTY_SELECT_VALUE = "__NONE__";
+const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
 
 export default function TradeFlashcardCreatePage() {
   const [successAlert, errorAlert] = useAlert();
@@ -48,6 +50,7 @@ export default function TradeFlashcardCreatePage() {
   const [progressImages, setProgressImages] = React.useState<ImageResource[]>([]);
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
+  const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([...TRADE_PERIOD_PRESETS]);
   const [playbookType, setPlaybookType] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [summary, setSummary] = React.useState("");
@@ -58,12 +61,38 @@ export default function TradeFlashcardCreatePage() {
   const [copyingTemplate, setCopyingTemplate] = React.useState(false);
 
   React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(SYMBOL_PAIR_HISTORY_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return;
+      const history = parsed
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      setSymbolPairOptions(Array.from(new Set([...TRADE_PERIOD_PRESETS, ...history])));
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
     let mounted = true;
     fetchFlashcardTagOptions().then((items) => mounted && setTagOptions(items)).catch(() => mounted && setTagOptions([]));
     fetchPlaybookTypeOptions().then((items) => mounted && setPlaybookTypeOptions(items)).catch(() => mounted && setPlaybookTypeOptions([]));
     return () => {
       mounted = false;
     };
+  }, []);
+
+  const rememberSymbolPair = React.useCallback((value: string) => {
+    const nextValue = value.trim();
+    if (!nextValue || typeof window === "undefined") return;
+
+    setSymbolPairOptions((prev) => {
+      const merged = Array.from(new Set([nextValue, ...prev, ...TRADE_PERIOD_PRESETS])).slice(0, 20);
+      window.localStorage.setItem(SYMBOL_PAIR_HISTORY_KEY, JSON.stringify(merged));
+      return merged;
+    });
   }, []);
 
   const handleCopyTemplate = React.useCallback(async () => {
@@ -100,6 +129,8 @@ export default function TradeFlashcardCreatePage() {
         tagCodes: tagCodes.length ? tagCodes : undefined,
       });
 
+      rememberSymbolPair(symbolPairInfo);
+
       setTradeFlashcardType("");
       setProcessResult("");
       setIsSystemAligned(EMPTY_SELECT_VALUE);
@@ -118,7 +149,7 @@ export default function TradeFlashcardCreatePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [errorAlert, isSystemAligned, marketTimeInfo, notes, playbookType, postEntryImages, preEntryImages, processResult, progressImages, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
+  }, [errorAlert, isSystemAligned, marketTimeInfo, notes, playbookType, postEntryImages, preEntryImages, processResult, progressImages, rememberSymbolPair, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
 
   return (
     <TradePageShell title="交易闪卡录入" subtitle="过程状态会根据图片自动推导，避免手动误操作" showAddButton={false}>
@@ -137,7 +168,12 @@ export default function TradeFlashcardCreatePage() {
               <DateCalendarPicker analysisTime={marketTimeInfo} updateForm={(patch) => setMarketTimeInfo(patch.analysisTime)} showSeconds={false} placeholder="选择行情时间" />
             </Field>
             <Field label="币对信息">
-              <Input value={symbolPairInfo} onChange={(e) => setSymbolPairInfo(e.target.value)} placeholder="例：BTC/USDT" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+              <>
+                <Input value={symbolPairInfo} onChange={(e) => setSymbolPairInfo(e.target.value)} onBlur={(e) => rememberSymbolPair(e.target.value)} list="trade-flashcard-symbol-pair-presets" placeholder="例：BTC/USDT" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+                <datalist id="trade-flashcard-symbol-pair-presets">
+                  {symbolPairOptions.map((item) => <option key={item} value={item} />)}
+                </datalist>
+              </>
             </Field>
             <Field label="剧本类型">
               <Select value={playbookType || EMPTY_SELECT_VALUE} onValueChange={(value) => setPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}>

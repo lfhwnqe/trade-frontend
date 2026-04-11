@@ -37,6 +37,8 @@ export type TradeFlashcardCard = {
   playbookType?: string;
   notes?: string;
   summary?: string;
+  convertedToFlashcardAt?: string;
+  convertedFlashcardId?: string;
   tagCodes?: string[];
   tagItems?: TradeFlashcardDictionaryTagItem[];
   createdAt: string;
@@ -50,6 +52,7 @@ export const TRADE_FLASHCARD_LABELS: Record<string, string> = {
   COMPLETED: '已完成',
   SUCCESS: '成功',
   FAIL: '失败',
+  CONVERTED_TO_FLASHCARD: '已转训练闪卡',
   CREATED_AT: '创建时间',
   UPDATED_AT: '最后编辑时间',
 };
