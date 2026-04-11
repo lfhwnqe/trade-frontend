@@ -39,6 +39,25 @@ function formatDateTime(value?: string) {
 
 const EMPTY_SELECT_VALUE = "__NONE__";
 
+type TradeFlashcardQuery = {
+  tradeFlashcardType: TradeFlashcardType | "";
+  status: TradeFlashcardStatus | "";
+  symbolPairInfo: string;
+  playbookType: string;
+  marketTimeInfo: string;
+  sortBy: TradeFlashcardCardSortBy;
+  sortOrder: TradeFlashcardCardSortOrder;
+};
+
+function encodeOffsetCursor(offset: number) {
+  if (offset <= 0) return undefined;
+  const json = JSON.stringify({ offset });
+  if (typeof window !== "undefined" && typeof window.btoa === "function") {
+    return window.btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+  return undefined;
+}
+
 export default function TradeFlashcardManagePage() {
   const [successAlert, errorAlert] = useAlert();
   const [items, setItems] = React.useState<TradeFlashcardCard[]>([]);
@@ -55,34 +74,62 @@ export default function TradeFlashcardManagePage() {
   const [tagCodes, setTagCodes] = React.useState<string[]>([]);
   const [tagOptions, setTagOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
   const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
-  const [queryType, setQueryType] = React.useState<TradeFlashcardType | "">("");
-  const [queryStatus, setQueryStatus] = React.useState<TradeFlashcardStatus | "">("");
-  const [querySymbol, setQuerySymbol] = React.useState("");
-  const [querySortBy, setQuerySortBy] = React.useState<TradeFlashcardCardSortBy>("CREATED_AT");
-  const [querySortOrder, setQuerySortOrder] = React.useState<TradeFlashcardCardSortOrder>("desc");
 
-  const loadCards = React.useCallback(async () => {
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
+  const [totalItems, setTotalItems] = React.useState(0);
+
+  const [queryForm, setQueryForm] = React.useState<TradeFlashcardQuery>({
+    tradeFlashcardType: "",
+    status: "",
+    symbolPairInfo: "",
+    playbookType: "",
+    marketTimeInfo: "",
+    sortBy: "CREATED_AT",
+    sortOrder: "desc",
+  });
+  const [activeQuery, setActiveQuery] = React.useState<TradeFlashcardQuery>({
+    tradeFlashcardType: "",
+    status: "",
+    symbolPairInfo: "",
+    playbookType: "",
+    marketTimeInfo: "",
+    sortBy: "CREATED_AT",
+    sortOrder: "desc",
+  });
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  const fetchPage = React.useCallback(async (targetPage: number, query: TradeFlashcardQuery, nextPageSize?: number) => {
+    const resolvedPageSize = nextPageSize || pageSize;
     setLoading(true);
     try {
+      const cursor = encodeOffsetCursor((targetPage - 1) * resolvedPageSize);
       const res = await listTradeFlashcardCards({
-        pageSize: 100,
-        tradeFlashcardType: queryType || undefined,
-        status: queryStatus || undefined,
-        symbolPairInfo: querySymbol.trim() || undefined,
-        sortBy: querySortBy,
-        sortOrder: querySortOrder,
+        pageSize: resolvedPageSize,
+        cursor,
+        tradeFlashcardType: query.tradeFlashcardType || undefined,
+        status: query.status || undefined,
+        symbolPairInfo: query.symbolPairInfo.trim() || undefined,
+        playbookType: query.playbookType || undefined,
+        marketTimeInfo: query.marketTimeInfo.trim() || undefined,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
       });
       setItems(res.items);
+      setPage(targetPage);
+      setPageSize(resolvedPageSize);
+      setTotalItems(Math.max(res.totalCount, 0));
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "查询失败");
     } finally {
       setLoading(false);
     }
-  }, [errorAlert, querySortBy, querySortOrder, queryStatus, querySymbol, queryType]);
+  }, [errorAlert, pageSize]);
 
   React.useEffect(() => {
-    void loadCards();
-  }, [loadCards]);
+    void fetchPage(1, activeQuery);
+  }, [activeQuery, fetchPage]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -126,44 +173,94 @@ export default function TradeFlashcardManagePage() {
       });
       setEditingCard(null);
       successAlert("交易闪卡更新成功");
-      await loadCards();
+      await fetchPage(page, activeQuery);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "保存失败");
     }
-  }, [editingCard, errorAlert, loadCards, marketTimeInfo, notes, playbookType, postEntryImages, preEntryImages, progressImages, successAlert, symbolPairInfo, tagCodes, tradeFlashcardType]);
+  }, [activeQuery, editingCard, errorAlert, fetchPage, marketTimeInfo, notes, page, playbookType, postEntryImages, preEntryImages, progressImages, successAlert, symbolPairInfo, tagCodes, tradeFlashcardType]);
 
   const handleDelete = React.useCallback(async (cardId: string) => {
     if (!window.confirm("确认删除这张交易闪卡吗？")) return;
     try {
       await deleteTradeFlashcardCard(cardId);
       successAlert("删除成功");
-      await loadCards();
+      const nextPage = items.length === 1 && page > 1 ? page - 1 : page;
+      await fetchPage(nextPage, activeQuery);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "删除失败");
     }
-  }, [errorAlert, loadCards, successAlert]);
+  }, [activeQuery, errorAlert, fetchPage, items.length, page, successAlert]);
+
+  const handleQuerySubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setActiveQuery({ ...queryForm });
+  }, [queryForm]);
+
+  const handleQueryReset = React.useCallback(() => {
+    const emptyQuery: TradeFlashcardQuery = {
+      tradeFlashcardType: "",
+      status: "",
+      symbolPairInfo: "",
+      playbookType: "",
+      marketTimeInfo: "",
+      sortBy: "CREATED_AT",
+      sortOrder: "desc",
+    };
+    setQueryForm(emptyQuery);
+    setActiveQuery(emptyQuery);
+  }, []);
 
   return (
     <TradePageShell title="交易闪卡管理" subtitle="查看、筛选和编辑实盘 / 模拟盘生命周期闪卡" showAddButton={false}>
       <div className="space-y-6">
-        <div className="grid gap-4 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:grid-cols-5">
-          <Select value={queryType || EMPTY_SELECT_VALUE} onValueChange={(value) => setQueryType(value === EMPTY_SELECT_VALUE ? "" : (value as TradeFlashcardType))}>
+        <form onSubmit={handleQuerySubmit} className="grid gap-4 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:grid-cols-4 xl:grid-cols-7">
+          <Select value={queryForm.tradeFlashcardType || EMPTY_SELECT_VALUE} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, tradeFlashcardType: value === EMPTY_SELECT_VALUE ? "" : (value as TradeFlashcardType) }))}>
             <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="全部类型" /></SelectTrigger>
             <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>全部类型</SelectItem>{TRADE_FLASHCARD_TYPES.map((item) => <SelectItem key={item} value={item}>{TRADE_FLASHCARD_LABELS[item]}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={queryStatus || EMPTY_SELECT_VALUE} onValueChange={(value) => setQueryStatus(value === EMPTY_SELECT_VALUE ? "" : (value as TradeFlashcardStatus))}>
+
+          <Select value={queryForm.status || EMPTY_SELECT_VALUE} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, status: value === EMPTY_SELECT_VALUE ? "" : (value as TradeFlashcardStatus) }))}>
             <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="全部状态" /></SelectTrigger>
             <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>全部状态</SelectItem>{TRADE_FLASHCARD_STATUSES.map((item) => <SelectItem key={item} value={item}>{TRADE_FLASHCARD_LABELS[item]}</SelectItem>)}</SelectContent>
           </Select>
-          <Input value={querySymbol} onChange={(e) => setQuerySymbol(e.target.value)} placeholder="币对模糊筛选" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
-          <Select value={querySortBy} onValueChange={(value) => setQuerySortBy(value as TradeFlashcardCardSortBy)}>
+
+          <Input value={queryForm.symbolPairInfo} onChange={(e) => setQueryForm((prev) => ({ ...prev, symbolPairInfo: e.target.value }))} placeholder="币对模糊筛选" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+
+          <Select value={queryForm.playbookType || EMPTY_SELECT_VALUE} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, playbookType: value === EMPTY_SELECT_VALUE ? "" : value }))}>
+            <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="全部剧本" /></SelectTrigger>
+            <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>全部剧本</SelectItem>{playbookTypeOptions.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}</SelectContent>
+          </Select>
+
+          <Input value={queryForm.marketTimeInfo} onChange={(e) => setQueryForm((prev) => ({ ...prev, marketTimeInfo: e.target.value }))} placeholder="时间模糊筛选" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+
+          <Select value={queryForm.sortBy} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, sortBy: value as TradeFlashcardCardSortBy }))}>
             <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
             <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">{TRADE_FLASHCARD_CARD_SORT_BYS.map((item) => <SelectItem key={item} value={item}>{TRADE_FLASHCARD_LABELS[item]}</SelectItem>)}</SelectContent>
           </Select>
-          <Select value={querySortOrder} onValueChange={(value) => setQuerySortOrder(value as TradeFlashcardCardSortOrder)}>
+
+          <Select value={queryForm.sortOrder} onValueChange={(value) => setQueryForm((prev) => ({ ...prev, sortOrder: value as TradeFlashcardCardSortOrder }))}>
             <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
             <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">{TRADE_FLASHCARD_CARD_SORT_ORDERS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
           </Select>
+
+          <div className="md:col-span-4 xl:col-span-7 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-[#71717a]">共 {totalItems} 条，当前第 {page} / {totalPages} 页</div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={handleQueryReset}>重置</Button>
+              <Button type="submit" className="bg-[#00c2b2] text-black hover:bg-[#009e91]">查询</Button>
+            </div>
+          </div>
+        </form>
+
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[#27272a] bg-[#121212] px-4 py-3">
+          <div className="text-sm text-[#a1a1aa]">支持按类型、状态、币对、剧本、时间分页查看</div>
+          <div className="flex items-center gap-2 text-sm text-[#e5e7eb]">
+            <span className="text-[#9ca3af]">每页</span>
+            <Select value={String(pageSize)} onValueChange={(value) => void fetchPage(1, activeQuery, Number(value))}>
+              <SelectTrigger className="h-9 w-[90px] border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+              <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">{[10, 20, 50, 100].map((size) => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -177,6 +274,7 @@ export default function TradeFlashcardManagePage() {
                     <span className="rounded-full bg-[#1e1e1e] px-2 py-1 text-xs">{TRADE_FLASHCARD_LABELS[card.tradeFlashcardType]}</span>
                     <span className="rounded-full bg-[#1e1e1e] px-2 py-1 text-xs">{TRADE_FLASHCARD_LABELS[card.status]}</span>
                     {card.symbolPairInfo ? <span className="text-xs text-[#9ca3af]">{card.symbolPairInfo}</span> : null}
+                    {card.playbookType ? <span className="text-xs text-[#9ca3af]">剧本：{playbookTypeOptions.find((item) => item.code === card.playbookType)?.label || card.playbookType}</span> : null}
                   </div>
                   <div className="text-xs text-[#71717a]">创建于 {formatDateTime(card.createdAt)}，更新于 {formatDateTime(card.updatedAt)}</div>
                 </div>
@@ -206,9 +304,26 @@ export default function TradeFlashcardManagePage() {
                 <div>时间：{card.marketTimeInfo || "--"}</div>
                 <div>剧本：{playbookTypeOptions.find((item) => item.code === card.playbookType)?.label || card.playbookType || "--"}</div>
                 <div className="md:col-span-2">备注：{card.notes || "--"}</div>
+                <div className="md:col-span-2 flex flex-wrap gap-2">
+                  {(card.tagItems || []).map((item) => (
+                    <span key={item.code} className="inline-flex items-center gap-2 rounded-full border border-[#27272a] bg-[#1e1e1e] px-3 py-1 text-xs text-[#e5e7eb]">
+                      {item.color ? <span className="inline-block h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: item.color }} /> : null}
+                      {item.label}
+                    </span>
+                  ))}
+                  {!(card.tagItems || []).length ? <span className="text-xs text-[#71717a]">无标签</span> : null}
+                </div>
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#27272a] bg-[#121212] px-4 py-3">
+          <div className="text-sm text-[#9ca3af]">第 {page} / {totalPages} 页，共 {totalItems} 条</div>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" disabled={loading || page <= 1} onClick={() => void fetchPage(page - 1, activeQuery)}>上一页</Button>
+            <Button type="button" variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" disabled={loading || page >= totalPages} onClick={() => void fetchPage(page + 1, activeQuery)}>下一页</Button>
+          </div>
         </div>
       </div>
 

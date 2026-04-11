@@ -14,6 +14,22 @@ import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictio
 import { createTradeFlashcardCard } from "../request";
 import { TRADE_FLASHCARD_LABELS, TRADE_FLASHCARD_TYPES, type TradeFlashcardType } from "../types";
 
+const NOTE_TEMPLATE = `【交易前】
+- 背景 / 市场环境：
+- 核心观察：
+- 计划剧本 / 触发条件：
+- 风险点：
+
+【交易中】
+- 实际入场原因：
+- 持仓过程中的变化：
+- 是否有加减仓 / 调整止损：
+
+【交易后】
+- 实际结果：
+- 做得好的地方：
+- 可以改进的地方：`;
+
 export default function TradeFlashcardCreatePage() {
   const [successAlert, errorAlert] = useAlert();
   const [tradeFlashcardType, setTradeFlashcardType] = React.useState<TradeFlashcardType | "">("");
@@ -28,6 +44,7 @@ export default function TradeFlashcardCreatePage() {
   const [tagOptions, setTagOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
   const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
   const [submitting, setSubmitting] = React.useState(false);
+  const [copyingTemplate, setCopyingTemplate] = React.useState(false);
 
   React.useEffect(() => {
     let mounted = true;
@@ -36,6 +53,25 @@ export default function TradeFlashcardCreatePage() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  const handleCopyTemplate = React.useCallback(async () => {
+    try {
+      setCopyingTemplate(true);
+      await navigator.clipboard.writeText(NOTE_TEMPLATE);
+      if (!notes.trim()) {
+        setNotes(NOTE_TEMPLATE);
+      }
+      successAlert("备注模板已复制");
+    } catch {
+      errorAlert("复制失败，请手动复制");
+    } finally {
+      setCopyingTemplate(false);
+    }
+  }, [errorAlert, notes, successAlert]);
+
+  const handleUseTemplate = React.useCallback(() => {
+    setNotes((prev) => (prev.trim() ? `${prev.trim()}\n\n${NOTE_TEMPLATE}` : NOTE_TEMPLATE));
   }, []);
 
   const handleSubmit = React.useCallback(async () => {
@@ -149,8 +185,22 @@ export default function TradeFlashcardCreatePage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-[#9ca3af]">备注</div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-medium text-[#9ca3af]">备注</div>
+                  <div className="mt-1 text-[11px] text-[#71717a]">可直接套用交易前 / 中 / 后复盘模板</div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={handleUseTemplate}>
+                    插入模板
+                  </Button>
+                  <Button type="button" variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => void handleCopyTemplate()} disabled={copyingTemplate}>
+                    {copyingTemplate ? "复制中..." : "一键复制模板"}
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-xl border border-dashed border-[#27272a] bg-[#101010] p-3 text-xs leading-6 text-[#a1a1aa] whitespace-pre-wrap">{NOTE_TEMPLATE}</div>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="记录入场前、入场中、入场后的判断变化" className="min-h-28 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
             </div>
           </div>
