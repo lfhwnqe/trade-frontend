@@ -65,6 +65,11 @@ const tradeNavItems: NavItem[] = [
     icon: Layers,
   },
   {
+    title: "交易闪卡录入",
+    href: "/trade/trade-flashcard/create",
+    icon: Layers,
+  },
+  {
     title: "闪卡练习",
     href: "/trade/flashcard/drill/setup",
     icon: Layers,
@@ -97,6 +102,11 @@ const tradeNavItems: NavItem[] = [
   {
     title: "闪卡管理",
     href: "/trade/flashcard/manage",
+    icon: Layers,
+  },
+  {
+    title: "交易闪卡管理",
+    href: "/trade/trade-flashcard/manage",
     icon: Layers,
   },
 ];
