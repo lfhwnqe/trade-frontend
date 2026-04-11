@@ -1,9 +1,11 @@
 import { fetchWithAuth } from '@/utils/fetchWithAuth';
+import type { FlashcardCard } from '../flashcard/types';
 import type {
   TradeFlashcardCard,
   TradeFlashcardCardSortBy,
   TradeFlashcardCardSortOrder,
-  TradeFlashcardStatus,
+  TradeFlashcardLifecycleStatus,
+  TradeFlashcardProcessResult,
   TradeFlashcardType,
 } from './types';
 
@@ -18,6 +20,8 @@ type Scope = 'pre-entry' | 'post-entry' | 'progress';
 
 type CreateTradeFlashcardPayload = {
   tradeFlashcardType: TradeFlashcardType;
+  processResult?: TradeFlashcardProcessResult;
+  isSystemAligned?: boolean;
   preEntryImageUrl: string;
   postEntryImageUrl?: string;
   progressImageUrls?: string[];
@@ -25,6 +29,7 @@ type CreateTradeFlashcardPayload = {
   symbolPairInfo?: string;
   playbookType?: string;
   notes?: string;
+  summary?: string;
   tagCodes?: string[];
 };
 
@@ -73,7 +78,7 @@ export async function listTradeFlashcardCards(params?: {
   pageSize?: number;
   cursor?: string;
   tradeFlashcardType?: TradeFlashcardType;
-  status?: TradeFlashcardStatus;
+  lifecycleStatus?: TradeFlashcardLifecycleStatus;
   symbolPairInfo?: string;
   playbookType?: string;
   marketTimeInfo?: string;
@@ -84,7 +89,7 @@ export async function listTradeFlashcardCards(params?: {
   if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
   if (params?.cursor) searchParams.set('cursor', params.cursor);
   if (params?.tradeFlashcardType) searchParams.set('tradeFlashcardType', params.tradeFlashcardType);
-  if (params?.status) searchParams.set('status', params.status);
+  if (params?.lifecycleStatus) searchParams.set('lifecycleStatus', params.lifecycleStatus);
   if (params?.symbolPairInfo) searchParams.set('symbolPairInfo', params.symbolPairInfo);
   if (params?.playbookType) searchParams.set('playbookType', params.playbookType);
   if (params?.marketTimeInfo) searchParams.set('marketTimeInfo', params.marketTimeInfo);
@@ -120,6 +125,30 @@ export async function updateTradeFlashcardCard(cardId: string, payload: UpdateTr
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '更新交易闪卡失败');
   return data.data as TradeFlashcardCard;
+}
+
+export async function convertTradeFlashcardToFlashcard(
+  cardId: string,
+  payload: {
+    expectedAction: 'LONG' | 'SHORT' | 'NO_TRADE';
+    systemOutcomeType: 'SYSTEM_WIN' | 'SYSTEM_LOSS_NORMAL';
+    behaviorType?: string;
+    invalidationType?: string;
+    notes?: string;
+  },
+): Promise<FlashcardCard> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `trade-flashcard/cards/${cardId}/convert-to-flashcard`,
+      actualMethod: 'POST',
+    },
+    actualBody: payload,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '转换为常规训练闪卡失败');
+  return data.data;
 }
 
 export async function deleteTradeFlashcardCard(cardId: string): Promise<void> {
