@@ -496,8 +496,38 @@ export default function FlashcardSimulationPlayPage() {
                         <div className="text-sm font-medium text-[#e5e7eb]">Attempt #{idx + 1}</div>
                         <div className="mt-1 text-xs text-[#9ca3af]">保存点位 {Math.round(attempt.revealProgress * 100)}% · RR {attempt.rrValue.toFixed(2)} · {FLASHCARD_LABELS[attempt.entryDirection]}{attempt.replaySourceAttemptId ? " · 基于历史点位复训" : ""}</div>
                       </div>
-                      <div className={`text-xs font-medium ${isResolved ? (attempt.result === "SUCCESS" ? "text-[#22c55e]" : "text-[#ef4444]") : "text-[#fbbf24]"}`}>
-                        {isResolved ? (attempt.result === "SUCCESS" ? "已判定成功" : "已判定失败") : "待保存结果"}
+                      <div className="flex flex-col items-end gap-2">
+                        <div className={`text-xs font-medium ${isResolved ? (attempt.result === "SUCCESS" ? "text-[#22c55e]" : "text-[#ef4444]") : "text-[#fbbf24]"}`}>
+                          {isResolved ? (attempt.result === "SUCCESS" ? "已判定成功" : "已判定失败") : "待保存结果"}
+                        </div>
+                        <Link href={`/trade/flashcard/simulation/attempts/${attempt.attemptId}`} className="text-xs text-[#00c2b2] hover:underline">
+                          查看 attempt 详情
+                        </Link>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-[220px_1fr]">
+                      <button type="button" className="overflow-hidden rounded-lg border border-[#27272a] bg-black text-left" onClick={() => setPreviewOpen(true)}>
+                        <img src={attempt.questionImageUrlSnapshot} alt="attempt-question" className="h-[150px] w-full object-contain" />
+                        <div className="border-t border-[#27272a] px-3 py-2 text-xs text-[#9ca3af]">本次 attempt 入场图快照</div>
+                      </button>
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                          <div className="text-xs text-[#9ca3af]">RR</div>
+                          <div className="mt-2 text-sm font-medium text-[#e5e7eb]">{attempt.rrValue.toFixed(2)}</div>
+                        </div>
+                        <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                          <div className="text-xs text-[#9ca3af]">入场线</div>
+                          <div className="mt-2 text-sm font-medium text-[#e5e7eb]">{(attempt.entryLineYPercent * 100).toFixed(1)}%</div>
+                        </div>
+                        <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                          <div className="text-xs text-[#9ca3af]">止损线</div>
+                          <div className="mt-2 text-sm font-medium text-[#e5e7eb]">{(attempt.stopLossLineYPercent * 100).toFixed(1)}%</div>
+                        </div>
+                        <div className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                          <div className="text-xs text-[#9ca3af]">止盈线</div>
+                          <div className="mt-2 text-sm font-medium text-[#e5e7eb]">{(attempt.takeProfitLineYPercent * 100).toFixed(1)}%</div>
+                        </div>
                       </div>
                     </div>
 
@@ -575,6 +605,16 @@ export default function FlashcardSimulationPlayPage() {
             </div>
           )}
         </div>
+
+        {answerVisible ? (
+          <div className="flex justify-end">
+            <Link href={`/trade/flashcard/${current.cardId}`}>
+              <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]">
+                查看这张闪卡详情
+              </Button>
+            </Link>
+          </div>
+        ) : null}
 
         {runningStats ? (
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 text-sm text-[#9ca3af]">

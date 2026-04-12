@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MultiSelectDropdown } from "@/components/common/MultiSelectDropdown";
 import { useAlert } from "@/components/common/alert";
 import { fetchMistakeTypeOptions, fetchPlaybookTypeOptions } from "@/app/trade/dictionary";
-import { listMistakeRecords } from "../../request";
-import { FLASHCARD_LABELS, type MistakeRecord, type MistakeDomain, type MistakeReviewStatus, type MistakeSourceType } from "../../types";
+import { getFlashcardSimulationAttempt, listMistakeRecords } from "../../request";
+import { FLASHCARD_LABELS, type FlashcardSimulationAttemptDetail, type MistakeRecord, type MistakeDomain, type MistakeReviewStatus, type MistakeSourceType } from "../../types";
+import { ImagePreviewDialog } from "../../components/ImagePreviewDialog";
 
 const EMPTY = "__ALL__";
 const PAGE_SIZE = 20;
@@ -43,6 +44,8 @@ export default function MistakeRecordsPage() {
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [mistakeTypeOptions, setMistakeTypeOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
   const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
+  const [attemptMap, setAttemptMap] = React.useState<Record<string, FlashcardSimulationAttemptDetail>>({});
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
   const loadRecords = React.useCallback(async (reset: boolean, cursor?: string | null) => {
     if (reset) {
@@ -178,6 +181,9 @@ export default function MistakeRecordsPage() {
             {items.map((item) => {
               const expanded = expandedId === item.mistakeRecordId;
               const primary = mistakeLabelMap.get(item.primaryMistakeCode);
+              const linkedAttempt = item.simulationAttemptId
+                ? attemptMap[item.simulationAttemptId]
+                : undefined;
               return (
                 <div key={item.mistakeRecordId} className="rounded-xl border border-[#27272a] bg-[#121212] p-5">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -195,7 +201,14 @@ export default function MistakeRecordsPage() {
                         <span>attempt：{item.simulationAttemptId ? item.simulationAttemptId.slice(0, 8) : "--"}</span>
                       </div>
                     </div>
-                    <Button type="button" variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setExpandedId((prev) => prev === item.mistakeRecordId ? null : item.mistakeRecordId)}>
+                    <Button type="button" variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => {
+                      setExpandedId((prev) => prev === item.mistakeRecordId ? null : item.mistakeRecordId);
+                      if (item.simulationAttemptId && !attemptMap[item.simulationAttemptId]) {
+                        getFlashcardSimulationAttempt(item.simulationAttemptId)
+                          .then((attempt) => setAttemptMap((prev) => ({ ...prev, [item.simulationAttemptId!]: attempt })))
+                          .catch(() => undefined);
+                      }
+                    }}>
                       {expanded ? "收起" : "展开详情"}
                     </Button>
                   </div>
@@ -203,6 +216,25 @@ export default function MistakeRecordsPage() {
                   {expanded ? (
                     <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
                       <div className="space-y-4">
+                        {linkedAttempt ? (
+                          <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                              <div>
+                                <div className="text-xs text-[#9ca3af]">Attempt 图片信息</div>
+                                <div className="mt-1 text-sm text-[#e5e7eb]">RR {linkedAttempt.rrValue.toFixed(2)} · {FLASHCARD_LABELS[linkedAttempt.entryDirection]}</div>
+                              </div>
+                              <div className="flex gap-2">
+                                {item.cardId ? <Link href={`/trade/flashcard/${item.cardId}`} className="text-xs text-[#00c2b2] hover:underline">闪卡详情</Link> : null}
+                                <Link href={`/trade/flashcard/simulation/attempts/${item.simulationAttemptId}`} className="text-xs text-[#00c2b2] hover:underline">attempt详情</Link>
+                              </div>
+                            </div>
+                            <button type="button" className="overflow-hidden rounded-lg border border-[#27272a] bg-black text-left" onClick={() => setPreviewUrl(linkedAttempt.questionImageUrlSnapshot || null)}>
+                              <img src={linkedAttempt.questionImageUrlSnapshot} alt="attempt-question" className="h-[180px] w-full object-contain" />
+                              <div className="border-t border-[#27272a] px-3 py-2 text-xs text-[#9ca3af]">题目图快照，点击放大</div>
+                            </button>
+                          </div>
+                        ) : null}
+
                         <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-4">
                           <div className="text-xs text-[#9ca3af]">主误判类型</div>
                           <div className="mt-2 text-sm text-[#e5e7eb]">{primary?.label || item.primaryMistakeCode}</div>
@@ -253,6 +285,8 @@ export default function MistakeRecordsPage() {
           </div>
         )}
       </div>
+
+      {previewUrl ? <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} /> : null}
     </TradePageShell>
   );
 }

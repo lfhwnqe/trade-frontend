@@ -205,6 +205,25 @@ export async function listFlashcardCards(params?: {
   };
 }
 
+export async function getFlashcardCard(cardId: string): Promise<FlashcardCard> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/cards/${cardId}`,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取闪卡详情失败");
+  }
+
+  return data.data as FlashcardCard;
+}
+
 export async function deleteFlashcardCard(cardId: string): Promise<void> {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",
@@ -645,7 +664,7 @@ export async function listFlashcardSimulationAttempts(params?: {
   pageSize?: number;
   cursor?: string;
   result?: "ALL" | "SUCCESS" | "FAILURE";
-}): Promise<{ items: import("./types").FlashcardSimulationAttemptDetail[]; nextCursor: string | null }> {
+}): Promise<{ items: import("./types").FlashcardSimulationAttemptDetail[]; totalCount: number; nextCursor: string | null }> {
   const searchParams = new URLSearchParams();
   if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
   if (params?.cursor) searchParams.set("cursor", params.cursor);
@@ -670,8 +689,75 @@ export async function listFlashcardSimulationAttempts(params?: {
 
   return {
     items: (data.data?.items || []) as import("./types").FlashcardSimulationAttemptDetail[],
+    totalCount: typeof data.data?.totalCount === "number" ? data.data.totalCount : 0,
     nextCursor: typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
   };
+}
+
+export async function getFlashcardSimulationAttempt(
+  attemptId: string,
+): Promise<import("./types").FlashcardSimulationAttemptDetail> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/simulation/attempts/${attemptId}`,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取 attempt 详情失败");
+  }
+
+  return data.data as import("./types").FlashcardSimulationAttemptDetail;
+}
+
+export async function updateFlashcardSimulationAttempt(params: {
+  attemptId: string;
+  result: "SUCCESS" | "FAILURE";
+  failureReason?: string;
+  primaryMistakeCode?: string;
+  mistakeCodes?: string[];
+  correctionNote?: string;
+  cardQualityScore?: 1 | 2 | 3 | 4 | 5;
+}): Promise<import("./types").FlashcardSimulationAttemptDetail> {
+  const { attemptId, ...body } = params;
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/simulation/attempts/${attemptId}`,
+      actualMethod: "PATCH",
+    },
+    actualBody: body,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "更新 attempt 失败");
+  }
+
+  return data.data as import("./types").FlashcardSimulationAttemptDetail;
+}
+
+export async function deleteFlashcardSimulationAttempt(attemptId: string): Promise<void> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/simulation/attempts/${attemptId}`,
+      actualMethod: "DELETE",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || "删除 attempt 失败");
+  }
 }
 
 export async function getFlashcardSimulationPlaybookAnalytics(params?: {
