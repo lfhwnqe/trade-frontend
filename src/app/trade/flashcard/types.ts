@@ -124,6 +124,22 @@ export type FlashcardDictionaryTagItem = {
 
 export type FlashcardDictionaryOptionItem = FlashcardDictionaryTagItem;
 
+export type MistakeDomain =
+  | "RECOGNITION"
+  | "TRIGGER_TIMING"
+  | "RISK_FRAMEWORK"
+  | "CONTEXT_FILTER"
+  | "EXECUTION";
+
+export type MistakeReviewStatus =
+  | "NEW"
+  | "CLASSIFIED"
+  | "IN_TRAINING"
+  | "IMPROVED"
+  | "ARCHIVED";
+
+export type MistakeSourceType = "FLASHCARD_SIMULATION" | "TRADE_FLASHCARD";
+
 export type FlashcardCard = {
   id: string;
   userId: string;
@@ -294,11 +310,34 @@ export type FlashcardSimulationAttemptDetail = {
   entryReason: string;
   result?: "SUCCESS" | "FAILURE";
   failureReason?: string;
+  primaryMistakeCode?: string;
+  mistakeCodes?: string[];
+  correctionNote?: string;
   cardQualityScore?: number;
   questionImageUrlSnapshot?: string;
   answerImageUrlSnapshot?: string;
   entrySavedAt: string;
   resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MistakeRecord = {
+  userId: string;
+  mistakeRecordId: string;
+  sourceType: MistakeSourceType;
+  sourceId: string;
+  simulationAttemptId?: string;
+  tradeFlashcardId?: string;
+  cardId?: string;
+  playbookType?: string;
+  tagCodes?: string[];
+  primaryMistakeCode: string;
+  mistakeCodes: string[];
+  mistakeDomain: MistakeDomain;
+  note?: string;
+  correctionNote?: string;
+  reviewStatus: MistakeReviewStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -532,4 +571,16 @@ export const FLASHCARD_LABELS: Record<string, string> = {
   QUALITY_SCORE_AVG: "平均评分",
   SIMULATION_RESOLVED_COUNT: "模拟闭环数",
   SIMULATION_AVG_RR: "模拟平均RR",
+  FLASHCARD_SIMULATION: "模拟盘训练",
+  TRADE_FLASHCARD: "交易闪卡",
+  RECOGNITION: "识别错误",
+  TRIGGER_TIMING: "触发时机错误",
+  RISK_FRAMEWORK: "风险框架错误",
+  CONTEXT_FILTER: "环境过滤错误",
+  EXECUTION: "执行错误",
+  NEW: "新记录",
+  CLASSIFIED: "已归类",
+  IN_TRAINING: "训练中",
+  IMPROVED: "已改善",
+  ARCHIVED: "已归档",
 };

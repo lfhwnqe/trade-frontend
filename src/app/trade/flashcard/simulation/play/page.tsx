@@ -6,7 +6,10 @@ import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelectDropdown } from "@/components/common/MultiSelectDropdown";
 import { useAlert } from "@/components/common/alert";
+import { fetchMistakeTypeOptions } from "@/app/trade/dictionary";
 import { ImagePreviewDialog } from "../../components/ImagePreviewDialog";
 import {
   clearFlashcardSimulationSession,
@@ -71,8 +74,13 @@ const PREVIEW_WHEEL_REVEAL_STEP = 0.00033;
 type AttemptResolutionDraft = {
   result: "SUCCESS" | "FAILURE" | "";
   failureReason: string;
+  primaryMistakeCode: string;
+  mistakeCodes: string[];
+  correctionNote: string;
   cardQualityScore: number;
 };
+
+const EMPTY_SELECT_VALUE = "__NONE__";
 
 export default function FlashcardSimulationPlayPage() {
   const [, errorAlert] = useAlert();
@@ -91,6 +99,7 @@ export default function FlashcardSimulationPlayPage() {
   const [savingAttempt, setSavingAttempt] = React.useState(false);
   const [resolvingAttemptId, setResolvingAttemptId] = React.useState<string | null>(null);
   const [finishing, setFinishing] = React.useState(false);
+  const [mistakeTypeOptions, setMistakeTypeOptions] = React.useState<Array<{ code: string; label: string; color?: string }>>([]);
   const [finalStats, setFinalStats] = React.useState<{
     completedAttemptCount?: number;
     successCount: number;
@@ -102,6 +111,16 @@ export default function FlashcardSimulationPlayPage() {
     const loaded = getFlashcardSimulationSession();
     if (!loaded) return;
     setSession(loaded);
+  }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+    fetchMistakeTypeOptions().then((items) => {
+      if (mounted) setMistakeTypeOptions(items);
+    }).catch(() => {
+      if (mounted) setMistakeTypeOptions([]);
+    });
+    return () => { mounted = false; };
   }, []);
 
   const cards = session?.cards || [];
@@ -145,6 +164,9 @@ export default function FlashcardSimulationPlayPage() {
       [attemptId]: {
         result: prev[attemptId]?.result || "",
         failureReason: prev[attemptId]?.failureReason || "",
+        primaryMistakeCode: prev[attemptId]?.primaryMistakeCode || "",
+        mistakeCodes: prev[attemptId]?.mistakeCodes || [],
+        correctionNote: prev[attemptId]?.correctionNote || "",
         cardQualityScore: prev[attemptId]?.cardQualityScore || 5,
         ...patch,
       },
@@ -197,6 +219,9 @@ export default function FlashcardSimulationPlayPage() {
     const draft = resolutionDrafts[attemptId] || {
       result: "",
       failureReason: "",
+      primaryMistakeCode: "",
+      mistakeCodes: [],
+      correctionNote: "",
       cardQualityScore: 5,
     };
     if (!draft.result) {
@@ -207,6 +232,14 @@ export default function FlashcardSimulationPlayPage() {
       errorAlert("失败时必须填写失败原因");
       return;
     }
+    if (draft.result === "FAILURE" && !draft.primaryMistakeCode) {
+      errorAlert("失败时必须选择主误判类型");
+      return;
+    }
+    if (draft.result === "FAILURE" && !draft.mistakeCodes.length) {
+      errorAlert("失败时至少要选择一个误判标签");
+      return;
+    }
 
     setResolvingAttemptId(attemptId);
     try {
@@ -214,6 +247,9 @@ export default function FlashcardSimulationPlayPage() {
         attemptId,
         result: draft.result,
         failureReason: draft.result === "FAILURE" ? draft.failureReason.trim() : undefined,
+        primaryMistakeCode: draft.result === "FAILURE" ? draft.primaryMistakeCode : undefined,
+        mistakeCodes: draft.result === "FAILURE" ? draft.mistakeCodes : undefined,
+        correctionNote: draft.result === "FAILURE" ? draft.correctionNote.trim() || undefined : undefined,
         cardQualityScore: draft.cardQualityScore as 1 | 2 | 3 | 4 | 5,
       });
 
@@ -226,6 +262,9 @@ export default function FlashcardSimulationPlayPage() {
                 status: "RESOLVED",
                 result: res.result,
                 failureReason: draft.result === "FAILURE" ? draft.failureReason.trim() : undefined,
+                primaryMistakeCode: draft.result === "FAILURE" ? draft.primaryMistakeCode : undefined,
+                mistakeCodes: draft.result === "FAILURE" ? draft.mistakeCodes : undefined,
+                correctionNote: draft.result === "FAILURE" ? draft.correctionNote.trim() || undefined : undefined,
                 cardQualityScore: draft.cardQualityScore,
                 resolvedAt: new Date().toISOString(),
               }
@@ -448,7 +487,7 @@ export default function FlashcardSimulationPlayPage() {
           ) : (
             <div className="space-y-4">
               {currentAttempts.map((attempt, idx) => {
-                const draft = resolutionDrafts[attempt.attemptId] || { result: "", failureReason: "", cardQualityScore: 5 };
+                const draft = resolutionDrafts[attempt.attemptId] || { result: "", failureReason: "", primaryMistakeCode: "", mistakeCodes: [], correctionNote: "", cardQualityScore: 5 };
                 const isResolved = attempt.status === "RESOLVED";
                 return (
                   <div key={attempt.attemptId} className="rounded-lg border border-[#27272a] bg-[#18181b] p-4 space-y-3">
@@ -468,6 +507,9 @@ export default function FlashcardSimulationPlayPage() {
                       <div className="space-y-2 text-sm">
                         <div className="text-[#e5e7eb]">结果：{attempt.result === "SUCCESS" ? "成功" : "失败"}</div>
                         {attempt.failureReason ? <div className="text-[#9ca3af]">失败原因：{attempt.failureReason}</div> : null}
+                        {attempt.primaryMistakeCode ? <div className="text-[#9ca3af]">主误判类型：{mistakeTypeOptions.find((item) => item.code === attempt.primaryMistakeCode)?.label || attempt.primaryMistakeCode}</div> : null}
+                        {attempt.mistakeCodes?.length ? <div className="text-[#9ca3af]">误判标签：{attempt.mistakeCodes.map((code) => mistakeTypeOptions.find((item) => item.code === code)?.label || code).join("、")}</div> : null}
+                        {attempt.correctionNote ? <div className="text-[#9ca3af]">纠正说明：{attempt.correctionNote}</div> : null}
                         <div className="text-[#9ca3af]">质量评分：{attempt.cardQualityScore ?? 5}</div>
                       </div>
                     ) : (
@@ -477,7 +519,46 @@ export default function FlashcardSimulationPlayPage() {
                           <Button type="button" variant={draft.result === "FAILURE" ? "default" : "outline"} className={draft.result === "FAILURE" ? "bg-[#ef4444] text-white hover:bg-[#dc2626]" : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"} onClick={() => updateResolutionDraft(attempt.attemptId, { result: "FAILURE" })}>失败</Button>
                         </div>
                         {draft.result === "FAILURE" ? (
-                          <Textarea value={draft.failureReason} onChange={(e) => updateResolutionDraft(attempt.attemptId, { failureReason: e.target.value })} className="min-h-[110px] border-[#27272a] bg-[#121212] text-[#e5e7eb]" placeholder="失败原因" />
+                          <div className="space-y-3">
+                            <Textarea value={draft.failureReason} onChange={(e) => updateResolutionDraft(attempt.attemptId, { failureReason: e.target.value })} className="min-h-[110px] border-[#27272a] bg-[#121212] text-[#e5e7eb]" placeholder="失败原因" />
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <div>
+                                <div className="mb-2 text-sm font-medium text-[#e5e7eb]">主误判类型</div>
+                                <Select
+                                  value={draft.primaryMistakeCode || EMPTY_SELECT_VALUE}
+                                  onValueChange={(value) => updateResolutionDraft(attempt.attemptId, {
+                                    primaryMistakeCode: value === EMPTY_SELECT_VALUE ? "" : value,
+                                    mistakeCodes: value === EMPTY_SELECT_VALUE
+                                      ? draft.mistakeCodes
+                                      : Array.from(new Set([value, ...draft.mistakeCodes])),
+                                  })}
+                                >
+                                  <SelectTrigger className="border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectValue placeholder="选择主误判类型" /></SelectTrigger>
+                                  <SelectContent className="border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                                    <SelectItem value={EMPTY_SELECT_VALUE}>请选择</SelectItem>
+                                    {mistakeTypeOptions.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <div className="mb-2 text-sm font-medium text-[#e5e7eb]">误判标签</div>
+                                <MultiSelectDropdown
+                                  options={mistakeTypeOptions.map((item) => ({ value: item.code, label: item.label, color: item.color }))}
+                                  value={draft.mistakeCodes}
+                                  onChange={(next) => updateResolutionDraft(attempt.attemptId, {
+                                    mistakeCodes: draft.primaryMistakeCode && !next.includes(draft.primaryMistakeCode)
+                                      ? [draft.primaryMistakeCode, ...next]
+                                      : next,
+                                  })}
+                                  placeholder="选择误判标签"
+                                  emptyText="暂无可用 mistake_type"
+                                  className="border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#1a1a1a]"
+                                  contentClassName="border-[#27272a] bg-[#121212] text-[#e5e7eb]"
+                                />
+                              </div>
+                            </div>
+                            <Textarea value={draft.correctionNote} onChange={(e) => updateResolutionDraft(attempt.attemptId, { correctionNote: e.target.value })} className="min-h-[90px] border-[#27272a] bg-[#121212] text-[#e5e7eb]" placeholder="这次失败后，你下次打算怎么改" />
+                          </div>
                         ) : null}
                         <div>
                           <div className="mb-2 text-sm font-medium text-[#e5e7eb]">题目质量评分（默认 5）</div>

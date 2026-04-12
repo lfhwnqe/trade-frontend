@@ -124,3 +124,7 @@ export async function fetchFlashcardTagOptions(): Promise<DictionaryTagItem[]> {
 export async function fetchPlaybookTypeOptions(): Promise<DictionaryTagItem[]> {
   return fetchDictionaryOptions("playbook_type");
 }
+
+export async function fetchMistakeTypeOptions(): Promise<DictionaryTagItem[]> {
+  return fetchDictionaryOptions("mistake_type");
+}

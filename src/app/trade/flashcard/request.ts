@@ -17,6 +17,7 @@ import type {
   FlashcardSimulationRunningStats,
   FlashcardSimulationSessionHistoryItem,
   FlashcardSimulationSessionStartResponse,
+  MistakeRecord,
   FlashcardSource,
   FlashcardSystemOutcomeType,
 } from "./types";
@@ -509,6 +510,9 @@ export async function resolveFlashcardSimulationAttempt(params: {
   attemptId: string;
   result: "SUCCESS" | "FAILURE";
   failureReason?: string;
+  primaryMistakeCode?: string;
+  mistakeCodes?: string[];
+  correctionNote?: string;
   cardQualityScore?: 1 | 2 | 3 | 4 | 5;
 }): Promise<{
   attemptId: string;
@@ -534,6 +538,47 @@ export async function resolveFlashcardSimulationAttempt(params: {
   }
 
   return data.data;
+}
+
+export async function listMistakeRecords(params?: {
+  pageSize?: number;
+  cursor?: string;
+  sourceType?: "FLASHCARD_SIMULATION" | "TRADE_FLASHCARD";
+  primaryMistakeCode?: string;
+  mistakeDomain?: "RECOGNITION" | "TRIGGER_TIMING" | "RISK_FRAMEWORK" | "CONTEXT_FILTER" | "EXECUTION";
+  playbookType?: string;
+  reviewStatus?: "NEW" | "CLASSIFIED" | "IN_TRAINING" | "IMPROVED" | "ARCHIVED";
+}): Promise<{ items: MistakeRecord[]; totalCount: number; nextCursor: string | null }> {
+  const searchParams = new URLSearchParams();
+  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params?.cursor) searchParams.set("cursor", params.cursor);
+  if (params?.sourceType) searchParams.set("sourceType", params.sourceType);
+  if (params?.primaryMistakeCode) searchParams.set("primaryMistakeCode", params.primaryMistakeCode);
+  if (params?.mistakeDomain) searchParams.set("mistakeDomain", params.mistakeDomain);
+  if (params?.playbookType) searchParams.set("playbookType", params.playbookType);
+  if (params?.reviewStatus) searchParams.set("reviewStatus", params.reviewStatus);
+
+  const targetPath = `mistakes/records${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取误判记录失败");
+  }
+
+  return {
+    items: (data.data?.items || []) as MistakeRecord[],
+    totalCount: typeof data.data?.totalCount === "number" ? data.data.totalCount : 0,
+    nextCursor: typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
+  };
 }
 
 export async function finishFlashcardSimulationSession(sessionId: string): Promise<{

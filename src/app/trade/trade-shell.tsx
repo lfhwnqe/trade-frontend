@@ -95,6 +95,11 @@ const tradeNavItems: NavItem[] = [
     icon: Layers,
   },
   {
+    title: "Mistake Records",
+    href: "/trade/flashcard/mistakes/records",
+    icon: Layers,
+  },
+  {
     title: "闪卡复盘",
     href: "/trade/flashcard/review",
     icon: Layers,
