@@ -54,7 +54,7 @@ export default function FlashcardDetailPage() {
     <TradePageShell title="闪卡详情" subtitle={`卡片 ${card.cardId.slice(0, 8)}`} showAddButton={false}>
       <div className="space-y-6">
         <div className="flex flex-wrap gap-2">
-          <Link href="/trade/flashcard/manage"><Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]">返回闪卡管理</Button></Link>
+          <Link href={`/trade/flashcard/manage?cardId=${card.cardId}`}><Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]">回管理页并按本卡查询</Button></Link>
           <Link href="/trade/flashcard/simulation/attempts"><Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]">查看 attempt 管理</Button></Link>
         </div>
 

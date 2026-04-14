@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { ColumnDef, RowSelectionState, SortingState } from "@tanstack/react-table";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ import { FlashcardChecklistGuide } from "../components/FlashcardChecklistGuide";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions, getDictionaryItemLabelByCode } from "../../dictionary";
 
 type FlashcardQuery = {
+  cardId: string;
   symbolPairInfo: string;
   playbookType: string;
   marketTimeInfo: string;
@@ -143,6 +145,7 @@ export default function FlashcardManagePage() {
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
   const [queryForm, setQueryForm] = React.useState<FlashcardQuery>({
+    cardId: "",
     symbolPairInfo: "",
     playbookType: "",
     marketTimeInfo: "",
@@ -150,6 +153,7 @@ export default function FlashcardManagePage() {
     sortOrder: "desc",
   });
   const [activeQuery, setActiveQuery] = React.useState<FlashcardQuery>({
+    cardId: "",
     symbolPairInfo: "",
     playbookType: "",
     marketTimeInfo: "",
@@ -175,6 +179,7 @@ export default function FlashcardManagePage() {
         const res = await listFlashcardCards({
           pageSize,
           cursor,
+          cardId: query.cardId.trim() || undefined,
           symbolPairInfo: query.symbolPairInfo.trim() || undefined,
           playbookType: query.playbookType || undefined,
           marketTimeInfo: query.marketTimeInfo.trim() || undefined,
@@ -198,6 +203,23 @@ export default function FlashcardManagePage() {
   React.useEffect(() => {
     void fetchPage(1, activeQuery, { resetCursor: true });
   }, [activeQuery, fetchPage]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const cardId = params.get("cardId") || "";
+    if (!cardId) return;
+    const nextQuery = {
+      cardId,
+      symbolPairInfo: "",
+      playbookType: "",
+      marketTimeInfo: "",
+      sortBy: "CREATED_AT" as FlashcardCardSortBy,
+      sortOrder: "desc" as FlashcardCardSortOrder,
+    };
+    setQueryForm(nextQuery);
+    setActiveQuery(nextQuery);
+  }, []);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -259,7 +281,7 @@ export default function FlashcardManagePage() {
   );
 
   const handleQueryReset = React.useCallback(() => {
-    const emptyQuery = { symbolPairInfo: "", playbookType: "", marketTimeInfo: "", sortBy: "CREATED_AT" as FlashcardCardSortBy, sortOrder: "desc" as FlashcardCardSortOrder };
+    const emptyQuery = { cardId: "", symbolPairInfo: "", playbookType: "", marketTimeInfo: "", sortBy: "CREATED_AT" as FlashcardCardSortBy, sortOrder: "desc" as FlashcardCardSortOrder };
     setQueryForm(emptyQuery);
     setActiveQuery(emptyQuery);
     setRowSelection({});
@@ -641,6 +663,11 @@ export default function FlashcardManagePage() {
         header: () => <div className="text-center">操作</div>,
         cell: ({ row }) => (
           <div className="flex flex-wrap gap-2 justify-center min-w-[260px]">
+            <Link href={`/trade/flashcard/${row.original.cardId}`}>
+              <Button variant="outline" size="sm">
+                独立详情
+              </Button>
+            </Link>
             <Button
               variant="outline"
               size="sm"
@@ -692,6 +719,17 @@ export default function FlashcardManagePage() {
           <div className="bg-[#121212] border border-[#27272a] rounded-xl p-4 mb-4 shadow-sm">
             <form onSubmit={handleQuerySubmit} className="space-y-3">
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#9ca3af] mb-1">闪卡 ID</label>
+                  <Input
+                    value={queryForm.cardId}
+                    onChange={(e) =>
+                      setQueryForm((prev) => ({ ...prev, cardId: e.target.value }))
+                    }
+                    placeholder="输入闪卡 ID，例如 6b4c..."
+                    className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-[#9ca3af] mb-1">币对信息</label>
                   <Input

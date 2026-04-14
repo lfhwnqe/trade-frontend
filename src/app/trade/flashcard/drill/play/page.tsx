@@ -19,6 +19,7 @@ import {
 import { ImagePreviewDialog } from "../../components/ImagePreviewDialog";
 import {
   finishFlashcardDrillSession,
+  rateFlashcardCard,
   submitFlashcardDrillAttempt,
   updateFlashcardNote,
 } from "../../request";
@@ -180,6 +181,8 @@ export default function FlashcardDrillPlayPage() {
   >({});
   const [favoriteMap, setFavoriteMap] = React.useState<Record<string, boolean>>({});
   const [noteMap, setNoteMap] = React.useState<Record<string, string>>({});
+  const [ratingMap, setRatingMap] = React.useState<Record<string, number>>({});
+  const [ratingSubmittingMap, setRatingSubmittingMap] = React.useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
     const loaded = getFlashcardSession();
@@ -264,6 +267,16 @@ export default function FlashcardDrillPlayPage() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== "Space") return;
       if (previewState) return;
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase();
+      if (
+        target?.isContentEditable ||
+        tagName === "textarea" ||
+        tagName === "input" ||
+        tagName === "select"
+      ) {
+        return;
+      }
       event.preventDefault();
 
       if (!revealed) {
@@ -320,6 +333,21 @@ export default function FlashcardDrillPlayPage() {
       }
     },
     [errorAlert, noteMap],
+  );
+
+  const handleRateCard = React.useCallback(
+    async (cardId: string, score: number) => {
+      setRatingSubmittingMap((prev) => ({ ...prev, [cardId]: true }));
+      try {
+        await rateFlashcardCard(cardId, score);
+        setRatingMap((prev) => ({ ...prev, [cardId]: score }));
+      } catch (error) {
+        errorAlert(error instanceof Error ? error.message : "闪卡评分失败");
+      } finally {
+        setRatingSubmittingMap((prev) => ({ ...prev, [cardId]: false }));
+      }
+    },
+    [errorAlert],
   );
 
   const toggleFavorite = React.useCallback(
@@ -556,6 +584,15 @@ export default function FlashcardDrillPlayPage() {
                 </div>
               ) : null}
               <div className="flex gap-2">
+                <Link href={`/trade/flashcard/${current.cardId}`}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]"
+                  >
+                    查看详情
+                  </Button>
+                </Link>
                 <Button
                   type="button"
                   size="sm"
@@ -564,6 +601,38 @@ export default function FlashcardDrillPlayPage() {
                 >
                   {favoriteMap[current.cardId] ? "取消收藏" : "收藏本题"}
                 </Button>
+              </div>
+              <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs text-[#9ca3af]">给这张闪卡打分</div>
+                    <div className="mt-1 text-sm text-[#cbd5e1]">
+                      复用管理页平均评分口径，当前显示 {typeof current.qualityScoreAvg === "number" ? current.qualityScoreAvg.toFixed(2) : "5.00"}
+                    </div>
+                  </div>
+                  <div className="text-xs text-[#9ca3af]">
+                    {ratingMap[current.cardId] ? `本次已打 ${ratingMap[current.cardId]} 分` : "未打分"}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5].map((score) => {
+                    const isActive = ratingMap[current.cardId] === score;
+                    return (
+                      <Button
+                        key={score}
+                        type="button"
+                        size="sm"
+                        disabled={ratingSubmittingMap[current.cardId]}
+                        onClick={() => void handleRateCard(current.cardId, score)}
+                        className={isActive
+                          ? "bg-[#00c2b2] text-black hover:bg-[#00b3a4]"
+                          : "bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]"}
+                      >
+                        {score} 分
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             </>
           ) : null}

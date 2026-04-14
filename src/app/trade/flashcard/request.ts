@@ -154,6 +154,7 @@ export async function randomFlashcardCards(params: {
 export async function listFlashcardCards(params?: {
   pageSize?: number;
   cursor?: string;
+  cardId?: string;
   behaviorType?: FlashcardBehaviorType;
   invalidationType?: FlashcardInvalidationType;
   symbolPairInfo?: string;
@@ -165,6 +166,7 @@ export async function listFlashcardCards(params?: {
   const searchParams = new URLSearchParams();
   if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
   if (params?.cursor) searchParams.set("cursor", params.cursor);
+  if (params?.cardId) searchParams.set("cardId", params.cardId);
   if (params?.behaviorType) searchParams.set("behaviorType", params.behaviorType);
   if (params?.invalidationType) {
     searchParams.set("invalidationType", params.invalidationType);
@@ -203,6 +205,25 @@ export async function listFlashcardCards(params?: {
     nextCursor:
       typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
   };
+}
+
+export async function rateFlashcardCard(cardId: string, score: number): Promise<FlashcardCard> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/cards/${cardId}/rate`,
+      actualMethod: "POST",
+    },
+    actualBody: { score },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "闪卡评分失败");
+  }
+
+  return data.data as FlashcardCard;
 }
 
 export async function getFlashcardCard(cardId: string): Promise<FlashcardCard> {
