@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ColumnDef, RowSelectionState, SortingState } from "@tanstack/react-table";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
@@ -103,8 +105,9 @@ function encodeOffsetCursor(offset: number) {
   return undefined;
 }
 
-export default function FlashcardManagePage() {
+function FlashcardManagePageContent() {
   const [successAlert, errorAlert] = useAlert();
+  const searchParams = useSearchParams();
 
   const [items, setItems] = React.useState<FlashcardCard[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -160,6 +163,7 @@ export default function FlashcardManagePage() {
     sortBy: "CREATED_AT",
     sortOrder: "desc",
   });
+  const [hasInitializedQuery, setHasInitializedQuery] = React.useState(false);
 
   // page N 的起始 cursor 存在 index N-1；只放 ref，避免触发 useEffect 循环
   const fetchPage = React.useCallback(
@@ -201,14 +205,11 @@ export default function FlashcardManagePage() {
   );
 
   React.useEffect(() => {
-    void fetchPage(1, activeQuery, { resetCursor: true });
-  }, [activeQuery, fetchPage]);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const cardId = params.get("cardId") || "";
-    if (!cardId) return;
+    const cardId = searchParams.get("cardId") || "";
+    if (!cardId) {
+      setHasInitializedQuery(true);
+      return;
+    }
     const nextQuery = {
       cardId,
       symbolPairInfo: "",
@@ -219,7 +220,13 @@ export default function FlashcardManagePage() {
     };
     setQueryForm(nextQuery);
     setActiveQuery(nextQuery);
-  }, []);
+    setHasInitializedQuery(true);
+  }, [searchParams]);
+
+  React.useEffect(() => {
+    if (!hasInitializedQuery) return;
+    void fetchPage(1, activeQuery, { resetCursor: true });
+  }, [activeQuery, fetchPage, hasInitializedQuery]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1218,5 +1225,13 @@ export default function FlashcardManagePage() {
         </DialogContent>
       </Dialog>
     </TradePageShell>
+  );
+}
+
+export default function FlashcardManagePage() {
+  return (
+    <Suspense fallback={null}>
+      <FlashcardManagePageContent />
+    </Suspense>
   );
 }

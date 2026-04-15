@@ -339,6 +339,28 @@ export async function finishFlashcardDrillSession(
   return data.data as { sessionId: string; score: number; stats: FlashcardDrillStats };
 }
 
+export async function abandonFlashcardDrillSession(
+  sessionId: string,
+): Promise<{ sessionId: string; score: number; stats: FlashcardDrillStats }> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    keepalive: true,
+    proxyParams: {
+      targetPath: `flashcard/drill/session/${sessionId}/abandon`,
+      actualMethod: "POST",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "中断练习失败");
+  }
+
+  return data.data as { sessionId: string; score: number; stats: FlashcardDrillStats };
+}
+
 export async function listFlashcardDrillSessions(params?: {
   pageSize?: number;
   cursor?: string;

@@ -18,6 +18,7 @@ import {
 } from "../../types";
 import { ImagePreviewDialog } from "../../components/ImagePreviewDialog";
 import {
+  abandonFlashcardDrillSession,
   finishFlashcardDrillSession,
   rateFlashcardCard,
   submitFlashcardDrillAttempt,
@@ -322,6 +323,14 @@ export default function FlashcardDrillPlayPage() {
       cancelled = true;
     };
   }, [errorAlert, finalScore, finishing, isCompleted, session]);
+
+  React.useEffect(() => {
+    if (!session || isCompleted) return;
+
+    return () => {
+      void abandonFlashcardDrillSession(session.sessionId).catch(() => {});
+    };
+  }, [isCompleted, session]);
 
   const handleSaveNote = React.useCallback(
     async (cardId: string) => {
