@@ -7,6 +7,7 @@ import type {
   FlashcardCardSortOrder,
   FlashcardDrillStartResponse,
   FlashcardDrillStats,
+  FlashcardDrillSessionDetail,
   FlashcardDrillSessionHistoryItem,
   FlashcardDrillAnalytics,
   FlashcardDirection,
@@ -393,6 +394,27 @@ export async function listFlashcardDrillSessions(params?: {
     nextCursor:
       typeof data.data?.nextCursor === "string" ? data.data.nextCursor : null,
   };
+}
+
+export async function getFlashcardDrillSessionDetail(
+  sessionId: string,
+): Promise<FlashcardDrillSessionDetail> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/drill/session/${sessionId}`,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取练习会话详情失败");
+  }
+
+  return data.data as FlashcardDrillSessionDetail;
 }
 
 export async function getFlashcardDrillAnalytics(params?: {

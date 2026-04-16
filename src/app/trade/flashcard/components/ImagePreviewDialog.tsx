@@ -140,7 +140,7 @@ export function ImagePreviewDialog({
                       <img
                         src={answerPreviewUrl}
                         alt="answer-preview"
-                        className="h-full w-full object-contain"
+                        className="h-full w-full object-fill"
                       />
                     </div>
                   </div>

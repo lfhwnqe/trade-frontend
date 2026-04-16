@@ -2,12 +2,14 @@
 
 import React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   clearFlashcardSession,
   getFlashcardSession,
+  saveFlashcardSession,
   type FlashcardDrillSession,
 } from "@/store/flashcard-session";
 import {
@@ -20,6 +22,7 @@ import { ImagePreviewDialog } from "../../components/ImagePreviewDialog";
 import {
   abandonFlashcardDrillSession,
   finishFlashcardDrillSession,
+  getFlashcardDrillSessionDetail,
   rateFlashcardCard,
   submitFlashcardDrillAttempt,
   updateFlashcardNote,
@@ -157,7 +160,8 @@ function FlashcardQuestionReveal({
   );
 }
 
-export default function FlashcardDrillPlayPage() {
+function FlashcardDrillPlayPageInner() {
+  const searchParams = useSearchParams();
   const [, errorAlert] = useAlert();
 
   const [session, setSession] = React.useState<FlashcardDrillSession | null>(null);
@@ -184,18 +188,103 @@ export default function FlashcardDrillPlayPage() {
   const [noteMap, setNoteMap] = React.useState<Record<string, string>>({});
   const [ratingMap, setRatingMap] = React.useState<Record<string, number>>({});
   const [ratingSubmittingMap, setRatingSubmittingMap] = React.useState<Record<string, boolean>>({});
+  const [loadingSession, setLoadingSession] = React.useState(true);
 
   React.useEffect(() => {
-    const loaded = getFlashcardSession();
-    if (!loaded) return;
+    let cancelled = false;
 
-    setSession(loaded);
-    const initialNotes = loaded.cards.reduce<Record<string, string>>((acc, card) => {
-      acc[card.cardId] = card.notes || "";
-      return acc;
-    }, {});
-    setNoteMap(initialNotes);
-  }, []);
+    const restore = async () => {
+      const sessionId = searchParams.get("sessionId") || "";
+      const loaded = getFlashcardSession();
+
+      if (!sessionId && loaded) {
+        if (cancelled) return;
+        setSession(loaded);
+        setRunningStats(loaded.stats || null);
+        const initialNotes = loaded.cards.reduce<Record<string, string>>((acc, card) => {
+          acc[card.cardId] = card.notes || "";
+          return acc;
+        }, {});
+        setNoteMap(initialNotes);
+        setLoadingSession(false);
+        return;
+      }
+
+      if (!sessionId) {
+        if (!cancelled) setLoadingSession(false);
+        return;
+      }
+
+      try {
+        const detail = await getFlashcardDrillSessionDetail(sessionId);
+        if (cancelled) return;
+
+        const restoredSession: FlashcardDrillSession = {
+          sessionId: detail.session.sessionId,
+          source: detail.session.source,
+          cards: detail.cards,
+          count: detail.cards.length,
+          startedAt: detail.session.startedAt,
+          stats: detail.session.stats,
+        };
+        saveFlashcardSession(restoredSession);
+        setSession(restoredSession);
+        setRunningStats(detail.session.stats);
+        setIndex(Math.min(detail.session.answered, Math.max(detail.cards.length - 1, 0)));
+        setFinalScore(detail.session.status === "COMPLETED" ? detail.session.stats.score : null);
+        setAttemptResults(
+          detail.attempts.reduce<Record<string, { isCorrect: boolean; expectedAction: FlashcardAction }>>((acc, attempt) => {
+            acc[attempt.cardId] = {
+              isCorrect: attempt.isCorrect,
+              expectedAction: attempt.expectedAction,
+            };
+            return acc;
+          }, {}),
+        );
+        setFavoriteMap(
+          detail.attempts.reduce<Record<string, boolean>>((acc, attempt) => {
+            acc[attempt.cardId] = attempt.isFavorite;
+            return acc;
+          }, {}),
+        );
+        setNoteMap(
+          detail.cards.reduce<Record<string, string>>((acc, card) => {
+            acc[card.cardId] = card.notes || "";
+            return acc;
+          }, detail.attempts.reduce<Record<string, string>>((acc, attempt) => {
+            if (typeof attempt.noteSnapshot === "string") {
+              acc[attempt.cardId] = attempt.noteSnapshot;
+            }
+            return acc;
+          }, {})),
+        );
+
+        if (detail.session.status === "COMPLETED") {
+          setIndex(detail.cards.length);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          errorAlert(error instanceof Error ? error.message : "恢复练习会话失败");
+        }
+      } finally {
+        if (!cancelled) setLoadingSession(false);
+      }
+    };
+
+    void restore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [errorAlert, searchParams]);
+
+  React.useEffect(() => {
+    if (!session) return;
+    saveFlashcardSession({
+      ...session,
+      stats: runningStats || session.stats,
+    });
+  }, [runningStats, session]);
 
   React.useEffect(() => {
     setQuestionRevealProgress(0);
@@ -381,6 +470,16 @@ export default function FlashcardDrillPlayPage() {
     },
     [attemptResults, errorAlert, favoriteMap, selectedAction, session],
   );
+
+  if (loadingSession) {
+    return (
+      <TradePageShell title="闪卡练习" subtitle="正在恢复练习会话" showAddButton={false}>
+        <div className="w-full rounded-xl border border-[#27272a] bg-[#121212] p-6 text-center text-[#9ca3af] shadow-sm">
+          正在恢复练习进度...
+        </div>
+      </TradePageShell>
+    );
+  }
 
   if (!session || cards.length === 0) {
     return (
@@ -593,13 +692,13 @@ export default function FlashcardDrillPlayPage() {
                 </div>
               ) : null}
               <div className="flex gap-2">
-                <Link href={`/trade/flashcard/${current.cardId}`}>
+                <Link href={`/trade/flashcard/manage?cardId=${current.cardId}`} target="_blank" rel="noreferrer">
                   <Button
                     type="button"
                     size="sm"
                     className="bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#262626]"
                   >
-                    查看详情
+                    新开页查看本卡
                   </Button>
                 </Link>
                 <Button
@@ -711,5 +810,21 @@ export default function FlashcardDrillPlayPage() {
         priceLineEditorEnabled={previewState?.priceLineEditorEnabled}
       />
     </TradePageShell>
+  );
+}
+
+export default function FlashcardDrillPlayPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <TradePageShell title="闪卡练习" subtitle="正在恢复练习会话" showAddButton={false}>
+          <div className="w-full rounded-xl border border-[#27272a] bg-[#121212] p-6 text-center text-[#9ca3af] shadow-sm">
+            正在加载练习页...
+          </div>
+        </TradePageShell>
+      }
+    >
+      <FlashcardDrillPlayPageInner />
+    </React.Suspense>
   );
 }

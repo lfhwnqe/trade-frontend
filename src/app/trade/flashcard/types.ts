@@ -218,6 +218,34 @@ export type FlashcardDrillSessionHistoryItem = {
   updatedAt: string;
 };
 
+export type FlashcardDrillSessionAttemptDetail = {
+  cardId: string;
+  userAction: FlashcardAction;
+  expectedAction: FlashcardAction;
+  isCorrect: boolean;
+  isFavorite: boolean;
+  noteSnapshot?: string;
+  answeredAt: string;
+};
+
+export type FlashcardDrillSessionDetail = {
+  session: {
+    sessionId: string;
+    source: FlashcardSource;
+    total: number;
+    answered: number;
+    correct: number;
+    wrong: number;
+    status: "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
+    startedAt: string;
+    endedAt?: string;
+    updatedAt: string;
+    stats: FlashcardDrillStats;
+  };
+  cards: FlashcardCard[];
+  attempts: FlashcardDrillSessionAttemptDetail[];
+};
+
 export type FlashcardDrillAnalyticsWindow = {
   sampleSize: number;
   averageScore: number;

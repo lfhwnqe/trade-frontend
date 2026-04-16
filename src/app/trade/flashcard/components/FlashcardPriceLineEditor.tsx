@@ -247,7 +247,7 @@ export function FlashcardPriceLineEditor({
             onMouseLeave={() => setIsHovered(false)}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageUrl} alt="price-line-preview" className="block h-full w-full select-none object-contain" draggable={false} />
+            <img src={imageUrl} alt="price-line-preview" className="block h-full w-full select-none object-fill" draggable={false} />
 
             {revealEnabled ? (
               <>

@@ -51,7 +51,7 @@ export default function FlashcardDrillSetupPage() {
         startedAt: new Date().toISOString(),
       });
       successAlert(`已生成 ${result.cards.length} 张训练卡片`);
-      router.push("/trade/flashcard/drill/play");
+      router.push(`/trade/flashcard/drill/play?sessionId=${result.sessionId}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "生成练习失败";
       errorAlert(message);
