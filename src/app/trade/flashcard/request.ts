@@ -43,6 +43,8 @@ type CreateFlashcardPayload = {
   earlyExitTag?: boolean;
   earlyExitReason?: string;
   earlyExitImageUrls?: string[];
+  orderFlowImageUrls?: string[];
+  orderFlowRemark?: string;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   playbookType?: string;
@@ -61,6 +63,8 @@ type UpdateFlashcardPayload = {
   earlyExitTag?: boolean;
   earlyExitReason?: string;
   earlyExitImageUrls?: string[];
+  orderFlowImageUrls?: string[];
+  orderFlowRemark?: string;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   playbookType?: string;

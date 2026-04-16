@@ -41,6 +41,8 @@ export default function FlashcardCreatePage() {
   const [earlyExitTag, setEarlyExitTag] = React.useState(false);
   const [earlyExitReason, setEarlyExitReason] = React.useState("");
   const [earlyExitImages, setEarlyExitImages] = React.useState<ImageResource[]>([]);
+  const [orderFlowImages, setOrderFlowImages] = React.useState<ImageResource[]>([]);
+  const [orderFlowRemark, setOrderFlowRemark] = React.useState("");
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
   const [symbolPairInfo, setSymbolPairInfo] = React.useState<string>("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
@@ -141,6 +143,8 @@ export default function FlashcardCreatePage() {
         earlyExitImageUrls: earlyExitTag
           ? earlyExitImages.map((item) => item.url).filter(Boolean)
           : undefined,
+        orderFlowImageUrls: orderFlowImages.map((item) => item.url).filter(Boolean),
+        orderFlowRemark: orderFlowRemark.trim() || undefined,
         marketTimeInfo: marketTimeInfo.trim() || undefined,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
         playbookType: playbookType || undefined,
@@ -157,6 +161,8 @@ export default function FlashcardCreatePage() {
       setEarlyExitTag(false);
       setEarlyExitReason("");
       setEarlyExitImages([]);
+      setOrderFlowImages([]);
+      setOrderFlowRemark("");
       setMarketTimeInfo("");
       setSymbolPairInfo("");
       setPlaybookType("");
@@ -176,6 +182,8 @@ export default function FlashcardCreatePage() {
     earlyExitReason,
     earlyExitTag,
     errorAlert,
+    orderFlowImages,
+    orderFlowRemark,
     expectedAction,
     systemOutcomeType,
     marketTimeInfo,
@@ -374,6 +382,23 @@ export default function FlashcardCreatePage() {
                 </div>
               </div>
             ) : null}
+          </div>
+
+          <div className="space-y-4 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
+            <div>
+              <div className="text-xs font-medium text-[#9ca3af]">订单流图片（选填，最多 5 张）</div>
+              <div className="mt-1 text-xs text-[#6b7280]">方便补充订单流截图、footprint 或成交量细节。</div>
+            </div>
+            <ImageUploader value={orderFlowImages} onChange={setOrderFlowImages} max={5} />
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-[#9ca3af]">订单流备注（选填）</div>
+              <Textarea
+                value={orderFlowRemark}
+                onChange={(event) => setOrderFlowRemark(event.target.value)}
+                placeholder="记录这组订单流图想表达的关键信号"
+                className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+              />
+            </div>
           </div>
 
           <div className="md:col-span-2">

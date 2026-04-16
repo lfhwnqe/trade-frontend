@@ -125,6 +125,8 @@ function FlashcardManagePageContent() {
   const [editingEarlyExitTag, setEditingEarlyExitTag] = React.useState(false);
   const [editingEarlyExitReason, setEditingEarlyExitReason] = React.useState("");
   const [editingEarlyExitImages, setEditingEarlyExitImages] = React.useState<ImageResource[]>([]);
+  const [editingOrderFlowImages, setEditingOrderFlowImages] = React.useState<ImageResource[]>([]);
+  const [editingOrderFlowRemark, setEditingOrderFlowRemark] = React.useState("");
   const [editingMarketTimeInfo, setEditingMarketTimeInfo] = React.useState("");
   const [editingSymbolPairInfo, setEditingSymbolPairInfo] = React.useState("");
   const [editingPlaybookType, setEditingPlaybookType] = React.useState("");
@@ -321,6 +323,13 @@ function FlashcardManagePageContent() {
         url,
       })),
     );
+    setEditingOrderFlowImages(
+      (card.orderFlowImageUrls || []).map((url, index) => ({
+        key: `${card.cardId}-order-flow-${index}`,
+        url,
+      })),
+    );
+    setEditingOrderFlowRemark(card.orderFlowRemark || "");
     setEditingMarketTimeInfo(card.marketTimeInfo || "");
     setEditingSymbolPairInfo(card.symbolPairInfo || "");
     setEditingPlaybookType(card.playbookType || "");
@@ -373,6 +382,8 @@ function FlashcardManagePageContent() {
         earlyExitImageUrls: editingEarlyExitTag
           ? editingEarlyExitImages.map((item) => item.url).filter(Boolean)
           : undefined,
+        orderFlowImageUrls: editingOrderFlowImages.map((item) => item.url).filter(Boolean),
+        orderFlowRemark: editingOrderFlowRemark.trim() || undefined,
         marketTimeInfo: editingMarketTimeInfo.trim() || undefined,
         symbolPairInfo: editingSymbolPairInfo.trim() || undefined,
         playbookType: editingPlaybookType || undefined,
@@ -401,6 +412,8 @@ function FlashcardManagePageContent() {
     editingSystemOutcomeType,
     editingMarketTimeInfo,
     editingNote,
+    editingOrderFlowImages,
+    editingOrderFlowRemark,
     editingPlaybookType,
     editingQuestionImages,
     editingSymbolPairInfo,
@@ -932,6 +945,11 @@ function FlashcardManagePageContent() {
                   <div className="min-h-20 whitespace-pre-wrap text-sm text-[#e5e7eb]">{viewingCard.notes?.trim() || "-"}</div>
                 </div>
 
+                <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                  <div className="text-xs font-medium text-[#9ca3af]">订单流备注</div>
+                  <div className="min-h-20 whitespace-pre-wrap text-sm text-[#e5e7eb]">{viewingCard.orderFlowRemark?.trim() || "-"}</div>
+                </div>
+
                 {viewingCard.earlyExitImageUrls?.length ? (
                   <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
                     <div className="text-xs font-medium text-[#9ca3af]">提前离场截图</div>
@@ -945,6 +963,25 @@ function FlashcardManagePageContent() {
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={url} alt={`early-exit-${index + 1}`} className="h-32 w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {viewingCard.orderFlowImageUrls?.length ? (
+                  <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+                    <div className="text-xs font-medium text-[#9ca3af]">订单流图片</div>
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                      {viewingCard.orderFlowImageUrls.map((url, index) => (
+                        <button
+                          key={`${viewingCard.cardId}-detail-order-flow-${index}`}
+                          type="button"
+                          className="cursor-pointer overflow-hidden rounded border border-[#27272a] bg-black"
+                          onClick={() => setPreviewUrl(url)}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={`order-flow-${index + 1}`} className="h-32 w-full object-cover" />
                         </button>
                       ))}
                     </div>
@@ -1183,6 +1220,29 @@ function FlashcardManagePageContent() {
                     </div>
                   </div>
                 ) : null}
+              </div>
+
+              <div className="space-y-4 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
+                <div>
+                  <div className="text-xs font-medium text-[#9ca3af]">订单流图片（选填，最多 5 张）</div>
+                  <div className="mt-1 text-xs text-[#6b7280]">方便补充订单流截图、footprint 或成交量细节。</div>
+                </div>
+                <ImageUploader
+                  value={editingOrderFlowImages}
+                  onChange={setEditingOrderFlowImages}
+                  max={5}
+                  disabled={savingNote}
+                />
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-[#9ca3af]">订单流备注（选填）</div>
+                  <Textarea
+                    value={editingOrderFlowRemark}
+                    onChange={(event) => setEditingOrderFlowRemark(event.target.value)}
+                    placeholder="记录这组订单流图想表达的关键信号"
+                    className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+                    disabled={savingNote}
+                  />
+                </div>
               </div>
 
               <div className="md:col-span-2">

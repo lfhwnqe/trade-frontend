@@ -83,8 +83,24 @@ export default function FlashcardDetailPage() {
               <span key={tag.code} className="rounded-full border border-[#3f3f46] px-2 py-1 text-xs text-[#d4d4d8]">{tag.label}</span>
             )) : <span className="text-sm text-[#9ca3af]">暂无标签</span>}
           </div>
-          <div className="mt-4 whitespace-pre-wrap rounded-lg border border-[#27272a] bg-[#18181b] p-4 text-sm text-[#e5e7eb]">{card.notes?.trim() || "暂无备注"}</div>
+          <div className="mt-4 space-y-3">
+            <div className="whitespace-pre-wrap rounded-lg border border-[#27272a] bg-[#18181b] p-4 text-sm text-[#e5e7eb]">{card.notes?.trim() || "暂无题目备注"}</div>
+            <div className="whitespace-pre-wrap rounded-lg border border-[#27272a] bg-[#18181b] p-4 text-sm text-[#e5e7eb]">{card.orderFlowRemark?.trim() || "暂无订单流备注"}</div>
+          </div>
         </div>
+
+        {card.orderFlowImageUrls?.length ? (
+          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5">
+            <div className="text-sm font-medium text-[#e5e7eb]">订单流图片</div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {card.orderFlowImageUrls.map((url, index) => (
+                <button key={`${card.cardId}-order-flow-${index}`} type="button" className="overflow-hidden rounded-lg border border-[#27272a] bg-black" onClick={() => setPreviewUrl(url)}>
+                  <img src={url} alt={`order-flow-${index + 1}`} className="h-40 w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="rounded-xl border border-[#27272a] bg-[#121212] p-5">
           <div className="text-sm font-medium text-[#e5e7eb]">最近模拟盘 attempts</div>

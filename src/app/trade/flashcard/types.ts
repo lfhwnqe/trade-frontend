@@ -160,6 +160,8 @@ export type FlashcardCard = {
   earlyExitTag?: boolean;
   earlyExitReason?: string;
   earlyExitImageUrls?: string[];
+  orderFlowImageUrls?: string[];
+  orderFlowRemark?: string;
   direction?: FlashcardDirection;
   marketTimeInfo?: string;
   symbolPairInfo?: string;
