@@ -103,6 +103,8 @@ export function FlashcardPriceLineEditor({
   title,
   revealProgress,
   onRevealProgressChange,
+  horizontalViewportPercent,
+  onHorizontalViewportPercentChange,
   className,
   imageViewportClassName,
   readOnly = false,
@@ -114,17 +116,22 @@ export function FlashcardPriceLineEditor({
   title?: string;
   revealProgress?: number;
   onRevealProgressChange?: (next: number) => void;
+  horizontalViewportPercent?: number;
+  onHorizontalViewportPercentChange?: (next: number) => void;
   className?: string;
   imageViewportClassName?: string;
   readOnly?: boolean;
   readOnlyHint?: string;
 }) {
+  const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const maskRef = React.useRef<HTMLDivElement | null>(null);
   const draggingTypeRef = React.useRef<FlashcardPriceLineType | null>(null);
   const [activeType, setActiveType] = React.useState<FlashcardPriceLineType>("entry");
   const [draggingType, setDraggingType] = React.useState<FlashcardPriceLineType | null>(null);
   const [isHovered, setIsHovered] = React.useState(false);
+  const [imageAspectRatio, setImageAspectRatio] = React.useState(1);
+  const [viewportSize, setViewportSize] = React.useState({ width: 0, height: 0 });
 
   const updateLineByClientY = React.useCallback(
     (type: FlashcardPriceLineType, clientY: number) => {
@@ -160,8 +167,39 @@ export function FlashcardPriceLineEditor({
 
   const rr = React.useMemo(() => getRr(value), [value]);
   const tradeSide = React.useMemo(() => getTradeSide(value), [value]);
+  const revealVisible = typeof revealProgress === "number";
   const revealEnabled =
     typeof revealProgress === "number" && typeof onRevealProgressChange === "function";
+  const horizontalViewportVisible = typeof horizontalViewportPercent === "number";
+  const horizontalViewportEnabled =
+    typeof horizontalViewportPercent === "number" && typeof onHorizontalViewportPercentChange === "function";
+  const stageWidth = Math.max(viewportSize.height * imageAspectRatio, viewportSize.width || 0);
+  const maxHorizontalOverflow = Math.max(stageWidth - viewportSize.width, 0);
+  const clampedHorizontalViewportPercent = clamp(horizontalViewportPercent ?? 0, 0, 1);
+  const horizontalTranslateX = maxHorizontalOverflow > 0
+    ? clampedHorizontalViewportPercent * maxHorizontalOverflow
+    : 0;
+
+  React.useEffect(() => {
+    const viewportNode = viewportRef.current;
+    if (!viewportNode) return;
+
+    const syncViewportSize = () => {
+      const rect = viewportNode.getBoundingClientRect();
+      setViewportSize({ width: rect.width, height: rect.height });
+    };
+
+    syncViewportSize();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(syncViewportSize);
+      observer.observe(viewportNode);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", syncViewportSize);
+    return () => window.removeEventListener("resize", syncViewportSize);
+  }, []);
 
   React.useEffect(() => {
     const maskNode = maskRef.current;
@@ -181,8 +219,22 @@ export function FlashcardPriceLineEditor({
 
   const handleWheel = React.useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
-      if (!revealEnabled || !isHovered) return;
+      if (!isHovered) return;
       event.preventDefault();
+      const horizontalDelta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.shiftKey ? event.deltaY : 0;
+      if (horizontalViewportEnabled && maxHorizontalOverflow > 0 && horizontalDelta) {
+        const direction = Math.sign(horizontalDelta);
+        if (direction) {
+          const nextHorizontal = clamp(
+            clampedHorizontalViewportPercent + direction * 0.00033 * Math.max(Math.abs(horizontalDelta), 12),
+            0,
+            1,
+          );
+          onHorizontalViewportPercentChange(nextHorizontal);
+          return;
+        }
+      }
+      if (!revealEnabled) return;
       const direction = Math.sign(event.deltaY);
       if (!direction) return;
       const nextProgress = clamp(
@@ -192,7 +244,7 @@ export function FlashcardPriceLineEditor({
       );
       onRevealProgressChange(nextProgress);
     },
-    [isHovered, onRevealProgressChange, revealEnabled, revealProgress],
+    [clampedHorizontalViewportPercent, horizontalViewportEnabled, isHovered, maxHorizontalOverflow, onHorizontalViewportPercentChange, onRevealProgressChange, revealEnabled, revealProgress],
   );
 
   const handleLinePointerDown = React.useCallback(
@@ -239,76 +291,101 @@ export function FlashcardPriceLineEditor({
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
         <div>
           <div
-            ref={containerRef}
+            ref={viewportRef}
             className={`group relative overflow-hidden rounded-lg border border-[#27272a] bg-black ${imageViewportClassName || ""}`}
             onPointerDown={handleImageClick}
             onWheel={handleWheel}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageUrl} alt="price-line-preview" className="block h-full w-full select-none object-fill" draggable={false} />
+            <div
+              ref={containerRef}
+              className="relative h-full"
+              style={{ width: stageWidth ? `${stageWidth}px` : "100%", transform: `translateX(-${horizontalTranslateX}px)` }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt="price-line-preview"
+                className="block h-full w-full select-none object-fill"
+                draggable={false}
+                onLoad={(event) => {
+                  const target = event.currentTarget;
+                  if (target.naturalWidth > 0 && target.naturalHeight > 0) {
+                    setImageAspectRatio(target.naturalWidth / target.naturalHeight);
+                  }
+                }}
+              />
 
-            {revealEnabled ? (
-              <>
-                <div
-                  className="pointer-events-none absolute inset-y-0 w-0 border-l-2 border-dashed border-[#fbbf24]"
-                  style={{ left: `${revealProgress * 100}%`, zIndex: 2 }}
-                >
-                  <div className="absolute -top-1 left-1 -translate-y-full rounded bg-[#fbbf24] px-2 py-1 text-[11px] font-medium text-black">
-                    当前推演位置 / x轴
-                  </div>
-                </div>
-                <div
-                  ref={maskRef}
-                  className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816]"
-                  style={{ width: "100%", transform: `scaleX(${Math.max(1 - revealProgress, 0)})`, willChange: "transform", zIndex: 1 }}
-                >
-                </div>
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-3 text-xs text-white/85">
-                  <span>{isHovered ? "滚轮向下逐步揭开，向上重新遮住" : "悬停后可滚轮推演 K 线"}</span>
-                  <span>{Math.round(revealProgress * 100)}%</span>
-                </div>
-              </>
-            ) : null}
-
-            <div className="pointer-events-none absolute inset-0">
-              {FLASHCARD_PRICE_LINE_TYPES.map((type) => {
-                const lineY = value[type];
-                if (typeof lineY !== "number") return null;
-                const meta = LINE_META[type];
-                const top = `${lineY * 100}%`;
-                const isDragging = draggingType === type;
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    className="pointer-events-auto absolute left-0 right-0 -translate-y-1/2 cursor-row-resize touch-none"
-                    style={{ top }}
-                    onPointerDown={(event) => handleLinePointerDown(type, event)}
+              {revealVisible ? (
+                <>
+                  <div
+                    className="pointer-events-none absolute inset-y-0 w-0 border-l-2 border-dashed border-[#fbbf24]"
+                    style={{ left: `${revealProgress * 100}%`, zIndex: 2 }}
                   >
-                    <div
-                      className="relative h-0.5 w-full shadow-[0_0_10px_rgba(255,255,255,0.15)]"
-                      style={{ backgroundColor: meta.color }}
+                    <div className="absolute -top-1 left-1 -translate-y-full rounded bg-[#fbbf24] px-2 py-1 text-[11px] font-medium text-black">
+                      当前推演位置 / x轴
+                    </div>
+                  </div>
+                  <div
+                    ref={maskRef}
+                    className="pointer-events-none absolute inset-y-0 right-0 origin-right rounded-r bg-[#050816]"
+                    style={{ width: "100%", transform: `scaleX(${Math.max(1 - revealProgress, 0)})`, willChange: "transform", zIndex: 1 }}
+                  >
+                  </div>
+                </>
+              ) : null}
+
+              <div className="pointer-events-none absolute inset-0">
+                {FLASHCARD_PRICE_LINE_TYPES.map((type) => {
+                  const lineY = value[type];
+                  if (typeof lineY !== "number") return null;
+                  const meta = LINE_META[type];
+                  const top = `${lineY * 100}%`;
+                  const isDragging = draggingType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      className="pointer-events-auto absolute left-0 right-0 -translate-y-1/2 cursor-row-resize touch-none"
+                      style={{ top }}
+                      onPointerDown={(event) => handleLinePointerDown(type, event)}
                     >
                       <div
-                        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border px-2 py-0.5 text-[11px] font-medium"
-                        style={{
-                          color: meta.color,
-                          borderColor: `${meta.color}88`,
-                          backgroundColor: "rgba(9,9,11,0.88)",
-                        }}
+                        className="relative h-0.5 w-full shadow-[0_0_10px_rgba(255,255,255,0.15)]"
+                        style={{ backgroundColor: meta.color }}
                       >
-                        {meta.shortLabel}
+                        <div
+                          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                          style={{
+                            color: meta.color,
+                            borderColor: `${meta.color}88`,
+                            backgroundColor: "rgba(9,9,11,0.88)",
+                          }}
+                        >
+                          {meta.shortLabel}
+                        </div>
+                        <div
+                          className="absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 bg-[#09090b]"
+                          style={{ borderColor: meta.color, boxShadow: isDragging ? `0 0 0 4px ${meta.color}33` : "none" }}
+                        />
                       </div>
-                      <div
-                        className="absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 bg-[#09090b]"
-                        style={{ borderColor: meta.color, boxShadow: isDragging ? `0 0 0 4px ${meta.color}33` : "none" }}
-                      />
-                    </div>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/20 to-transparent px-3 py-3 text-xs text-white/85">
+              <span>
+                {horizontalViewportVisible && maxHorizontalOverflow > 0
+                  ? (isHovered ? "纵向滚轮控制蒙层，横向滚动或 Shift+滚轮控制左右视口" : "悬停后可滚轮推演，左右滚动可移动视口")
+                  : (isHovered ? "滚轮向下逐步揭开，向上重新遮住" : "悬停后可滚轮推演 K 线")}
+              </span>
+              <div className="flex items-center gap-3">
+                {horizontalViewportVisible && maxHorizontalOverflow > 0 ? <span>视口 {Math.round(clampedHorizontalViewportPercent * 100)}%</span> : null}
+                {revealVisible ? <span>{Math.round(revealProgress * 100)}%</span> : null}
+              </div>
             </div>
           </div>
         </div>

@@ -33,6 +33,8 @@ type ImagePreviewDialogProps = {
   onClose: () => void;
   revealProgress?: number;
   onRevealProgressChange?: (next: number) => void;
+  horizontalViewportPercent?: number;
+  onHorizontalViewportPercentChange?: (next: number) => void;
   priceLineEditorEnabled?: boolean;
   priceLineValue?: FlashcardPriceLineValue;
   onPriceLineChange?: (next: FlashcardPriceLineValue) => void;
@@ -48,6 +50,8 @@ export function ImagePreviewDialog({
   onClose,
   revealProgress,
   onRevealProgressChange,
+  horizontalViewportPercent,
+  onHorizontalViewportPercentChange,
   priceLineEditorEnabled = false,
   priceLineValue,
   onPriceLineChange,
@@ -57,9 +61,6 @@ export function ImagePreviewDialog({
 }: ImagePreviewDialogProps) {
   const [internalPriceLineValue, setInternalPriceLineValue] = React.useState<FlashcardPriceLineValue>({});
   const [showAnswerPreview, setShowAnswerPreview] = React.useState(false);
-
-  const revealEnabled =
-    typeof revealProgress === "number" && typeof onRevealProgressChange === "function";
 
   const resolvedPriceLineValue = priceLineValue ?? internalPriceLineValue;
   const resolvedSetPriceLineValue = onPriceLineChange ?? setInternalPriceLineValue;
@@ -150,8 +151,10 @@ export function ImagePreviewDialog({
                     value={resolvedPriceLineValue}
                     onChange={resolvedSetPriceLineValue}
                     title="问题图：盈亏比辅助线"
-                    revealProgress={revealEnabled ? revealProgress : undefined}
-                    onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
+                    revealProgress={revealProgress}
+                    onRevealProgressChange={onRevealProgressChange}
+                    horizontalViewportPercent={horizontalViewportPercent}
+                    onHorizontalViewportPercentChange={onHorizontalViewportPercentChange}
                     className="flex h-full min-h-0 flex-col overflow-hidden"
                     imageViewportClassName="h-[520px] lg:h-[560px]"
                     readOnly={priceLineEditorReadOnly}
@@ -169,8 +172,10 @@ export function ImagePreviewDialog({
                   value={resolvedPriceLineValue}
                   onChange={resolvedSetPriceLineValue}
                   title="问题图：盈亏比辅助线"
-                  revealProgress={revealEnabled ? revealProgress : undefined}
-                  onRevealProgressChange={revealEnabled ? onRevealProgressChange : undefined}
+                  revealProgress={revealProgress}
+                  onRevealProgressChange={onRevealProgressChange}
+                  horizontalViewportPercent={horizontalViewportPercent}
+                  onHorizontalViewportPercentChange={onHorizontalViewportPercentChange}
                   className="flex h-full min-h-0 flex-col overflow-hidden"
                   imageViewportClassName="h-[520px] lg:h-[560px]"
                   readOnly={priceLineEditorReadOnly}

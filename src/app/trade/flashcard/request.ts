@@ -562,6 +562,7 @@ export async function createFlashcardSimulationAttempt(params: {
   sessionId: string;
   cardId: string;
   revealProgress: number;
+  horizontalViewportPercent?: number;
   entryLineYPercent: number;
   stopLossLineYPercent: number;
   takeProfitLineYPercent: number;

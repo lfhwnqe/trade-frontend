@@ -121,6 +121,7 @@ export default function FlashcardSimulationAttemptDetailPage() {
         <ImagePreviewDialog
           previewUrl={attempt.questionImageUrlSnapshot ?? null}
           revealProgress={attempt.revealProgress}
+          horizontalViewportPercent={attempt.horizontalViewportPercent ?? 0}
           priceLineEditorEnabled
           priceLineEditorReadOnly
           priceLineEditorReadOnlyHint="只读回放：这里按保存时的入场线 / 止损线 / 止盈线，以及当时的 x 轴位置展示。"

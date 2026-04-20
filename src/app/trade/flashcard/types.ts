@@ -145,6 +145,7 @@ export type FlashcardCard = {
   userId: string;
   cardId: string;
   prefilledRevealProgress?: number;
+  prefilledHorizontalViewportPercent?: number;
   replaySourceAttemptId?: string;
   previousAttemptResult?: "SUCCESS" | "FAILURE";
   previousEntryDirection?: "LONG" | "SHORT";
@@ -331,6 +332,7 @@ export type FlashcardSimulationAttemptDetail = {
   cardId: string;
   status: "ENTRY_SAVED" | "RESOLVED";
   revealProgress: number;
+  horizontalViewportPercent?: number;
   replaySourceAttemptId?: string;
   entryLineYPercent: number;
   stopLossLineYPercent: number;

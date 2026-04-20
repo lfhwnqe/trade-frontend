@@ -306,6 +306,7 @@ export default function FlashcardSimulationAttemptsPage() {
         <ImagePreviewDialog
           previewUrl={previewAttempt.questionImageUrlSnapshot ?? null}
           revealProgress={previewAttempt.revealProgress}
+          horizontalViewportPercent={previewAttempt.horizontalViewportPercent ?? 0}
           priceLineEditorEnabled
           priceLineEditorReadOnly
           priceLineEditorReadOnlyHint="只读回放：按保存时的三条线和 x 轴位置展示。"

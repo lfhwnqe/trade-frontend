@@ -88,10 +88,12 @@ export default function FlashcardSimulationPlayPage() {
   const [index, setIndex] = React.useState(0);
   const [questionRevealProgress, setQuestionRevealProgress] = React.useState(0);
   const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [previewAttempt, setPreviewAttempt] = React.useState<FlashcardSimulationAttemptDetail | null>(null);
   const [answerVisible, setAnswerVisible] = React.useState(false);
   const [answerPreviewOpen, setAnswerPreviewOpen] = React.useState(false);
   const [entryReasonInput, setEntryReasonInput] = React.useState("");
   const [linesByCard, setLinesByCard] = React.useState<Record<string, FlashcardPriceLineValue>>({});
+  const [horizontalViewportByCard, setHorizontalViewportByCard] = React.useState<Record<string, number>>({});
   const [attemptsByCard, setAttemptsByCard] = React.useState<Record<string, FlashcardSimulationAttemptDetail[]>>({});
   const [resolutionDrafts, setResolutionDrafts] = React.useState<Record<string, AttemptResolutionDraft>>({});
   const [runningStats, setRunningStats] = React.useState<FlashcardSimulationRunningStats | null>(null);
@@ -128,6 +130,7 @@ export default function FlashcardSimulationPlayPage() {
   const currentCardId = current?.cardId ?? null;
   const isCompleted = cards.length > 0 && index >= cards.length;
   const currentLines = currentCardId ? linesByCard[currentCardId] || {} : {};
+  const currentHorizontalViewportPercent = currentCardId ? horizontalViewportByCard[currentCardId] ?? 0 : 0;
   const currentTradeSide = getTradeSide(currentLines);
   const currentRr = getRr(currentLines);
   const currentAttempts = currentCardId ? attemptsByCard[currentCardId] || [] : [];
@@ -136,15 +139,27 @@ export default function FlashcardSimulationPlayPage() {
   React.useEffect(() => {
     setQuestionRevealProgress(current?.prefilledRevealProgress ?? 0);
     setPreviewOpen(false);
+    setPreviewAttempt(null);
     setAnswerVisible(false);
     setAnswerPreviewOpen(false);
     setEntryReasonInput("");
-  }, [current?.prefilledRevealProgress, index]);
+    if (current?.replaySourceAttemptId && typeof current?.prefilledHorizontalViewportPercent === "number") {
+      setHorizontalViewportByCard((prev) => ({ ...prev, [current.cardId]: current.prefilledHorizontalViewportPercent ?? 0 }));
+    }
+  }, [current?.cardId, current?.prefilledHorizontalViewportPercent, current?.prefilledRevealProgress, current?.replaySourceAttemptId, index]);
 
   const handleCurrentPriceLineChange = React.useCallback(
     (next: FlashcardPriceLineValue) => {
       if (!currentCardId) return;
       setLinesByCard((prev) => ({ ...prev, [currentCardId]: next }));
+    },
+    [currentCardId],
+  );
+
+  const handleCurrentHorizontalViewportChange = React.useCallback(
+    (next: number) => {
+      if (!currentCardId) return;
+      setHorizontalViewportByCard((prev) => ({ ...prev, [currentCardId]: next }));
     },
     [currentCardId],
   );
@@ -192,6 +207,7 @@ export default function FlashcardSimulationPlayPage() {
         sessionId: session.simulationSessionId,
         cardId: currentCardId,
         revealProgress: questionRevealProgress,
+        horizontalViewportPercent: currentHorizontalViewportPercent,
         entryLineYPercent: currentLines.entry!,
         stopLossLineYPercent: currentLines.stopLoss!,
         takeProfitLineYPercent: currentLines.takeProfit!,
@@ -212,7 +228,7 @@ export default function FlashcardSimulationPlayPage() {
     } finally {
       setSavingAttempt(false);
     }
-  }, [current, currentCardId, currentLines, entryReasonInput, errorAlert, questionRevealProgress, session]);
+  }, [current, currentCardId, currentHorizontalViewportPercent, currentLines, entryReasonInput, errorAlert, questionRevealProgress, session]);
 
   const handleResolveAttempt = React.useCallback(async (attemptId: string) => {
     if (!currentCardId) return;
@@ -507,7 +523,7 @@ export default function FlashcardSimulationPlayPage() {
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-[220px_1fr]">
-                      <button type="button" className="overflow-hidden rounded-lg border border-[#27272a] bg-black text-left" onClick={() => setPreviewOpen(true)}>
+                      <button type="button" className="overflow-hidden rounded-lg border border-[#27272a] bg-black text-left" onClick={() => setPreviewAttempt(attempt)}>
                         <img src={attempt.questionImageUrlSnapshot} alt="attempt-question" className="h-[150px] w-full object-contain" />
                         <div className="border-t border-[#27272a] px-3 py-2 text-xs text-[#9ca3af]">本次 attempt 入场图快照</div>
                       </button>
@@ -633,6 +649,8 @@ export default function FlashcardSimulationPlayPage() {
           priceLineEditorEnabled
           priceLineValue={currentLines}
           onPriceLineChange={handleCurrentPriceLineChange}
+          horizontalViewportPercent={currentHorizontalViewportPercent}
+          onHorizontalViewportPercentChange={handleCurrentHorizontalViewportChange}
           footer={
             <div className="flex flex-col gap-3 md:flex-row md:items-end">
               <div className="flex-1">
@@ -645,6 +663,23 @@ export default function FlashcardSimulationPlayPage() {
               </div>
             </div>
           }
+        />
+      ) : null}
+
+      {previewAttempt ? (
+        <ImagePreviewDialog
+          previewUrl={previewAttempt.questionImageUrlSnapshot ?? null}
+          onClose={() => setPreviewAttempt(null)}
+          revealProgress={previewAttempt.revealProgress}
+          horizontalViewportPercent={previewAttempt.horizontalViewportPercent ?? 0}
+          priceLineEditorEnabled
+          priceLineEditorReadOnly
+          priceLineEditorReadOnlyHint="只读回放：这里按该条 attempt 保存时的入场线 / 止损线 / 止盈线，以及当时的 x 轴位置展示。"
+          priceLineValue={{
+            entry: previewAttempt.entryLineYPercent,
+            stopLoss: previewAttempt.stopLossLineYPercent,
+            takeProfit: previewAttempt.takeProfitLineYPercent,
+          }}
         />
       ) : null}
 
