@@ -345,6 +345,23 @@ export default function FlashcardCreatePage() {
             </Select>
           </div>
 
+          <div className="space-y-4 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
+            <div>
+              <div className="text-xs font-medium text-[#9ca3af]">订单流图片（选填，最多 5 张）</div>
+              <div className="mt-1 text-xs text-[#6b7280]">方便补充订单流截图、footprint 或成交量细节。</div>
+            </div>
+            <ImageUploader value={orderFlowImages} onChange={setOrderFlowImages} max={5} />
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-[#9ca3af]">订单流备注（选填）</div>
+              <Textarea
+                value={orderFlowRemark}
+                onChange={(event) => setOrderFlowRemark(event.target.value)}
+                placeholder="记录这组订单流图想表达的关键信号"
+                className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
+              />
+            </div>
+          </div>
+
           <div className="space-y-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
             <label className="cursor-pointer flex items-center gap-3 text-sm text-[#e5e7eb]">
               <input
@@ -382,23 +399,6 @@ export default function FlashcardCreatePage() {
                 </div>
               </div>
             ) : null}
-          </div>
-
-          <div className="space-y-4 rounded-lg border border-[#27272a] bg-[#18181b] p-3 md:col-span-2">
-            <div>
-              <div className="text-xs font-medium text-[#9ca3af]">订单流图片（选填，最多 5 张）</div>
-              <div className="mt-1 text-xs text-[#6b7280]">方便补充订单流截图、footprint 或成交量细节。</div>
-            </div>
-            <ImageUploader value={orderFlowImages} onChange={setOrderFlowImages} max={5} />
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-[#9ca3af]">订单流备注（选填）</div>
-              <Textarea
-                value={orderFlowRemark}
-                onChange={(event) => setOrderFlowRemark(event.target.value)}
-                placeholder="记录这组订单流图想表达的关键信号"
-                className="min-h-20 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"
-              />
-            </div>
           </div>
 
           <div className="md:col-span-2">
