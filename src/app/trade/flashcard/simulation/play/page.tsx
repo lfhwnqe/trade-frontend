@@ -266,7 +266,7 @@ export default function FlashcardSimulationPlayPage() {
         primaryMistakeCode: draft.result === "FAILURE" ? draft.primaryMistakeCode : undefined,
         mistakeCodes: draft.result === "FAILURE" ? draft.mistakeCodes : undefined,
         correctionNote: draft.result === "FAILURE" ? draft.correctionNote.trim() || undefined : undefined,
-        cardQualityScore: draft.cardQualityScore as 1 | 2 | 3 | 4 | 5,
+        cardQualityScore: draft.cardQualityScore,
       });
 
       setAttemptsByCard((prev) => ({
@@ -607,8 +607,8 @@ export default function FlashcardSimulationPlayPage() {
                           </div>
                         ) : null}
                         <div>
-                          <div className="mb-2 text-sm font-medium text-[#e5e7eb]">题目质量评分（默认 5）</div>
-                          <Input type="number" min={1} max={5} value={draft.cardQualityScore} onChange={(e) => updateResolutionDraft(attempt.attemptId, { cardQualityScore: Math.min(5, Math.max(1, Number(e.target.value || 5))) })} className="w-28 border-[#27272a] bg-[#121212] text-[#e5e7eb]" />
+                          <div className="mb-2 text-sm font-medium text-[#e5e7eb]">题目质量评分（1-10，默认 5）</div>
+                          <Input type="number" min={1} max={10} value={draft.cardQualityScore} onChange={(e) => updateResolutionDraft(attempt.attemptId, { cardQualityScore: Math.min(10, Math.max(1, Number(e.target.value || 5))) })} className="w-28 border-[#27272a] bg-[#121212] text-[#e5e7eb]" />
                         </div>
                         <Button onClick={() => handleResolveAttempt(attempt.attemptId)} disabled={resolvingAttemptId === attempt.attemptId} className="bg-[#00c2b2] text-black hover:bg-[#009e91]">
                           {resolvingAttemptId === attempt.attemptId ? "保存中..." : "保存本次结果"}

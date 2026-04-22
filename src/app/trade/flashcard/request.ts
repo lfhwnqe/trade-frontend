@@ -602,7 +602,7 @@ export async function resolveFlashcardSimulationAttempt(params: {
   primaryMistakeCode?: string;
   mistakeCodes?: string[];
   correctionNote?: string;
-  cardQualityScore?: 1 | 2 | 3 | 4 | 5;
+  cardQualityScore?: number;
 }): Promise<{
   attemptId: string;
   status: "RESOLVED" | "ENTRY_SAVED";
@@ -792,7 +792,7 @@ export async function updateFlashcardSimulationAttempt(params: {
   primaryMistakeCode?: string;
   mistakeCodes?: string[];
   correctionNote?: string;
-  cardQualityScore?: 1 | 2 | 3 | 4 | 5;
+  cardQualityScore?: number;
 }): Promise<import("./types").FlashcardSimulationAttemptDetail> {
   const { attemptId, ...body } = params;
   const res = await fetchWithAuth("/api/proxy-post", {

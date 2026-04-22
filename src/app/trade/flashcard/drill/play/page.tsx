@@ -723,7 +723,7 @@ function FlashcardDrillPlayPageInner() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4, 5].map((score) => {
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => {
                     const isActive = ratingMap[current.cardId] === score;
                     return (
                       <Button

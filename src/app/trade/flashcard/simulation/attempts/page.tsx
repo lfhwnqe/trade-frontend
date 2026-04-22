@@ -155,7 +155,7 @@ export default function FlashcardSimulationAttemptsPage() {
         primaryMistakeCode: draft.result === "FAILURE" ? draft.primaryMistakeCode : undefined,
         mistakeCodes: draft.result === "FAILURE" ? draft.mistakeCodes : undefined,
         correctionNote: draft.result === "FAILURE" ? draft.correctionNote.trim() || undefined : undefined,
-        cardQualityScore: draft.cardQualityScore as 1 | 2 | 3 | 4 | 5,
+        cardQualityScore: draft.cardQualityScore,
       });
       setItems((prev) => prev.map((item) => item.attemptId === attempt.attemptId ? updated : item));
       setDrafts((prev) => ({ ...prev, [attempt.attemptId]: hydrateDraft(updated) }));
@@ -278,7 +278,7 @@ export default function FlashcardSimulationAttemptsPage() {
 
                       <div>
                         <div className="mb-2 text-sm font-medium text-[#e5e7eb]">质量评分</div>
-                        <Input type="number" min={1} max={5} value={draft.cardQualityScore} onChange={(e) => updateDraft(attempt.attemptId, { cardQualityScore: Math.min(5, Math.max(1, Number(e.target.value || 5))) })} className="w-28 border-[#27272a] bg-[#121212] text-[#e5e7eb]" />
+                        <Input type="number" min={1} max={10} value={draft.cardQualityScore} onChange={(e) => updateDraft(attempt.attemptId, { cardQualityScore: Math.min(10, Math.max(1, Number(e.target.value || 5))) })} className="w-28 border-[#27272a] bg-[#121212] text-[#e5e7eb]" />
                       </div>
 
                       <div className="flex flex-wrap gap-2">
