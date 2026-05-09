@@ -144,6 +144,9 @@ export async function convertTradeFlashcardToFlashcard(
     expectedAction: 'LONG' | 'SHORT' | 'NO_TRADE';
     systemOutcomeType: 'SYSTEM_WIN' | 'SYSTEM_LOSS_NORMAL' | 'NO_ENTRY';
     notes?: string;
+    marketTimeInfo?: string;
+    symbolPairInfo?: string;
+    playbookType?: string;
   },
 ): Promise<FlashcardCard> {
   const res = await fetchWithAuth('/api/proxy-post', {

@@ -110,6 +110,9 @@ export default function TradeFlashcardManagePage() {
   const [convertingCard, setConvertingCard] = React.useState<TradeFlashcardCard | null>(null);
   const [convertExpectedAction, setConvertExpectedAction] = React.useState<FlashcardDirection>("LONG");
   const [convertSystemOutcomeType, setConvertSystemOutcomeType] = React.useState<FlashcardSystemOutcomeType>("SYSTEM_WIN");
+  const [convertMarketTimeInfo, setConvertMarketTimeInfo] = React.useState("");
+  const [convertSymbolPairInfo, setConvertSymbolPairInfo] = React.useState("");
+  const [convertPlaybookType, setConvertPlaybookType] = React.useState("");
   const [convertNotes, setConvertNotes] = React.useState("");
   const [converting, setConverting] = React.useState(false);
   const [copyingTemplate, setCopyingTemplate] = React.useState(false);
@@ -265,25 +268,42 @@ export default function TradeFlashcardManagePage() {
     }
   }, [activeQuery, errorAlert, fetchPage, items.length, page, successAlert]);
 
+  const openConvert = React.useCallback((card: TradeFlashcardCard) => {
+    setConvertingCard(card);
+    setConvertMarketTimeInfo(card.marketTimeInfo || "");
+    setConvertSymbolPairInfo(card.symbolPairInfo || "");
+    setConvertPlaybookType(card.playbookType || "");
+    setConfirmConvertCardId(null);
+  }, []);
+
   const handleConvert = React.useCallback(async () => {
     if (!convertingCard) return;
+    if (!convertMarketTimeInfo.trim() || !convertSymbolPairInfo.trim() || !convertPlaybookType) {
+      errorAlert("行情时间、币对和剧本类型不能为空");
+      return;
+    }
     setConverting(true);
     try {
       await convertTradeFlashcardToFlashcard(convertingCard.cardId, {
         expectedAction: convertExpectedAction,
         systemOutcomeType: convertSystemOutcomeType,
+        marketTimeInfo: convertMarketTimeInfo.trim(),
+        symbolPairInfo: convertSymbolPairInfo.trim(),
+        playbookType: convertPlaybookType,
         notes: convertNotes.trim() || undefined,
       });
+      rememberSymbolPair(convertSymbolPairInfo);
       setConvertingCard(null);
       setConfirmConvertCardId(null);
       setConvertNotes("");
       successAlert("已转换为常规训练闪卡");
+      await fetchPage(page, activeQuery);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "转换失败");
     } finally {
       setConverting(false);
     }
-  }, [convertExpectedAction, convertNotes, convertSystemOutcomeType, convertingCard, errorAlert, successAlert]);
+  }, [activeQuery, convertExpectedAction, convertMarketTimeInfo, convertNotes, convertPlaybookType, convertSymbolPairInfo, convertSystemOutcomeType, convertingCard, errorAlert, fetchPage, page, rememberSymbolPair, successAlert]);
 
   const handleQuerySubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -358,7 +378,7 @@ export default function TradeFlashcardManagePage() {
                     <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => openEdit(card)}>编辑</Button>
                     {confirmMode ? (
                       <>
-                        <Button variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20" onClick={() => { setConvertingCard(card); setConfirmConvertCardId(null); }} disabled={!canConvert}>确认转换</Button>
+                        <Button variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20" onClick={() => openConvert(card)} disabled={!canConvert}>确认转换</Button>
                         <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setConfirmConvertCardId(null)}>取消</Button>
                       </>
                     ) : (
@@ -441,6 +461,11 @@ export default function TradeFlashcardManagePage() {
           <div className="space-y-4">
             <Field label="标准动作"><Select value={convertExpectedAction} onValueChange={(value) => setConvertExpectedAction(value as FlashcardDirection)}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">{FLASHCARD_DIRECTIONS.map((item) => <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>)}</SelectContent></Select></Field>
             <Field label="系统结果分类"><Select value={convertSystemOutcomeType} onValueChange={(value) => setConvertSystemOutcomeType(value as FlashcardSystemOutcomeType)}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">{FLASHCARD_SYSTEM_OUTCOME_TYPES.map((item) => <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>)}</SelectContent></Select></Field>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="行情时间"><DateCalendarPicker analysisTime={convertMarketTimeInfo} updateForm={(patch) => setConvertMarketTimeInfo(patch.analysisTime)} showSeconds={false} placeholder="选择行情时间" /></Field>
+              <Field label="币对"><><Input value={convertSymbolPairInfo} onChange={(e) => setConvertSymbolPairInfo(e.target.value)} onBlur={(e) => rememberSymbolPair(e.target.value)} list="trade-flashcard-convert-symbol-pair-presets" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /><datalist id="trade-flashcard-convert-symbol-pair-presets">{symbolPairOptions.map((item) => <option key={item} value={item} />)}</datalist></></Field>
+              <Field label="剧本类型"><Select value={convertPlaybookType || EMPTY_SELECT_VALUE} onValueChange={(value) => setConvertPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="选择剧本类型" /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>{playbookTypeOptions.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}</SelectContent></Select></Field>
+            </div>
             <Field label="补充说明"><Textarea value={convertNotes} onChange={(e) => setConvertNotes(e.target.value)} className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>
           </div>
           <DialogFooter><Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setConvertingCard(null)}>取消</Button><Button className="bg-[#00c2b2] text-black hover:bg-[#009e91]" disabled={converting} onClick={() => void handleConvert()}>{converting ? "转换中..." : "确认转换"}</Button></DialogFooter>
