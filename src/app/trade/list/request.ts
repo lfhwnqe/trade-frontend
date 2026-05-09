@@ -123,6 +123,9 @@ function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
         : undefined,
     entryTagCodes: normalizeTags((rest as Record<string, unknown>).entryTagCodes),
     entryTagItems: normalizeTagItems((rest as Record<string, unknown>).entryTagItems),
+    analysisMistakeCodes: normalizeTags(
+      (rest as Record<string, unknown>).analysisMistakeCodes,
+    ),
   };
 }
 
@@ -268,6 +271,13 @@ export type CreateTradeDto = {
   remarks?: string;
   lessonsLearned?: string;
   lessonsLearnedImportance?: number;
+  marketStructureReview?: "CORRECT" | "WRONG" | "PARTIAL" | "NOT_REVIEWED";
+  priceActionReview?: "CORRECT" | "WRONG" | "PARTIAL" | "NOT_REVIEWED";
+  orderFlowReview?: "CORRECT" | "WRONG" | "PARTIAL" | "NOT_REVIEWED";
+  indicatorReview?: "CORRECT" | "WRONG" | "PARTIAL" | "NOT_REVIEWED";
+  analysisMistakeCodes?: string[];
+  primaryAnalysisMistakeCode?: string;
+  analysisReviewSummary?: string;
   analysisImages?: ImageResource[];
   analysisImagesDetailed?: MarketStructureAnalysisImage[];
 
@@ -402,6 +412,14 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     }
     return Array.from(new Set(tags));
   };
+  const normalizedPossiblePlaybookTypes =
+    normalizeTags(form.possiblePlaybookTypes, { preserveEmptyArray: true }) || [];
+  const possiblePlaybookTypes =
+    normalizedPossiblePlaybookTypes.length > 0
+      ? normalizedPossiblePlaybookTypes
+      : form.entryPlaybookType
+        ? [form.entryPlaybookType]
+        : normalizedPossiblePlaybookTypes;
 
   return {
     transactionId: form.transactionId,
@@ -422,7 +440,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     marketStructure: form.marketStructure!,
     marketStructureAnalysis: form.marketStructureAnalysis || "",
     preEntrySummary: form.preEntrySummary,
-    possiblePlaybookTypes: normalizeTags(form.possiblePlaybookTypes, { preserveEmptyArray: true }) || [],
+    possiblePlaybookTypes,
     preEntrySummaryImportance: parseNum(form.preEntrySummaryImportance),
     tradeTags: normalizeTags(form.tradeTags),
     expectedPathImages: asImageArray(form.expectedPathImages),
@@ -479,6 +497,13 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     remarks: form.remarks,
     lessonsLearned: form.lessonsLearned,
     lessonsLearnedImportance: parseNum(form.lessonsLearnedImportance),
+    marketStructureReview: form.marketStructureReview as CreateTradeDto["marketStructureReview"],
+    priceActionReview: form.priceActionReview as CreateTradeDto["priceActionReview"],
+    orderFlowReview: form.orderFlowReview as CreateTradeDto["orderFlowReview"],
+    indicatorReview: form.indicatorReview as CreateTradeDto["indicatorReview"],
+    analysisMistakeCodes: normalizeTags(form.analysisMistakeCodes, { preserveEmptyArray: true }),
+    primaryAnalysisMistakeCode: form.primaryAnalysisMistakeCode,
+    analysisReviewSummary: form.analysisReviewSummary,
     analysisImages: asImageArray(form.analysisImages),
     analysisImagesDetailed: asMarketStructureImages(
       form.analysisImagesDetailed,

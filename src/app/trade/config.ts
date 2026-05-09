@@ -66,6 +66,13 @@ export const exitReasonCodeOptions = [
   { label: '其他', value: 'OTHER' },
 ];
 
+export const analysisReviewResultOptions = [
+  { label: "分析正确", value: "CORRECT" },
+  { label: "分析错误", value: "WRONG" },
+  { label: "部分正确", value: "PARTIAL" },
+  { label: "未复盘", value: "NOT_REVIEWED" },
+];
+
 // 计划选项
 export const planOptions = [
   { label: "A计划", value: "A" },
@@ -226,6 +233,13 @@ export type Trade = {
   remarks?: string;
   lessonsLearned?: string;
   lessonsLearnedImportance?: number;
+  marketStructureReview?: string;
+  priceActionReview?: string;
+  orderFlowReview?: string;
+  indicatorReview?: string;
+  analysisMistakeCodes?: string[];
+  primaryAnalysisMistakeCode?: string;
+  analysisReviewSummary?: string;
   profitLossPercentage?: string;
   riskRewardRatio?: string;
 

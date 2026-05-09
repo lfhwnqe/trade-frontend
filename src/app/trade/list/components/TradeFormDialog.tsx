@@ -21,6 +21,7 @@ import {
   tradeGradeOptions,
   tradeResultOptions,
   tradeTypeOptions,
+  analysisReviewResultOptions,
   exitTypeOptions,
   exitQualityTagOptions,
   exitReasonCodeOptions,
@@ -44,6 +45,7 @@ import { Star } from "lucide-react";
 import TagSelectInput from "@/components/common/TagSelectInput";
 import {
   fetchFlashcardTagOptions,
+  fetchMistakeTypeOptions,
   fetchPlaybookTypeOptions,
 } from "../../dictionary";
 
@@ -217,6 +219,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const [, errorAlert] = useAlert();
     const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<DictionaryTagItem[]>([]);
     const [entryTagOptions, setEntryTagOptions] = React.useState<DictionaryTagItem[]>([]);
+    const [mistakeTypeOptions, setMistakeTypeOptions] = React.useState<DictionaryTagItem[]>([]);
     const inputProps = React.useMemo(
       () => (readOnly ? { readOnly: true } : {}),
       [readOnly],
@@ -300,11 +303,13 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       Promise.all([
         fetchPlaybookTypeOptions(),
         fetchFlashcardTagOptions(),
+        fetchMistakeTypeOptions(),
       ])
-        .then(([playbookItems, entryItems]) => {
+        .then(([playbookItems, entryItems, mistakeItems]) => {
           if (!mounted) return;
           setPlaybookTypeOptions(playbookItems);
           setEntryTagOptions(entryItems);
+          setMistakeTypeOptions(mistakeItems);
         })
         .catch((error) => {
           console.warn("加载交易表单字典失败", error);
@@ -320,6 +325,20 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       const fallbackMap = new Map((form.entryTagItems || []).map((item) => [item.code, item]));
       return selectedCodes.map((code) => optionMap.get(code) || fallbackMap.get(code) || { code, label: code });
     }, [entryTagOptions, form.entryTagCodes, form.entryTagItems]);
+
+    const analysisMistakeOptions = React.useMemo(() => {
+      const selectedCodes = Array.isArray(form.analysisMistakeCodes)
+        ? form.analysisMistakeCodes
+        : [];
+      const optionMap = new Map(mistakeTypeOptions.map((item) => [item.code, item]));
+      const merged = [...mistakeTypeOptions];
+      selectedCodes.forEach((code) => {
+        if (!optionMap.has(code)) {
+          merged.push({ code, label: code });
+        }
+      });
+      return merged;
+    }, [form.analysisMistakeCodes, mistakeTypeOptions]);
 
     const isDistributed = formMode === "distributed";
     const statusRank: Record<TradeStatus, number> = {
@@ -1762,6 +1781,122 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 handleSelectChange("actualPathAnalysis", e.target.value)
               }
             />
+          </div>
+          <div className="col-span-full rounded-lg border border-white/10 p-4">
+            <div className="mb-3 text-sm font-medium text-foreground">
+              分析复盘
+            </div>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-4">
+              {[
+                ["marketStructureReview", "市场结构分析"],
+                ["priceActionReview", "价格行为分析"],
+                ["orderFlowReview", "订单流分析"],
+                ["indicatorReview", "指标参数分析"],
+              ].map(([field, label]) => (
+                <div key={field}>
+                  <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                    {label}
+                  </label>
+                  <BaseSelect
+                    {...exitedSection.selectProps}
+                    value={((form as Record<string, unknown>)[field] as string | undefined) ?? "NOT_REVIEWED"}
+                    onValueChange={(value) =>
+                      handleFormSelectChange(field as keyof Trade, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="选择复盘结果" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {analysisReviewResultOptions.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </BaseSelect>
+                </div>
+              ))}
+              <div className="sm:col-span-2">
+                <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                  分析错因标签
+                </label>
+                <MultiSelectDropdown
+                  disabled={exitedSection.readOnly}
+                  options={analysisMistakeOptions.map((item) => ({
+                    value: item.code,
+                    label: item.label,
+                    color: item.color,
+                  }))}
+                  value={form.analysisMistakeCodes || []}
+                  onChange={(next) =>
+                    handleFormUpdate({
+                      analysisMistakeCodes: next,
+                      primaryAnalysisMistakeCode:
+                        form.primaryAnalysisMistakeCode &&
+                        !next.includes(form.primaryAnalysisMistakeCode)
+                          ? ""
+                          : form.primaryAnalysisMistakeCode,
+                    })
+                  }
+                  placeholder="选择分析错因"
+                  emptyText="暂无可用 mistake_type"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                  主分析错因
+                </label>
+                <BaseSelect
+                  {...exitedSection.selectProps}
+                  disabled={
+                    exitedSection.readOnly ||
+                    !form.analysisMistakeCodes?.length
+                  }
+                  value={form.primaryAnalysisMistakeCode ?? ""}
+                  onValueChange={(value) =>
+                    handleFormUpdate({
+                      primaryAnalysisMistakeCode: value,
+                      analysisMistakeCodes: Array.from(
+                        new Set([...(form.analysisMistakeCodes || []), value]),
+                      ),
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="先选择分析错因标签" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(form.analysisMistakeCodes || []).map((code) => {
+                      const item = analysisMistakeOptions.find(
+                        (option) => option.code === code,
+                      );
+                      return (
+                        <SelectItem key={code} value={code}>
+                          {item?.label || code}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </BaseSelect>
+              </div>
+              <div className="sm:col-span-4">
+                <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                  分析复盘总结
+                </label>
+                <BaseTextarea
+                  {...exitedSection.textareaProps}
+                  id="analysisReviewSummary"
+                  name="analysisReviewSummary"
+                  value={form.analysisReviewSummary ?? ""}
+                  onChange={(e) =>
+                    handleFormUpdate({ analysisReviewSummary: e.target.value })
+                  }
+                  placeholder="记录这笔交易的结构、价格行为、订单流或指标判断哪里正确，哪里需要修正"
+                  className="min-h-[96px]"
+                />
+              </div>
+            </div>
           </div>
           {form.status === TradeStatus.EARLY_EXITED && (
             <div className="col-span-3">
