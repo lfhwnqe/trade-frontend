@@ -84,6 +84,57 @@ type FeaturedSummary = {
   summaryType: "pre" | "post";
 };
 
+type AnalysisReviewDimensionStats = {
+  reviewed: number;
+  correct: number;
+  partial: number;
+  wrong: number;
+  correctRate: number;
+};
+
+type AnalysisReviewStats = {
+  analysisReviewedTradeCount: number;
+  coreAnalysisCorrectCount: number;
+  coreAnalysisWinRate: number;
+  analysisCorrectButLoss: number;
+  analysisWrongButProfit: number;
+  dimensions: {
+    marketStructureReview: AnalysisReviewDimensionStats;
+    priceActionReview: AnalysisReviewDimensionStats;
+    orderFlowReview: AnalysisReviewDimensionStats;
+    indicatorReview: AnalysisReviewDimensionStats;
+  };
+  topMistakes: Array<{
+    code: string;
+    label: string;
+    color?: string;
+    count: number;
+  }>;
+};
+
+const emptyAnalysisReviewDimension = (): AnalysisReviewDimensionStats => ({
+  reviewed: 0,
+  correct: 0,
+  partial: 0,
+  wrong: 0,
+  correctRate: 0,
+});
+
+const emptyAnalysisReviewStats = (): AnalysisReviewStats => ({
+  analysisReviewedTradeCount: 0,
+  coreAnalysisCorrectCount: 0,
+  coreAnalysisWinRate: 0,
+  analysisCorrectButLoss: 0,
+  analysisWrongButProfit: 0,
+  dimensions: {
+    marketStructureReview: emptyAnalysisReviewDimension(),
+    priceActionReview: emptyAnalysisReviewDimension(),
+    orderFlowReview: emptyAnalysisReviewDimension(),
+    indicatorReview: emptyAnalysisReviewDimension(),
+  },
+  topMistakes: [],
+});
+
 function extractSummaryItems(payload: unknown): unknown[] {
   if (!payload || typeof payload !== "object") return [];
   if (Array.isArray(payload)) return payload;
@@ -191,6 +242,7 @@ export default function TradeHomePage() {
         missingReviewNotes: number;
       };
     };
+    analysisReviewStats: AnalysisReviewStats;
   }>({
     thisMonthTradeCount: 0,
     lastMonthTradeCount: 0,
@@ -242,6 +294,7 @@ export default function TradeHomePage() {
       scoreVersion: "v1",
       breakdown: { notFollowedPlan: 0, emotionalExit: 0, missingReviewNotes: 0 },
     },
+    analysisReviewStats: emptyAnalysisReviewStats(),
   });
   const [recentTrades, setRecentTrades] = React.useState<Trade[]>([]);
   const [tradesLoading, setTradesLoading] = React.useState(true);
@@ -370,6 +423,86 @@ export default function TradeHomePage() {
           };
         };
 
+        const normalizeAnalysisReviewDimension = (
+          raw: unknown,
+        ): AnalysisReviewDimensionStats => {
+          const input = (raw ?? {}) as Partial<AnalysisReviewDimensionStats>;
+          return {
+            reviewed: normalizeNumber(input.reviewed),
+            correct: normalizeNumber(input.correct),
+            partial: normalizeNumber(input.partial),
+            wrong: normalizeNumber(input.wrong),
+            correctRate: normalizeNumber(input.correctRate),
+          };
+        };
+
+        const normalizeAnalysisReviewStats = (raw: unknown): AnalysisReviewStats => {
+          const input = (raw ?? {}) as {
+            analysisReviewedTradeCount?: unknown;
+            coreAnalysisCorrectCount?: unknown;
+            coreAnalysisWinRate?: unknown;
+            analysisCorrectButLoss?: unknown;
+            analysisWrongButProfit?: unknown;
+            dimensions?: Record<string, unknown>;
+            topMistakes?: unknown;
+          };
+          const topMistakes: AnalysisReviewStats["topMistakes"] = Array.isArray(
+            input.topMistakes,
+          )
+            ? input.topMistakes.reduce<AnalysisReviewStats["topMistakes"]>(
+                (acc, item) => {
+                  const entity = (item ?? {}) as {
+                    code?: unknown;
+                    label?: unknown;
+                    color?: unknown;
+                    count?: unknown;
+                  };
+                  const code = String(entity.code ?? "").trim();
+                  if (!code) return acc;
+                  acc.push({
+                    code,
+                    label:
+                      typeof entity.label === "string" && entity.label.trim()
+                        ? entity.label
+                        : code,
+                    color:
+                      typeof entity.color === "string" && entity.color.trim()
+                        ? entity.color
+                        : undefined,
+                    count: normalizeNumber(entity.count),
+                  });
+                  return acc;
+                },
+                [],
+              )
+            : [];
+
+          return {
+            analysisReviewedTradeCount: normalizeNumber(
+              input.analysisReviewedTradeCount,
+            ),
+            coreAnalysisCorrectCount: normalizeNumber(input.coreAnalysisCorrectCount),
+            coreAnalysisWinRate: normalizeNumber(input.coreAnalysisWinRate),
+            analysisCorrectButLoss: normalizeNumber(input.analysisCorrectButLoss),
+            analysisWrongButProfit: normalizeNumber(input.analysisWrongButProfit),
+            dimensions: {
+              marketStructureReview: normalizeAnalysisReviewDimension(
+                input.dimensions?.marketStructureReview,
+              ),
+              priceActionReview: normalizeAnalysisReviewDimension(
+                input.dimensions?.priceActionReview,
+              ),
+              orderFlowReview: normalizeAnalysisReviewDimension(
+                input.dimensions?.orderFlowReview,
+              ),
+              indicatorReview: normalizeAnalysisReviewDimension(
+                input.dimensions?.indicatorReview,
+              ),
+            },
+            topMistakes,
+          };
+        };
+
         setStats({
           thisMonthTradeCount: normalizeNumber(data.thisMonthTradeCount),
           lastMonthTradeCount: normalizeNumber(data.lastMonthTradeCount),
@@ -408,6 +541,9 @@ export default function TradeHomePage() {
           ),
           recent30SimulationDisciplineStats: normalizeDisciplineStats(
             data.recent30SimulationDisciplineStats,
+          ),
+          analysisReviewStats: normalizeAnalysisReviewStats(
+            data.analysisReviewStats,
           ),
         });
         setFeaturedSummaries(
@@ -827,6 +963,28 @@ export default function TradeHomePage() {
       : level === "fair"
         ? "建议：优先减少提前离场与计划偏离，提升兑现率。"
         : "建议：先收缩频率，严格执行止损与复盘记录。";
+  const analysisDimensions = [
+    {
+      key: "marketStructureReview",
+      label: "市场结构分析",
+      stats: stats.analysisReviewStats.dimensions.marketStructureReview,
+    },
+    {
+      key: "priceActionReview",
+      label: "价格行为分析",
+      stats: stats.analysisReviewStats.dimensions.priceActionReview,
+    },
+    {
+      key: "orderFlowReview",
+      label: "订单流分析",
+      stats: stats.analysisReviewStats.dimensions.orderFlowReview,
+    },
+    {
+      key: "indicatorReview",
+      label: "指标分析",
+      stats: stats.analysisReviewStats.dimensions.indicatorReview,
+    },
+  ];
 
   return (
     <TradePageShell title="主页">
@@ -1003,6 +1161,127 @@ export default function TradeHomePage() {
             </p>
           </div>
         </div>
+
+        <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#121212] shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-[#27272a] bg-white/[0.02] px-6 py-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded border border-[#27272a] bg-[#1e1e1e]">
+                <PieChart className="h-4 w-4 text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+                  分析复盘统计
+                </h2>
+                <p className="mt-1 text-xs text-[#9ca3af]">
+                  已复盘样本 {stats.analysisReviewStats.analysisReviewedTradeCount} 笔
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-right md:grid-cols-3">
+              <div>
+                <p className="text-[10px] uppercase text-[#9ca3af]">正确分析胜率</p>
+                <p className="text-lg font-bold text-emerald-400">
+                  {loading ? "..." : `${stats.analysisReviewStats.coreAnalysisWinRate}%`}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase text-[#9ca3af]">正确但亏损</p>
+                <p className="text-lg font-bold text-yellow-300">
+                  {loading ? "..." : stats.analysisReviewStats.analysisCorrectButLoss}
+                </p>
+              </div>
+              <div className="col-span-2 md:col-span-1">
+                <p className="text-[10px] uppercase text-[#9ca3af]">错误但盈利</p>
+                <p className="text-lg font-bold text-red-300">
+                  {loading ? "..." : stats.analysisReviewStats.analysisWrongButProfit}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-0 lg:grid-cols-[1fr_320px]">
+            <div className="grid grid-cols-1 border-b border-[#27272a] md:grid-cols-2 lg:border-b-0 lg:border-r">
+              {analysisDimensions.map((item) => (
+                <div
+                  key={item.key}
+                  className="border-b border-[#27272a] px-6 py-5 md:border-r lg:last:border-b-0"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-white">{item.label}</p>
+                      <p className="mt-1 text-xs text-[#9ca3af]">
+                        样本 {item.stats.reviewed} 笔
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-white">
+                        {loading ? "..." : `${item.stats.correctRate}%`}
+                      </p>
+                      <p className="text-[10px] uppercase text-[#9ca3af]">正确率</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/30">
+                    <div
+                      className="h-full rounded-full bg-emerald-400"
+                      style={{ width: `${Math.min(item.stats.correctRate, 100)}%` }}
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[11px] text-[#9ca3af]">
+                    <span>正确 {item.stats.correct}</span>
+                    <span>部分 {item.stats.partial}</span>
+                    <span>错误 {item.stats.wrong}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-medium text-white">Top 分析错因</h3>
+                <span className="text-xs text-[#9ca3af]">
+                  核心正确 {stats.analysisReviewStats.coreAnalysisCorrectCount}
+                </span>
+              </div>
+              {loading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <Skeleton key={`analysis-mistake-skeleton-${index}`} className="h-7 w-full bg-white/5" />
+                  ))}
+                </div>
+              ) : stats.analysisReviewStats.topMistakes.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-[#27272a] px-4 py-6 text-center text-sm text-[#9ca3af]">
+                  暂无错因样本
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stats.analysisReviewStats.topMistakes.map((item) => {
+                    const maxCount = Math.max(
+                      ...stats.analysisReviewStats.topMistakes.map((mistake) => mistake.count),
+                      1,
+                    );
+                    return (
+                      <div key={item.code}>
+                        <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                          <span className="truncate text-[#e5e7eb]">{item.label}</span>
+                          <span className="text-[#9ca3af]">{item.count}</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-black/30">
+                          <div
+                            className="h-full rounded-full bg-blue-400"
+                            style={{
+                              width: `${Math.max(8, (item.count / maxCount) * 100)}%`,
+                              backgroundColor: item.color || undefined,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
         <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#121212] shadow-sm">
           <div className="flex items-center justify-between border-b border-[#27272a] bg-white/[0.02] px-6 py-4">
