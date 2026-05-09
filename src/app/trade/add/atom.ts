@@ -16,7 +16,6 @@ export const formInitialState: FormState = {
   trendAnalysisImages: [],
   expectedPathImages: [],
   expectedPathImagesDetailed: [],
-  tradeTags: [],
   possiblePlaybookTypes: [],
   entryTagCodes: [],
   entryTagItems: [],
@@ -29,12 +28,6 @@ export const formInitialState: FormState = {
   entryPlanA: { entryReason: "", entrySignal: "", exitSignal: "" },
   entryPlanB: { entryReason: "", entrySignal: "", exitSignal: "" },
   entryPlanC: { entryReason: "", entrySignal: "", exitSignal: "" },
-  checklist: {
-    phaseAnalysis: false,
-    rangeAnalysis: false,
-    trendAnalysis: false,
-    riskRewardCheck: false,
-  },
 };
 
 export const formAtom = createImmerAtom<FormState>(formInitialState);

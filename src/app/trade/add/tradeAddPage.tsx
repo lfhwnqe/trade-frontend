@@ -53,177 +53,7 @@ const STATUS_RANK: Record<TradeStatus, number> = {
   [TradeStatus.EARLY_EXITED]: 4,
 };
 
-const checklistSections = [
-  {
-    id: "check-4h-context",
-    title: "4h 周期：定义战场与规则",
-    items: [
-      {
-        title: "市场状态识别",
-        checks: [
-          "趋势：HH/HL 或 LH/LL，动能未衰竭。",
-          "震荡：价格在大区间内上下扫荡。",
-          "突破：价格收盘有效站上/站下区间。",
-          "混乱：结构反复、不可预测，避免交易。",
-        ],
-      },
-      {
-        title: "基调与交易规则",
-        checks: [
-          "趋势：只做顺势回调，不逆势。",
-          "震荡：溢价区做空、折价区做多，EQ 禁止交易。",
-          "混乱：只观察，等待结构稳定。",
-          "标注大级别支撑/阻力，等待价格到关键位。",
-        ],
-      },
-    ],
-  },
-  {
-    id: "check-structure",
-    title: "绘制波浪与关键结构",
-    items: [
-      {
-        title: "结构标记",
-        checks: [
-          "标记 Swing High / Swing Low。",
-          "震荡：标记 RH / RL 与中轴 EQ。",
-          "记录 BOS / CHOCH 作为结构确认或预警。",
-        ],
-      },
-    ],
-  },
-  {
-    id: "check-entry-modes",
-    title: "1h + 15min：选择作战模式",
-    items: [
-      {
-        title: "模式 A：顺势（4h 趋势强）",
-        checks: [
-          "背景：4h 趋势清晰，未出现失效信号。",
-          "位置：回撤进入关键结构/阻力支撑带。",
-          "结构：1h/15min 出现 BOS / CHOCH / 趋势线突破。",
-          "节奏：回撤速度变慢，出现拒绝影线。",
-          "K 线：关键位出现 Pinbar / 吞没等触发信号。",
-          "加分项：隐藏背离或动能回升。",
-          "核心：Footprint 出现续航/主动性回归。",
-        ],
-      },
-      {
-        title: "模式 B：震荡（4h 区间）",
-        checks: [
-          "位置：仅在 RH/RL 边界交易，EQ 禁止。",
-          "形态：SFP / Liquidity Sweep 假突破回收。",
-          "K 线：Pinbar / 锤子线 / 吞没（长影拒绝）。",
-          "回测确认：回到区间内后回踩不破。",
-          "核心：Stopping Volume（努力大但结果弱）。",
-          "核心：订单流吸收，Delta 很大但价格不动。",
-          "加分项：RSI/MACD 或 Delta 背离。",
-        ],
-      },
-      {
-        title: "模式 B+：区间突破",
-        checks: [
-          "强力引发：1h/4h 实体饱满，收盘站稳区间外。",
-          "价值接受：区间外盘整而非快速回归。",
-          "阻力互换：回踩区间边缘缩量且形态干净。",
-          "核心：Footprint 出现失衡链或激进引发。",
-          "核心：回踩出现支撑/Delta 翻转。",
-        ],
-      },
-    ],
-  },
-  {
-    id: "check-order-flow",
-    title: "订单流（Footprint）最终滤网",
-    items: [
-      {
-        title: "顺势场景（宽容度高）",
-        checks: [
-          "确认持续失衡堆叠推动价格。",
-          "没有明显的反向吸收即可考虑入场。",
-        ],
-      },
-      {
-        title: "震荡/突破场景（必须严苛）",
-        checks: [
-          "吸收：Buy/Sell Delta 很大但价格不推进。",
-          "Delta 背离：价格创新高/低但 Delta 下降。",
-          "失衡反转：先有失衡后被反向吞没。",
-        ],
-      },
-    ],
-  },
-  {
-    id: "check-execution",
-    title: "执行与风控",
-    items: [
-      {
-        title: "开仓与止损止盈",
-        checks: [
-          "总分 ≥ 3 且至少包含 1 个核心项。",
-          "止损：放在结构失效点或针尖外侧。",
-          "止盈：前高/前低或结构位，趋势延续分批。",
-          "震荡突破失败：跌回区间即止损。",
-        ],
-      },
-      {
-        title: "记录与复盘",
-        checks: ["用计分卡记录入场理由与证据。"],
-      },
-    ],
-  },
-  {
-    id: "check-scoring",
-    title: "打分细节（计分卡）",
-    items: [
-      {
-        title: "通用开仓评分规则",
-        checks: [
-          "总分 ≥ 3 分。",
-          "必须包含至少 1 个核心项（2 分）。",
-          "顺势/震荡/突破三种模式均适用评分规则。",
-        ],
-      },
-      {
-        title: "顺势模式评分明细",
-        checks: [
-          "必须：背景（4h 趋势清晰）。",
-          "必须：位置（回撤进入关键位）。",
-          "1 分：结构（BOS/CHOCH/趋势线突破）。",
-          "1 分：节奏（回撤速度变慢/拒绝影线）。",
-          "1 分：K 线触发（Pinbar/吞没/破底翻）。",
-          "1 分：背离（隐藏背离/动能回升）。",
-          "2 分：订单流续航（Imbalance/主动性回归）。",
-        ],
-      },
-      {
-        title: "震荡模式评分明细",
-        checks: [
-          "必须：位置（RH/RL 边界，EQ 禁止）。",
-          "1 分：形态（SFP/Liquidity Sweep）。",
-          "1 分：K 线（Pinbar/锤子线/吞没）。",
-          "1 分：回测确认（回踩不破）。",
-          "2 分：量价（Stopping Volume）。",
-          "2 分：订单流吸收（Delta 很大但价格不动）。",
-          "1 分：背离（RSI/MACD 或 Delta 背离）。",
-        ],
-      },
-      {
-        title: "突破模式评分明细",
-        checks: [
-          "必须：强力引发（实体饱满收盘站稳区间外）。",
-          "1 分：价值接受（区间外盘整）。",
-          "1 分：阻力互换（回踩缩量且形态干净）。",
-          "2 分：订单流失衡链/激进引发。",
-          "2 分：回踩支撑/Delta 翻转。",
-        ],
-      },
-    ],
-  },
-] as const;
-
 const LOCAL_DRAFT_STORAGE_KEY = "trade-add-draft";
-const CHECKLIST_STATE_KEY = "trade-checklist-state";
 type SaveMode = "redirect" | "stay";
 
 function extractTransactionId(payload: unknown): string | null {
@@ -250,14 +80,12 @@ function extractTransactionId(payload: unknown): string | null {
 export default function TradeAddPage({
   className,
   readOnly = false,
-  enableChecklist = true,
   detailMode = "transaction",
   detailId: detailIdProp,
   disableStatusChange = false,
 }: {
   className?: string;
   readOnly?: boolean;
-  enableChecklist?: boolean;
   detailMode?: "transaction" | "share";
   detailId?: string | null;
   disableStatusChange?: boolean;
@@ -272,13 +100,6 @@ export default function TradeAddPage({
   const mainScrollRef = useRef<HTMLDivElement | null>(null);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const [activeTocId, setActiveTocId] = useState<string | null>(null);
-  const [checklistOpen, setChecklistOpen] = useState(false);
-  const checklistScrollRef = useRef<HTMLDivElement | null>(null);
-  const checklistScrollTopRef = useRef(0);
-  const [activeChecklistId, setActiveChecklistId] = useState<string | null>(null);
-  const [checklistState, setChecklistState] = useState<Record<string, boolean>>(
-    {},
-  );
 
   // Trade webhook (TradingView -> Telegram)
   const [webhookLoading, setWebhookLoading] = useState(false);
@@ -580,30 +401,6 @@ export default function TradeAddPage({
     }
   }, [transactionId, readOnly, setForm]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const stored = window.localStorage.getItem(CHECKLIST_STATE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Record<string, boolean>;
-        setChecklistState(parsed);
-      }
-    } catch (err) {
-      console.error("Failed to restore checklist state", err);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(
-        CHECKLIST_STATE_KEY,
-        JSON.stringify(checklistState),
-      );
-    } catch (err) {
-      console.error("Failed to persist checklist state", err);
-    }
-  }, [checklistState]);
 
   // 提交函数 - 添加节流控制避免重复提交
   const submittingRef = useRef(false);
@@ -739,47 +536,6 @@ export default function TradeAddPage({
     formRef.current?.submit();
   }, [loading]);
 
-  const getChecklistKey = useCallback(
-    (sectionId: string, itemTitle: string, checkText: string) =>
-      `${sectionId}::${itemTitle}::${checkText}`,
-    [],
-  );
-
-  const handleChecklistToggle = useCallback((key: string) => {
-    setChecklistState((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  }, []);
-
-  const handleChecklistOpenChange = useCallback((open: boolean) => {
-    setChecklistOpen(open);
-    if (!open) {
-      if (checklistScrollRef.current) {
-        checklistScrollTopRef.current = checklistScrollRef.current.scrollTop;
-      }
-      return;
-    }
-    window.requestAnimationFrame(() => {
-      if (checklistScrollRef.current) {
-        checklistScrollRef.current.scrollTop = checklistScrollTopRef.current;
-      }
-    });
-  }, []);
-
-  const handleChecklistJump = useCallback((id: string) => {
-    const container = checklistScrollRef.current;
-    const target = document.getElementById(id);
-    if (!container || !target) return;
-    const containerRect = container.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
-    const offset = 12;
-    container.scrollTo({
-      top: container.scrollTop + (targetRect.top - containerRect.top) - offset,
-      behavior: "smooth",
-    });
-  }, []);
-
   const currentRank = form.status ? STATUS_RANK[form.status] : 0;
   const shouldShowSection = useCallback(
     (target: TradeStatus) => currentRank >= STATUS_RANK[target],
@@ -795,11 +551,6 @@ export default function TradeAddPage({
       id: "section-entry-plan",
       label: "入场计划",
       visible: shouldShowSection(TradeStatus.WAITING),
-    },
-    {
-      id: "section-pre-entry-checklist",
-      label: "入场前检查",
-      visible: enableChecklist && shouldShowSection(TradeStatus.WAITING),
     },
     {
       id: "section-not-entered",
@@ -874,55 +625,6 @@ export default function TradeAddPage({
     };
   }, [tocSections, readOnly]);
 
-  useEffect(() => {
-    if (!checklistOpen) {
-      setActiveChecklistId(null);
-      return;
-    }
-    const container = checklistScrollRef.current;
-    if (!container) return;
-
-    const targets = checklistSections
-      .map((section) => document.getElementById(section.id))
-      .filter(Boolean) as HTMLElement[];
-
-    if (targets.length === 0) return;
-
-    const getTargetTop = (target: HTMLElement) => {
-      const containerRect = container.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      return targetRect.top - containerRect.top + container.scrollTop;
-    };
-
-    let rafId = 0;
-    const updateActive = () => {
-      const scrollTop = container.scrollTop;
-      const offset = 120;
-      let currentId = targets[0].id;
-      for (const target of targets) {
-        if (getTargetTop(target) <= scrollTop + offset) {
-          currentId = target.id;
-        } else {
-          break;
-        }
-      }
-      setActiveChecklistId(currentId);
-      rafId = 0;
-    };
-
-    const onScroll = () => {
-      if (rafId) return;
-      rafId = window.requestAnimationFrame(updateActive);
-    };
-
-    updateActive();
-    container.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      container.removeEventListener("scroll", onScroll);
-      if (rafId) window.cancelAnimationFrame(rafId);
-    };
-  }, [checklistOpen]);
 
   const pageTitle = readOnly ? "交易详情" : "新增/编辑交易记录";
   const displayId = form.transactionId ?? detailId;
@@ -1161,111 +863,6 @@ export default function TradeAddPage({
                       )}
                     </div>
                   )}
-                  <Sheet open={checklistOpen} onOpenChange={handleChecklistOpenChange}>
-                    <SheetTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-white/20 bg-white/5 text-[#a1a1aa] transition-colors hover:bg-white/10 hover:text-white"
-                      >
-                        查看 Checklist
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent
-                      side="right"
-                      className="w-[90vw] max-w-[980px] sm:max-w-[980px] border-white/10 bg-[#0b0b0c] text-[#ededed]"
-                    >
-                      <div className="flex h-full flex-col">
-                        <SheetHeader className="border-b border-white/10 px-6 py-5">
-                          <SheetTitle className="text-base text-white">
-                            交易执行 Checklist
-                          </SheetTitle>
-                        </SheetHeader>
-                        <div className="flex min-h-0 flex-1">
-                          <div
-                            ref={checklistScrollRef}
-                            className="flex-1 space-y-6 overflow-y-auto emerald-scrollbar px-6 pb-8 pt-4 text-sm"
-                          >
-                            {checklistSections.map((section) => (
-                              <div
-                                key={section.id}
-                                id={section.id}
-                                className="space-y-3 scroll-mt-6"
-                              >
-                                <h3 className="text-xs font-semibold uppercase tracking-[0.2em] ">
-                                  {section.title}
-                                </h3>
-                                <div className="space-y-3">
-                                  {section.items.map((item) => (
-                                    <div
-                                      key={item.title}
-                                      className="rounded-xl border border-white/10 bg-white/5 p-3"
-                                    >
-                                      <div className="text-sm font-semibold text-white">
-                                        {item.title}
-                                      </div>
-                                      <ul className="mt-2 space-y-1 text-xs text-[#cbd5f5]">
-                                        {item.checks.map((check) => {
-                                          const key = getChecklistKey(
-                                            section.id,
-                                            item.title,
-                                            check,
-                                          );
-                                          const checked = !!checklistState[key];
-                                          return (
-                                            <li key={check}>
-                                              <label className="flex cursor-pointer items-start gap-2">
-                                                <input
-                                                  type="checkbox"
-                                                  checked={checked}
-                                                  onChange={() =>
-                                                    handleChecklistToggle(key)
-                                                  }
-                                                  className="mt-0.5 h-3 w-3 rounded border border-white/30 bg-transparent text-emerald-400"
-                                                />
-                                                <span>{check}</span>
-                                              </label>
-                                            </li>
-                                          );
-                                        })}
-                                      </ul>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="w-48 shrink-0 border-l border-white/10 px-4 py-4">
-                            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9ca3af]">
-                              Anchor
-                            </div>
-                            <div className="mt-4 space-y-2">
-                              {checklistSections.map((section) => {
-                                const isActive =
-                                  activeChecklistId === section.id;
-                                return (
-                                  <button
-                                    key={section.id}
-                                    type="button"
-                                    onClick={() => handleChecklistJump(section.id)}
-                                    className={
-                                      "w-full rounded-lg border px-3 py-2 text-left text-xs transition-colors " +
-                                      (isActive
-                                        ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-200"
-                                        : "border-white/10 text-[#cbd5f5] hover:border-white/30 hover:text-white")
-                                    }
-                                  >
-                                    {section.title}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
-
                   <Sheet open={webhookOpen} onOpenChange={setWebhookOpen}>
                     <SheetTrigger asChild>
                       <Button
@@ -1661,7 +1258,6 @@ export default function TradeAddPage({
                 updateForm={updateForm}
                 loading={loading}
                 readOnly={readOnly}
-                showChecklist={enableChecklist}
                 formMode="distributed"
               />
               {(loading || detailLoading) && (

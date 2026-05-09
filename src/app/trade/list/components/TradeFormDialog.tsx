@@ -11,9 +11,7 @@ import type {
 } from "../../config";
 import {
   ANALYSIS_PERIOD_PRESETS,
-  ChecklistState,
   TRADE_PERIOD_PRESETS,
-  TRADE_TAG_PRESETS,
   TradeStatus,
   entryDirectionOptions,
   marketStructureOptions,
@@ -23,11 +21,8 @@ import {
   tradeTypeOptions,
   analysisReviewResultOptions,
   exitTypeOptions,
-  exitQualityTagOptions,
-  exitReasonCodeOptions,
 } from "../../config";
 import { Input as BaseInput } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelectDropdown } from "@/components/common/MultiSelectDropdown";
 import {
   Select as BaseSelect,
@@ -42,11 +37,11 @@ import { DateRange } from "react-day-picker";
 import { Textarea as BaseTextarea } from "@/components/ui/textarea";
 import { useAlert } from "@/components/common/alert";
 import { Star } from "lucide-react";
-import TagSelectInput from "@/components/common/TagSelectInput";
 import {
   fetchFlashcardTagOptions,
   fetchMistakeTypeOptions,
   fetchPlaybookTypeOptions,
+  fetchTradeExitReasonOptions,
 } from "../../dictionary";
 
 export interface TradeFormProps {
@@ -61,7 +56,6 @@ export interface TradeFormProps {
   updateForm: (patch: Partial<Trade>) => void;
   loading?: boolean;
   readOnly?: boolean;
-  showChecklist?: boolean;
   formMode?: "full" | "distributed";
 }
 
@@ -211,7 +205,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       handleSubmit,
       updateForm, // 默认为false
       readOnly = false,
-      showChecklist = true,
       formMode = "full",
     },
     ref,
@@ -220,6 +213,7 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
     const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<DictionaryTagItem[]>([]);
     const [entryTagOptions, setEntryTagOptions] = React.useState<DictionaryTagItem[]>([]);
     const [mistakeTypeOptions, setMistakeTypeOptions] = React.useState<DictionaryTagItem[]>([]);
+    const [exitReasonOptions, setExitReasonOptions] = React.useState<DictionaryTagItem[]>([]);
     const inputProps = React.useMemo(
       () => (readOnly ? { readOnly: true } : {}),
       [readOnly],
@@ -284,35 +278,25 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       [updateForm, readOnly],
     );
 
-    const handleChecklistChange = React.useCallback(
-      (key: keyof ChecklistState, checked: boolean | "indeterminate") => {
-        if (readOnly) return;
-        // 入场前检查清单仅在待入场状态下填写
-        handleFormUpdate({
-          checklist: {
-            ...(form.checklist ?? {}),
-            [key]: checked === true,
-          },
-        });
-      },
-      [form.checklist, handleFormUpdate, readOnly],
-    );
-
     React.useEffect(() => {
       let mounted = true;
-      Promise.all([
+      Promise.allSettled([
         fetchPlaybookTypeOptions(),
         fetchFlashcardTagOptions(),
         fetchMistakeTypeOptions(),
+        fetchTradeExitReasonOptions(),
       ])
-        .then(([playbookItems, entryItems, mistakeItems]) => {
+        .then(([playbookResult, entryResult, mistakeResult, exitReasonResult]) => {
           if (!mounted) return;
-          setPlaybookTypeOptions(playbookItems);
-          setEntryTagOptions(entryItems);
-          setMistakeTypeOptions(mistakeItems);
-        })
-        .catch((error) => {
-          console.warn("加载交易表单字典失败", error);
+          if (playbookResult.status === "fulfilled") setPlaybookTypeOptions(playbookResult.value);
+          if (entryResult.status === "fulfilled") setEntryTagOptions(entryResult.value);
+          if (mistakeResult.status === "fulfilled") setMistakeTypeOptions(mistakeResult.value);
+          if (exitReasonResult.status === "fulfilled") setExitReasonOptions(exitReasonResult.value);
+          [playbookResult, entryResult, mistakeResult, exitReasonResult].forEach((result) => {
+            if (result.status === "rejected") {
+              console.warn("加载交易表单字典失败", result.reason);
+            }
+          });
         });
       return () => {
         mounted = false;
@@ -578,25 +562,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
             )}
           </div>
 
-          {/* 旧自定义交易标签 */}
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              自定义标签（兼容旧字段）:
-            </label>
-            <TagSelectInput
-              value={form.tradeTags}
-              onChange={(tags) => handleFormUpdate({ tradeTags: tags })}
-              presets={TRADE_TAG_PRESETS}
-              readOnly={analyzedSection.readOnly}
-              placeholder="输入后回车添加，或从建议中选择"
-              showAddButton
-              containerClassName="border-white/10 bg-transparent"
-              chipClassName="border-white/10 bg-white/5 text-foreground"
-              inputClassName="text-foreground"
-              popoverClassName="border-white/10 bg-[#0b0b0c] text-foreground"
-              suggestionClassName="border-white/10 bg-white/5 text-foreground"
-            />
-          </div>
           {/* 交易类型 */}
           <div className="col-span-2">
             <label className="block pb-1 text-sm font-medium text-muted-foreground">
@@ -824,61 +789,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
         </div>
       </section>
     ) : null;
-
-    const waitingChecklistBlock =
-      showChecklist && shouldShowSection(TradeStatus.WAITING) ? (
-        <section
-          id="section-pre-entry-checklist"
-          className="space-y-2 scroll-mt-24"
-        >
-          <h3 className="mb-6 flex items-center gap-2 text-sm font-medium text-white">
-            <span className="h-4 w-1 rounded-full bg-emerald-500" />
-            入场前检查
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            <label className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Checkbox
-                checked={!!form.checklist?.phaseAnalysis}
-                onCheckedChange={(checked) =>
-                  handleChecklistChange("phaseAnalysis", checked)
-                }
-                disabled={waitingSection.readOnly}
-              />
-              阶段分析：判断当前行情所处阶段（震荡/趋势）
-            </label>
-            <label className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Checkbox
-                checked={!!form.checklist?.rangeAnalysis}
-                onCheckedChange={(checked) =>
-                  handleChecklistChange("rangeAnalysis", checked)
-                }
-                disabled={waitingSection.readOnly}
-              />
-              震荡阶段：关键阻力点、VWAP 位置、威科夫区间边缘与小溪测试行为
-            </label>
-            <label className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Checkbox
-                checked={!!form.checklist?.trendAnalysis}
-                onCheckedChange={(checked) =>
-                  handleChecklistChange("trendAnalysis", checked)
-                }
-                disabled={waitingSection.readOnly}
-              />
-              趋势阶段：最近高成交量节点（可能回调测试点/入场价格）
-            </label>
-            <label className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Checkbox
-                checked={!!form.checklist?.riskRewardCheck}
-                onCheckedChange={(checked) =>
-                  handleChecklistChange("riskRewardCheck", checked)
-                }
-                disabled={waitingSection.readOnly}
-              />
-              盈亏比计算是否完成
-            </label>
-          </div>
-        </section>
-      ) : null;
 
     const analyzedNotEnteredSectionBlock =
       form.status === TradeStatus.ANALYZED_NOT_ENTERED ? (
@@ -1639,38 +1549,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 ))}
               </SelectContent>
             </BaseSelect>
-            {errors.exitQualityTag && (
-              <p className="mt-1 text-sm text-destructive">
-                {errors.exitQualityTag}
-              </p>
-            )}
-          </div>
-
-          <div className="col-span-2">
-            <label className="block pb-1 text-sm font-medium text-muted-foreground">
-              离场质量标签:
-            </label>
-            <BaseSelect
-              {...exitedSection.selectProps}
-              name="exitQualityTag"
-              value={(form.exitQualityTag as string) ?? ""}
-              onValueChange={(value) =>
-                handleFormSelectChange("exitQualityTag", value)
-              }
-            >
-              <SelectTrigger
-                className={`w-full ${errors.exitQualityTag ? "border-destructive" : ""}`}
-              >
-                <SelectValue placeholder="请选择离场质量标签" />
-              </SelectTrigger>
-              <SelectContent>
-                {exitQualityTagOptions.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </BaseSelect>
           </div>
 
           <div className="col-span-2">
@@ -1687,11 +1565,16 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                 <SelectValue placeholder="请选择离场原因代码" />
               </SelectTrigger>
               <SelectContent>
-                {exitReasonCodeOptions.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
+                {exitReasonOptions.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
                     {item.label}
                   </SelectItem>
                 ))}
+                {exitReasonOptions.length === 0 ? (
+                  <div className="px-2 py-2 text-xs text-muted-foreground">
+                    暂无 trade_exit_reason 字典值
+                  </div>
+                ) : null}
               </SelectContent>
             </BaseSelect>
           </div>
@@ -2085,10 +1968,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
           newErrors.tradeResult = "交易结果为必填项";
         }
 
-        if (!form.exitQualityTag) {
-          newErrors.exitQualityTag = "离场质量标签为必填项";
-        }
-
         // 如果选择了执行计划，则计划类型必填
         if (form.followedPlan && !form.followedPlanId) {
           newErrors.followedPlanId = "计划类型为必填项";
@@ -2171,7 +2050,6 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
       entrySectionBlock,
       analyzedNotEnteredSectionBlock,
       waitingPlanBlock,
-      waitingChecklistBlock,
       analysisSectionBlock,
     ].filter(Boolean) as React.ReactElement[];
 

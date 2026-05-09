@@ -50,22 +50,6 @@ export const exitTypeOptions = [
   { label: "被动强平", value: "FORCED" },
 ];
 
-export const exitQualityTagOptions = [
-  { label: "技术性离场", value: "TECHNICAL" },
-  { label: "情绪性离场", value: "EMOTIONAL" },
-  { label: "系统性离场", value: "SYSTEM" },
-  { label: "未知", value: "UNKNOWN" },
-];
-
-export const exitReasonCodeOptions = [
-  { label: '结构破坏', value: 'CHOCH_BREAK' },
-  { label: '订单流反转', value: 'ORDERFLOW_REVERSAL' },
-  { label: '情绪离场', value: 'EMOTIONAL_EXIT' },
-  { label: '时间到期', value: 'TIME_EXIT' },
-  { label: '系统规则离场', value: 'SYSTEM_EXIT' },
-  { label: '其他', value: 'OTHER' },
-];
-
 export const analysisReviewResultOptions = [
   { label: "分析正确", value: "CORRECT" },
   { label: "分析错误", value: "WRONG" },
@@ -116,13 +100,6 @@ export interface EntryPlan {
   exitSignal?: string;
 }
 
-export interface ChecklistState {
-  phaseAnalysis?: boolean;
-  rangeAnalysis?: boolean;
-  trendAnalysis?: boolean;
-  riskRewardCheck?: boolean;
-}
-
 // 交易记录状态枚举
 export enum TradeStatus {
   ANALYZED = "已分析",
@@ -155,7 +132,6 @@ export const TRADE_PERIOD_PRESETS = [
   "BTC/USDT",
   "ETH/USDT",
 ] as const;
-export const TRADE_TAG_PRESETS = ["头脑发热", "严谨", "交易系统v1"] as const;
 
 export type DictionaryTagItem = {
   code: string;
@@ -181,7 +157,6 @@ export type Trade = {
   possiblePlaybookTypes?: string[];
   preEntrySummaryImportance?: number;
   signalType?: string;
-  tradeTags?: string[];
   tagCodes?: string[];
   tagItems?: DictionaryTagItem[];
 
@@ -204,7 +179,6 @@ export type Trade = {
   entryPlanA?: EntryPlan;
   entryPlanB?: EntryPlan;
   entryPlanC?: EntryPlan;
-  checklist?: ChecklistState;
 
   // 入场记录
   entry?: string;
@@ -306,7 +280,6 @@ export type TradeQuery = {
   grade?: string;
   analysisPeriod?: string;
   followedSystemStrictly?: boolean | string;
-  tradeTags?: string[];
 };
 
 export interface ApiQueryParameters {
@@ -323,7 +296,6 @@ export interface ApiQueryParameters {
   grade?: string;
   analysisPeriod?: string;
   followedSystemStrictly?: boolean;
-  tradeTags?: string[];
 }
 
 export interface TradeFieldConfig {

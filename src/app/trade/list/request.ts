@@ -3,7 +3,6 @@ import { TradeStatus } from "../config";
 import type {
   EntryDirection,
   EntryPlan,
-  ChecklistState,
   Trade,
   TradeListResponse,
   TradeQuery,
@@ -116,7 +115,6 @@ function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
     possiblePlaybookTypes: normalizeTags(
       (rest as Record<string, unknown>).possiblePlaybookTypes,
     ),
-    tradeTags: normalizeTags(rest.tradeTags),
     entryPlaybookType:
       typeof (rest as Record<string, unknown>).entryPlaybookType === "string"
         ? ((rest as Record<string, unknown>).entryPlaybookType as string)
@@ -234,15 +232,12 @@ export type CreateTradeDto = {
   preEntrySummary?: string;
   possiblePlaybookTypes: string[];
   preEntrySummaryImportance?: number;
-  tradeTags?: string[];
   expectedPathImages?: ImageResource[];
   expectedPathImagesDetailed?: MarketStructureAnalysisImage[];
   expectedPathAnalysis?: string;
   entryPlanA: EntryPlan;
   entryPlanB?: EntryPlan;
   entryPlanC?: EntryPlan;
-  checklist?: ChecklistState;
-
   // ===== 入场记录 =====
   entryPrice?: number;
   entryTime?: string;
@@ -298,7 +293,6 @@ export type CreateTradeDto = {
   maxFavorableExcursionR?: number;
   maxAdverseExcursionR?: number;
   exitType?: "TP" | "SL" | "MANUAL" | "TIME" | "FORCED";
-  exitQualityTag?: "TECHNICAL" | "EMOTIONAL" | "SYSTEM" | "UNKNOWN";
   exitReasonCode?: string;
   exitReasonNote?: string;
   rMetricsReady?: boolean;
@@ -382,17 +376,6 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
           })
           .filter((item): item is MarketStructureAnalysisImage => !!item)
       : [];
-  const normalizeChecklist = (value?: ChecklistState) => {
-    if (!value) {
-      return undefined;
-    }
-    return {
-      phaseAnalysis: !!value.phaseAnalysis,
-      rangeAnalysis: !!value.rangeAnalysis,
-      trendAnalysis: !!value.trendAnalysis,
-      riskRewardCheck: !!value.riskRewardCheck,
-    };
-  };
   const normalizeTags = (
     value?: unknown,
     options?: { preserveEmptyArray?: boolean },
@@ -442,7 +425,6 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     preEntrySummary: form.preEntrySummary,
     possiblePlaybookTypes,
     preEntrySummaryImportance: parseNum(form.preEntrySummaryImportance),
-    tradeTags: normalizeTags(form.tradeTags),
     expectedPathImages: asImageArray(form.expectedPathImages),
     expectedPathImagesDetailed: asMarketStructureImages(
       form.expectedPathImagesDetailed,
@@ -455,12 +437,6 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     },
     entryPlanB: form.entryPlanB,
     entryPlanC: form.entryPlanC,
-    // 仅待入场状态需要提交入场前检查清单
-    checklist:
-      form.status === TradeStatus.WAITING
-        ? normalizeChecklist(form.checklist)
-        : undefined,
-
     // ===== 入场记录 =====
     entryPrice: parseNum(form.entry),
     entryTime: form.entryTime,
@@ -526,7 +502,6 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     maxFavorableExcursionR: parseNum(form.maxFavorableExcursionR),
     maxAdverseExcursionR: parseNum(form.maxAdverseExcursionR),
     exitType: form.exitType as CreateTradeDto["exitType"],
-    exitQualityTag: form.exitQualityTag as CreateTradeDto["exitQualityTag"],
     exitReasonCode: form.exitReasonCode,
     exitReasonNote: form.exitReasonNote,
     rMetricsReady: form.rMetricsReady,

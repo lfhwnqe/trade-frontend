@@ -18,11 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import TagSelectInput from "@/components/common/TagSelectInput";
 import {
   TradeQuery,
   ANALYSIS_PERIOD_PRESETS,
-  TRADE_TAG_PRESETS,
   marketStructureOptions,
   entryDirectionOptions,
   tradeStatusOptions,
@@ -66,7 +64,6 @@ export default function TradeQueryForm({
       tradeResult: "all",
       analysisPeriod: undefined,
       followedSystemStrictly: "all",
-      tradeTags: [],
     });
     // 调用外部重置函数
     onReset();
@@ -340,24 +337,6 @@ export default function TradeQueryForm({
               </Select>
             </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
-                交易标签
-              </label>
-              <TagSelectInput
-                value={queryForm.tradeTags}
-                onChange={(tags) =>
-                  onQueryFormChange({ ...queryForm, tradeTags: tags })
-                }
-                presets={TRADE_TAG_PRESETS}
-                placeholder="输入后回车添加，或从建议中选择"
-                containerClassName="border-[#27272a] bg-[#1e1e1e]"
-                chipClassName="border-white/10 bg-white/5 text-[#e5e7eb]"
-                inputClassName="text-[#e5e7eb] placeholder:text-[#9ca3af]"
-                popoverClassName="border-[#27272a] bg-[#121212] text-[#e5e7eb]"
-                suggestionClassName="border-white/10 bg-white/5 text-[#e5e7eb]"
-              />
-            </div>
           </div>
           <datalist id="analysis-period-presets">
             {ANALYSIS_PERIOD_PRESETS.map((preset) => (

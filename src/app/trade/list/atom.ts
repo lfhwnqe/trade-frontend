@@ -120,11 +120,6 @@ export function processQueryParams(query: TradeQuery, sorting: SortingState): Ap
       processedQuery.followedSystemStrictly = false;
     }
   }
-  // tradeTags（交易标签）
-  if (Array.isArray(query?.tradeTags) && query.tradeTags.length > 0) {
-    processedQuery.tradeTags = query.tradeTags;
-  }
-
   if (sorting.length > 0) {
     processedQuery.sortBy = sorting[0].id;
     processedQuery.sortOrder = sorting[0].desc ? "DESC" : "ASC";

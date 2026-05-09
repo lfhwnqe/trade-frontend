@@ -117,6 +117,10 @@ export async function fetchTradeTagOptions(): Promise<DictionaryTagItem[]> {
   return fetchDictionaryOptions("trade_tag");
 }
 
+export async function fetchTradeExitReasonOptions(): Promise<DictionaryTagItem[]> {
+  return fetchDictionaryOptions("trade_exit_reason");
+}
+
 export async function fetchFlashcardTagOptions(): Promise<DictionaryTagItem[]> {
   return fetchDictionaryOptions("flashcard_tag");
 }
