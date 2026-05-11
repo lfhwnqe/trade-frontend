@@ -212,6 +212,13 @@ export enum TradeResult {
 /**
  * CreateTradeDto 类型，对齐后端 CreateTradeDto （所有字段类型与必选/可选严格一致，见后端 dto 和 entity 注释）
  */
+type AnalysisReviewResultValue =
+  | "CORRECT"
+  | "WRONG"
+  | "PARTIAL"
+  | "NOT_REVIEWED"
+  | "NO_SPECIFIC_FEATURE";
+
 export type CreateTradeDto = {
   transactionId?: string;
   // ===== 交易类型 =====
@@ -266,10 +273,11 @@ export type CreateTradeDto = {
   remarks?: string;
   lessonsLearned?: string;
   lessonsLearnedImportance?: number;
-  marketStructureReview?: "CORRECT" | "WRONG" | "PARTIAL" | "NOT_REVIEWED";
-  priceActionReview?: "CORRECT" | "WRONG" | "PARTIAL" | "NOT_REVIEWED";
-  orderFlowReview?: "CORRECT" | "WRONG" | "PARTIAL" | "NOT_REVIEWED";
-  indicatorReview?: "CORRECT" | "WRONG" | "PARTIAL" | "NOT_REVIEWED";
+  marketStructureReview?: AnalysisReviewResultValue;
+  priceActionReview?: AnalysisReviewResultValue;
+  orderFlowReview?: AnalysisReviewResultValue;
+  indicatorReview?: AnalysisReviewResultValue;
+  riskRewardRatioPrecise?: boolean;
   analysisMistakeCodes?: string[];
   primaryAnalysisMistakeCode?: string;
   analysisReviewSummary?: string;
@@ -477,6 +485,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     priceActionReview: form.priceActionReview as CreateTradeDto["priceActionReview"],
     orderFlowReview: form.orderFlowReview as CreateTradeDto["orderFlowReview"],
     indicatorReview: form.indicatorReview as CreateTradeDto["indicatorReview"],
+    riskRewardRatioPrecise: form.riskRewardRatioPrecise,
     analysisMistakeCodes: normalizeTags(form.analysisMistakeCodes, { preserveEmptyArray: true }),
     primaryAnalysisMistakeCode: form.primaryAnalysisMistakeCode,
     analysisReviewSummary: form.analysisReviewSummary,

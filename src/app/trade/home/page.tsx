@@ -89,7 +89,15 @@ type AnalysisReviewDimensionStats = {
   correct: number;
   partial: number;
   wrong: number;
+  noSpecificFeature: number;
   correctRate: number;
+};
+
+type RiskRewardRatioPrecisionStats = {
+  recorded: number;
+  precise: number;
+  imprecise: number;
+  preciseRate: number;
 };
 
 type AnalysisReviewStats = {
@@ -98,6 +106,7 @@ type AnalysisReviewStats = {
   coreAnalysisWinRate: number;
   analysisCorrectButLoss: number;
   analysisWrongButProfit: number;
+  riskRewardRatioPrecision: RiskRewardRatioPrecisionStats;
   dimensions: {
     marketStructureReview: AnalysisReviewDimensionStats;
     priceActionReview: AnalysisReviewDimensionStats;
@@ -117,7 +126,15 @@ const emptyAnalysisReviewDimension = (): AnalysisReviewDimensionStats => ({
   correct: 0,
   partial: 0,
   wrong: 0,
+  noSpecificFeature: 0,
   correctRate: 0,
+});
+
+const emptyRiskRewardRatioPrecisionStats = (): RiskRewardRatioPrecisionStats => ({
+  recorded: 0,
+  precise: 0,
+  imprecise: 0,
+  preciseRate: 0,
 });
 
 const emptyAnalysisReviewStats = (): AnalysisReviewStats => ({
@@ -126,6 +143,7 @@ const emptyAnalysisReviewStats = (): AnalysisReviewStats => ({
   coreAnalysisWinRate: 0,
   analysisCorrectButLoss: 0,
   analysisWrongButProfit: 0,
+  riskRewardRatioPrecision: emptyRiskRewardRatioPrecisionStats(),
   dimensions: {
     marketStructureReview: emptyAnalysisReviewDimension(),
     priceActionReview: emptyAnalysisReviewDimension(),
@@ -432,6 +450,7 @@ export default function TradeHomePage() {
             correct: normalizeNumber(input.correct),
             partial: normalizeNumber(input.partial),
             wrong: normalizeNumber(input.wrong),
+            noSpecificFeature: normalizeNumber(input.noSpecificFeature),
             correctRate: normalizeNumber(input.correctRate),
           };
         };
@@ -443,8 +462,16 @@ export default function TradeHomePage() {
             coreAnalysisWinRate?: unknown;
             analysisCorrectButLoss?: unknown;
             analysisWrongButProfit?: unknown;
+            riskRewardRatioPrecision?: unknown;
             dimensions?: Record<string, unknown>;
             topMistakes?: unknown;
+          };
+          const riskRewardRatioPrecision = (input.riskRewardRatioPrecision ??
+            {}) as {
+            recorded?: unknown;
+            precise?: unknown;
+            imprecise?: unknown;
+            preciseRate?: unknown;
           };
           const topMistakes: AnalysisReviewStats["topMistakes"] = Array.isArray(
             input.topMistakes,
@@ -485,6 +512,12 @@ export default function TradeHomePage() {
             coreAnalysisWinRate: normalizeNumber(input.coreAnalysisWinRate),
             analysisCorrectButLoss: normalizeNumber(input.analysisCorrectButLoss),
             analysisWrongButProfit: normalizeNumber(input.analysisWrongButProfit),
+            riskRewardRatioPrecision: {
+              recorded: normalizeNumber(riskRewardRatioPrecision.recorded),
+              precise: normalizeNumber(riskRewardRatioPrecision.precise),
+              imprecise: normalizeNumber(riskRewardRatioPrecision.imprecise),
+              preciseRate: normalizeNumber(riskRewardRatioPrecision.preciseRate),
+            },
             dimensions: {
               marketStructureReview: normalizeAnalysisReviewDimension(
                 input.dimensions?.marketStructureReview,
@@ -977,11 +1010,13 @@ export default function TradeHomePage() {
     {
       key: "orderFlowReview",
       label: "订单流分析",
+      showNoSpecificFeature: true,
       stats: stats.analysisReviewStats.dimensions.orderFlowReview,
     },
     {
       key: "indicatorReview",
-      label: "指标分析",
+      label: "指标参数分析",
+      showNoSpecificFeature: true,
       stats: stats.analysisReviewStats.dimensions.indicatorReview,
     },
   ];
@@ -1177,7 +1212,7 @@ export default function TradeHomePage() {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-right md:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 text-right md:grid-cols-4">
               <div>
                 <p className="text-[10px] uppercase text-[#9ca3af]">正确分析胜率</p>
                 <p className="text-lg font-bold text-emerald-400">
@@ -1190,10 +1225,23 @@ export default function TradeHomePage() {
                   {loading ? "..." : stats.analysisReviewStats.analysisCorrectButLoss}
                 </p>
               </div>
-              <div className="col-span-2 md:col-span-1">
+              <div>
                 <p className="text-[10px] uppercase text-[#9ca3af]">错误但盈利</p>
                 <p className="text-lg font-bold text-red-300">
                   {loading ? "..." : stats.analysisReviewStats.analysisWrongButProfit}
+                </p>
+              </div>
+              <div className="col-span-2 md:col-span-1">
+                <p className="text-[10px] uppercase text-[#9ca3af]">盈亏比设置是否精准</p>
+                <p className="text-lg font-bold text-blue-300">
+                  {loading
+                    ? "..."
+                    : `${stats.analysisReviewStats.riskRewardRatioPrecision.preciseRate}%`}
+                </p>
+                <p className="text-[10px] text-[#6b7280]">
+                  {loading
+                    ? "..."
+                    : `精准 ${stats.analysisReviewStats.riskRewardRatioPrecision.precise} / 不精准 ${stats.analysisReviewStats.riskRewardRatioPrecision.imprecise}`}
                 </p>
               </div>
             </div>
@@ -1231,11 +1279,51 @@ export default function TradeHomePage() {
                     <span>部分 {item.stats.partial}</span>
                     <span>错误 {item.stats.wrong}</span>
                   </div>
+                  {item.showNoSpecificFeature ? (
+                    <div className="mt-2 text-[11px] text-[#6b7280]">
+                      没有特定特征 {item.stats.noSpecificFeature} 笔，未计入正确率
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
 
-            <div className="px-6 py-5">
+            <div className="space-y-6 px-6 py-5">
+              <div>
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-white">盈亏比设置是否精准</h3>
+                  <span className="text-xs text-[#9ca3af]">
+                    样本 {stats.analysisReviewStats.riskRewardRatioPrecision.recorded} 笔
+                  </span>
+                </div>
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-2xl font-bold text-blue-300">
+                      {loading
+                        ? "..."
+                        : `${stats.analysisReviewStats.riskRewardRatioPrecision.preciseRate}%`}
+                    </p>
+                    <p className="mt-1 text-[10px] uppercase text-[#9ca3af]">精准率</p>
+                  </div>
+                  <div className="text-right text-xs text-[#9ca3af]">
+                    <p>精准 {stats.analysisReviewStats.riskRewardRatioPrecision.precise}</p>
+                    <p>不精准 {stats.analysisReviewStats.riskRewardRatioPrecision.imprecise}</p>
+                  </div>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/30">
+                  <div
+                    className="h-full rounded-full bg-blue-300"
+                    style={{
+                      width: `${Math.min(
+                        stats.analysisReviewStats.riskRewardRatioPrecision.preciseRate,
+                        100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-medium text-white">Top 分析错因</h3>
                 <span className="text-xs text-[#9ca3af]">
@@ -1279,6 +1367,7 @@ export default function TradeHomePage() {
                   })}
                 </div>
               )}
+              </div>
             </div>
           </div>
         </section>

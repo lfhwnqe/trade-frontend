@@ -20,6 +20,7 @@ import {
   tradeResultOptions,
   tradeTypeOptions,
   analysisReviewResultOptions,
+  optionalAnalysisReviewResultOptions,
   exitTypeOptions,
 } from "../../config";
 import { Input as BaseInput } from "@/components/ui/input";
@@ -1670,12 +1671,12 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
               分析复盘
             </div>
             <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-4">
-              {[
-                ["marketStructureReview", "市场结构分析"],
-                ["priceActionReview", "价格行为分析"],
-                ["orderFlowReview", "订单流分析"],
-                ["indicatorReview", "指标参数分析"],
-              ].map(([field, label]) => (
+              {([
+                ["marketStructureReview", "市场结构分析", false],
+                ["priceActionReview", "价格行为分析", false],
+                ["orderFlowReview", "订单流分析", true],
+                ["indicatorReview", "指标参数分析", true],
+              ] as const).map(([field, label, allowNoFeature]) => (
                 <div key={field}>
                   <label className="block pb-1 text-sm font-medium text-muted-foreground">
                     {label}
@@ -1691,7 +1692,10 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                       <SelectValue placeholder="选择复盘结果" />
                     </SelectTrigger>
                     <SelectContent>
-                      {analysisReviewResultOptions.map((item) => (
+                      {(allowNoFeature
+                        ? optionalAnalysisReviewResultOptions
+                        : analysisReviewResultOptions
+                      ).map((item) => (
                         <SelectItem key={item.value} value={item.value}>
                           {item.label}
                         </SelectItem>
@@ -1700,6 +1704,36 @@ export const TradeForm = React.forwardRef<TradeFormRef, TradeFormProps>(
                   </BaseSelect>
                 </div>
               ))}
+              <div className="sm:col-span-2">
+                <label className="block pb-1 text-sm font-medium text-muted-foreground">
+                  盈亏比设置是否精准
+                </label>
+                <BaseSelect
+                  {...exitedSection.selectProps}
+                  value={
+                    form.riskRewardRatioPrecise === true
+                      ? "true"
+                      : form.riskRewardRatioPrecise === false
+                        ? "false"
+                        : "unset"
+                  }
+                  onValueChange={(value) =>
+                    handleFormUpdate({
+                      riskRewardRatioPrecise:
+                        value === "unset" ? undefined : value === "true",
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="记录盈亏比设置精度" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">未记录</SelectItem>
+                    <SelectItem value="true">精准</SelectItem>
+                    <SelectItem value="false">不精准</SelectItem>
+                  </SelectContent>
+                </BaseSelect>
+              </div>
               <div className="sm:col-span-2">
                 <label className="block pb-1 text-sm font-medium text-muted-foreground">
                   分析错因标签

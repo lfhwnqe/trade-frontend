@@ -57,6 +57,11 @@ export const analysisReviewResultOptions = [
   { label: "未复盘", value: "NOT_REVIEWED" },
 ];
 
+export const optionalAnalysisReviewResultOptions = [
+  ...analysisReviewResultOptions,
+  { label: "没有特定特征", value: "NO_SPECIFIC_FEATURE" },
+];
+
 // 计划选项
 export const planOptions = [
   { label: "A计划", value: "A" },
@@ -211,6 +216,7 @@ export type Trade = {
   priceActionReview?: string;
   orderFlowReview?: string;
   indicatorReview?: string;
+  riskRewardRatioPrecise?: boolean;
   analysisMistakeCodes?: string[];
   primaryAnalysisMistakeCode?: string;
   analysisReviewSummary?: string;
