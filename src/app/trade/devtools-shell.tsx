@@ -32,7 +32,7 @@ export default function DevtoolsShell({ children }: { children: React.ReactNode 
   const nav = (
     <>
       <div className="h-16 flex items-center px-6 border-b border-[#27272a]">
-        <Link className="text-sm font-bold text-white flex items-center gap-2 tracking-wide" href="/trade/devtools" prefetch>
+        <Link className="text-sm font-bold text-white flex items-center gap-2 tracking-wide" href="/trade/devtools" prefetch={false}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00c2b2]/10 border border-[#00c2b2]/30">
             <Wrench className="h-4 w-4 text-[#00c2b2]" />
           </div>
@@ -45,7 +45,7 @@ export default function DevtoolsShell({ children }: { children: React.ReactNode 
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
-              prefetch
+              prefetch={false}
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
@@ -63,7 +63,7 @@ export default function DevtoolsShell({ children }: { children: React.ReactNode 
 
       <div className="border-t border-[#27272a] p-4">
         <Link
-          prefetch
+          prefetch={false}
           href="/trade/home"
           className="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-white transition-colors"
         >
@@ -95,12 +95,12 @@ export default function DevtoolsShell({ children }: { children: React.ReactNode 
                 </SheetHeader>
                 <div className="px-4 pb-4 space-y-2">
                   {devtoolItems.map((item) => (
-                    <Link key={item.href} href={item.href} className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]">
+                    <Link key={item.href} href={item.href} prefetch={false} className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]">
                       {item.title}
                     </Link>
                   ))}
                   <div className="pt-2 border-t border-white/10">
-                    <Link href="/trade/home" className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white">
+                    <Link href="/trade/home" prefetch={false} className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white">
                       返回交易模块
                     </Link>
                   </div>

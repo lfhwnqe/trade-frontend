@@ -5,11 +5,15 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ChevronDown,
+  ClipboardList,
   FileText,
   Home,
   Layers,
   ReceiptText,
+  Repeat2,
+  ScrollText,
   Terminal,
+  Trophy,
   KeyRound,
   Webhook,
   Link2,
@@ -41,78 +45,133 @@ type NavItem = {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  activePaths?: string[];
 };
 
-const tradeNavItems: NavItem[] = [
+type NavSection = {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+  isActive?: (pathname: string | null) => boolean;
+};
+
+const isPathActive = (pathname: string | null, href: string) =>
+  pathname === href || Boolean(pathname?.startsWith(`${href}/`));
+
+const isFlashcardDetailPath = (pathname: string | null) => {
+  if (!pathname) return false;
+  const match = pathname.match(/^\/trade\/flashcard\/([^/]+)$/);
+  if (!match) return false;
+
+  return !new Set([
+    "create",
+    "manage",
+    "review",
+    "drill",
+    "simulation",
+    "mistakes",
+  ]).has(match[1]);
+};
+
+const homeNavItem: NavItem = {
+  title: "主页",
+  href: "/trade/home",
+  icon: Home,
+};
+
+const tradeNavSections: NavSection[] = [
   {
-    title: "主页",
-    href: "/trade/home",
-    icon: Home,
-  },
-  {
-    title: "交易记录",
-    href: "/trade/list",
+    title: "交易模块",
     icon: ReceiptText,
+    items: [
+      {
+        title: "交易记录",
+        href: "/trade/list",
+        icon: ClipboardList,
+        activePaths: ["/trade/add", "/trade/detail"],
+      },
+      {
+        title: "交易总结",
+        href: "/trade/summaries",
+        icon: FileText,
+      },
+    ],
   },
   {
-    title: "交易总结",
-    href: "/trade/summaries",
+    title: "闪卡模块",
+    icon: Layers,
+    items: [
+      {
+        title: "闪卡录入",
+        href: "/trade/flashcard/create",
+        icon: Layers,
+      },
+      {
+        title: "闪卡练习",
+        href: "/trade/flashcard/drill/setup",
+        icon: Repeat2,
+        activePaths: ["/trade/flashcard/drill/play"],
+      },
+      {
+        title: "闪卡复盘",
+        href: "/trade/flashcard/review",
+        icon: ScrollText,
+      },
+      {
+        title: "训练成绩",
+        href: "/trade/flashcard/drill/history",
+        icon: Trophy,
+      },
+      {
+        title: "闪卡管理",
+        href: "/trade/flashcard/manage",
+        icon: ClipboardList,
+      },
+    ],
+    isActive: (pathname) => isFlashcardDetailPath(pathname),
+  },
+  {
+    title: "交易闪卡",
     icon: FileText,
-  },
-  {
-    title: "闪卡录入",
-    href: "/trade/flashcard/create",
-    icon: Layers,
-  },
-  {
-    title: "交易闪卡录入",
-    href: "/trade/trade-flashcard/create",
-    icon: Layers,
-  },
-  {
-    title: "闪卡练习",
-    href: "/trade/flashcard/drill/setup",
-    icon: Layers,
-  },
-  {
-    title: "训练成绩",
-    href: "/trade/flashcard/drill/history",
-    icon: Layers,
+    items: [
+      {
+        title: "交易闪卡录入",
+        href: "/trade/trade-flashcard/create",
+        icon: FileText,
+      },
+      {
+        title: "交易闪卡管理",
+        href: "/trade/trade-flashcard/manage",
+        icon: ClipboardList,
+      },
+    ],
   },
   {
     title: "模拟盘训练",
-    href: "/trade/flashcard/simulation/setup",
-    icon: Layers,
-  },
-  {
-    title: "模拟盘历史",
-    href: "/trade/flashcard/simulation/history",
-    icon: Layers,
-  },
-  {
-    title: "训练记录管理",
-    href: "/trade/flashcard/simulation/attempts",
-    icon: Layers,
-  },
-  {
-    title: "Mistake Records",
-    href: "/trade/flashcard/mistakes/records",
-    icon: Layers,
-  },
-  {
-    title: "闪卡复盘",
-    href: "/trade/flashcard/review",
-    icon: Layers,
-  },
-  {
-    title: "闪卡管理",
-    href: "/trade/flashcard/manage",
-    icon: Layers,
-  },
-  {
-    title: "交易闪卡管理",
-    href: "/trade/trade-flashcard/manage",
-    icon: Layers,
+    icon: Repeat2,
+    items: [
+      {
+        title: "模拟盘训练",
+        href: "/trade/flashcard/simulation/setup",
+        icon: Repeat2,
+        activePaths: ["/trade/flashcard/simulation/play"],
+      },
+      {
+        title: "模拟盘历史",
+        href: "/trade/flashcard/simulation/history",
+        icon: Trophy,
+      },
+      {
+        title: "训练记录管理",
+        href: "/trade/flashcard/simulation/attempts",
+        icon: ClipboardList,
+      },
+      {
+        title: "Mistake Records",
+        href: "/trade/flashcard/mistakes/records",
+        icon: ScrollText,
+      },
+    ],
   },
 ];
 
@@ -134,6 +193,14 @@ const integrationItems: NavItem[] = [
   },
 ];
 
+const isNavItemActive = (pathname: string | null, item: NavItem) =>
+  isPathActive(pathname, item.href) ||
+  Boolean(item.activePaths?.some((path) => isPathActive(pathname, path)));
+
+const isNavSectionActive = (pathname: string | null, section: NavSection) =>
+  Boolean(section.isActive?.(pathname)) ||
+  section.items.some((item) => isNavItemActive(pathname, item));
+
 export default function TradeShell({
   children,
 }: {
@@ -141,6 +208,11 @@ export default function TradeShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [openSection, setOpenSection] = useState<string | null>(
+    () =>
+      tradeNavSections.find((section) => isNavSectionActive(pathname, section))
+        ?.title ?? null,
+  );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [errorAlert] = useAlert();
   const [user, setUser] = useAtomImmer(userAtom);
@@ -178,6 +250,19 @@ export default function TradeShell({
       setIsLoggingOut(false);
     }
   };
+
+  const toggleSection = (title: string) => {
+    setOpenSection((current) => (current === title ? null : title));
+  };
+
+  useEffect(() => {
+    const activeSection = tradeNavSections.find((section) =>
+      isNavSectionActive(pathname, section),
+    );
+    if (!activeSection) return;
+
+    setOpenSection(activeSection.title);
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -237,35 +322,106 @@ export default function TradeShell({
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          {tradeNavItems.map((item) => {
-            const isActive =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {(() => {
+            const isActive = isNavItemActive(pathname, homeNavItem);
             return (
               <Link
-                prefetch
-                key={item.title}
+                prefetch={false}
+                key={homeNavItem.title}
                 className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive
                     ? "bg-[#00c2b2]/15 text-[#00c2b2]"
                     : "text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-[#00c2b2]"
                 }`}
-                href={item.href}
+                href={homeNavItem.href}
               >
-                <item.icon
+                <homeNavItem.icon
                   className={`h-4 w-4 ${
                     isActive ? "text-[#00c2b2]" : "text-[#9ca3af]"
                   }`}
                 />
-                {item.title}
+                {homeNavItem.title}
               </Link>
+            );
+          })()}
+
+          {tradeNavSections.map((section) => {
+            const isOpen = openSection === section.title;
+            const isActive = isNavSectionActive(pathname, section);
+            return (
+              <div key={section.title} className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.title)}
+                  aria-expanded={isOpen}
+                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-[#00c2b2]/10 text-[#00c2b2]"
+                      : "text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-[#00c2b2]"
+                  }`}
+                >
+                  <section.icon
+                    className={`h-4 w-4 ${
+                      isActive ? "text-[#00c2b2]" : "text-[#9ca3af]"
+                    }`}
+                  />
+                  <span className="min-w-0 flex-1 truncate">
+                    {section.title}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    } ${isActive ? "text-[#00c2b2]" : "text-[#71717a]"}`}
+                  />
+                </button>
+
+                <div
+                  className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                    isOpen
+                      ? "grid-rows-[1fr] opacity-100"
+                      : "grid-rows-[0fr] opacity-0"
+                  }`}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="ml-5 space-y-1 border-l border-[#27272a] pl-3 pt-1">
+                      {section.items.map((item) => {
+                        const itemActive = isNavItemActive(pathname, item);
+                        return (
+                          <Link
+                            prefetch={false}
+                            key={item.href}
+                            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors ${
+                              itemActive
+                                ? "bg-[#00c2b2]/15 text-[#00c2b2]"
+                                : "text-[#a1a1aa] hover:bg-[#1e1e1e] hover:text-[#00c2b2]"
+                            }`}
+                            href={item.href}
+                          >
+                            <item.icon
+                              className={`h-3.5 w-3.5 shrink-0 ${
+                                itemActive
+                                  ? "text-[#00c2b2]"
+                                  : "text-[#71717a]"
+                              }`}
+                            />
+                            <span className="min-w-0 truncate">
+                              {item.title}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
             );
           })}
         </nav>
 
         <div className="p-4 border-t border-[#27272a] space-y-2">
           <Link
-            prefetch
+            prefetch={false}
             href="/trade/devtools"
             className="flex items-center gap-3 w-full px-3 py-2 text-sm font-medium rounded-md text-[#9ca3af] hover:bg-[#1e1e1e] hover:text-white transition-colors"
           >
@@ -337,20 +493,40 @@ export default function TradeShell({
                 <div className="px-4 pb-4 space-y-6">
                   <div>
                     <div className="text-xs font-semibold text-gray-400">
-                      页面
+                      主入口
                     </div>
                     <div className="mt-2 space-y-1">
-                      {tradeNavItems.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
-                        >
-                          {item.title}
-                        </Link>
-                      ))}
+                      <Link
+                        prefetch={false}
+                        href={homeNavItem.href}
+                        className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
+                      >
+                        {homeNavItem.title}
+                      </Link>
                     </div>
                   </div>
+
+                  {tradeNavSections.map((section) => (
+                    <div key={section.title}>
+                      <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+                        <section.icon className="h-3.5 w-3.5" />
+                        <span>{section.title}</span>
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        {section.items.map((item) => (
+                          <Link
+                            prefetch={false}
+                            key={item.href}
+                            href={item.href}
+                            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
+                          >
+                            <item.icon className="h-3.5 w-3.5" />
+                            <span>{item.title}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
 
                   <div>
                     <div className="text-xs font-semibold text-gray-400">
@@ -359,6 +535,7 @@ export default function TradeShell({
                     <div className="mt-2 space-y-1">
                       {integrationItems.map((item) => (
                         <Link
+                          prefetch={false}
                           key={item.href}
                           href={item.href}
                           className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
@@ -371,6 +548,7 @@ export default function TradeShell({
 
                   <div className="pt-2 border-t border-white/10 space-y-1">
                     <Link
+                      prefetch={false}
                       href="/trade/password"
                       className="block rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#00c2b2]"
                     >
