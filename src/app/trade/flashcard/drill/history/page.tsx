@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Search, Bell, TrendingUp, TrendingDown, Minus, Star, Bolt, BarChart3, Siren, ExternalLink } from "lucide-react";
+import { Search, Bell, TrendingUp, TrendingDown, Minus, Star, Bolt, Siren, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -25,7 +25,6 @@ import { getFlashcardDrillAnalytics, getFlashcardDrillCardErrorRanking, listFlas
 import {
   FLASHCARD_LABELS,
   type FlashcardDrillAnalytics,
-  type FlashcardDrillAnalyticsDimensionStat,
   type FlashcardDrillAnalyticsWindow,
   type FlashcardDrillCardErrorRanking,
   type FlashcardDrillCardErrorRankingItem,
@@ -214,114 +213,6 @@ function LineChartCard(props: {
             <span>{props.bottomLabels[0]}</span>
             <span>{props.bottomLabels[1]}</span>
             <span>{props.bottomLabels[2]}</span>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function BehaviorAccuracyCard(props: { items: FlashcardDrillAnalyticsDimensionStat[] }) {
-  return (
-    <div className={cardClass("p-6")}>
-      <h3 className="mb-6 flex items-center gap-2 text-lg font-bold text-white">
-        <BarChart3 className="h-5 w-5 text-[#00c2b2]" />
-        行为类型命中率
-      </h3>
-      <div className="space-y-6">
-        {props.items.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#273a39] px-4 py-10 text-center text-sm text-slate-500">
-            暂无可展示数据
-          </div>
-        ) : (
-          props.items.slice(0, 4).map((item) => (
-            <div key={item.key}>
-              <div className="mb-2 flex justify-between gap-3 text-sm">
-                <span className="font-medium text-slate-300">{FLASHCARD_LABELS[item.key] || item.key}</span>
-                <span className="font-bold text-[#00c2b2]">
-                  {Math.round(item.accuracy * 100)}%
-                  <span className="ml-2 text-xs font-normal text-slate-500">({item.total} samples)</span>
-                </span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
-                <div className="h-full rounded-full bg-[#00c2b2]" style={{ width: `${Math.max(item.accuracy * 100, 6)}%` }} />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ErrorRankingCard(props: { items: FlashcardDrillAnalyticsDimensionStat[] }) {
-  const topItems = props.items.slice(0, 2);
-  const totalWrong = props.items.reduce((sum, item) => sum + item.wrong, 0);
-  const firstWrong = topItems[0]?.wrong || 0;
-  const secondWrong = topItems[1]?.wrong || 0;
-  const firstPercent = totalWrong ? Math.round((firstWrong / totalWrong) * 100) : 0;
-  const secondPercent = totalWrong ? Math.round((secondWrong / totalWrong) * 100) : 0;
-  const otherPercent = Math.max(100 - firstPercent - secondPercent, 0);
-
-  return (
-    <div className={cardClass("p-6")}>
-      <h3 className="mb-6 flex items-center gap-2 text-lg font-bold text-white">
-        <Siren className="h-5 w-5 text-[#E03F3F]" />
-        高频错误排行
-      </h3>
-      {props.items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#273a39] px-4 py-10 text-center text-sm text-slate-500">
-          暂无可展示数据
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-4">
-              {topItems.map((item, index) => {
-                const isTop = index === 0;
-                const cardTone = isTop
-                  ? "bg-[#E03F3F]/5 border-[#E03F3F]/20"
-                  : "bg-[#1a1a1a] border-[#273a39]";
-                const wrongRate = totalWrong ? Math.round((item.wrong / totalWrong) * 100) : 0;
-                return (
-                  <div key={item.key} className={`rounded-lg border p-3 ${cardTone}`}>
-                    <p className={`mb-1 text-[10px] font-bold uppercase tracking-wider ${isTop ? "text-[#E03F3F]" : "text-slate-500"}`}>
-                      第 {index + 1} 位错误
-                    </p>
-                    <p className="text-sm font-bold text-slate-200">{FLASHCARD_LABELS[item.key] || item.key}</p>
-                    <p className="mt-2 text-xs text-slate-500">错了 {item.wrong} 次（{wrongRate}%）</p>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center justify-center">
-              <div className="relative h-40 w-40">
-                <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="100, 100" strokeWidth="3" className="text-slate-800" />
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${firstPercent}, 100`} strokeLinecap="round" strokeWidth="3" className="text-[#E03F3F]" />
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${secondPercent}, 100`} strokeDashoffset={`-${firstPercent}`} strokeLinecap="round" strokeWidth="3" className="text-[#00c2b2]" />
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${otherPercent}, 100`} strokeDashoffset={`-${firstPercent + secondPercent}`} strokeLinecap="round" strokeWidth="3" className="text-slate-700" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xs font-bold text-slate-500">总错题</span>
-                  <span className="text-xl font-bold text-white">{totalWrong}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#E03F3F]" />
-              <span className="text-xs text-slate-400">第 1 高频错误</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#00c2b2]" />
-              <span className="text-xs text-slate-400">第 2 高频错误</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-slate-700" />
-              <span className="text-xs text-slate-400">其他失效类型</span>
-            </div>
           </div>
         </>
       )}
@@ -632,11 +523,6 @@ export default function FlashcardDrillHistoryPage() {
               stroke="#04D280"
               loading={analyticsLoading}
             />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <BehaviorAccuracyCard items={analytics?.weaknesses.behaviorTypes || []} />
-            <ErrorRankingCard items={analytics?.weaknesses.invalidationTypes || []} />
           </div>
 
           <CardErrorRankingCard ranking={cardErrorRanking} loading={cardRankingLoading} />
