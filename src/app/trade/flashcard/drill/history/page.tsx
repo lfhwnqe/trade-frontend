@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { format } from "date-fns";
-import { Search, Bell, TrendingUp, TrendingDown, Minus, Star, Bolt, BarChart3, Siren } from "lucide-react";
+import { Search, Bell, TrendingUp, TrendingDown, Minus, Star, Bolt, BarChart3, Siren, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -20,12 +21,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAlert } from "@/components/common/alert";
-import { getFlashcardDrillAnalytics, listFlashcardDrillSessions } from "../../request";
+import { getFlashcardDrillAnalytics, getFlashcardDrillCardErrorRanking, listFlashcardDrillSessions } from "../../request";
 import {
   FLASHCARD_LABELS,
   type FlashcardDrillAnalytics,
   type FlashcardDrillAnalyticsDimensionStat,
   type FlashcardDrillAnalyticsWindow,
+  type FlashcardDrillCardErrorRanking,
+  type FlashcardDrillCardErrorRankingItem,
   type FlashcardDrillSessionHistoryItem,
 } from "../../types";
 
@@ -33,6 +36,8 @@ type SessionStatus = "ALL" | "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
 
 const PAGE_SIZE = 20;
 const RECENT_WINDOW = 30;
+const CARD_ERROR_MIN_ANSWERED = 3;
+const CARD_ERROR_LIMIT = 20;
 
 function formatDelta(delta: number | null) {
   if (delta === null) return "暂无上一组";
@@ -324,6 +329,122 @@ function ErrorRankingCard(props: { items: FlashcardDrillAnalyticsDimensionStat[]
   );
 }
 
+function formatPercent(value: number) {
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
+function CardErrorRankingCard(props: {
+  ranking: FlashcardDrillCardErrorRanking | null;
+  loading: boolean;
+}) {
+  const items = props.ranking?.items || [];
+  const minAnswered = props.ranking?.summary.minAnswered || CARD_ERROR_MIN_ANSWERED;
+
+  return (
+    <div className={cardClass("p-6")}>
+      <div className="mb-6 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+        <div>
+          <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+            <Siren className="h-5 w-5 text-[#E03F3F]" />
+            错误率最高闪卡
+          </h3>
+          <p className="mt-2 text-xs text-slate-500">
+            默认仅展示作答不少于 {minAnswered} 次的闪卡，按错误率从高到低排序。
+          </p>
+        </div>
+        <div className="rounded-full border border-[#273a39] px-3 py-1 text-xs font-bold text-slate-400">
+          最近 {props.ranking?.summary.recentWindow || RECENT_WINDOW} 轮
+        </div>
+      </div>
+
+      {props.loading ? (
+        <div className="flex h-64 items-center justify-center text-sm text-slate-500">加载中...</div>
+      ) : items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[#273a39] px-4 py-12 text-center text-sm text-slate-500">
+          暂无达到样本门槛的闪卡
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.slice(0, 8).map((item, index) => (
+            <CardErrorRankingRow key={item.cardId} item={item} index={index} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CardErrorRankingRow({ item, index }: { item: FlashcardDrillCardErrorRankingItem; index: number }) {
+  const errorRatePercent = Math.round(item.errorRate * 100);
+  const mistakeReasonCountMap = new Map((item.mistakeReasonCounts || []).map((stat) => [stat.reason, stat.count]));
+  const marketStructureWrongCount = mistakeReasonCountMap.get("MARKET_STRUCTURE_ANALYSIS_WRONG") || 0;
+  const priceActionWrongCount = mistakeReasonCountMap.get("PRICE_ACTION_ANALYSIS_WRONG") || 0;
+
+  return (
+    <div className="grid gap-4 rounded-xl border border-[#273a39] bg-[#101010] p-3 transition-colors hover:border-[#00c2b2]/40 hover:bg-[#111c1b] md:grid-cols-[96px_1fr_auto]">
+      <Link href={`/trade/flashcard/${item.cardId}`} className="block overflow-hidden rounded-lg border border-[#273a39] bg-black">
+        <img src={item.questionImageUrl} alt="question" className="h-20 w-full object-cover" />
+      </Link>
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-[#E03F3F]/15 px-2 py-1 text-xs font-bold text-[#f87171]">
+            #{index + 1} 错误率 {formatPercent(item.errorRate)}
+          </span>
+          {item.drillStatus === "DISABLED" ? (
+            <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-300">
+              已禁用
+            </span>
+          ) : null}
+        </div>
+        <div className="grid gap-2 text-xs text-slate-500 sm:grid-cols-3">
+          <div>
+            <span className="block text-slate-600">币对</span>
+            <span className="font-medium text-slate-200">{item.symbolPairInfo || "--"}</span>
+          </div>
+          <div>
+            <span className="block text-slate-600">行情时间</span>
+            <span className="font-medium text-slate-200">{item.marketTimeInfo || "--"}</span>
+          </div>
+          <div>
+            <span className="block text-slate-600">剧本</span>
+            <span className="font-medium text-slate-200">{item.playbookLabel || item.playbookType || "--"}</span>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full border border-[#273a39] bg-[#181818] px-2 py-1 text-xs text-slate-300">
+            {FLASHCARD_LABELS.MARKET_STRUCTURE_ANALYSIS_WRONG}：{marketStructureWrongCount}
+          </span>
+          <span className="rounded-full border border-[#273a39] bg-[#181818] px-2 py-1 text-xs text-slate-300">
+            {FLASHCARD_LABELS.PRICE_ACTION_ANALYSIS_WRONG}：{priceActionWrongCount}
+          </span>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
+          <div className="h-full rounded-full bg-[#E03F3F]" style={{ width: `${Math.max(errorRatePercent, 4)}%` }} />
+        </div>
+      </div>
+      <div className="flex items-end justify-between gap-3 md:flex-col md:items-end">
+        <div className="text-right">
+          <div className="text-sm font-bold text-white">{item.wrongCount} / {item.answeredCount}</div>
+          <div className="text-xs text-slate-500">错误 / 作答</div>
+        </div>
+        <div className="flex gap-2">
+          <Link href={`/trade/flashcard/${item.cardId}`}>
+            <Button size="sm" variant="outline" className="border-[#273a39] bg-[#1a1a1a] text-slate-100 hover:bg-[#273a39]">
+              <ExternalLink className="mr-1 h-3.5 w-3.5" />
+              详情
+            </Button>
+          </Link>
+          <Link href={`/trade/flashcard/manage?cardId=${encodeURIComponent(item.cardId)}`}>
+            <Button size="sm" variant="outline" className="border-[#273a39] bg-[#1a1a1a] text-slate-100 hover:bg-[#273a39]">
+              管理
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FlashcardDrillHistoryPage() {
   const [, errorAlert] = useAlert();
 
@@ -331,19 +452,31 @@ export default function FlashcardDrillHistoryPage() {
   const [items, setItems] = React.useState<FlashcardDrillSessionHistoryItem[]>([]);
   const [nextCursor, setNextCursor] = React.useState<string | null>(null);
   const [analytics, setAnalytics] = React.useState<FlashcardDrillAnalytics | null>(null);
+  const [cardErrorRanking, setCardErrorRanking] = React.useState<FlashcardDrillCardErrorRanking | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [analyticsLoading, setAnalyticsLoading] = React.useState(false);
+  const [cardRankingLoading, setCardRankingLoading] = React.useState(false);
 
   const fetchAnalytics = React.useCallback(async () => {
     setAnalyticsLoading(true);
+    setCardRankingLoading(true);
     try {
-      const res = await getFlashcardDrillAnalytics({ recentWindow: RECENT_WINDOW });
-      setAnalytics(res);
+      const [analyticsRes, cardRankingRes] = await Promise.all([
+        getFlashcardDrillAnalytics({ recentWindow: RECENT_WINDOW }),
+        getFlashcardDrillCardErrorRanking({
+          recentWindow: RECENT_WINDOW,
+          minAnswered: CARD_ERROR_MIN_ANSWERED,
+          limit: CARD_ERROR_LIMIT,
+        }),
+      ]);
+      setAnalytics(analyticsRes);
+      setCardErrorRanking(cardRankingRes);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "获取训练成绩分析失败");
     } finally {
       setAnalyticsLoading(false);
+      setCardRankingLoading(false);
     }
   }, [errorAlert]);
 
@@ -505,6 +638,8 @@ export default function FlashcardDrillHistoryPage() {
             <BehaviorAccuracyCard items={analytics?.weaknesses.behaviorTypes || []} />
             <ErrorRankingCard items={analytics?.weaknesses.invalidationTypes || []} />
           </div>
+
+          <CardErrorRankingCard ranking={cardErrorRanking} loading={cardRankingLoading} />
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
             <div className={cardClass("overflow-hidden")}>

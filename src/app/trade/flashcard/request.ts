@@ -10,6 +10,7 @@ import type {
   FlashcardDrillSessionDetail,
   FlashcardDrillSessionHistoryItem,
   FlashcardDrillAnalytics,
+  FlashcardDrillCardErrorRanking,
   FlashcardDrillMistakeReason,
   FlashcardDirection,
   FlashcardFilters,
@@ -454,6 +455,42 @@ export async function getFlashcardDrillAnalytics(params?: {
   }
 
   return data.data as FlashcardDrillAnalytics;
+}
+
+export async function getFlashcardDrillCardErrorRanking(params?: {
+  recentWindow?: number;
+  minAnswered?: number;
+  limit?: number;
+}): Promise<FlashcardDrillCardErrorRanking> {
+  const searchParams = new URLSearchParams();
+  if (params?.recentWindow) {
+    searchParams.set("recentWindow", String(params.recentWindow));
+  }
+  if (params?.minAnswered) {
+    searchParams.set("minAnswered", String(params.minAnswered));
+  }
+  if (params?.limit) {
+    searchParams.set("limit", String(params.limit));
+  }
+
+  const targetPath = `flashcard/drill/analytics/cards${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "获取错误率最高闪卡排行失败");
+  }
+
+  return data.data as FlashcardDrillCardErrorRanking;
 }
 
 export async function listFlashcardWrongBook(): Promise<FlashcardCard[]> {

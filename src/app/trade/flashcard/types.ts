@@ -282,6 +282,35 @@ export type FlashcardDrillAnalyticsDimensionStat = {
   wrongRate: number;
 };
 
+export type FlashcardDrillCardErrorRankingItem = {
+  cardId: string;
+  questionImageUrl: string;
+  answerImageUrl?: string;
+  symbolPairInfo?: string;
+  marketTimeInfo?: string;
+  playbookType?: string;
+  playbookLabel?: string;
+  answeredCount: number;
+  wrongCount: number;
+  correctCount: number;
+  errorRate: number;
+  mistakeReasonCounts: Array<{
+    reason: FlashcardDrillMistakeReason;
+    count: number;
+  }>;
+  lastAnsweredAt?: string;
+  drillStatus?: string;
+};
+
+export type FlashcardDrillCardErrorRanking = {
+  items: FlashcardDrillCardErrorRankingItem[];
+  summary: {
+    recentWindow: number;
+    minAnswered: number;
+    rankedCardCount: number;
+  };
+};
+
 export type FlashcardDrillAnalytics = {
   summary: {
     totalCompletedSessions: number;
