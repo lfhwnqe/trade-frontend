@@ -24,12 +24,30 @@ import {
 } from "@/components/ui/tooltip";
 import { Trade } from "../config";
 
-function fetchDashboard() {
+type AnalysisReviewRange = "7d" | "30d" | "3m";
+
+function fetchDashboard(analysisRange: AnalysisReviewRange) {
   return fetchWithAuth("/api/proxy-post", {
     method: "POST",
     credentials: "include",
     proxyParams: {
-      targetPath: "trade/dashboard",
+      targetPath: `trade/dashboard?analysisRange=${analysisRange}`,
+      actualMethod: "GET",
+    },
+    actualBody: {},
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(await res.text());
+    const result = await res.json();
+    return result.data || {};
+  });
+}
+
+function fetchAnalysisReviewStats(range: AnalysisReviewRange) {
+  return fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `trade/dashboard/analysis-review?range=${range}`,
       actualMethod: "GET",
     },
     actualBody: {},
@@ -100,7 +118,7 @@ type RiskRewardRatioPrecisionStats = {
   preciseRate: number;
 };
 
-type AnalysisReviewStats = {
+type AnalysisReviewStatsCore = {
   analysisReviewedTradeCount: number;
   coreAnalysisCorrectCount: number;
   coreAnalysisWinRate: number;
@@ -112,6 +130,33 @@ type AnalysisReviewStats = {
     priceActionReview: AnalysisReviewDimensionStats;
     orderFlowReview: AnalysisReviewDimensionStats;
     indicatorReview: AnalysisReviewDimensionStats;
+  };
+};
+
+type AnalysisReviewStats = AnalysisReviewStatsCore & {
+  range: AnalysisReviewRange;
+  currentPeriod: {
+    start: string;
+    end: string;
+  };
+  previousPeriod: {
+    start: string;
+    end: string;
+  };
+  previous: AnalysisReviewStatsCore;
+  delta: {
+    analysisReviewedTradeCount: number;
+    coreAnalysisCorrectCount: number;
+    coreAnalysisWinRate: number;
+    analysisCorrectButLoss: number;
+    analysisWrongButProfit: number;
+    riskRewardRatioPreciseRate: number;
+    dimensions: {
+      marketStructureReview: number;
+      priceActionReview: number;
+      orderFlowReview: number;
+      indicatorReview: number;
+    };
   };
 };
 
@@ -144,7 +189,180 @@ const emptyAnalysisReviewStats = (): AnalysisReviewStats => ({
     orderFlowReview: emptyAnalysisReviewDimension(),
     indicatorReview: emptyAnalysisReviewDimension(),
   },
+  range: "7d",
+  currentPeriod: { start: "", end: "" },
+  previousPeriod: { start: "", end: "" },
+  previous: {
+    analysisReviewedTradeCount: 0,
+    coreAnalysisCorrectCount: 0,
+    coreAnalysisWinRate: 0,
+    analysisCorrectButLoss: 0,
+    analysisWrongButProfit: 0,
+    riskRewardRatioPrecision: emptyRiskRewardRatioPrecisionStats(),
+    dimensions: {
+      marketStructureReview: emptyAnalysisReviewDimension(),
+      priceActionReview: emptyAnalysisReviewDimension(),
+      orderFlowReview: emptyAnalysisReviewDimension(),
+      indicatorReview: emptyAnalysisReviewDimension(),
+    },
+  },
+  delta: {
+    analysisReviewedTradeCount: 0,
+    coreAnalysisCorrectCount: 0,
+    coreAnalysisWinRate: 0,
+    analysisCorrectButLoss: 0,
+    analysisWrongButProfit: 0,
+    riskRewardRatioPreciseRate: 0,
+    dimensions: {
+      marketStructureReview: 0,
+      priceActionReview: 0,
+      orderFlowReview: 0,
+      indicatorReview: 0,
+    },
+  },
 });
+
+const normalizeNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeAnalysisReviewDimension = (
+  raw: unknown,
+): AnalysisReviewDimensionStats => {
+  const input = (raw ?? {}) as Partial<AnalysisReviewDimensionStats>;
+  return {
+    reviewed: normalizeNumber(input.reviewed),
+    correct: normalizeNumber(input.correct),
+    partial: normalizeNumber(input.partial),
+    wrong: normalizeNumber(input.wrong),
+    noSpecificFeature: normalizeNumber(input.noSpecificFeature),
+    correctRate: normalizeNumber(input.correctRate),
+  };
+};
+
+const normalizeAnalysisReviewStats = (
+  raw: unknown,
+  fallbackRange: AnalysisReviewRange,
+): AnalysisReviewStats => {
+  const input = (raw ?? {}) as {
+    analysisReviewedTradeCount?: unknown;
+    coreAnalysisCorrectCount?: unknown;
+    coreAnalysisWinRate?: unknown;
+    analysisCorrectButLoss?: unknown;
+    analysisWrongButProfit?: unknown;
+    riskRewardRatioPrecision?: unknown;
+    dimensions?: Record<string, unknown>;
+    range?: unknown;
+    currentPeriod?: { start?: unknown; end?: unknown };
+    previousPeriod?: { start?: unknown; end?: unknown };
+    previous?: unknown;
+    delta?: {
+      analysisReviewedTradeCount?: unknown;
+      coreAnalysisCorrectCount?: unknown;
+      coreAnalysisWinRate?: unknown;
+      analysisCorrectButLoss?: unknown;
+      analysisWrongButProfit?: unknown;
+      riskRewardRatioPreciseRate?: unknown;
+      dimensions?: Record<string, unknown>;
+    };
+  };
+  const normalizeCore = (source: typeof input): AnalysisReviewStatsCore => {
+    const riskRewardRatioPrecision = (source.riskRewardRatioPrecision ?? {}) as {
+      recorded?: unknown;
+      precise?: unknown;
+      imprecise?: unknown;
+      preciseRate?: unknown;
+    };
+    return {
+      analysisReviewedTradeCount: normalizeNumber(
+        source.analysisReviewedTradeCount,
+      ),
+      coreAnalysisCorrectCount: normalizeNumber(source.coreAnalysisCorrectCount),
+      coreAnalysisWinRate: normalizeNumber(source.coreAnalysisWinRate),
+      analysisCorrectButLoss: normalizeNumber(source.analysisCorrectButLoss),
+      analysisWrongButProfit: normalizeNumber(source.analysisWrongButProfit),
+      riskRewardRatioPrecision: {
+        recorded: normalizeNumber(riskRewardRatioPrecision.recorded),
+        precise: normalizeNumber(riskRewardRatioPrecision.precise),
+        imprecise: normalizeNumber(riskRewardRatioPrecision.imprecise),
+        preciseRate: normalizeNumber(riskRewardRatioPrecision.preciseRate),
+      },
+      dimensions: {
+        marketStructureReview: normalizeAnalysisReviewDimension(
+          source.dimensions?.marketStructureReview,
+        ),
+        priceActionReview: normalizeAnalysisReviewDimension(
+          source.dimensions?.priceActionReview,
+        ),
+        orderFlowReview: normalizeAnalysisReviewDimension(
+          source.dimensions?.orderFlowReview,
+        ),
+        indicatorReview: normalizeAnalysisReviewDimension(
+          source.dimensions?.indicatorReview,
+        ),
+      },
+    };
+  };
+  const normalizedRange =
+    input.range === "30d" || input.range === "3m" || input.range === "7d"
+      ? input.range
+      : fallbackRange;
+
+  return {
+    ...normalizeCore(input),
+    range: normalizedRange,
+    currentPeriod: {
+      start:
+        typeof input.currentPeriod?.start === "string"
+          ? input.currentPeriod.start
+          : "",
+      end:
+        typeof input.currentPeriod?.end === "string"
+          ? input.currentPeriod.end
+          : "",
+    },
+    previousPeriod: {
+      start:
+        typeof input.previousPeriod?.start === "string"
+          ? input.previousPeriod.start
+          : "",
+      end:
+        typeof input.previousPeriod?.end === "string"
+          ? input.previousPeriod.end
+          : "",
+    },
+    previous: normalizeCore((input.previous ?? {}) as typeof input),
+    delta: {
+      analysisReviewedTradeCount: normalizeNumber(
+        input.delta?.analysisReviewedTradeCount,
+      ),
+      coreAnalysisCorrectCount: normalizeNumber(
+        input.delta?.coreAnalysisCorrectCount,
+      ),
+      coreAnalysisWinRate: normalizeNumber(input.delta?.coreAnalysisWinRate),
+      analysisCorrectButLoss: normalizeNumber(input.delta?.analysisCorrectButLoss),
+      analysisWrongButProfit: normalizeNumber(input.delta?.analysisWrongButProfit),
+      riskRewardRatioPreciseRate: normalizeNumber(
+        input.delta?.riskRewardRatioPreciseRate,
+      ),
+      dimensions: {
+        marketStructureReview: normalizeNumber(
+          input.delta?.dimensions?.marketStructureReview,
+        ),
+        priceActionReview: normalizeNumber(
+          input.delta?.dimensions?.priceActionReview,
+        ),
+        orderFlowReview: normalizeNumber(
+          input.delta?.dimensions?.orderFlowReview,
+        ),
+        indicatorReview: normalizeNumber(
+          input.delta?.dimensions?.indicatorReview,
+        ),
+      },
+    },
+  };
+};
 
 function extractSummaryItems(payload: unknown): unknown[] {
   if (!payload || typeof payload !== "object") return [];
@@ -312,6 +530,12 @@ export default function TradeHomePage() {
   const [tradesError, setTradesError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [analysisRange, setAnalysisRange] =
+    React.useState<AnalysisReviewRange>("7d");
+  const [analysisStatsLoading, setAnalysisStatsLoading] = React.useState(false);
+  const [analysisStatsError, setAnalysisStatsError] = React.useState<string | null>(
+    null,
+  );
   const [winRateRange, setWinRateRange] = React.useState<"7d" | "30d" | "3m">(
     "7d",
   );
@@ -331,6 +555,7 @@ export default function TradeHomePage() {
   const [winRateTooltip, setWinRateTooltip] =
     React.useState<WinRateTooltipState | null>(null);
   const [showRGlossary, setShowRGlossary] = React.useState(false);
+  const didMountAnalysisRangeRef = React.useRef(false);
   const winRateContainerRef = React.useRef<HTMLDivElement | null>(null);
   const chartRef = React.useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = React.useRef<Chart | null>(null);
@@ -339,7 +564,7 @@ export default function TradeHomePage() {
     setLoading(true);
     setFeaturedLoading(true);
     setTradesLoading(true);
-    fetchDashboard()
+    fetchDashboard("7d")
       .then((data) => {
         const normalizeNumber = (value: unknown) => {
           const parsed = Number(value);
@@ -457,6 +682,19 @@ export default function TradeHomePage() {
             analysisWrongButProfit?: unknown;
             riskRewardRatioPrecision?: unknown;
             dimensions?: Record<string, unknown>;
+            range?: unknown;
+            currentPeriod?: { start?: unknown; end?: unknown };
+            previousPeriod?: { start?: unknown; end?: unknown };
+            previous?: unknown;
+            delta?: {
+              analysisReviewedTradeCount?: unknown;
+              coreAnalysisCorrectCount?: unknown;
+              coreAnalysisWinRate?: unknown;
+              analysisCorrectButLoss?: unknown;
+              analysisWrongButProfit?: unknown;
+              riskRewardRatioPreciseRate?: unknown;
+              dimensions?: Record<string, unknown>;
+            };
           };
           const riskRewardRatioPrecision = (input.riskRewardRatioPrecision ??
             {}) as {
@@ -465,6 +703,63 @@ export default function TradeHomePage() {
             imprecise?: unknown;
             preciseRate?: unknown;
           };
+          const normalizeCore = (
+            source: typeof input,
+          ): AnalysisReviewStatsCore => {
+            const sourceRiskRewardRatioPrecision =
+              (source.riskRewardRatioPrecision ?? {}) as {
+                recorded?: unknown;
+                precise?: unknown;
+                imprecise?: unknown;
+                preciseRate?: unknown;
+              };
+            return {
+              analysisReviewedTradeCount: normalizeNumber(
+                source.analysisReviewedTradeCount,
+              ),
+              coreAnalysisCorrectCount: normalizeNumber(
+                source.coreAnalysisCorrectCount,
+              ),
+              coreAnalysisWinRate: normalizeNumber(source.coreAnalysisWinRate),
+              analysisCorrectButLoss: normalizeNumber(
+                source.analysisCorrectButLoss,
+              ),
+              analysisWrongButProfit: normalizeNumber(
+                source.analysisWrongButProfit,
+              ),
+              riskRewardRatioPrecision: {
+                recorded: normalizeNumber(
+                  sourceRiskRewardRatioPrecision.recorded,
+                ),
+                precise: normalizeNumber(sourceRiskRewardRatioPrecision.precise),
+                imprecise: normalizeNumber(
+                  sourceRiskRewardRatioPrecision.imprecise,
+                ),
+                preciseRate: normalizeNumber(
+                  sourceRiskRewardRatioPrecision.preciseRate,
+                ),
+              },
+              dimensions: {
+                marketStructureReview: normalizeAnalysisReviewDimension(
+                  source.dimensions?.marketStructureReview,
+                ),
+                priceActionReview: normalizeAnalysisReviewDimension(
+                  source.dimensions?.priceActionReview,
+                ),
+                orderFlowReview: normalizeAnalysisReviewDimension(
+                  source.dimensions?.orderFlowReview,
+                ),
+                indicatorReview: normalizeAnalysisReviewDimension(
+                  source.dimensions?.indicatorReview,
+                ),
+              },
+            };
+          };
+          const previousInput = (input.previous ?? {}) as typeof input;
+          const normalizedRange =
+            input.range === "30d" || input.range === "3m" || input.range === "7d"
+              ? input.range
+              : analysisRange;
           return {
             analysisReviewedTradeCount: normalizeNumber(
               input.analysisReviewedTradeCount,
@@ -492,6 +787,60 @@ export default function TradeHomePage() {
               indicatorReview: normalizeAnalysisReviewDimension(
                 input.dimensions?.indicatorReview,
               ),
+            },
+            range: normalizedRange,
+            currentPeriod: {
+              start:
+                typeof input.currentPeriod?.start === "string"
+                  ? input.currentPeriod.start
+                  : "",
+              end:
+                typeof input.currentPeriod?.end === "string"
+                  ? input.currentPeriod.end
+                  : "",
+            },
+            previousPeriod: {
+              start:
+                typeof input.previousPeriod?.start === "string"
+                  ? input.previousPeriod.start
+                  : "",
+              end:
+                typeof input.previousPeriod?.end === "string"
+                  ? input.previousPeriod.end
+                  : "",
+            },
+            previous: normalizeCore(previousInput),
+            delta: {
+              analysisReviewedTradeCount: normalizeNumber(
+                input.delta?.analysisReviewedTradeCount,
+              ),
+              coreAnalysisCorrectCount: normalizeNumber(
+                input.delta?.coreAnalysisCorrectCount,
+              ),
+              coreAnalysisWinRate: normalizeNumber(input.delta?.coreAnalysisWinRate),
+              analysisCorrectButLoss: normalizeNumber(
+                input.delta?.analysisCorrectButLoss,
+              ),
+              analysisWrongButProfit: normalizeNumber(
+                input.delta?.analysisWrongButProfit,
+              ),
+              riskRewardRatioPreciseRate: normalizeNumber(
+                input.delta?.riskRewardRatioPreciseRate,
+              ),
+              dimensions: {
+                marketStructureReview: normalizeNumber(
+                  input.delta?.dimensions?.marketStructureReview,
+                ),
+                priceActionReview: normalizeNumber(
+                  input.delta?.dimensions?.priceActionReview,
+                ),
+                orderFlowReview: normalizeNumber(
+                  input.delta?.dimensions?.orderFlowReview,
+                ),
+                indicatorReview: normalizeNumber(
+                  input.delta?.dimensions?.indicatorReview,
+                ),
+              },
             },
           };
         };
@@ -565,6 +914,30 @@ export default function TradeHomePage() {
         setTradesLoading(false);
       });
   }, []);
+
+  React.useEffect(() => {
+    if (!didMountAnalysisRangeRef.current) {
+      didMountAnalysisRangeRef.current = true;
+      return;
+    }
+
+    setAnalysisStatsLoading(true);
+    setAnalysisStatsError(null);
+    fetchAnalysisReviewStats(analysisRange)
+      .then((data) => {
+        setStats((current) => ({
+          ...current,
+          analysisReviewStats: normalizeAnalysisReviewStats(data, analysisRange),
+        }));
+        setAnalysisStatsError(null);
+      })
+      .catch((err) => {
+        setAnalysisStatsError(err.message || "获取分析复盘统计失败");
+      })
+      .finally(() => {
+        setAnalysisStatsLoading(false);
+      });
+  }, [analysisRange]);
 
   React.useEffect(() => {
     setWinRateLoading(true);
@@ -956,28 +1329,60 @@ export default function TradeHomePage() {
       : level === "fair"
         ? "建议：优先减少提前离场与计划偏离，提升兑现率。"
         : "建议：先收缩频率，严格执行止损与复盘记录。";
+  const analysisRangeOptions: { value: AnalysisReviewRange; label: string; compare: string }[] = [
+    { value: "7d", label: "最近7天", compare: "对比前7天" },
+    { value: "30d", label: "最近30天", compare: "对比前30天" },
+    { value: "3m", label: "最近3个月", compare: "对比前3个月" },
+  ];
+  const activeAnalysisRange =
+    analysisRangeOptions.find((item) => item.value === analysisRange) ??
+    analysisRangeOptions[0];
+  const analysisReviewLoading = loading || analysisStatsLoading;
+  const formatPeriod = (period: { start: string; end: string }) => {
+    const start = Date.parse(period.start);
+    const end = Date.parse(period.end);
+    if (Number.isNaN(start) || Number.isNaN(end)) return activeAnalysisRange.label;
+    return `${format(start, "MM/dd")} - ${format(end, "MM/dd")}`;
+  };
+  const deltaClass = (value: number, lowerIsBetter = false) => {
+    if (value === 0) return "text-[#9ca3af]";
+    const isGood = lowerIsBetter ? value < 0 : value > 0;
+    return isGood ? "text-emerald-400" : "text-red-400";
+  };
+  const formatRateDelta = (value: number) =>
+    `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+  const formatCountDelta = (value: number) =>
+    `${value > 0 ? "+" : ""}${value}`;
   const analysisDimensions = [
     {
       key: "marketStructureReview",
       label: "市场结构分析",
       stats: stats.analysisReviewStats.dimensions.marketStructureReview,
+      previousStats: stats.analysisReviewStats.previous.dimensions.marketStructureReview,
+      deltaRate: stats.analysisReviewStats.delta.dimensions.marketStructureReview,
     },
     {
       key: "priceActionReview",
       label: "价格行为分析",
       stats: stats.analysisReviewStats.dimensions.priceActionReview,
+      previousStats: stats.analysisReviewStats.previous.dimensions.priceActionReview,
+      deltaRate: stats.analysisReviewStats.delta.dimensions.priceActionReview,
     },
     {
       key: "orderFlowReview",
       label: "订单流分析",
       showNoSpecificFeature: true,
       stats: stats.analysisReviewStats.dimensions.orderFlowReview,
+      previousStats: stats.analysisReviewStats.previous.dimensions.orderFlowReview,
+      deltaRate: stats.analysisReviewStats.delta.dimensions.orderFlowReview,
     },
     {
       key: "indicatorReview",
       label: "指标参数分析",
       showNoSpecificFeature: true,
       stats: stats.analysisReviewStats.dimensions.indicatorReview,
+      previousStats: stats.analysisReviewStats.previous.dimensions.indicatorReview,
+      deltaRate: stats.analysisReviewStats.delta.dimensions.indicatorReview,
     },
   ];
 
@@ -1158,7 +1563,7 @@ export default function TradeHomePage() {
         </div>
 
         <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#121212] shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-[#27272a] bg-white/[0.02] px-6 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 border-b border-[#27272a] bg-white/[0.02] px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded border border-[#27272a] bg-[#1e1e1e]">
                 <PieChart className="h-4 w-4 text-blue-400" />
@@ -1168,41 +1573,90 @@ export default function TradeHomePage() {
                   分析复盘统计
                 </h2>
                 <p className="mt-1 text-xs text-[#9ca3af]">
-                  已复盘样本 {stats.analysisReviewStats.analysisReviewedTradeCount} 笔
+                  {formatPeriod(stats.analysisReviewStats.currentPeriod)} vs{" "}
+                  {formatPeriod(stats.analysisReviewStats.previousPeriod)}
                 </p>
+                {analysisStatsError ? (
+                  <p className="mt-1 text-xs text-red-300">{analysisStatsError}</p>
+                ) : null}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-right md:grid-cols-4">
+            <div className="flex flex-col gap-4 lg:items-end">
+              <div className="inline-flex w-full rounded-lg border border-[#27272a] bg-black/20 p-1 lg:w-auto">
+                {analysisRangeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setAnalysisRange(option.value)}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-xs transition-colors lg:flex-none ${
+                      analysisRange === option.value
+                        ? "bg-emerald-500 text-black shadow-sm shadow-emerald-500/20"
+                        : "text-[#9ca3af] hover:bg-white/5 hover:text-white"
+                    }`}
+                    title={option.compare}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-right md:grid-cols-4">
               <div>
                 <p className="text-[10px] uppercase text-[#9ca3af]">正确分析胜率</p>
                 <p className="text-lg font-bold text-emerald-400">
-                  {loading ? "..." : `${stats.analysisReviewStats.coreAnalysisWinRate}%`}
+                  {analysisReviewLoading
+                    ? "..."
+                    : `${stats.analysisReviewStats.coreAnalysisWinRate}%`}
+                </p>
+                <p className={`text-[10px] ${deltaClass(stats.analysisReviewStats.delta.coreAnalysisWinRate)}`}>
+                  {analysisReviewLoading
+                    ? "..."
+                    : `${formatRateDelta(stats.analysisReviewStats.delta.coreAnalysisWinRate)} vs 上期`}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] uppercase text-[#9ca3af]">正确但亏损</p>
                 <p className="text-lg font-bold text-yellow-300">
-                  {loading ? "..." : stats.analysisReviewStats.analysisCorrectButLoss}
+                  {analysisReviewLoading
+                    ? "..."
+                    : stats.analysisReviewStats.analysisCorrectButLoss}
+                </p>
+                <p className={`text-[10px] ${deltaClass(stats.analysisReviewStats.delta.analysisCorrectButLoss, true)}`}>
+                  {analysisReviewLoading
+                    ? "..."
+                    : `${formatCountDelta(stats.analysisReviewStats.delta.analysisCorrectButLoss)} vs 上期`}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] uppercase text-[#9ca3af]">错误但盈利</p>
                 <p className="text-lg font-bold text-red-300">
-                  {loading ? "..." : stats.analysisReviewStats.analysisWrongButProfit}
+                  {analysisReviewLoading
+                    ? "..."
+                    : stats.analysisReviewStats.analysisWrongButProfit}
+                </p>
+                <p className={`text-[10px] ${deltaClass(stats.analysisReviewStats.delta.analysisWrongButProfit, true)}`}>
+                  {analysisReviewLoading
+                    ? "..."
+                    : `${formatCountDelta(stats.analysisReviewStats.delta.analysisWrongButProfit)} vs 上期`}
                 </p>
               </div>
               <div className="col-span-2 md:col-span-1">
                 <p className="text-[10px] uppercase text-[#9ca3af]">盈亏比设置是否精准</p>
-                <p className="text-lg font-bold text-blue-300">
-                  {loading
+                <p className="text-lg font-bold text-emerald-300">
+                  {analysisReviewLoading
                     ? "..."
                     : `${stats.analysisReviewStats.riskRewardRatioPrecision.preciseRate}%`}
                 </p>
                 <p className="text-[10px] text-[#6b7280]">
-                  {loading
+                  {analysisReviewLoading
                     ? "..."
                     : `精准 ${stats.analysisReviewStats.riskRewardRatioPrecision.precise} / 不精准 ${stats.analysisReviewStats.riskRewardRatioPrecision.imprecise}`}
                 </p>
+                <p className={`text-[10px] ${deltaClass(stats.analysisReviewStats.delta.riskRewardRatioPreciseRate)}`}>
+                  {analysisReviewLoading
+                    ? "..."
+                    : `${formatRateDelta(stats.analysisReviewStats.delta.riskRewardRatioPreciseRate)} vs 上期`}
+                </p>
+              </div>
               </div>
             </div>
           </div>
@@ -1218,14 +1672,18 @@ export default function TradeHomePage() {
                     <div>
                       <p className="text-sm font-medium text-white">{item.label}</p>
                       <p className="mt-1 text-xs text-[#9ca3af]">
-                        样本 {item.stats.reviewed} 笔
+                        样本 {item.stats.reviewed} 笔 / 上期 {item.previousStats.reviewed} 笔
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold text-white">
-                        {loading ? "..." : `${item.stats.correctRate}%`}
+                        {analysisReviewLoading ? "..." : `${item.stats.correctRate}%`}
                       </p>
-                      <p className="text-[10px] uppercase text-[#9ca3af]">正确率</p>
+                      <p className={`text-[10px] ${deltaClass(item.deltaRate)}`}>
+                        {analysisReviewLoading
+                          ? "..."
+                          : `${formatRateDelta(item.deltaRate)} vs 上期`}
+                      </p>
                     </div>
                   </div>
                   <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/30">
@@ -1258,8 +1716,8 @@ export default function TradeHomePage() {
                 </div>
                 <div className="flex items-end justify-between gap-4">
                   <div>
-                    <p className="text-2xl font-bold text-blue-300">
-                      {loading
+                    <p className="text-2xl font-bold text-emerald-300">
+                      {analysisReviewLoading
                         ? "..."
                         : `${stats.analysisReviewStats.riskRewardRatioPrecision.preciseRate}%`}
                     </p>
@@ -1272,7 +1730,7 @@ export default function TradeHomePage() {
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/30">
                   <div
-                    className="h-full rounded-full bg-blue-300"
+                    className="h-full rounded-full bg-emerald-300"
                     style={{
                       width: `${Math.min(
                         stats.analysisReviewStats.riskRewardRatioPrecision.preciseRate,
@@ -1294,7 +1752,9 @@ export default function TradeHomePage() {
                   <div className="flex items-end justify-between gap-4">
                     <div>
                       <p className="text-2xl font-bold text-emerald-300">
-                        {loading ? "..." : stats.analysisReviewStats.coreAnalysisCorrectCount}
+                        {analysisReviewLoading
+                          ? "..."
+                          : stats.analysisReviewStats.coreAnalysisCorrectCount}
                       </p>
                       <p className="mt-1 text-[10px] uppercase text-[#9ca3af]">核心正确</p>
                     </div>
