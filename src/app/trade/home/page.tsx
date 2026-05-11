@@ -113,12 +113,6 @@ type AnalysisReviewStats = {
     orderFlowReview: AnalysisReviewDimensionStats;
     indicatorReview: AnalysisReviewDimensionStats;
   };
-  topMistakes: Array<{
-    code: string;
-    label: string;
-    color?: string;
-    count: number;
-  }>;
 };
 
 const emptyAnalysisReviewDimension = (): AnalysisReviewDimensionStats => ({
@@ -150,7 +144,6 @@ const emptyAnalysisReviewStats = (): AnalysisReviewStats => ({
     orderFlowReview: emptyAnalysisReviewDimension(),
     indicatorReview: emptyAnalysisReviewDimension(),
   },
-  topMistakes: [],
 });
 
 function extractSummaryItems(payload: unknown): unknown[] {
@@ -464,7 +457,6 @@ export default function TradeHomePage() {
             analysisWrongButProfit?: unknown;
             riskRewardRatioPrecision?: unknown;
             dimensions?: Record<string, unknown>;
-            topMistakes?: unknown;
           };
           const riskRewardRatioPrecision = (input.riskRewardRatioPrecision ??
             {}) as {
@@ -473,37 +465,6 @@ export default function TradeHomePage() {
             imprecise?: unknown;
             preciseRate?: unknown;
           };
-          const topMistakes: AnalysisReviewStats["topMistakes"] = Array.isArray(
-            input.topMistakes,
-          )
-            ? input.topMistakes.reduce<AnalysisReviewStats["topMistakes"]>(
-                (acc, item) => {
-                  const entity = (item ?? {}) as {
-                    code?: unknown;
-                    label?: unknown;
-                    color?: unknown;
-                    count?: unknown;
-                  };
-                  const code = String(entity.code ?? "").trim();
-                  if (!code) return acc;
-                  acc.push({
-                    code,
-                    label:
-                      typeof entity.label === "string" && entity.label.trim()
-                        ? entity.label
-                        : code,
-                    color:
-                      typeof entity.color === "string" && entity.color.trim()
-                        ? entity.color
-                        : undefined,
-                    count: normalizeNumber(entity.count),
-                  });
-                  return acc;
-                },
-                [],
-              )
-            : [];
-
           return {
             analysisReviewedTradeCount: normalizeNumber(
               input.analysisReviewedTradeCount,
@@ -532,7 +493,6 @@ export default function TradeHomePage() {
                 input.dimensions?.indicatorReview,
               ),
             },
-            topMistakes,
           };
         };
 
@@ -1324,49 +1284,26 @@ export default function TradeHomePage() {
               </div>
 
               <div>
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-white">Top 分析错因</h3>
-                <span className="text-xs text-[#9ca3af]">
-                  核心正确 {stats.analysisReviewStats.coreAnalysisCorrectCount}
-                </span>
-              </div>
-              {loading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <Skeleton key={`analysis-mistake-skeleton-${index}`} className="h-7 w-full bg-white/5" />
-                  ))}
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-white">核心分析正确样本</h3>
+                  <span className="text-xs text-[#9ca3af]">
+                    已复盘 {stats.analysisReviewStats.analysisReviewedTradeCount} 笔
+                  </span>
                 </div>
-              ) : stats.analysisReviewStats.topMistakes.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-[#27272a] px-4 py-6 text-center text-sm text-[#9ca3af]">
-                  暂无错因样本
+                <div className="rounded-lg border border-[#27272a] bg-black/20 px-4 py-5">
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-2xl font-bold text-emerald-300">
+                        {loading ? "..." : stats.analysisReviewStats.coreAnalysisCorrectCount}
+                      </p>
+                      <p className="mt-1 text-[10px] uppercase text-[#9ca3af]">核心正确</p>
+                    </div>
+                    <div className="text-right text-xs text-[#9ca3af]">
+                      <p>正确但亏损 {stats.analysisReviewStats.analysisCorrectButLoss}</p>
+                      <p>错误但盈利 {stats.analysisReviewStats.analysisWrongButProfit}</p>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {stats.analysisReviewStats.topMistakes.map((item) => {
-                    const maxCount = Math.max(
-                      ...stats.analysisReviewStats.topMistakes.map((mistake) => mistake.count),
-                      1,
-                    );
-                    return (
-                      <div key={item.code}>
-                        <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                          <span className="truncate text-[#e5e7eb]">{item.label}</span>
-                          <span className="text-[#9ca3af]">{item.count}</span>
-                        </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-black/30">
-                          <div
-                            className="h-full rounded-full bg-blue-400"
-                            style={{
-                              width: `${Math.max(8, (item.count / maxCount) * 100)}%`,
-                              backgroundColor: item.color || undefined,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
               </div>
             </div>
           </div>

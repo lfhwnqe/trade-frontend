@@ -38,7 +38,6 @@ const skillUrl = new URL('/downloads/trade-api-token-agent-SKILL.md', window.loc
 - `analysisTime: string`：分析时间（ISO）
 - `analysisPeriod: string`：分析周期（如 15分钟）
 - `grade: "高" | "中" | "低"`：交易分级
-- `analysisExpired: boolean`：分析是否过期
 - `entryDirection: "多" | "空"`：入场方向
 - `entryPrice/stopLoss/takeProfit: number`：入场/风控价格
 - `exitPrice/exitTime: number|string`：离场价格与时间

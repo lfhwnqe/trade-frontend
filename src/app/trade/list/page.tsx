@@ -647,7 +647,7 @@ export default function TradeListPage() {
                 <DialogTitle>确认复制</DialogTitle>
               </DialogHeader>
               <div className="py-4">
-                确定要复制这条交易记录吗？将创建一个新的交易记录，并将分析已过期字段设置为未过期。
+                确定要复制这条交易记录吗？将创建一个新的交易记录。
               </div>
               <DialogFooter>
                 <Button

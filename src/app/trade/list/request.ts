@@ -121,9 +121,6 @@ function normalizeTradeDetail(detail: TradeDetailResponse): Trade {
         : undefined,
     entryTagCodes: normalizeTags((rest as Record<string, unknown>).entryTagCodes),
     entryTagItems: normalizeTagItems((rest as Record<string, unknown>).entryTagItems),
-    analysisMistakeCodes: normalizeTags(
-      (rest as Record<string, unknown>).analysisMistakeCodes,
-    ),
   };
 }
 
@@ -233,7 +230,6 @@ export type CreateTradeDto = {
   marketStructureAnalysisImages?: MarketStructureAnalysisImage[];
   trendAnalysisImages?: MarketStructureAnalysisImage[];
   tradeSubject: string;
-  keyPriceLevels?: string;
   marketStructure: MarketStructure;
   marketStructureAnalysis: string;
   preEntrySummary?: string;
@@ -278,9 +274,6 @@ export type CreateTradeDto = {
   orderFlowReview?: AnalysisReviewResultValue;
   indicatorReview?: AnalysisReviewResultValue;
   riskRewardRatioPrecise?: boolean;
-  analysisMistakeCodes?: string[];
-  primaryAnalysisMistakeCode?: string;
-  analysisReviewSummary?: string;
   analysisImages?: ImageResource[];
   analysisImagesDetailed?: MarketStructureAnalysisImage[];
 
@@ -307,7 +300,6 @@ export type CreateTradeDto = {
 
   // 新增
   grade?: string;
-  analysisExpired?: boolean;
 };
 
 /**
@@ -427,7 +419,6 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
       form.marketStructureAnalysisImages,
     ),
     trendAnalysisImages: asMarketStructureImages(form.trendAnalysisImages),
-    keyPriceLevels: form.keyPriceLevels,
     marketStructure: form.marketStructure!,
     marketStructureAnalysis: form.marketStructureAnalysis || "",
     preEntrySummary: form.preEntrySummary,
@@ -469,9 +460,7 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     tradeResult: form.tradeResult as TradeResult | undefined,
     followedPlan: form.followedPlan,
 
-    // 新增扩展字段
     grade: form.grade,
-    analysisExpired: !!form.analysisExpired,
     followedPlanId: form.followedPlanId,
     actualPathImages: asImageArray(form.actualPathImages),
     actualPathImagesDetailed: asMarketStructureImages(
@@ -486,9 +475,6 @@ export function toDto(form: Partial<Trade>): CreateTradeDto {
     orderFlowReview: form.orderFlowReview as CreateTradeDto["orderFlowReview"],
     indicatorReview: form.indicatorReview as CreateTradeDto["indicatorReview"],
     riskRewardRatioPrecise: form.riskRewardRatioPrecise,
-    analysisMistakeCodes: normalizeTags(form.analysisMistakeCodes, { preserveEmptyArray: true }),
-    primaryAnalysisMistakeCode: form.primaryAnalysisMistakeCode,
-    analysisReviewSummary: form.analysisReviewSummary,
     analysisImages: asImageArray(form.analysisImages),
     analysisImagesDetailed: asMarketStructureImages(
       form.analysisImagesDetailed,

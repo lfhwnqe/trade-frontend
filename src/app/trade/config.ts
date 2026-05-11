@@ -177,9 +177,6 @@ export type Trade = {
   analysisImages?: ImageResource[]; // 旧字段
   analysisImagesDetailed?: MarketStructureAnalysisImage[]; // 新字段
 
-  // 价格/价值区等
-  keyPriceLevels?: string;
-
   // 入场计划
   entryPlanA?: EntryPlan;
   entryPlanB?: EntryPlan;
@@ -217,9 +214,6 @@ export type Trade = {
   orderFlowReview?: string;
   indicatorReview?: string;
   riskRewardRatioPrecise?: boolean;
-  analysisMistakeCodes?: string[];
-  primaryAnalysisMistakeCode?: string;
-  analysisReviewSummary?: string;
   profitLossPercentage?: string;
   riskRewardRatio?: string;
 
@@ -248,7 +242,6 @@ export type Trade = {
   updatedAt?: string;
   // 新增扩展字段
   grade?: string;
-  analysisExpired?: boolean;
   isShareable?: boolean;
   shareId?: string;
 };
