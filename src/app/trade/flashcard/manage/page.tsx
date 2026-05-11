@@ -32,12 +32,15 @@ import { ImageUploader } from "@/components/common/ImageUploader";
 import { useAlert } from "@/components/common/alert";
 import {
   deleteFlashcardCard,
+  duplicateFlashcardCard,
   listFlashcardCards,
   updateFlashcardCard,
+  updateFlashcardDrillStatus,
 } from "../request";
 import {
   FLASHCARD_CARD_SORT_BYS,
   FLASHCARD_CARD_SORT_ORDERS,
+  FLASHCARD_DRILL_STATUSES,
   FLASHCARD_DIRECTIONS,
   FLASHCARD_LABELS,
   FLASHCARD_SYSTEM_OUTCOME_TYPES,
@@ -46,6 +49,7 @@ import {
   type FlashcardCardSortBy,
   type FlashcardCardSortOrder,
   type FlashcardDictionaryOptionItem,
+  type FlashcardDrillStatus,
   type FlashcardSystemOutcomeType,
 } from "../types";
 import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
@@ -59,6 +63,7 @@ type FlashcardQuery = {
   symbolPairInfo: string;
   playbookType: string;
   marketTimeInfo: string;
+  drillStatus: FlashcardDrillStatus | "ALL";
   sortBy: FlashcardCardSortBy;
   sortOrder: FlashcardCardSortOrder;
 };
@@ -139,6 +144,7 @@ function FlashcardManagePageContent() {
     [flashcardTagOptions],
   );
   const [savingNote, setSavingNote] = React.useState(false);
+  const [operatingCardId, setOperatingCardId] = React.useState<string | null>(null);
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([
     ...TRADE_PERIOD_PRESETS,
   ]);
@@ -154,6 +160,7 @@ function FlashcardManagePageContent() {
     symbolPairInfo: "",
     playbookType: "",
     marketTimeInfo: "",
+    drillStatus: "ALL",
     sortBy: "CREATED_AT",
     sortOrder: "desc",
   });
@@ -162,6 +169,7 @@ function FlashcardManagePageContent() {
     symbolPairInfo: "",
     playbookType: "",
     marketTimeInfo: "",
+    drillStatus: "ALL",
     sortBy: "CREATED_AT",
     sortOrder: "desc",
   });
@@ -189,6 +197,7 @@ function FlashcardManagePageContent() {
           symbolPairInfo: query.symbolPairInfo.trim() || undefined,
           playbookType: query.playbookType || undefined,
           marketTimeInfo: query.marketTimeInfo.trim() || undefined,
+          drillStatus: query.drillStatus,
           sortBy: query.sortBy,
           sortOrder: query.sortOrder,
         });
@@ -217,6 +226,7 @@ function FlashcardManagePageContent() {
       symbolPairInfo: "",
       playbookType: "",
       marketTimeInfo: "",
+      drillStatus: "ALL" as const,
       sortBy: "CREATED_AT" as FlashcardCardSortBy,
       sortOrder: "desc" as FlashcardCardSortOrder,
     };
@@ -290,7 +300,7 @@ function FlashcardManagePageContent() {
   );
 
   const handleQueryReset = React.useCallback(() => {
-    const emptyQuery = { cardId: "", symbolPairInfo: "", playbookType: "", marketTimeInfo: "", sortBy: "CREATED_AT" as FlashcardCardSortBy, sortOrder: "desc" as FlashcardCardSortOrder };
+    const emptyQuery = { cardId: "", symbolPairInfo: "", playbookType: "", marketTimeInfo: "", drillStatus: "ALL" as const, sortBy: "CREATED_AT" as FlashcardCardSortBy, sortOrder: "desc" as FlashcardCardSortOrder };
     setQueryForm(emptyQuery);
     setActiveQuery(emptyQuery);
     setRowSelection({});
@@ -443,6 +453,66 @@ function FlashcardManagePageContent() {
     [errorAlert, successAlert],
   );
 
+  const handleToggleDrillStatus = React.useCallback(
+    async (card: FlashcardCard) => {
+      const currentStatus = card.drillStatus === "DISABLED" ? "DISABLED" : "ENABLED";
+      const nextStatus: FlashcardDrillStatus = currentStatus === "DISABLED" ? "ENABLED" : "DISABLED";
+      if (nextStatus === "DISABLED") {
+        const confirmed = window.confirm("确认禁用这张闪卡吗？禁用后它不会再进入常规 Drill 抽题。");
+        if (!confirmed) return;
+      }
+
+      setOperatingCardId(card.cardId);
+      try {
+        const updated = await updateFlashcardDrillStatus(card.cardId, {
+          drillStatus: nextStatus,
+        });
+        setItems((prev) =>
+          prev.map((item) => (item.cardId === updated.cardId ? { ...item, ...updated } : item)),
+        );
+        await fetchPage(page, activeQuery);
+        successAlert(nextStatus === "DISABLED" ? "闪卡已禁用" : "闪卡已启用");
+      } catch (error) {
+        errorAlert(error instanceof Error ? error.message : "更新闪卡训练状态失败");
+      } finally {
+        setOperatingCardId(null);
+      }
+    },
+    [activeQuery, errorAlert, fetchPage, page, successAlert],
+  );
+
+  const handleDuplicateCard = React.useCallback(
+    async (card: FlashcardCard) => {
+      const confirmed = window.confirm("确认复制这张闪卡吗？新卡不会继承训练统计、收藏、错题和评分。");
+      if (!confirmed) return;
+
+      setOperatingCardId(card.cardId);
+      try {
+        const duplicated = await duplicateFlashcardCard(card.cardId);
+        const nextQuery: FlashcardQuery = {
+          cardId: duplicated.cardId,
+          symbolPairInfo: "",
+          playbookType: "",
+          marketTimeInfo: "",
+          drillStatus: "ALL",
+          sortBy: "CREATED_AT",
+          sortOrder: "desc",
+        };
+        setQueryForm(nextQuery);
+        setActiveQuery(nextQuery);
+        setPage(1);
+        setRowSelection({});
+        setSorting([]);
+        successAlert("闪卡已复制，已筛出新卡");
+      } catch (error) {
+        errorAlert(error instanceof Error ? error.message : "复制闪卡失败");
+      } finally {
+        setOperatingCardId(null);
+      }
+    },
+    [errorAlert, successAlert],
+  );
+
   const columns = React.useMemo<ColumnDef<FlashcardCard>[]>(
     () => [
       {
@@ -566,6 +636,25 @@ function FlashcardManagePageContent() {
                 </span>
               ))}
             </div>
+          );
+        },
+        enableSorting: false,
+      },
+      {
+        accessorKey: "drillStatus",
+        header: "训练状态",
+        cell: ({ row }) => {
+          const status = row.original.drillStatus === "DISABLED" ? "DISABLED" : "ENABLED";
+          return (
+            <span
+              className={`inline-flex min-w-[72px] items-center justify-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                status === "DISABLED"
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                  : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+              }`}
+            >
+              {FLASHCARD_LABELS[status]}
+            </span>
           );
         },
         enableSorting: false,
@@ -703,6 +792,22 @@ function FlashcardManagePageContent() {
               编辑
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleToggleDrillStatus(row.original)}
+              disabled={operatingCardId === row.original.cardId}
+            >
+              {row.original.drillStatus === "DISABLED" ? "启用" : "禁用"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleDuplicateCard(row.original)}
+              disabled={operatingCardId === row.original.cardId}
+            >
+              复制
+            </Button>
+            <Button
               variant="destructive"
               size="sm"
               onClick={() => void handleDeleteCard(row.original)}
@@ -723,9 +828,12 @@ function FlashcardManagePageContent() {
     [
       flashcardTagOptionMap,
       flashcardTagOptions,
+      handleDuplicateCard,
       handleDeleteCard,
+      handleToggleDrillStatus,
       openNoteDialog,
       openViewDialog,
+      operatingCardId,
       playbookTypeOptions,
     ],
   );
@@ -738,7 +846,7 @@ function FlashcardManagePageContent() {
         <div className="flex-shrink-0">
           <div className="bg-[#121212] border border-[#27272a] rounded-xl p-4 mb-4 shadow-sm">
             <form onSubmit={handleQuerySubmit} className="space-y-3">
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-[#9ca3af] mb-1">闪卡 ID</label>
                   <Input
@@ -791,6 +899,26 @@ function FlashcardManagePageContent() {
                     placeholder="输入时间关键字，例如 2026-03-05"
                     className="h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#9ca3af] mb-1">训练状态</label>
+                  <Select
+                    value={queryForm.drillStatus}
+                    onValueChange={(value) =>
+                      setQueryForm((prev) => ({
+                        ...prev,
+                        drillStatus: value as FlashcardDrillStatus | "ALL",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="cursor-pointer h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                      <SelectItem value="ALL">全部状态</SelectItem>
+                      {FLASHCARD_DRILL_STATUSES.map((item) => (
+                        <SelectItem key={item} value={item}>{FLASHCARD_LABELS[item]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-[#9ca3af] mb-1">排序字段</label>

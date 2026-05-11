@@ -70,6 +70,9 @@ export type FlashcardCardSortBy = (typeof FLASHCARD_CARD_SORT_BYS)[number];
 export const FLASHCARD_CARD_SORT_ORDERS = ["asc", "desc"] as const;
 export type FlashcardCardSortOrder = (typeof FLASHCARD_CARD_SORT_ORDERS)[number];
 
+export const FLASHCARD_DRILL_STATUSES = ["ENABLED", "DISABLED"] as const;
+export type FlashcardDrillStatus = (typeof FLASHCARD_DRILL_STATUSES)[number];
+
 export const FLASHCARD_BEHAVIOR_OPTION_GROUPS: ReadonlyArray<{
   label: string;
   items: readonly FlashcardBehaviorType[];
@@ -184,6 +187,10 @@ export type FlashcardCard = {
   simulationAvgRr?: number;
   qualityScoreAvg?: number;
   qualityScoreCount?: number;
+  drillStatus?: FlashcardDrillStatus;
+  disabledAt?: string;
+  disabledReason?: string;
+  copiedFromCardId?: string;
   lastSimulationAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -640,6 +647,8 @@ export const FLASHCARD_LABELS: Record<string, string> = {
   QUALITY_SCORE_AVG: "平均评分",
   SIMULATION_RESOLVED_COUNT: "模拟闭环数",
   SIMULATION_AVG_RR: "模拟平均RR",
+  ENABLED: "启用",
+  DISABLED: "已禁用",
   MARKET_STRUCTURE_ANALYSIS_WRONG: "市场结构分析错误",
   PRICE_ACTION_ANALYSIS_WRONG: "价格行为分析错误",
   FLASHCARD_SIMULATION: "模拟盘训练",

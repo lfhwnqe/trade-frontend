@@ -12,6 +12,7 @@ import type {
   FlashcardDrillAnalytics,
   FlashcardDrillCardErrorRanking,
   FlashcardDrillMistakeReason,
+  FlashcardDrillStatus,
   FlashcardDirection,
   FlashcardFilters,
   FlashcardInvalidationType,
@@ -169,6 +170,7 @@ export async function listFlashcardCards(params?: {
   marketTimeInfo?: string;
   sortBy?: FlashcardCardSortBy;
   sortOrder?: FlashcardCardSortOrder;
+  drillStatus?: FlashcardDrillStatus | "ALL";
 }): Promise<{ items: FlashcardCard[]; totalCount: number; nextCursor: string | null }> {
   const searchParams = new URLSearchParams();
   if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
@@ -181,6 +183,9 @@ export async function listFlashcardCards(params?: {
   if (params?.symbolPairInfo) searchParams.set("symbolPairInfo", params.symbolPairInfo);
   if (params?.playbookType) searchParams.set("playbookType", params.playbookType);
   if (params?.marketTimeInfo) searchParams.set("marketTimeInfo", params.marketTimeInfo);
+  if (params?.drillStatus && params.drillStatus !== "ALL") {
+    searchParams.set("drillStatus", params.drillStatus);
+  }
   if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
   if (params?.sortOrder) searchParams.set("sortOrder", params.sortOrder);
 
@@ -572,6 +577,47 @@ export async function updateFlashcardCard(
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.message || "更新闪卡失败");
+  }
+
+  return data.data as FlashcardCard;
+}
+
+export async function updateFlashcardDrillStatus(
+  cardId: string,
+  payload: { drillStatus: FlashcardDrillStatus; disabledReason?: string },
+): Promise<FlashcardCard> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/cards/${cardId}/drill-status`,
+      actualMethod: "PATCH",
+    },
+    actualBody: payload,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "更新闪卡训练状态失败");
+  }
+
+  return data.data as FlashcardCard;
+}
+
+export async function duplicateFlashcardCard(cardId: string): Promise<FlashcardCard> {
+  const res = await fetchWithAuth("/api/proxy-post", {
+    method: "POST",
+    credentials: "include",
+    proxyParams: {
+      targetPath: `flashcard/cards/${cardId}/duplicate`,
+      actualMethod: "POST",
+    },
+    actualBody: {},
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "复制闪卡失败");
   }
 
   return data.data as FlashcardCard;
