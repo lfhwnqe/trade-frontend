@@ -14,8 +14,10 @@ import {
 } from "@/store/flashcard-session";
 import {
   FLASHCARD_DIRECTIONS,
+  FLASHCARD_DRILL_MISTAKE_REASONS,
   FLASHCARD_LABELS,
   type FlashcardAction,
+  type FlashcardDrillMistakeReason,
   type FlashcardDrillStats,
 } from "../../types";
 import { ImagePreviewDialog } from "../../components/ImagePreviewDialog";
@@ -182,7 +184,20 @@ function FlashcardDrillPlayPageInner() {
   );
   const [finalScore, setFinalScore] = React.useState<number | null>(null);
   const [attemptResults, setAttemptResults] = React.useState<
-    Record<string, { isCorrect: boolean; expectedAction: FlashcardAction }>
+    Record<
+      string,
+      {
+        userAction?: FlashcardAction;
+        isCorrect: boolean;
+        expectedAction: FlashcardAction;
+        mistakeReasons?: FlashcardDrillMistakeReason[];
+        mistakeReason?: FlashcardDrillMistakeReason;
+        saved?: boolean;
+      }
+    >
+  >({});
+  const [mistakeReasonsMap, setMistakeReasonsMap] = React.useState<
+    Record<string, FlashcardDrillMistakeReason[]>
   >({});
   const [favoriteMap, setFavoriteMap] = React.useState<Record<string, boolean>>({});
   const [noteMap, setNoteMap] = React.useState<Record<string, string>>({});
@@ -233,11 +248,33 @@ function FlashcardDrillPlayPageInner() {
         setIndex(Math.min(detail.session.answered, Math.max(detail.cards.length - 1, 0)));
         setFinalScore(detail.session.status === "COMPLETED" ? detail.session.stats.score : null);
         setAttemptResults(
-          detail.attempts.reduce<Record<string, { isCorrect: boolean; expectedAction: FlashcardAction }>>((acc, attempt) => {
+          detail.attempts.reduce<
+            Record<
+              string,
+              {
+                userAction?: FlashcardAction;
+                isCorrect: boolean;
+                expectedAction: FlashcardAction;
+                mistakeReasons?: FlashcardDrillMistakeReason[];
+                mistakeReason?: FlashcardDrillMistakeReason;
+                saved?: boolean;
+              }
+            >
+          >((acc, attempt) => {
             acc[attempt.cardId] = {
+              userAction: attempt.userAction,
               isCorrect: attempt.isCorrect,
               expectedAction: attempt.expectedAction,
+              mistakeReasons: attempt.mistakeReasons || (attempt.mistakeReason ? [attempt.mistakeReason] : undefined),
+              mistakeReason: attempt.mistakeReason,
+              saved: true,
             };
+            return acc;
+          }, {}),
+        );
+        setMistakeReasonsMap(
+          detail.attempts.reduce<Record<string, FlashcardDrillMistakeReason[]>>((acc, attempt) => {
+            acc[attempt.cardId] = attempt.mistakeReasons || (attempt.mistakeReason ? [attempt.mistakeReason] : []);
             return acc;
           }, {}),
         );
@@ -289,6 +326,8 @@ function FlashcardDrillPlayPageInner() {
   React.useEffect(() => {
     setQuestionRevealProgress(0);
     setPreviewState(null);
+    setRevealed(false);
+    setSelectedAction("");
   }, [index]);
 
   const cards = session?.cards || [];
@@ -302,9 +341,45 @@ function FlashcardDrillPlayPageInner() {
     runningStats?.score ??
     Math.round((correctCount / Math.max(answeredCount, 1)) * 100);
 
-  const handleSubmitCurrent = React.useCallback(async () => {
+  const resolveExpectedAction = React.useCallback(
+    (card?: { expectedAction?: FlashcardAction; direction?: FlashcardAction }): FlashcardAction => {
+      return (card?.expectedAction || card?.direction || "NO_TRADE") as FlashcardAction;
+    },
+    [],
+  );
+
+  const handleRevealCurrent = React.useCallback(() => {
     if (!session || !current || !selectedAction) {
       errorAlert("请先选择本题动作");
+      return;
+    }
+
+    const expectedAction = resolveExpectedAction(current);
+    setAttemptResults((prev) => ({
+      ...prev,
+      [current.cardId]: {
+        userAction: selectedAction,
+        isCorrect: selectedAction === expectedAction,
+        expectedAction,
+        mistakeReasons: prev[current.cardId]?.mistakeReasons,
+        mistakeReason: prev[current.cardId]?.mistakeReason,
+        saved: false,
+      },
+    }));
+    setRevealed(true);
+  }, [current, errorAlert, resolveExpectedAction, selectedAction, session]);
+
+  const handleSaveCurrentAttempt = React.useCallback(async () => {
+    if (!session || !current || !selectedAction) {
+      errorAlert("请先选择本题动作");
+      return;
+    }
+
+    const expectedAction = resolveExpectedAction(current);
+    const isCorrect = selectedAction === expectedAction;
+    const mistakeReasons = mistakeReasonsMap[current.cardId] || [];
+    if (!isCorrect && mistakeReasons.length === 0) {
+      errorAlert("做错题需要先选择错误原因");
       return;
     }
 
@@ -316,42 +391,48 @@ function FlashcardDrillPlayPageInner() {
         userAction: selectedAction,
         isFavorite: !!favoriteMap[current.cardId],
         note: noteMap[current.cardId] || undefined,
+        mistakeReasons: !isCorrect ? mistakeReasons : undefined,
       });
 
       setAttemptResults((prev) => ({
         ...prev,
         [current.cardId]: {
+          userAction: selectedAction,
           isCorrect: res.isCorrect,
           expectedAction: res.expectedAction,
+          mistakeReasons: res.mistakeReasons || (res.mistakeReason ? [res.mistakeReason] : undefined),
+          mistakeReason: res.mistakeReason,
+          saved: true,
         },
       }));
+      setMistakeReasonsMap((prev) => ({
+        ...prev,
+        [current.cardId]: res.mistakeReasons || (res.mistakeReason ? [res.mistakeReason] : []),
+      }));
       setRunningStats(res.runningStats);
-      setRevealed(true);
+      if (index + 1 >= cards.length) {
+        setIndex(cards.length);
+        return;
+      }
+
+      setIndex((prev) => prev + 1);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "提交失败");
     } finally {
       setSubmitting(false);
     }
   }, [
+    cards.length,
     current,
     errorAlert,
     favoriteMap,
+    index,
+    mistakeReasonsMap,
     noteMap,
+    resolveExpectedAction,
     selectedAction,
     session,
   ]);
-
-  const handleNext = React.useCallback(() => {
-    if (index + 1 >= cards.length) {
-      setIndex(cards.length);
-      setRevealed(false);
-      return;
-    }
-
-    setIndex((prev) => prev + 1);
-    setRevealed(false);
-    setSelectedAction("");
-  }, [cards.length, index]);
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -371,17 +452,17 @@ function FlashcardDrillPlayPageInner() {
 
       if (!revealed) {
         if (!submitting) {
-          void handleSubmitCurrent();
+          handleRevealCurrent();
         }
         return;
       }
 
-      handleNext();
+      void handleSaveCurrentAttempt();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleNext, handleSubmitCurrent, previewState, revealed, submitting]);
+  }, [handleRevealCurrent, handleSaveCurrentAttempt, previewState, revealed, submitting]);
 
   React.useEffect(() => {
     if (!session || !isCompleted || finalScore !== null || finishing) return;
@@ -453,15 +534,15 @@ function FlashcardDrillPlayPageInner() {
       const next = !favoriteMap[cardId];
       setFavoriteMap((prev) => ({ ...prev, [cardId]: next }));
 
-      if (!session) return;
+      if (!session || !attemptResults[cardId]?.saved) return;
 
       try {
         await submitFlashcardDrillAttempt({
           sessionId: session.sessionId,
           cardId,
-          userAction:
-            attemptResults[cardId]?.expectedAction || selectedAction || "NO_TRADE",
+          userAction: attemptResults[cardId]?.userAction || selectedAction || "NO_TRADE",
           isFavorite: next,
+          mistakeReasons: attemptResults[cardId]?.isCorrect ? undefined : attemptResults[cardId]?.mistakeReasons,
         });
       } catch (error) {
         errorAlert(error instanceof Error ? error.message : "更新收藏失败");
@@ -674,6 +755,42 @@ function FlashcardDrillPlayPageInner() {
                   {currentAttempt?.isCorrect ? "正确" : "错误"}
                 </span>
               </div>
+              {currentAttempt && !currentAttempt.isCorrect ? (
+                <div className="space-y-2 rounded-lg border border-rose-500/20 bg-rose-500/5 p-3">
+                  <div className="text-xs font-medium text-rose-200">错误原因</div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {FLASHCARD_DRILL_MISTAKE_REASONS.map((reason) => {
+                      const selectedReasons = mistakeReasonsMap[current.cardId] || [];
+                      const isActive = selectedReasons.includes(reason);
+                      return (
+                        <button
+                          key={reason}
+                          type="button"
+                          onClick={() =>
+                            setMistakeReasonsMap((prev) => {
+                              const currentReasons = prev[current.cardId] || [];
+                              const nextReasons = currentReasons.includes(reason)
+                                ? currentReasons.filter((item) => item !== reason)
+                                : [...currentReasons, reason];
+                              return {
+                                ...prev,
+                                [current.cardId]: nextReasons,
+                              };
+                            })
+                          }
+                          className={`min-h-10 rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                            isActive
+                              ? "border-rose-300 bg-rose-500/20 text-rose-100"
+                              : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
+                          }`}
+                        >
+                          {FLASHCARD_LABELS[reason]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
               {(current.behaviorType || current.invalidationType || current.systemOutcomeType) ? (
                 <div className="flex flex-wrap gap-2">
                   {current.behaviorType ? (
@@ -786,17 +903,21 @@ function FlashcardDrillPlayPageInner() {
           </div>
           <Button
             type="button"
-            disabled={submitting || (!revealed && !selectedAction)}
+            disabled={
+              submitting ||
+              (!revealed && !selectedAction) ||
+              (revealed && currentAttempt?.isCorrect === false && (mistakeReasonsMap[current.cardId] || []).length === 0)
+            }
             onClick={() => {
               if (!revealed) {
-                void handleSubmitCurrent();
+                handleRevealCurrent();
                 return;
               }
-              handleNext();
+              void handleSaveCurrentAttempt();
             }}
             className="bg-[#00c2b2] text-black hover:bg-[#009e91]"
           >
-            {submitting ? "提交中..." : revealed ? "下一题" : "揭晓答案"}
+            {submitting ? "提交中..." : revealed ? "保存并下一题" : "揭晓答案"}
           </Button>
         </div>
       </div>

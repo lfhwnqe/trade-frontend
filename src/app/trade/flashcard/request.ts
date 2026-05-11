@@ -10,6 +10,7 @@ import type {
   FlashcardDrillSessionDetail,
   FlashcardDrillSessionHistoryItem,
   FlashcardDrillAnalytics,
+  FlashcardDrillMistakeReason,
   FlashcardDirection,
   FlashcardFilters,
   FlashcardInvalidationType,
@@ -295,9 +296,13 @@ export async function submitFlashcardDrillAttempt(params: {
   userAction: FlashcardAction;
   isFavorite?: boolean;
   note?: string;
+  mistakeReasons?: FlashcardDrillMistakeReason[];
+  mistakeReason?: FlashcardDrillMistakeReason;
 }): Promise<{
   isCorrect: boolean;
   expectedAction: FlashcardAction;
+  mistakeReasons?: FlashcardDrillMistakeReason[];
+  mistakeReason?: FlashcardDrillMistakeReason;
   runningStats: FlashcardDrillStats;
 }> {
   const { sessionId, ...body } = params;
@@ -319,6 +324,8 @@ export async function submitFlashcardDrillAttempt(params: {
   return data.data as {
     isCorrect: boolean;
     expectedAction: FlashcardAction;
+    mistakeReasons?: FlashcardDrillMistakeReason[];
+    mistakeReason?: FlashcardDrillMistakeReason;
     runningStats: FlashcardDrillStats;
   };
 }

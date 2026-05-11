@@ -58,6 +58,12 @@ export type FlashcardInvalidationType =
 export const FLASHCARD_SOURCES = ["ALL", "WRONG_BOOK", "FAVORITES"] as const;
 export type FlashcardSource = (typeof FLASHCARD_SOURCES)[number];
 
+export const FLASHCARD_DRILL_MISTAKE_REASONS = [
+  "MARKET_STRUCTURE_ANALYSIS_WRONG",
+  "PRICE_ACTION_ANALYSIS_WRONG",
+] as const;
+export type FlashcardDrillMistakeReason = (typeof FLASHCARD_DRILL_MISTAKE_REASONS)[number];
+
 export const FLASHCARD_CARD_SORT_BYS = ["CREATED_AT", "UPDATED_AT", "QUALITY_SCORE_AVG", "SIMULATION_RESOLVED_COUNT", "SIMULATION_AVG_RR"] as const;
 export type FlashcardCardSortBy = (typeof FLASHCARD_CARD_SORT_BYS)[number];
 
@@ -226,6 +232,8 @@ export type FlashcardDrillSessionAttemptDetail = {
   userAction: FlashcardAction;
   expectedAction: FlashcardAction;
   isCorrect: boolean;
+  mistakeReasons?: FlashcardDrillMistakeReason[];
+  mistakeReason?: FlashcardDrillMistakeReason;
   isFavorite: boolean;
   noteSnapshot?: string;
   answeredAt: string;
@@ -603,6 +611,8 @@ export const FLASHCARD_LABELS: Record<string, string> = {
   QUALITY_SCORE_AVG: "平均评分",
   SIMULATION_RESOLVED_COUNT: "模拟闭环数",
   SIMULATION_AVG_RR: "模拟平均RR",
+  MARKET_STRUCTURE_ANALYSIS_WRONG: "市场结构分析错误",
+  PRICE_ACTION_ANALYSIS_WRONG: "价格行为分析错误",
   FLASHCARD_SIMULATION: "模拟盘训练",
   TRADE_FLASHCARD: "交易闪卡",
   RECOGNITION: "识别错误",
