@@ -35,6 +35,7 @@ import {
   type FlashcardDrillAnalyticsWindow,
   type FlashcardDrillCardErrorRanking,
   type FlashcardDrillCardErrorRankingItem,
+  type FlashcardDrillPlaybookErrorRankingItem,
   type FlashcardDrillSessionHistoryItem,
 } from "../../types";
 
@@ -44,7 +45,7 @@ const PAGE_SIZE = 5;
 const DEFAULT_DRILL_COUNT = 20;
 const RECENT_WINDOW = 30;
 const CARD_ERROR_MIN_ANSWERED = 3;
-const CARD_ERROR_LIMIT = 20;
+const CARD_ERROR_LIMIT = 5;
 
 function formatDelta(delta: number | null) {
   if (delta === null) return "暂无上一组";
@@ -232,11 +233,114 @@ function formatPercent(value: number) {
   return `${Math.round(value * 1000) / 10}%`;
 }
 
+function PlaybookErrorRankingCard(props: {
+  ranking: FlashcardDrillCardErrorRanking | null;
+  loading: boolean;
+}) {
+  const rateItems = (props.ranking?.playbookItems || []).slice(0, 5);
+  const wrongCountItems = (props.ranking?.playbookWrongCountItems || []).slice(0, 5);
+  const hasItems = rateItems.length > 0 || wrongCountItems.length > 0;
+  const minAnswered = props.ranking?.summary.minAnswered || CARD_ERROR_MIN_ANSWERED;
+
+  return (
+    <div className={cardClass("p-5")}>
+      <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+        <div>
+          <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+            <Siren className="h-5 w-5 text-amber-300" />
+            剧本出错 Top5
+          </h3>
+          <p className="mt-2 text-xs text-slate-500">
+            只统计启用中的闪卡，同时按错误率和错误数排序。
+          </p>
+        </div>
+        <span className="rounded-full border border-[#273a39] px-3 py-1 text-xs font-bold text-slate-400">
+          作答 &gt;= {minAnswered} 次
+        </span>
+      </div>
+
+      {props.loading ? (
+        <div className="flex h-64 items-center justify-center text-sm text-slate-500">加载中...</div>
+      ) : !hasItems ? (
+        <div className="rounded-xl border border-dashed border-[#273a39] px-4 py-12 text-center text-sm text-slate-500">
+          暂无达到样本门槛的剧本
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PlaybookErrorRankingList title="按错误率" items={rateItems} rankType="rate" />
+          <PlaybookErrorRankingList title="按错误数" items={wrongCountItems} rankType="count" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlaybookErrorRankingList(props: {
+  title: string;
+  items: FlashcardDrillPlaybookErrorRankingItem[];
+  rankType: "rate" | "count";
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="text-xs font-bold uppercase tracking-wider text-slate-500">{props.title}</div>
+      {props.items.map((item, index) => (
+        <PlaybookErrorRankingRow
+          key={`${props.rankType}-${item.playbookType || "__UNSPECIFIED__"}`}
+          item={item}
+          index={index}
+          rankType={props.rankType}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PlaybookErrorRankingRow({
+  item,
+  index,
+  rankType,
+}: {
+  item: FlashcardDrillPlaybookErrorRankingItem;
+  index: number;
+  rankType: "rate" | "count";
+}) {
+  const errorRatePercent = Math.round(item.errorRate * 100);
+  const rankLabel =
+    rankType === "rate"
+      ? `错误率 ${formatPercent(item.errorRate)}`
+      : `错误数 ${item.wrongCount}`;
+
+  return (
+    <div className="rounded-xl border border-[#273a39] bg-[#101010] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-amber-300/15 px-2 py-1 text-xs font-bold text-amber-200">
+              #{index + 1} {rankLabel}
+            </span>
+            <span className="rounded-full border border-[#273a39] px-2 py-1 text-xs text-slate-400">
+              {item.cardCount} 张卡
+            </span>
+          </div>
+          <div className="mt-3 truncate text-base font-bold text-white">{item.playbookLabel || "--"}</div>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="text-sm font-bold text-white">{item.wrongCount} / {item.answeredCount}</div>
+          <div className="text-xs text-slate-500">错误 / 作答</div>
+        </div>
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800">
+        <div className="h-full rounded-full bg-amber-300" style={{ width: `${Math.max(errorRatePercent, 4)}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function CardErrorRankingCard(props: {
   ranking: FlashcardDrillCardErrorRanking | null;
   loading: boolean;
 }) {
-  const items = props.ranking?.items || [];
+  const items = (props.ranking?.items || []).slice(0, 5);
   const minAnswered = props.ranking?.summary.minAnswered || CARD_ERROR_MIN_ANSWERED;
 
   return (
@@ -245,14 +349,14 @@ function CardErrorRankingCard(props: {
         <div>
           <h3 className="flex items-center gap-2 text-lg font-bold text-white">
             <Siren className="h-5 w-5 text-[#E03F3F]" />
-            错误率最高闪卡
+            闪卡错误 Top5
           </h3>
           <p className="mt-2 text-xs text-slate-500">
-            默认仅展示作答不少于 {minAnswered} 次的闪卡，按错误率从高到低排序。
+            只统计启用中的闪卡，按错误率从高到低排序。
           </p>
         </div>
         <div className="rounded-full border border-[#273a39] px-3 py-1 text-xs font-bold text-slate-400">
-          最近 {props.ranking?.summary.recentWindow || RECENT_WINDOW} 轮
+          作答 &gt;= {minAnswered} 次
         </div>
       </div>
 
@@ -263,7 +367,7 @@ function CardErrorRankingCard(props: {
           暂无达到样本门槛的闪卡
         </div>
       ) : (
-        <div className="max-h-[520px] space-y-3 overflow-y-auto pr-2">
+        <div className="space-y-3">
           {items.map((item, index) => (
             <CardErrorRankingRow key={item.cardId} item={item} index={index} />
           ))}
@@ -289,11 +393,6 @@ function CardErrorRankingRow({ item, index }: { item: FlashcardDrillCardErrorRan
           <span className="rounded-full bg-[#E03F3F]/15 px-2 py-1 text-xs font-bold text-[#f87171]">
             #{index + 1} 错误率 {formatPercent(item.errorRate)}
           </span>
-          {item.drillStatus === "DISABLED" ? (
-            <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-300">
-              已禁用
-            </span>
-          ) : null}
         </div>
         <div className="grid gap-2 text-xs text-slate-500 sm:grid-cols-3">
           <div>
@@ -556,7 +655,10 @@ export default function FlashcardDrillHistoryPage() {
             />
           </div>
 
-          <CardErrorRankingCard ranking={cardErrorRanking} loading={cardRankingLoading} />
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+            <PlaybookErrorRankingCard ranking={cardErrorRanking} loading={cardRankingLoading} />
+            <CardErrorRankingCard ranking={cardErrorRanking} loading={cardRankingLoading} />
+          </div>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
             <div className={cardClass("overflow-hidden")}>

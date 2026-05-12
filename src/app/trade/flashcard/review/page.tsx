@@ -36,6 +36,22 @@ type SourceView = "WRONG_BOOK" | "FAVORITES";
 
 const PAGE_SIZE = 10;
 
+function isReviewableCard(card: FlashcardCard) {
+  const maybeDeleted = card as FlashcardCard & {
+    deletedAt?: string;
+    isDeleted?: boolean;
+  };
+
+  return Boolean(
+    card.cardId &&
+      card.questionImageUrl &&
+      card.answerImageUrl &&
+      card.drillStatus !== "DISABLED" &&
+      !maybeDeleted.deletedAt &&
+      maybeDeleted.isDeleted !== true,
+  );
+}
+
 function matchesKeyword(card: FlashcardCard, keyword: string) {
   if (!keyword.trim()) return true;
   const text = [
@@ -80,8 +96,8 @@ export default function FlashcardReviewPage() {
         listFlashcardWrongBook(),
         listFlashcardFavorites(),
       ]);
-      setWrongItems(wrongBook);
-      setFavoriteItems(favorites);
+      setWrongItems(wrongBook.filter(isReviewableCard));
+      setFavoriteItems(favorites.filter(isReviewableCard));
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "加载复盘数据失败");
     } finally {

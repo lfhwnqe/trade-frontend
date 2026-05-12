@@ -309,12 +309,26 @@ export type FlashcardDrillCardErrorRankingItem = {
   drillStatus?: string;
 };
 
+export type FlashcardDrillPlaybookErrorRankingItem = {
+  playbookType?: string;
+  playbookLabel: string;
+  answeredCount: number;
+  wrongCount: number;
+  correctCount: number;
+  errorRate: number;
+  cardCount: number;
+  lastAnsweredAt?: string;
+};
+
 export type FlashcardDrillCardErrorRanking = {
   items: FlashcardDrillCardErrorRankingItem[];
+  playbookItems?: FlashcardDrillPlaybookErrorRankingItem[];
+  playbookWrongCountItems?: FlashcardDrillPlaybookErrorRankingItem[];
   summary: {
     recentWindow: number;
     minAnswered: number;
     rankedCardCount: number;
+    rankedPlaybookCount?: number;
   };
 };
 

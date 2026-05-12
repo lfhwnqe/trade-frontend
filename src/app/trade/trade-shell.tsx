@@ -272,6 +272,9 @@ export default function TradeShell({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const browserWindow = window;
+    const requestIdleCallback = browserWindow.requestIdleCallback?.bind(browserWindow);
+    const cancelIdleCallback = browserWindow.cancelIdleCallback?.bind(browserWindow);
 
     const prefetchRoutes = () => {
       priorityPrefetchRoutes.forEach((href) => {
@@ -279,15 +282,15 @@ export default function TradeShell({
       });
     };
 
-    if ("requestIdleCallback" in window) {
-      const idleCallbackId = window.requestIdleCallback(prefetchRoutes, {
+    if (requestIdleCallback && cancelIdleCallback) {
+      const idleCallbackId = requestIdleCallback(prefetchRoutes, {
         timeout: 2000,
       });
-      return () => window.cancelIdleCallback(idleCallbackId);
+      return () => cancelIdleCallback(idleCallbackId);
     }
 
-    const timeoutId = window.setTimeout(prefetchRoutes, 800);
-    return () => window.clearTimeout(timeoutId);
+    const timeoutId = browserWindow.setTimeout(prefetchRoutes, 800);
+    return () => browserWindow.clearTimeout(timeoutId);
   }, [router]);
 
   useEffect(() => {
