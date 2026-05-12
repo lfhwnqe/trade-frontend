@@ -28,13 +28,15 @@ import { DataTable } from "@/components/common/DataTable";
 import { isErrorWithMessage } from "@/utils";
 import TradeQueryForm from "./components/TradeQueryForm";
 import { TradeFormDialog } from "./components/TradeFormDialog";
-import { Trade } from "../config";
+import {
+  Trade,
+  analysisReviewResultOptions,
+  optionalAnalysisReviewResultOptions,
+} from "../config";
 import { useTradeList } from "./useTradeList";
 import { format } from "date-fns";
 import { useAlert } from "@/components/common/alert";
 import TradePageShell from "../components/trade-page-shell";
-import { fetchTradeTagOptions, getDictionaryItemLabelByCode } from "../dictionary";
-import type { DictionaryTagItem } from "../config";
 
 export default function TradeListPage() {
   const router = useRouter();
@@ -62,26 +64,6 @@ export default function TradeListPage() {
   // 复制交易记录相关状态
   const [copyId, setCopyId] = useState<string | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
-  const [tradeTagOptions, setTradeTagOptions] = useState<DictionaryTagItem[]>([]);
-  const tradeTagOptionMap = useMemo(
-    () => new Map(tradeTagOptions.map((item) => [item.code, item])),
-    [tradeTagOptions],
-  );
-
-  useEffect(() => {
-    let mounted = true;
-    fetchTradeTagOptions()
-      .then((items) => {
-        if (mounted) setTradeTagOptions(items);
-      })
-      .catch(() => {
-        if (mounted) setTradeTagOptions([]);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   // 处理复制交易记录
   const handleCopy = async () => {
     if (!copyId) return;
@@ -157,6 +139,41 @@ export default function TradeListPage() {
       default:
         return "bg-white/5 text-[#9ca3af] border border-white/10";
     }
+  };
+
+  const analysisReviewLabelMap = useMemo(() => {
+    const options = [
+      ...analysisReviewResultOptions,
+      ...optionalAnalysisReviewResultOptions,
+    ];
+    return new Map(options.map((item) => [item.value, item.label]));
+  }, []);
+
+  const getAnalysisReviewBadge = (value?: string) => {
+    switch (value) {
+      case "CORRECT":
+        return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
+      case "WRONG":
+        return "bg-red-500/10 text-red-300 border border-red-500/20";
+      case "PARTIAL":
+        return "bg-yellow-500/10 text-yellow-300 border border-yellow-500/20";
+      case "NO_SPECIFIC_FEATURE":
+        return "bg-sky-500/10 text-sky-300 border border-sky-500/20";
+      case "NOT_REVIEWED":
+        return "bg-white/5 text-[#9ca3af] border border-white/10";
+      default:
+        return "bg-white/5 text-[#71717a] border border-white/10";
+    }
+  };
+
+  const getRiskRewardPreciseBadge = (value?: boolean) => {
+    if (value === true) {
+      return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
+    }
+    if (value === false) {
+      return "bg-red-500/10 text-red-300 border border-red-500/20";
+    }
+    return "bg-white/5 text-[#71717a] border border-white/10";
   };
 
   const latestDialogFormRef = React.useRef(dialog.form);
@@ -294,45 +311,50 @@ export default function TradeListPage() {
         enableHiding: true,
       },
       {
-        accessorKey: "tagItems",
-        header: "字典标签",
+        id: "analysisReview",
+        header: "分析复盘",
         cell: ({ row }) => {
-          const hasTagCodes = Array.isArray(row.original.tagCodes);
-          const resolvedTagItems = hasTagCodes
-            ? (row.original.tagCodes || [])
-                .map((code) => {
-                  const matched = tradeTagOptionMap.get(code) || getDictionaryItemLabelByCode(tradeTagOptions, code);
-                  return {
-                    code,
-                    label: matched?.label || code,
-                    color: matched?.color,
-                  };
-                })
-                .filter((item) => item.code)
-            : row.original.tagItems && row.original.tagItems.length > 0
-              ? row.original.tagItems
-              : [];
-          if (!resolvedTagItems.length) {
-            return <div className="min-w-[120px] text-[#9ca3af]">-</div>;
-          }
+          const items: Array<[string, string | undefined]> = [
+            ["结构", row.original.marketStructureReview],
+            ["行为", row.original.priceActionReview],
+            ["订单", row.original.orderFlowReview],
+            ["指标", row.original.indicatorReview],
+          ];
           return (
-            <div className="flex min-w-[180px] max-w-[260px] flex-wrap gap-1.5">
-              {resolvedTagItems.map((tag) => (
+            <div className="grid min-w-[300px] grid-cols-3 gap-1.5">
+              {items.map(([label, value]) => (
                 <span
-                  key={tag.code}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-xs text-white/90"
-                  style={{ backgroundColor: tag.color ? `${tag.color}22` : undefined }}
-                  title={tag.code}
+                  key={label}
+                  className={`inline-flex items-center justify-between gap-1 rounded-md px-2 py-1 text-[11px] ${getAnalysisReviewBadge(value)}`}
+                  title={`${label}: ${
+                    value ? analysisReviewLabelMap.get(value) || value : "未复盘"
+                  }`}
                 >
-                  {tag.color ? (
-                    <span
-                      className="inline-block h-2 w-2 rounded-full border border-white/20"
-                      style={{ backgroundColor: tag.color }}
-                    />
-                  ) : null}
-                  {tag.label}
+                  <span className="text-[#9ca3af]">{label}</span>
+                  <span className="max-w-[72px] truncate">
+                    {value ? analysisReviewLabelMap.get(value) || value : "未复盘"}
+                  </span>
                 </span>
               ))}
+              <span
+                className={`inline-flex items-center justify-between gap-1 rounded-md px-2 py-1 text-[11px] ${getRiskRewardPreciseBadge(row.original.riskRewardRatioPrecise)}`}
+                title={`RR: ${
+                  row.original.riskRewardRatioPrecise === true
+                    ? "精准"
+                    : row.original.riskRewardRatioPrecise === false
+                      ? "不精准"
+                      : "未记录"
+                }`}
+              >
+                <span className="text-[#9ca3af]">RR</span>
+                <span className="max-w-[72px] truncate">
+                  {row.original.riskRewardRatioPrecise === true
+                    ? "精准"
+                    : row.original.riskRewardRatioPrecise === false
+                      ? "不精准"
+                      : "未记录"}
+                </span>
+              </span>
             </div>
           );
         },
@@ -487,7 +509,7 @@ export default function TradeListPage() {
         },
       },
     ],
-    [router, setCopyId, setDeleteId, tradeTagOptionMap, tradeTagOptions],
+    [analysisReviewLabelMap, router, setCopyId, setDeleteId],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {

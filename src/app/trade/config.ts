@@ -279,6 +279,11 @@ export type TradeQuery = {
   grade?: string;
   analysisPeriod?: string;
   followedSystemStrictly?: boolean | string;
+  marketStructureReview?: string;
+  priceActionReview?: string;
+  orderFlowReview?: string;
+  indicatorReview?: string;
+  riskRewardRatioPrecise?: boolean | string;
 };
 
 export interface ApiQueryParameters {
@@ -295,6 +300,11 @@ export interface ApiQueryParameters {
   grade?: string;
   analysisPeriod?: string;
   followedSystemStrictly?: boolean;
+  marketStructureReview?: string;
+  priceActionReview?: string;
+  orderFlowReview?: string;
+  indicatorReview?: string;
+  riskRewardRatioPrecise?: boolean;
 }
 
 export interface TradeFieldConfig {

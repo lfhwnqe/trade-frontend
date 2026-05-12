@@ -120,6 +120,31 @@ export function processQueryParams(query: TradeQuery, sorting: SortingState): Ap
       processedQuery.followedSystemStrictly = false;
     }
   }
+  if (query?.marketStructureReview && query.marketStructureReview !== "all") {
+    processedQuery.marketStructureReview = query.marketStructureReview;
+  }
+  if (query?.priceActionReview && query.priceActionReview !== "all") {
+    processedQuery.priceActionReview = query.priceActionReview;
+  }
+  if (query?.orderFlowReview && query.orderFlowReview !== "all") {
+    processedQuery.orderFlowReview = query.orderFlowReview;
+  }
+  if (query?.indicatorReview && query.indicatorReview !== "all") {
+    processedQuery.indicatorReview = query.indicatorReview;
+  }
+  if (
+    query?.riskRewardRatioPrecise !== undefined &&
+    query.riskRewardRatioPrecise !== "all" &&
+    query.riskRewardRatioPrecise !== ""
+  ) {
+    if (typeof query.riskRewardRatioPrecise === "boolean") {
+      processedQuery.riskRewardRatioPrecise = query.riskRewardRatioPrecise;
+    } else if (query.riskRewardRatioPrecise === "true") {
+      processedQuery.riskRewardRatioPrecise = true;
+    } else if (query.riskRewardRatioPrecise === "false") {
+      processedQuery.riskRewardRatioPrecise = false;
+    }
+  }
   if (sorting.length > 0) {
     processedQuery.sortBy = sorting[0].id;
     processedQuery.sortOrder = sorting[0].desc ? "DESC" : "ASC";

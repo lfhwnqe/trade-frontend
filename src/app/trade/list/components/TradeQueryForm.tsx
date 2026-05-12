@@ -27,14 +27,14 @@ import {
   Option,
   tradeTypeOptions,
   tradeGradeOptions,
+  analysisReviewResultOptions,
+  optionalAnalysisReviewResultOptions,
+  tradeResultOptions,
 } from "../../config";
 
-// 交易结果选项
-const tradeResultOptions = [
+const tradeResultFilterOptions = [
   { label: "全部", value: "all" },
-  { label: "盈利", value: "盈利" },
-  { label: "亏损", value: "亏损" },
-  { label: "保本", value: "保本" },
+  ...tradeResultOptions,
 ];
 
 interface TradeQueryFormProps {
@@ -64,6 +64,11 @@ export default function TradeQueryForm({
       tradeResult: "all",
       analysisPeriod: undefined,
       followedSystemStrictly: "all",
+      marketStructureReview: "all",
+      priceActionReview: "all",
+      orderFlowReview: "all",
+      indicatorReview: "all",
+      riskRewardRatioPrecise: "all",
     });
     // 调用外部重置函数
     onReset();
@@ -278,7 +283,7 @@ export default function TradeQueryForm({
                   <SelectValue placeholder="全部" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
-                  {tradeResultOptions.map((opt: Option) => (
+                  {tradeResultFilterOptions.map((opt: Option) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </SelectItem>
@@ -333,6 +338,142 @@ export default function TradeQueryForm({
                   <SelectItem value="all">全部</SelectItem>
                   <SelectItem value="true">是</SelectItem>
                   <SelectItem value="false">否</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
+                结构复盘
+              </label>
+              <Select
+                value={queryForm.marketStructureReview ?? ""}
+                onValueChange={(value: string) =>
+                  onQueryFormChange({
+                    ...queryForm,
+                    marketStructureReview: value,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                  <SelectItem value="all">全部</SelectItem>
+                  {analysisReviewResultOptions.map((opt: Option) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
+                价格行为复盘
+              </label>
+              <Select
+                value={queryForm.priceActionReview ?? ""}
+                onValueChange={(value: string) =>
+                  onQueryFormChange({
+                    ...queryForm,
+                    priceActionReview: value,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                  <SelectItem value="all">全部</SelectItem>
+                  {analysisReviewResultOptions.map((opt: Option) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
+                订单流复盘
+              </label>
+              <Select
+                value={queryForm.orderFlowReview ?? ""}
+                onValueChange={(value: string) =>
+                  onQueryFormChange({
+                    ...queryForm,
+                    orderFlowReview: value,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                  <SelectItem value="all">全部</SelectItem>
+                  {optionalAnalysisReviewResultOptions.map((opt: Option) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
+                指标复盘
+              </label>
+              <Select
+                value={queryForm.indicatorReview ?? ""}
+                onValueChange={(value: string) =>
+                  onQueryFormChange({
+                    ...queryForm,
+                    indicatorReview: value,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                  <SelectItem value="all">全部</SelectItem>
+                  {optionalAnalysisReviewResultOptions.map((opt: Option) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#9ca3af] mb-1">
+                盈亏比设置
+              </label>
+              <Select
+                value={
+                  queryForm.riskRewardRatioPrecise !== undefined
+                    ? String(queryForm.riskRewardRatioPrecise)
+                    : ""
+                }
+                onValueChange={(value: string) =>
+                  onQueryFormChange({
+                    ...queryForm,
+                    riskRewardRatioPrecise: value,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full h-9 bg-[#1e1e1e] border border-[#27272a] text-[#e5e7eb] focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#121212] border border-[#27272a] text-[#e5e7eb]">
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="true">精准</SelectItem>
+                  <SelectItem value="false">不精准</SelectItem>
                 </SelectContent>
               </Select>
             </div>
