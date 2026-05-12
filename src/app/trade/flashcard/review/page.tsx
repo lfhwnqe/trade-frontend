@@ -41,12 +41,21 @@ function isReviewableCard(card: FlashcardCard) {
     deletedAt?: string;
     isDeleted?: boolean;
   };
+  const hasRatedScore =
+    typeof card.qualityScoreCount === "number"
+      ? card.qualityScoreCount > 0
+      : typeof card.qualityScoreAvg === "number";
+  const isQualityEligible =
+    !hasRatedScore ||
+    typeof card.qualityScoreAvg !== "number" ||
+    card.qualityScoreAvg > 3;
 
   return Boolean(
     card.cardId &&
       card.questionImageUrl &&
       card.answerImageUrl &&
       card.drillStatus !== "DISABLED" &&
+      isQualityEligible &&
       !maybeDeleted.deletedAt &&
       maybeDeleted.isDeleted !== true,
   );

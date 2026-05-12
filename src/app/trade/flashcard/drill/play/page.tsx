@@ -791,20 +791,10 @@ function FlashcardDrillPlayPageInner() {
                   </div>
                 </div>
               ) : null}
-              {(current.behaviorType || current.invalidationType || current.systemOutcomeType) ? (
+              {current.systemOutcomeType ? (
                 <div className="flex flex-wrap gap-2">
-                  {current.behaviorType ? (
-                    <span className="inline-flex items-center rounded-full border border-sky-400/20 bg-sky-400/10 px-2 py-0.5 text-xs text-sky-200">
-                      行为: {FLASHCARD_LABELS[current.behaviorType]}
-                    </span>
-                  ) : null}
-                  {current.invalidationType ? (
-                    <span className="inline-flex items-center rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-xs text-amber-200">
-                      失效: {FLASHCARD_LABELS[current.invalidationType]}
-                    </span>
-                  ) : null}
                   <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-200">
-                    系统结果: {current.systemOutcomeType ? FLASHCARD_LABELS[current.systemOutcomeType] : FLASHCARD_LABELS.FLASHCARD_SYSTEM_OUTCOME_UNSET}
+                    系统结果: {FLASHCARD_LABELS[current.systemOutcomeType]}
                   </span>
                 </div>
               ) : null}
