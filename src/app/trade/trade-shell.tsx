@@ -79,6 +79,13 @@ const homeNavItem: NavItem = {
   icon: Home,
 };
 
+const priorityPrefetchRoutes = [
+  "/trade/home",
+  "/trade/list",
+  "/trade/flashcard/drill/setup",
+  "/trade/flashcard/simulation/setup",
+];
+
 const tradeNavSections: NavSection[] = [
   {
     title: "交易模块",
@@ -259,10 +266,29 @@ export default function TradeShell({
     const activeSection = tradeNavSections.find((section) =>
       isNavSectionActive(pathname, section),
     );
-    if (!activeSection) return;
 
-    setOpenSection(activeSection.title);
+    setOpenSection(activeSection?.title ?? null);
   }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const prefetchRoutes = () => {
+      priorityPrefetchRoutes.forEach((href) => {
+        router.prefetch(href);
+      });
+    };
+
+    if ("requestIdleCallback" in window) {
+      const idleCallbackId = window.requestIdleCallback(prefetchRoutes, {
+        timeout: 2000,
+      });
+      return () => window.cancelIdleCallback(idleCallbackId);
+    }
+
+    const timeoutId = window.setTimeout(prefetchRoutes, 800);
+    return () => window.clearTimeout(timeoutId);
+  }, [router]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
