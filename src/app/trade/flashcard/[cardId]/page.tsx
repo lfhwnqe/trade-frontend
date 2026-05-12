@@ -7,7 +7,8 @@ import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/components/common/alert";
 import { getFlashcardCard, getFlashcardSimulationCardHistory } from "../request";
-import { FLASHCARD_LABELS, type FlashcardCard, type FlashcardSimulationCardHistoryItem } from "../types";
+import { fetchPlaybookTypeOptions } from "../../dictionary";
+import { FLASHCARD_LABELS, type FlashcardCard, type FlashcardDictionaryOptionItem, type FlashcardSimulationCardHistoryItem } from "../types";
 import { ImagePreviewDialog } from "../components/ImagePreviewDialog";
 
 function formatDateTime(value?: string) {
@@ -26,6 +27,8 @@ export default function FlashcardDetailPage() {
   const [, errorAlert] = useAlert();
   const [card, setCard] = React.useState<FlashcardCard | null>(null);
   const [history, setHistory] = React.useState<FlashcardSimulationCardHistoryItem[]>([]);
+  const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<FlashcardDictionaryOptionItem[]>([]);
+  const [playbookOptionsLoaded, setPlaybookOptionsLoaded] = React.useState(false);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -41,6 +44,29 @@ export default function FlashcardDetailPage() {
       errorAlert(error instanceof Error ? error.message : "获取闪卡详情失败");
     });
   }, [errorAlert, params]);
+
+  React.useEffect(() => {
+    let mounted = true;
+    fetchPlaybookTypeOptions()
+      .then((items) => {
+        if (mounted) setPlaybookTypeOptions(items);
+      })
+      .catch(() => {
+        if (mounted) setPlaybookTypeOptions([]);
+      })
+      .finally(() => {
+        if (mounted) setPlaybookOptionsLoaded(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const playbookLabel = React.useMemo(() => {
+    if (!card?.playbookType) return "--";
+    if (!playbookOptionsLoaded) return "加载中...";
+    return playbookTypeOptions.find((item) => item.code === card.playbookType)?.label || card.playbookType;
+  }, [card?.playbookType, playbookOptionsLoaded, playbookTypeOptions]);
 
   if (!card) {
     return (
@@ -71,7 +97,7 @@ export default function FlashcardDetailPage() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4"><div className="text-xs text-[#9ca3af]">预期动作</div><div className="mt-2 text-sm text-[#e5e7eb]">{card.expectedAction ? FLASHCARD_LABELS[card.expectedAction] : "--"}</div></div>
-          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4"><div className="text-xs text-[#9ca3af]">剧本</div><div className="mt-2 text-sm text-[#e5e7eb]">{card.playbookType || "--"}</div></div>
+          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4"><div className="text-xs text-[#9ca3af]">剧本</div><div className="mt-2 text-sm text-[#e5e7eb]">{playbookLabel}</div></div>
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4"><div className="text-xs text-[#9ca3af]">交易对</div><div className="mt-2 text-sm text-[#e5e7eb]">{card.symbolPairInfo || "--"}</div></div>
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4"><div className="text-xs text-[#9ca3af]">系统结果</div><div className="mt-2 text-sm text-[#e5e7eb]">{card.systemOutcomeType ? FLASHCARD_LABELS[card.systemOutcomeType] : "--"}</div></div>
         </div>

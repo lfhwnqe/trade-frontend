@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Search, Bell, TrendingUp, TrendingDown, Minus, Star, Bolt, Siren, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAlert } from "@/components/common/alert";
-import { getFlashcardDrillAnalytics, getFlashcardDrillCardErrorRanking, listFlashcardDrillSessions } from "../../request";
+import {
+  getFlashcardDrillAnalytics,
+  getFlashcardDrillCardErrorRanking,
+  listFlashcardDrillSessions,
+  startFlashcardDrillSession,
+} from "../../request";
+import { saveFlashcardSession } from "@/store/flashcard-session";
 import {
   FLASHCARD_LABELS,
   type FlashcardDrillAnalytics,
@@ -33,7 +40,8 @@ import {
 
 type SessionStatus = "ALL" | "IN_PROGRESS" | "COMPLETED" | "ABANDONED";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
+const DEFAULT_DRILL_COUNT = 20;
 const RECENT_WINDOW = 30;
 const CARD_ERROR_MIN_ANSWERED = 3;
 const CARD_ERROR_LIMIT = 20;
@@ -130,7 +138,7 @@ function SummaryCard(props: {
 
 function MiniWindowCard({ title, window }: { title: string; window: FlashcardDrillAnalyticsWindow }) {
   return (
-    <div className={cardClass("p-5")}>
+    <div className={cardClass("p-4")}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-bold text-white">{title}</div>
@@ -138,18 +146,18 @@ function MiniWindowCard({ title, window }: { title: string; window: FlashcardDri
         </div>
         <div className={`text-xs font-bold ${deltaTone(window.deltaFromPrevious)}`}>{formatDelta(window.deltaFromPrevious)}</div>
       </div>
-      <div className="mt-5 grid grid-cols-3 gap-3">
+      <div className="mt-4 grid grid-cols-3 gap-3">
         <div>
           <div className="text-xs text-slate-500">均分</div>
-          <div className="mt-2 text-2xl font-bold text-white">{window.averageScore}</div>
+          <div className="mt-1 text-xl font-bold text-white">{window.averageScore}</div>
         </div>
         <div>
           <div className="text-xs text-slate-500">最高</div>
-          <div className="mt-2 text-2xl font-bold text-white">{window.bestScore}</div>
+          <div className="mt-1 text-xl font-bold text-white">{window.bestScore}</div>
         </div>
         <div>
           <div className="text-xs text-slate-500">最低</div>
-          <div className="mt-2 text-2xl font-bold text-white">{window.lowestScore}</div>
+          <div className="mt-1 text-xl font-bold text-white">{window.lowestScore}</div>
         </div>
       </div>
     </div>
@@ -178,20 +186,20 @@ function LineChartCard(props: {
   const areaPath = path ? `${path} L${width},100 L0,100 Z` : "";
 
   return (
-    <div className={cardClass("p-6")}>
-      <div className="mb-6 flex items-center justify-between">
-        <h3 className="text-[28px] leading-none font-bold tracking-tight text-white sm:text-lg">{props.title}</h3>
+    <div className={cardClass("p-4")}>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-base font-bold tracking-tight text-white">{props.title}</h3>
         <span className="text-slate-500">•••</span>
       </div>
       {props.loading ? (
-        <div className="flex h-64 items-center justify-center text-sm text-slate-500">加载中...</div>
+        <div className="flex h-40 items-center justify-center text-sm text-slate-500">加载中...</div>
       ) : props.points.length === 0 ? (
-        <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-[#273a39] text-sm text-slate-500">
+        <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-[#273a39] text-sm text-slate-500">
           暂无趋势数据
         </div>
       ) : (
         <>
-          <div className="relative h-64">
+          <div className="relative h-40">
             <div className="absolute inset-0 flex flex-col justify-between opacity-20 pointer-events-none">
               <div className="h-0 w-full border-t border-slate-500" />
               <div className="h-0 w-full border-t border-slate-500" />
@@ -232,8 +240,8 @@ function CardErrorRankingCard(props: {
   const minAnswered = props.ranking?.summary.minAnswered || CARD_ERROR_MIN_ANSWERED;
 
   return (
-    <div className={cardClass("p-6")}>
-      <div className="mb-6 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+    <div className={cardClass("p-5")}>
+      <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
         <div>
           <h3 className="flex items-center gap-2 text-lg font-bold text-white">
             <Siren className="h-5 w-5 text-[#E03F3F]" />
@@ -255,8 +263,8 @@ function CardErrorRankingCard(props: {
           暂无达到样本门槛的闪卡
         </div>
       ) : (
-        <div className="space-y-3">
-          {items.slice(0, 8).map((item, index) => (
+        <div className="max-h-[520px] space-y-3 overflow-y-auto pr-2">
+          {items.map((item, index) => (
             <CardErrorRankingRow key={item.cardId} item={item} index={index} />
           ))}
         </div>
@@ -337,17 +345,20 @@ function CardErrorRankingRow({ item, index }: { item: FlashcardDrillCardErrorRan
 }
 
 export default function FlashcardDrillHistoryPage() {
-  const [, errorAlert] = useAlert();
+  const router = useRouter();
+  const [successAlert, errorAlert] = useAlert();
 
   const [status, setStatus] = React.useState<SessionStatus>("COMPLETED");
   const [items, setItems] = React.useState<FlashcardDrillSessionHistoryItem[]>([]);
   const [nextCursor, setNextCursor] = React.useState<string | null>(null);
+  const [currentPage, setCurrentPage] = React.useState(1);
   const [analytics, setAnalytics] = React.useState<FlashcardDrillAnalytics | null>(null);
   const [cardErrorRanking, setCardErrorRanking] = React.useState<FlashcardDrillCardErrorRanking | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [loadingMore, setLoadingMore] = React.useState(false);
+  const [startingNewTraining, setStartingNewTraining] = React.useState(false);
   const [analyticsLoading, setAnalyticsLoading] = React.useState(false);
   const [cardRankingLoading, setCardRankingLoading] = React.useState(false);
+  const pageCursorRef = React.useRef<Record<number, string | null>>({ 1: null });
 
   const fetchAnalytics = React.useCallback(async () => {
     setAnalyticsLoading(true);
@@ -371,15 +382,21 @@ export default function FlashcardDrillHistoryPage() {
     }
   }, [errorAlert]);
 
-  const fetchFirstPage = React.useCallback(async () => {
+  const fetchPage = React.useCallback(async (pageNumber: number) => {
     setLoading(true);
     try {
+      const cursor = pageCursorRef.current[pageNumber] || undefined;
       const res = await listFlashcardDrillSessions({
         pageSize: PAGE_SIZE,
+        cursor,
         status: status === "ALL" ? undefined : status,
       });
       setItems(res.items);
       setNextCursor(res.nextCursor);
+      setCurrentPage(pageNumber);
+      if (res.nextCursor) {
+        pageCursorRef.current[pageNumber + 1] = res.nextCursor;
+      }
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "查询训练成绩失败");
     } finally {
@@ -387,31 +404,43 @@ export default function FlashcardDrillHistoryPage() {
     }
   }, [errorAlert, status]);
 
-  const fetchMore = React.useCallback(async () => {
-    if (!nextCursor) return;
-    setLoadingMore(true);
+  const handleStartDefaultTraining = React.useCallback(async () => {
+    setStartingNewTraining(true);
     try {
-      const res = await listFlashcardDrillSessions({
-        pageSize: PAGE_SIZE,
-        cursor: nextCursor,
-        status: status === "ALL" ? undefined : status,
+      const result = await startFlashcardDrillSession({
+        source: "ALL",
+        count: DEFAULT_DRILL_COUNT,
       });
-      setItems((prev) => [...prev, ...res.items]);
-      setNextCursor(res.nextCursor);
+
+      if (!result.cards.length) {
+        errorAlert("没有可训练题目", "请先录入或启用闪卡后重试");
+        return;
+      }
+
+      saveFlashcardSession({
+        sessionId: result.sessionId,
+        source: result.source,
+        cards: result.cards,
+        count: result.count,
+        startedAt: new Date().toISOString(),
+      });
+      successAlert(`已生成 ${result.cards.length} 张训练卡片`);
+      router.push(`/trade/flashcard/drill/play?sessionId=${result.sessionId}`);
     } catch (error) {
-      errorAlert(error instanceof Error ? error.message : "查询训练成绩失败");
+      errorAlert(error instanceof Error ? error.message : "开始训练失败");
     } finally {
-      setLoadingMore(false);
+      setStartingNewTraining(false);
     }
-  }, [errorAlert, nextCursor, status]);
+  }, [errorAlert, router, successAlert]);
 
   React.useEffect(() => {
     void fetchAnalytics();
   }, [fetchAnalytics]);
 
   React.useEffect(() => {
-    void fetchFirstPage();
-  }, [fetchFirstPage]);
+    pageCursorRef.current = { 1: null };
+    void fetchPage(1);
+  }, [fetchPage]);
 
   const trendPoints = analytics?.trend.points || [];
   const scoreDelta7 = analytics?.windows.recent7.deltaFromPrevious ?? null;
@@ -456,11 +485,13 @@ export default function FlashcardDrillHistoryPage() {
               </p>
             </div>
             <div className="flex gap-3">
-              <button className="flex items-center gap-2 rounded-xl border border-[#273a39] bg-[#1a1a1a] px-6 py-2.5 text-sm font-bold text-slate-100 transition-all hover:bg-[#273a39]">
-                训练设置
-              </button>
-              <button className="flex items-center gap-2 rounded-xl bg-[#00c2b2] px-6 py-2.5 text-sm font-bold text-[#0a0a0a] transition-all hover:opacity-90">
-                新建训练
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-xl bg-[#00c2b2] px-6 py-2.5 text-sm font-bold text-[#0a0a0a] transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={startingNewTraining}
+                onClick={() => void handleStartDefaultTraining()}
+              >
+                {startingNewTraining ? "创建中..." : "新建训练"}
               </button>
             </div>
           </div>
@@ -508,7 +539,7 @@ export default function FlashcardDrillHistoryPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <LineChartCard
               title="最近 30 轮分数走势"
               bottomLabels={["第 1 轮", "第 15 轮", "第 30 轮"]}
@@ -545,7 +576,7 @@ export default function FlashcardDrillHistoryPage() {
                   </Select>
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className="h-[360px] overflow-auto">
                 <Table className="min-w-[920px] text-left">
                   <TableHeader>
                     <TableRow className="bg-[#0f0f0f]/60 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:bg-[#0f0f0f]/60">
@@ -597,16 +628,27 @@ export default function FlashcardDrillHistoryPage() {
                 </Table>
               </div>
               <div className="flex items-center justify-between border-t border-[#273a39] bg-[#1a1a1a]/30 px-6 py-4">
-                <span className="text-xs text-slate-500">已加载 {items.length} 条训练记录</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-[#273a39] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
-                  disabled={!nextCursor || loadingMore || loading}
-                  onClick={() => void fetchMore()}
-                >
-                  {loadingMore ? "加载中..." : nextCursor ? "加载更多" : "没有更多数据"}
-                </Button>
+                <span className="text-xs text-slate-500">第 {currentPage} 页 · 每页 {PAGE_SIZE} 条</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-[#273a39] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+                    disabled={currentPage <= 1 || loading}
+                    onClick={() => void fetchPage(currentPage - 1)}
+                  >
+                    上一页
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-[#273a39] bg-transparent text-[#e5e7eb] hover:bg-[#1e1e1e]"
+                    disabled={!nextCursor || loading}
+                    onClick={() => void fetchPage(currentPage + 1)}
+                  >
+                    下一页
+                  </Button>
+                </div>
               </div>
             </div>
 
