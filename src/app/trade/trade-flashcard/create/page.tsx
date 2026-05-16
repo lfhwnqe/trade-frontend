@@ -46,9 +46,10 @@ export default function TradeFlashcardCreatePage() {
   const [processResult, setProcessResult] = React.useState<TradeFlashcardProcessResult | "">("");
   const [isSystemAligned, setIsSystemAligned] = React.useState<string>(EMPTY_SELECT_VALUE);
   const [preEntryImages, setPreEntryImages] = React.useState<ImageResource[]>([]);
-  const [postEntryImages, setPostEntryImages] = React.useState<ImageResource[]>([]);
-  const [progressImages, setProgressImages] = React.useState<ImageResource[]>([]);
+  const [entryImages, setEntryImages] = React.useState<ImageResource[]>([]);
+  const [finalTrendImages, setFinalTrendImages] = React.useState<ImageResource[]>([]);
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
+  const [entryTimeInfo, setEntryTimeInfo] = React.useState("");
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([...TRADE_PERIOD_PRESETS]);
   const [playbookType, setPlaybookType] = React.useState("");
@@ -119,8 +120,9 @@ export default function TradeFlashcardCreatePage() {
         processResult: processResult || undefined,
         isSystemAligned: isSystemAligned === EMPTY_SELECT_VALUE ? undefined : isSystemAligned === "true",
         preEntryImageUrl: preEntryImages[0].url,
-        postEntryImageUrl: postEntryImages[0]?.url || undefined,
-        progressImageUrls: progressImages.map((item) => item.url).filter(Boolean),
+        entryImageUrls: entryImages.map((item) => item.url).filter(Boolean),
+        entryTimeInfo: entryTimeInfo.trim() || undefined,
+        finalTrendImageUrl: finalTrendImages[0]?.url || undefined,
         marketTimeInfo: marketTimeInfo.trim() || undefined,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
         playbookType: playbookType || undefined,
@@ -135,21 +137,22 @@ export default function TradeFlashcardCreatePage() {
       setProcessResult("");
       setIsSystemAligned(EMPTY_SELECT_VALUE);
       setPreEntryImages([]);
-      setPostEntryImages([]);
-      setProgressImages([]);
+      setEntryImages([]);
+      setFinalTrendImages([]);
       setMarketTimeInfo("");
+      setEntryTimeInfo("");
       setSymbolPairInfo("");
       setPlaybookType("");
       setNotes("");
       setSummary("");
       setTagCodes([]);
-      successAlert("交易闪卡保存成功，过程状态会根据图片自动推导");
+      successAlert("交易闪卡保存成功，过程状态会根据最终走势截图自动推导");
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "保存失败");
     } finally {
       setSubmitting(false);
     }
-  }, [errorAlert, isSystemAligned, marketTimeInfo, notes, playbookType, postEntryImages, preEntryImages, processResult, progressImages, rememberSymbolPair, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
+  }, [entryImages, entryTimeInfo, errorAlert, finalTrendImages, isSystemAligned, marketTimeInfo, notes, playbookType, preEntryImages, processResult, rememberSymbolPair, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
 
   return (
     <TradePageShell title="交易闪卡录入" subtitle="过程状态会根据图片自动推导，避免手动误操作" showAddButton={false}>
@@ -166,6 +169,9 @@ export default function TradeFlashcardCreatePage() {
             </Field>
             <Field label="行情时间信息">
               <DateCalendarPicker analysisTime={marketTimeInfo} updateForm={(patch) => setMarketTimeInfo(patch.analysisTime)} showSeconds={false} placeholder="选择行情时间" />
+            </Field>
+            <Field label="入场时间">
+              <DateCalendarPicker analysisTime={entryTimeInfo} updateForm={(patch) => setEntryTimeInfo(patch.analysisTime)} showSeconds={false} placeholder="选择入场时间" />
             </Field>
             <Field label="币对信息">
               <>
@@ -240,8 +246,8 @@ export default function TradeFlashcardCreatePage() {
 
         <div className="grid gap-6 md:grid-cols-3">
           <UploadCard title="入场前截图（必填）"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={1} /></UploadCard>
-          <UploadCard title="入场后截图（选填）"><ImageUploader value={postEntryImages} onChange={setPostEntryImages} max={1} /></UploadCard>
-          <UploadCard title="走势截图（最多 5 张）"><ImageUploader value={progressImages} onChange={setProgressImages} max={5} /></UploadCard>
+          <UploadCard title="入场时截图（最多 5 张）"><ImageUploader value={entryImages} onChange={setEntryImages} max={5} /></UploadCard>
+          <UploadCard title="最终走势截图（选填）"><ImageUploader value={finalTrendImages} onChange={setFinalTrendImages} max={1} /></UploadCard>
         </div>
 
         <div className="flex justify-end">

@@ -16,13 +16,16 @@ export const TRADE_FLASHCARD_ALLOWED_IMAGE_TYPES = [
   'image/webp',
 ] as const;
 
-type Scope = 'pre-entry' | 'post-entry' | 'progress';
+type Scope = 'pre-entry' | 'entry' | 'final-trend' | 'post-entry' | 'progress';
 
 type CreateTradeFlashcardPayload = {
   tradeFlashcardType: TradeFlashcardType;
   processResult?: TradeFlashcardProcessResult;
   isSystemAligned?: boolean;
   preEntryImageUrl: string;
+  entryImageUrls?: string[];
+  entryTimeInfo?: string;
+  finalTrendImageUrl?: string;
   postEntryImageUrl?: string;
   progressImageUrls?: string[];
   marketTimeInfo?: string;
@@ -39,7 +42,7 @@ function sanitizeTradeFlashcardPayload<T extends Partial<CreateTradeFlashcardPay
   const entries = Object.entries(payload).filter(([, value]) => {
     if (value === undefined) return false;
     if (typeof value === 'string') return value.trim() !== '';
-    if (Array.isArray(value)) return value.length > 0;
+    if (Array.isArray(value)) return true;
     return true;
   });
 

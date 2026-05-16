@@ -30,6 +30,9 @@ export type TradeFlashcardCard = {
   processResult?: TradeFlashcardProcessResult;
   isSystemAligned?: boolean;
   preEntryImageUrl: string;
+  entryImageUrls?: string[];
+  entryTimeInfo?: string;
+  finalTrendImageUrl?: string;
   postEntryImageUrl?: string;
   progressImageUrls?: string[];
   marketTimeInfo?: string;

@@ -79,6 +79,14 @@ function encodeOffsetCursor(offset: number) {
   return undefined;
 }
 
+function getFirstEntryImageUrl(card: TradeFlashcardCard) {
+  return card.entryImageUrls?.find((url) => url.trim()) || "";
+}
+
+function getFinalTrendImageUrl(card: TradeFlashcardCard) {
+  return card.finalTrendImageUrl || card.postEntryImageUrl || "";
+}
+
 export default function TradeFlashcardManagePage() {
   const [successAlert, errorAlert] = useAlert();
   const [items, setItems] = React.useState<TradeFlashcardCard[]>([]);
@@ -88,12 +96,13 @@ export default function TradeFlashcardManagePage() {
   const [editingCard, setEditingCard] = React.useState<TradeFlashcardCard | null>(null);
   const [confirmConvertCardId, setConfirmConvertCardId] = React.useState<string | null>(null);
   const [preEntryImages, setPreEntryImages] = React.useState<ImageResource[]>([]);
-  const [postEntryImages, setPostEntryImages] = React.useState<ImageResource[]>([]);
-  const [progressImages, setProgressImages] = React.useState<ImageResource[]>([]);
+  const [entryImages, setEntryImages] = React.useState<ImageResource[]>([]);
+  const [finalTrendImages, setFinalTrendImages] = React.useState<ImageResource[]>([]);
   const [tradeFlashcardType, setTradeFlashcardType] = React.useState<TradeFlashcardType | "">("");
   const [processResult, setProcessResult] = React.useState<TradeFlashcardProcessResult | "">("");
   const [isSystemAligned, setIsSystemAligned] = React.useState<string>(EMPTY_SELECT_VALUE);
   const [marketTimeInfo, setMarketTimeInfo] = React.useState("");
+  const [entryTimeInfo, setEntryTimeInfo] = React.useState("");
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([...TRADE_PERIOD_PRESETS]);
   const [playbookType, setPlaybookType] = React.useState("");
@@ -219,9 +228,11 @@ export default function TradeFlashcardManagePage() {
     setProcessResult(card.processResult || "");
     setIsSystemAligned(typeof card.isSystemAligned === "boolean" ? String(card.isSystemAligned) : EMPTY_SELECT_VALUE);
     setPreEntryImages(card.preEntryImageUrl ? [{ key: card.preEntryImageUrl, url: card.preEntryImageUrl }] : []);
-    setPostEntryImages(card.postEntryImageUrl ? [{ key: card.postEntryImageUrl, url: card.postEntryImageUrl }] : []);
-    setProgressImages((card.progressImageUrls || []).map((url) => ({ key: url, url })));
+    setEntryImages((card.entryImageUrls || []).map((url) => ({ key: url, url })));
+    const finalTrendImageUrl = getFinalTrendImageUrl(card);
+    setFinalTrendImages(finalTrendImageUrl ? [{ key: finalTrendImageUrl, url: finalTrendImageUrl }] : []);
     setMarketTimeInfo(card.marketTimeInfo || "");
+    setEntryTimeInfo(card.entryTimeInfo || "");
     setSymbolPairInfo(card.symbolPairInfo || "");
     setPlaybookType(card.playbookType || "");
     setNotes(card.notes || "");
@@ -238,8 +249,9 @@ export default function TradeFlashcardManagePage() {
         processResult: processResult || undefined,
         isSystemAligned: isSystemAligned === EMPTY_SELECT_VALUE ? undefined : isSystemAligned === "true",
         preEntryImageUrl: preEntryImages[0].url,
-        postEntryImageUrl: postEntryImages[0]?.url || "",
-        progressImageUrls: progressImages.map((item) => item.url).filter(Boolean),
+        entryImageUrls: entryImages.map((item) => item.url).filter(Boolean),
+        entryTimeInfo: entryTimeInfo.trim() || "",
+        finalTrendImageUrl: finalTrendImages[0]?.url || "",
         marketTimeInfo: marketTimeInfo.trim() || "",
         symbolPairInfo: symbolPairInfo.trim() || "",
         playbookType: playbookType || "",
@@ -249,12 +261,12 @@ export default function TradeFlashcardManagePage() {
       });
       rememberSymbolPair(symbolPairInfo);
       setEditingCard(null);
-      successAlert("交易闪卡更新成功，过程状态已按图片自动重算");
+      successAlert("交易闪卡更新成功，过程状态已按最终走势截图自动重算");
       await fetchPage(page, activeQuery);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "保存失败");
     }
-  }, [activeQuery, editingCard, errorAlert, fetchPage, isSystemAligned, marketTimeInfo, notes, page, playbookType, postEntryImages, preEntryImages, processResult, progressImages, rememberSymbolPair, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
+  }, [activeQuery, editingCard, entryImages, entryTimeInfo, errorAlert, fetchPage, finalTrendImages, isSystemAligned, marketTimeInfo, notes, page, playbookType, preEntryImages, processResult, rememberSymbolPair, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
 
   const handleDelete = React.useCallback(async (cardId: string) => {
     if (!window.confirm("确认删除这张交易闪卡吗？")) return;
@@ -270,7 +282,7 @@ export default function TradeFlashcardManagePage() {
 
   const openConvert = React.useCallback((card: TradeFlashcardCard) => {
     setConvertingCard(card);
-    setConvertMarketTimeInfo(card.marketTimeInfo || "");
+    setConvertMarketTimeInfo(card.entryTimeInfo || card.marketTimeInfo || "");
     setConvertSymbolPairInfo(card.symbolPairInfo || "");
     setConvertPlaybookType(card.playbookType || "");
     setConfirmConvertCardId(null);
@@ -278,6 +290,10 @@ export default function TradeFlashcardManagePage() {
 
   const handleConvert = React.useCallback(async () => {
     if (!convertingCard) return;
+    if (!getFirstEntryImageUrl(convertingCard) || !getFinalTrendImageUrl(convertingCard)) {
+      errorAlert("请先补齐入场时截图和最终走势截图，再转换为常规训练闪卡");
+      return;
+    }
     if (!convertMarketTimeInfo.trim() || !convertSymbolPairInfo.trim() || !convertPlaybookType) {
       errorAlert("行情时间、币对和剧本类型不能为空");
       return;
@@ -355,12 +371,15 @@ export default function TradeFlashcardManagePage() {
           {!loading && items.length === 0 ? <div className="rounded-xl border border-dashed border-[#27272a] bg-[#121212] p-8 text-center text-sm text-[#9ca3af]">暂无交易闪卡</div> : null}
           {items.map((card) => {
             const confirmMode = confirmConvertCardId === card.cardId;
-            const canConvert = card.lifecycleStatus === "COMPLETED" && !card.convertedToFlashcardAt;
+            const hasConversionImages = Boolean(getFirstEntryImageUrl(card) && getFinalTrendImageUrl(card));
+            const canConvert = card.lifecycleStatus === "COMPLETED" && !card.convertedToFlashcardAt && hasConversionImages;
             const convertTitle = card.convertedToFlashcardAt
               ? `已于 ${formatDateTime(card.convertedToFlashcardAt)} 转为训练闪卡`
               : canConvert
                 ? "把这条已完成记录转为常规训练闪卡"
-                : "仅已完成的交易闪卡可转为常规训练闪卡";
+                : card.lifecycleStatus !== "COMPLETED"
+                  ? "仅已完成的交易闪卡可转为常规训练闪卡"
+                  : "请先补齐入场时截图和最终走势截图";
             return (
               <div key={card.cardId} className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -399,8 +418,8 @@ export default function TradeFlashcardManagePage() {
                   <TradeFlashcardMetaSummary card={card} playbookTypeOptions={playbookTypeOptions} />
                   <div className="grid gap-3 sm:grid-cols-3">
                     <ImageBlock title="入场前" url={card.preEntryImageUrl} onPreview={setPreviewUrl} compact />
-                    <ImageBlock title="入场后" url={card.postEntryImageUrl} onPreview={setPreviewUrl} compact />
-                    <ImageGalleryBlock title="走势截图" urls={card.progressImageUrls || []} onPreview={setPreviewUrl} compact />
+                    <ImageGalleryBlock title="入场时" urls={card.entryImageUrls || []} onPreview={setPreviewUrl} compact />
+                    <ImageBlock title="最终走势" url={getFinalTrendImageUrl(card)} onPreview={setPreviewUrl} compact />
                   </div>
                 </div>
               </div>
@@ -431,11 +450,12 @@ export default function TradeFlashcardManagePage() {
               <Field label="过程结果"><Select value={processResult || EMPTY_SELECT_VALUE} onValueChange={(value) => setProcessResult(value === EMPTY_SELECT_VALUE ? "" : (value as TradeFlashcardProcessResult))}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="未设置" /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>{TRADE_FLASHCARD_PROCESS_RESULTS.map((item) => <SelectItem key={item} value={item}>{TRADE_FLASHCARD_LABELS[item]}</SelectItem>)}</SelectContent></Select></Field>
               <Field label="是否符合交易系统"><Select value={isSystemAligned} onValueChange={setIsSystemAligned}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="未设置" /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem><SelectItem value="true">符合</SelectItem><SelectItem value="false">不符合</SelectItem></SelectContent></Select></Field>
               <Field label="行情时间"><DateCalendarPicker analysisTime={marketTimeInfo} updateForm={(patch) => setMarketTimeInfo(patch.analysisTime)} showSeconds={false} placeholder="选择行情时间" /></Field>
+              <Field label="入场时间"><DateCalendarPicker analysisTime={entryTimeInfo} updateForm={(patch) => setEntryTimeInfo(patch.analysisTime)} showSeconds={false} placeholder="选择入场时间" /></Field>
               <Field label="币对"><><Input value={symbolPairInfo} onChange={(e) => setSymbolPairInfo(e.target.value)} onBlur={(e) => rememberSymbolPair(e.target.value)} list="trade-flashcard-symbol-pair-presets" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /><datalist id="trade-flashcard-symbol-pair-presets">{symbolPairOptions.map((item) => <option key={item} value={item} />)}</datalist></></Field>
               <Field label="剧本类型"><Select value={playbookType || EMPTY_SELECT_VALUE} onValueChange={(value) => setPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="选择剧本类型" /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>{playbookTypeOptions.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}</SelectContent></Select></Field>
             </div>
             <Field label="字典标签"><div className="flex flex-wrap gap-2 rounded-xl border border-[#27272a] bg-[#1e1e1e] p-3">{tagOptions.map((item) => { const active = tagCodes.includes(item.code); return <button key={item.code} type="button" onClick={() => setTagCodes((prev) => prev.includes(item.code) ? prev.filter((code) => code !== item.code) : [...prev, item.code])} className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${active ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]" : "border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424]"}`}>{item.color ? <span className="inline-block h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: item.color }} /> : null}{item.label}</button>; })}</div></Field>
-            <div className="grid gap-6 md:grid-cols-3"><UploadCard title="入场前截图"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={1} /></UploadCard><UploadCard title="入场后截图"><ImageUploader value={postEntryImages} onChange={setPostEntryImages} max={1} /></UploadCard><UploadCard title="走势截图"><ImageUploader value={progressImages} onChange={setProgressImages} max={5} /></UploadCard></div>
+            <div className="grid gap-6 md:grid-cols-3"><UploadCard title="入场前截图"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={1} /></UploadCard><UploadCard title="入场时截图"><ImageUploader value={entryImages} onChange={setEntryImages} max={5} /></UploadCard><UploadCard title="最终走势截图"><ImageUploader value={finalTrendImages} onChange={setFinalTrendImages} max={1} /></UploadCard></div>
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -495,13 +515,14 @@ function ImageBlock({ title, url, onPreview, compact = false }: { title: string;
 }
 
 function ImageGalleryBlock({ title, urls, onPreview, compact = false }: { title: string; urls: string[]; onPreview: (url: string) => void; compact?: boolean }) {
-  return <div className="space-y-2"><div className="text-sm font-medium text-[#e5e7eb]">{title}</div><div className={`grid gap-2 ${compact ? "grid-cols-2" : "grid-cols-3"}`}>{urls.map((url) => <button key={url} type="button" className="relative aspect-video overflow-hidden rounded border border-[#27272a] bg-[#0f0f10]" onClick={() => onPreview(url)}><img src={url} alt="progress" className="h-full w-full object-cover" /></button>)}{!urls.length ? <div className="flex aspect-video items-center justify-center rounded border border-dashed border-[#27272a] bg-[#0f0f10] text-xs text-[#71717a]">暂无</div> : null}</div></div>;
+  return <div className="space-y-2"><div className="text-sm font-medium text-[#e5e7eb]">{title}</div><div className={`grid gap-2 ${compact ? "grid-cols-2" : "grid-cols-3"}`}>{urls.map((url) => <button key={url} type="button" className="relative aspect-video overflow-hidden rounded border border-[#27272a] bg-[#0f0f10]" onClick={() => onPreview(url)}><img src={url} alt={title} className="h-full w-full object-cover" /></button>)}{!urls.length ? <div className="flex aspect-video items-center justify-center rounded border border-dashed border-[#27272a] bg-[#0f0f10] text-xs text-[#71717a]">暂无</div> : null}</div></div>;
 }
 
 function TradeFlashcardMetaSummary({ card, playbookTypeOptions }: { card: TradeFlashcardCard; playbookTypeOptions: Array<{ code: string; label: string }> }) {
   const metaItems = [
     { label: "币对", value: card.symbolPairInfo || "--" },
-    { label: "时间", value: card.marketTimeInfo || "--" },
+    { label: "行情时间", value: card.marketTimeInfo || "--" },
+    { label: "入场时间", value: card.entryTimeInfo || "--" },
     { label: "剧本", value: getPlaybookLabel(playbookTypeOptions, card.playbookType) },
     { label: "系统一致性", value: typeof card.isSystemAligned === "boolean" ? (card.isSystemAligned ? "符合" : "不符合") : "--" },
     { label: "转换状态", value: card.convertedToFlashcardAt ? `已转换（${formatDateTime(card.convertedToFlashcardAt)}）` : "未转换" },
@@ -529,7 +550,8 @@ function ReadonlyContent({ card, playbookTypeOptions, onPreview }: { card: Trade
         <div>状态：{TRADE_FLASHCARD_LABELS[card.lifecycleStatus]}</div>
         <div>结果：{card.processResult ? TRADE_FLASHCARD_LABELS[card.processResult] : "--"}</div>
         <div>是否符合系统：{typeof card.isSystemAligned === "boolean" ? (card.isSystemAligned ? "符合" : "不符合") : "--"}</div>
-        <div>时间：{card.marketTimeInfo || "--"}</div>
+        <div>行情时间：{card.marketTimeInfo || "--"}</div>
+        <div>入场时间：{card.entryTimeInfo || "--"}</div>
         <div>币对：{card.symbolPairInfo || "--"}</div>
         <div className="md:col-span-2">剧本：{getPlaybookLabel(playbookTypeOptions, card.playbookType)}</div>
         <div className="md:col-span-2">备注：{card.notes || "--"}</div>
@@ -537,8 +559,8 @@ function ReadonlyContent({ card, playbookTypeOptions, onPreview }: { card: Trade
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <ImageBlock title="入场前" url={card.preEntryImageUrl} onPreview={onPreview} />
-        <ImageBlock title="入场后" url={card.postEntryImageUrl} onPreview={onPreview} />
-        <ImageGalleryBlock title="走势截图" urls={card.progressImageUrls || []} onPreview={onPreview} />
+        <ImageGalleryBlock title="入场时" urls={card.entryImageUrls || []} onPreview={onPreview} />
+        <ImageBlock title="最终走势" url={getFinalTrendImageUrl(card)} onPreview={onPreview} />
       </div>
       <div className="flex flex-wrap gap-2">{(card.tagItems || []).map((item) => <span key={item.code} className="inline-flex items-center gap-2 rounded-full border border-[#27272a] bg-[#1e1e1e] px-3 py-1 text-xs text-[#e5e7eb]">{item.color ? <span className="inline-block h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: item.color }} /> : null}{item.label}</span>)}{!(card.tagItems || []).length ? <span className="text-xs text-[#71717a]">无标签</span> : null}</div>
     </div>
