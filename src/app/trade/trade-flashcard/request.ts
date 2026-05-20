@@ -49,6 +49,11 @@ function sanitizeTradeFlashcardPayload<T extends Partial<CreateTradeFlashcardPay
   return Object.fromEntries(entries) as T;
 }
 
+function sanitizeTradeFlashcardUpdatePayload<T extends Partial<CreateTradeFlashcardPayload>>(payload: T): T {
+  const entries = Object.entries(payload).filter(([, value]) => value !== undefined);
+  return Object.fromEntries(entries) as T;
+}
+
 export async function getTradeFlashcardUploadUrl(params: {
   fileName: string;
   contentType: string;
@@ -134,7 +139,7 @@ export async function updateTradeFlashcardCard(cardId: string, payload: UpdateTr
       targetPath: `trade-flashcard/cards/${cardId}`,
       actualMethod: 'PATCH',
     },
-    actualBody: sanitizeTradeFlashcardPayload(payload),
+    actualBody: sanitizeTradeFlashcardUpdatePayload(payload),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '更新交易闪卡失败');
