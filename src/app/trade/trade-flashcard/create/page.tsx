@@ -39,6 +39,8 @@ const NOTE_TEMPLATE = `【交易前】
 
 const EMPTY_SELECT_VALUE = "__NONE__";
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
+const PRE_ENTRY_IMAGE_LIMIT = 10;
+const ENTRY_IMAGE_LIMIT = 5;
 
 export default function TradeFlashcardCreatePage() {
   const [successAlert, errorAlert] = useAlert();
@@ -120,6 +122,7 @@ export default function TradeFlashcardCreatePage() {
         processResult: processResult || undefined,
         isSystemAligned: isSystemAligned === EMPTY_SELECT_VALUE ? undefined : isSystemAligned === "true",
         preEntryImageUrl: preEntryImages[0].url,
+        preEntryImageUrls: preEntryImages.map((item) => item.url).filter(Boolean),
         entryImageUrls: entryImages.map((item) => item.url).filter(Boolean),
         entryTimeInfo: entryTimeInfo.trim() || undefined,
         finalTrendImageUrl: finalTrendImages[0]?.url || undefined,
@@ -245,8 +248,8 @@ export default function TradeFlashcardCreatePage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          <UploadCard title="入场前截图（必填）"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={1} /></UploadCard>
-          <UploadCard title="入场时截图（最多 5 张）"><ImageUploader value={entryImages} onChange={setEntryImages} max={5} /></UploadCard>
+          <UploadCard title="入场前走势截图（必填，最多 10 张）"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={PRE_ENTRY_IMAGE_LIMIT} /></UploadCard>
+          <UploadCard title="入场时截图（最多 5 张）"><ImageUploader value={entryImages} onChange={setEntryImages} max={ENTRY_IMAGE_LIMIT} /></UploadCard>
           <UploadCard title="最终走势截图（选填）"><ImageUploader value={finalTrendImages} onChange={setFinalTrendImages} max={1} /></UploadCard>
         </div>
 

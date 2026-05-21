@@ -33,6 +33,8 @@ import {
 
 const EMPTY_SELECT_VALUE = "__NONE__";
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
+const PRE_ENTRY_IMAGE_LIMIT = 10;
+const ENTRY_IMAGE_LIMIT = 5;
 const NOTE_TEMPLATE = `【交易前】
 - 背景 / 市场环境：
 - 核心观察：
@@ -81,6 +83,11 @@ function encodeOffsetCursor(offset: number) {
 
 function getFirstEntryImageUrl(card: TradeFlashcardCard) {
   return card.entryImageUrls?.find((url) => url.trim()) || "";
+}
+
+function getPreEntryImageUrls(card: TradeFlashcardCard) {
+  const urls = card.preEntryImageUrls?.length ? card.preEntryImageUrls : [card.preEntryImageUrl];
+  return urls.map((url) => url.trim()).filter(Boolean);
 }
 
 function getFinalTrendImageUrl(card: TradeFlashcardCard) {
@@ -227,7 +234,7 @@ export default function TradeFlashcardManagePage() {
     setTradeFlashcardType(card.tradeFlashcardType);
     setProcessResult(card.processResult || "");
     setIsSystemAligned(typeof card.isSystemAligned === "boolean" ? String(card.isSystemAligned) : EMPTY_SELECT_VALUE);
-    setPreEntryImages(card.preEntryImageUrl ? [{ key: card.preEntryImageUrl, url: card.preEntryImageUrl }] : []);
+    setPreEntryImages(getPreEntryImageUrls(card).map((url) => ({ key: url, url })));
     setEntryImages((card.entryImageUrls || []).map((url) => ({ key: url, url })));
     const finalTrendImageUrl = getFinalTrendImageUrl(card);
     setFinalTrendImages(finalTrendImageUrl ? [{ key: finalTrendImageUrl, url: finalTrendImageUrl }] : []);
@@ -249,6 +256,7 @@ export default function TradeFlashcardManagePage() {
         processResult: processResult || undefined,
         isSystemAligned: isSystemAligned === EMPTY_SELECT_VALUE ? undefined : isSystemAligned === "true",
         preEntryImageUrl: preEntryImages[0].url,
+        preEntryImageUrls: preEntryImages.map((item) => item.url).filter(Boolean),
         entryImageUrls: entryImages.map((item) => item.url).filter(Boolean),
         entryTimeInfo: entryTimeInfo.trim() || "",
         finalTrendImageUrl: finalTrendImages[0]?.url || "",
@@ -417,7 +425,7 @@ export default function TradeFlashcardManagePage() {
                 <div className="mt-4 space-y-4">
                   <TradeFlashcardMetaSummary card={card} playbookTypeOptions={playbookTypeOptions} />
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <ImageBlock title="入场前" url={card.preEntryImageUrl} onPreview={setPreviewUrl} compact />
+                    <ImageGalleryBlock title="入场前走势" urls={getPreEntryImageUrls(card)} onPreview={setPreviewUrl} compact />
                     <ImageGalleryBlock title="入场时" urls={card.entryImageUrls || []} onPreview={setPreviewUrl} compact />
                     <ImageBlock title="最终走势" url={getFinalTrendImageUrl(card)} onPreview={setPreviewUrl} compact />
                   </div>
@@ -455,7 +463,7 @@ export default function TradeFlashcardManagePage() {
               <Field label="剧本类型"><Select value={playbookType || EMPTY_SELECT_VALUE} onValueChange={(value) => setPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="选择剧本类型" /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>{playbookTypeOptions.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}</SelectContent></Select></Field>
             </div>
             <Field label="字典标签"><div className="flex flex-wrap gap-2 rounded-xl border border-[#27272a] bg-[#1e1e1e] p-3">{tagOptions.map((item) => { const active = tagCodes.includes(item.code); return <button key={item.code} type="button" onClick={() => setTagCodes((prev) => prev.includes(item.code) ? prev.filter((code) => code !== item.code) : [...prev, item.code])} className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${active ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]" : "border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424]"}`}>{item.color ? <span className="inline-block h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: item.color }} /> : null}{item.label}</button>; })}</div></Field>
-            <div className="grid gap-6 md:grid-cols-3"><UploadCard title="入场前截图"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={1} /></UploadCard><UploadCard title="入场时截图"><ImageUploader value={entryImages} onChange={setEntryImages} max={5} /></UploadCard><UploadCard title="最终走势截图"><ImageUploader value={finalTrendImages} onChange={setFinalTrendImages} max={1} /></UploadCard></div>
+            <div className="grid gap-6 md:grid-cols-3"><UploadCard title="入场前走势截图"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={PRE_ENTRY_IMAGE_LIMIT} /></UploadCard><UploadCard title="入场时截图"><ImageUploader value={entryImages} onChange={setEntryImages} max={ENTRY_IMAGE_LIMIT} /></UploadCard><UploadCard title="最终走势截图"><ImageUploader value={finalTrendImages} onChange={setFinalTrendImages} max={1} /></UploadCard></div>
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -558,7 +566,7 @@ function ReadonlyContent({ card, playbookTypeOptions, onPreview }: { card: Trade
         <div className="md:col-span-2">总结：{card.summary || "--"}</div>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        <ImageBlock title="入场前" url={card.preEntryImageUrl} onPreview={onPreview} />
+        <ImageGalleryBlock title="入场前走势" urls={getPreEntryImageUrls(card)} onPreview={onPreview} />
         <ImageGalleryBlock title="入场时" urls={card.entryImageUrls || []} onPreview={onPreview} />
         <ImageBlock title="最终走势" url={getFinalTrendImageUrl(card)} onPreview={onPreview} />
       </div>

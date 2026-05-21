@@ -23,6 +23,7 @@ type CreateTradeFlashcardPayload = {
   processResult?: TradeFlashcardProcessResult;
   isSystemAligned?: boolean;
   preEntryImageUrl: string;
+  preEntryImageUrls?: string[];
   entryImageUrls?: string[];
   entryTimeInfo?: string;
   finalTrendImageUrl?: string;
