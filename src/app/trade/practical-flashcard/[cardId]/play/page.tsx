@@ -197,9 +197,10 @@ function CandlestickReplayChart({
   const [viewportVersion, setViewportVersion] = React.useState(0);
   const drawingsHydratedRef = React.useRef(false);
   const safeCurrentIndex = clampIndex(currentIndex, candles.length);
+  const browserTimeZone = React.useMemo(getBrowserTimeZone, []);
   const visibleCandles = React.useMemo(
-    () => candles.slice(0, safeCurrentIndex + 1).map(toCandlestickData),
-    [candles, safeCurrentIndex],
+    () => candles.slice(0, safeCurrentIndex + 1).map((candle) => toCandlestickData(candle, browserTimeZone)),
+    [browserTimeZone, candles, safeCurrentIndex],
   );
 
   React.useEffect(() => {
@@ -647,14 +648,49 @@ function positionLineHandleToField(handle: PositionLineHandle): PositionPriceFie
   return "takeProfitPrice";
 }
 
-function toCandlestickData(candle: PracticalFlashcardCandle): CandlestickData {
+function toCandlestickData(candle: PracticalFlashcardCandle, timeZone: string): CandlestickData {
   return {
-    time: Math.floor(candle.openTime / 1000) as UTCTimestamp,
+    time: toChartTime(candle.openTime, timeZone),
     open: candle.open,
     high: candle.high,
     low: candle.low,
     close: candle.close,
   };
+}
+
+function toChartTime(utcMs: number, timeZone: string): UTCTimestamp {
+  return Math.floor((utcMs + getTimeZoneOffsetMs(timeZone, utcMs)) / 1000) as UTCTimestamp;
+}
+
+function getBrowserTimeZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai";
+}
+
+function getTimeZoneOffsetMs(timeZone: string, utcMs: number) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(utcMs));
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    const zonedAsUtc = Date.UTC(
+      Number(values.year),
+      Number(values.month) - 1,
+      Number(values.day),
+      Number(values.hour),
+      Number(values.minute),
+      Number(values.second),
+    );
+    return zonedAsUtc - utcMs;
+  } catch {
+    return 0;
+  }
 }
 
 function resolveDrawingPoint(

@@ -12,6 +12,7 @@ export type CreatePracticalFlashcardPayload = {
   entryTimeInfo: string;
   exitTimeInfo: string;
   primaryInterval?: '15m';
+  timeZone?: string;
   snapshotStartTime?: string;
   snapshotEndTime?: string;
   expectedDirection?: PracticalFlashcardDirection;
@@ -28,6 +29,9 @@ export type CreatePracticalFlashcardPayload = {
 
 export type UpdatePracticalFlashcardPayload = {
   status?: PracticalFlashcardStatus;
+  entryTimeInfo?: string;
+  exitTimeInfo?: string;
+  timeZone?: string;
   expectedDirection?: PracticalFlashcardDirection | null;
   standardEntryPrice?: number | null;
   standardStopLossPrice?: number | null;
@@ -39,6 +43,10 @@ export type UpdatePracticalFlashcardPayload = {
   notes?: string | null;
   summary?: string | null;
 };
+
+export function getBrowserTimeZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai';
+}
 
 function sanitizePayload<T extends object>(payload: T): Record<string, unknown> {
   return Object.fromEntries(

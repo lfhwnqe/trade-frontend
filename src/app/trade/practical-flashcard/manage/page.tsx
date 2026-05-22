@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
 import { useAlert } from "@/components/common/alert";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
-import { listPracticalFlashcardCards, updatePracticalFlashcardCard } from "../request";
+import { getBrowserTimeZone, listPracticalFlashcardCards, updatePracticalFlashcardCard } from "../request";
 import {
   PRACTICAL_FLASHCARD_DIRECTIONS,
   PRACTICAL_FLASHCARD_LABELS,
@@ -27,6 +28,8 @@ type DictionaryOption = { code: string; label: string; color?: string };
 
 type EditDraft = {
   status: PracticalFlashcardStatus;
+  entryTimeInfo: string;
+  exitTimeInfo: string;
   expectedDirection: PracticalFlashcardDirection | "";
   standardEntryPrice: string;
   standardStopLossPrice: string;
@@ -89,6 +92,8 @@ export default function PracticalFlashcardManagePage() {
     setEditingCard(card);
     setDraft({
       status: card.status,
+      entryTimeInfo: card.entryTimeInfo,
+      exitTimeInfo: card.exitTimeInfo,
       expectedDirection: card.expectedDirection || "",
       standardEntryPrice: stringifyNumber(card.standardEntryPrice),
       standardStopLossPrice: stringifyNumber(card.standardStopLossPrice),
@@ -112,11 +117,22 @@ export default function PracticalFlashcardManagePage() {
       errorAlert("请选择剧本类型");
       return;
     }
+    if (!draft.entryTimeInfo.trim()) {
+      errorAlert("请选择入场时间");
+      return;
+    }
+    if (!draft.exitTimeInfo.trim()) {
+      errorAlert("请选择离场 / 结果确认时间");
+      return;
+    }
 
     setSaving(true);
     try {
       const updated = await updatePracticalFlashcardCard(editingCard.cardId, {
         status: draft.status,
+        entryTimeInfo: draft.entryTimeInfo,
+        exitTimeInfo: draft.exitTimeInfo,
+        timeZone: getBrowserTimeZone(),
         expectedDirection: draft.expectedDirection || null,
         standardEntryPrice: parseOptionalNumber(draft.standardEntryPrice),
         standardStopLossPrice: parseOptionalNumber(draft.standardStopLossPrice),
@@ -222,13 +238,17 @@ export default function PracticalFlashcardManagePage() {
               <div className="grid gap-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 text-sm text-[#a1a1aa] md:grid-cols-3">
                 <ReadonlyField label="交易对" value={editingCard.symbolPairInfo} />
                 <ReadonlyField label="行情源" value={PRACTICAL_FLASHCARD_LABELS[editingCard.venue] || editingCard.venue} />
-                <ReadonlyField label="K 线快照" value={`${editingCard.candles.length} 根，不可直接编辑`} />
-                <ReadonlyField label="入场时间" value={editingCard.entryTimeInfo} />
-                <ReadonlyField label="离场时间" value={editingCard.exitTimeInfo} />
+                <ReadonlyField label="K 线快照" value={`${editingCard.candles.length} 根；修改时间保存后会重新拉取`} />
                 <ReadonlyField label="快照范围" value={`${editingCard.snapshotStartTime} -> ${editingCard.snapshotEndTime}`} />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
+                <Field label="入场 / 考试开始时间">
+                  <DateCalendarPicker analysisTime={draft.entryTimeInfo} updateForm={(patch) => updateDraft({ entryTimeInfo: patch.analysisTime })} placeholder="选择入场时间" />
+                </Field>
+                <Field label="离场 / 结果确认时间">
+                  <DateCalendarPicker analysisTime={draft.exitTimeInfo} updateForm={(patch) => updateDraft({ exitTimeInfo: patch.analysisTime })} placeholder="选择离场时间" />
+                </Field>
                 <Field label="状态">
                   <Select value={draft.status} onValueChange={(value) => updateDraft({ status: value as PracticalFlashcardStatus })}>
                     <SelectTrigger className="h-9 w-full border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger>

@@ -9,20 +9,18 @@ import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/components/common/alert";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
-import { createPracticalFlashcardCard } from "../request";
+import { createPracticalFlashcardCard, getBrowserTimeZone } from "../request";
 import {
+  PRACTICAL_FLASHCARD_BINANCE_UM_SYMBOLS,
   PRACTICAL_FLASHCARD_DIRECTIONS,
   PRACTICAL_FLASHCARD_LABELS,
-  PRACTICAL_FLASHCARD_VENUES,
   type PracticalFlashcardDirection,
-  type PracticalFlashcardVenue,
 } from "../types";
 
 const EMPTY_SELECT_VALUE = "__NONE__";
 
 export default function PracticalFlashcardCreatePage() {
   const [successAlert, errorAlert] = useAlert();
-  const [venue, setVenue] = React.useState<PracticalFlashcardVenue>("BINANCE_UM_FUTURES");
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
   const [entryTimeInfo, setEntryTimeInfo] = React.useState("");
   const [exitTimeInfo, setExitTimeInfo] = React.useState("");
@@ -65,11 +63,12 @@ export default function PracticalFlashcardCreatePage() {
     setSubmitting(true);
     try {
       const created = await createPracticalFlashcardCard({
-        venue,
+        venue: "BINANCE_UM_FUTURES",
         symbolPairInfo: symbolPairInfo.trim(),
         entryTimeInfo,
         exitTimeInfo,
         primaryInterval: "15m",
+        timeZone: getBrowserTimeZone(),
         expectedDirection: expectedDirection || undefined,
         standardEntryPrice: parseOptionalNumber(standardEntryPrice),
         standardStopLossPrice: parseOptionalNumber(standardStopLossPrice),
@@ -103,24 +102,27 @@ export default function PracticalFlashcardCreatePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [entryTimeInfo, errorAlert, exitTimeInfo, expectedDirection, notes, orderFlowImageUrls, orderFlowRemark, playbookType, standardEntryPrice, standardStopLossPrice, standardTakeProfitPrice, successAlert, summary, symbolPairInfo, tagCodes, venue]);
+  }, [entryTimeInfo, errorAlert, exitTimeInfo, expectedDirection, notes, orderFlowImageUrls, orderFlowRemark, playbookType, standardEntryPrice, standardStopLossPrice, standardTakeProfitPrice, successAlert, summary, symbolPairInfo, tagCodes]);
 
   return (
-    <TradePageShell title="实操闪卡创建" subtitle="创建时拉取 Binance 公开 K 线并保存冻结快照" showAddButton={false}>
+    <TradePageShell title="实操闪卡创建" subtitle="创建时拉取 Binance U 本位合约公开 K 线并保存冻结快照" showAddButton={false}>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4 space-y-4">
               <Field label="行情源">
-                <Select value={venue} onValueChange={(value) => setVenue(value as PracticalFlashcardVenue)}>
-                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                <div className="flex h-9 items-center rounded-md border border-[#27272a] bg-[#1e1e1e] px-3 text-sm text-[#e5e7eb]">
+                  {PRACTICAL_FLASHCARD_LABELS.BINANCE_UM_FUTURES}
+                </div>
+              </Field>
+              <Field label="交易对 *">
+                <Select value={symbolPairInfo || EMPTY_SELECT_VALUE} onValueChange={(value) => setSymbolPairInfo(value === EMPTY_SELECT_VALUE ? "" : value)}>
+                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="选择 Binance 合约币对" /></SelectTrigger>
                   <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-                    {PRACTICAL_FLASHCARD_VENUES.map((item) => <SelectItem key={item} value={item}>{PRACTICAL_FLASHCARD_LABELS[item]}</SelectItem>)}
+                    <SelectItem value={EMPTY_SELECT_VALUE}>请选择</SelectItem>
+                    {PRACTICAL_FLASHCARD_BINANCE_UM_SYMBOLS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </Field>
-              <Field label="交易对">
-                <Input value={symbolPairInfo} onChange={(e) => setSymbolPairInfo(e.target.value)} placeholder="例：BTCUSDT / BTC/USDT" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
               </Field>
               <Field label="入场 / 考试开始时间">
                 <DateCalendarPicker analysisTime={entryTimeInfo} updateForm={(patch) => setEntryTimeInfo(patch.analysisTime)} placeholder="选择入场时间" />
@@ -196,7 +198,7 @@ export default function PracticalFlashcardCreatePage() {
           <div>
             <div className="text-sm font-semibold text-white">PF-M1 创建口径</div>
             <div className="mt-2 text-sm leading-6 text-[#a1a1aa]">
-              保存前会按入场时间向前 6 小时、离场时间向后 2 小时拉取 15m K 线，并把结果写入卡片快照。后续训练只读取本地快照。
+              保存前会固定使用 Binance U 本位合约 15m K 线，按入场时间向前 5 天、离场时间向后 2 小时拉取，并把结果写入卡片快照。当前可选币对：BTCUSDT、BTCUSDC、ETHUSDT、ETHUSDC。
             </div>
           </div>
           <Button onClick={handleSubmit} disabled={submitting} className="w-full bg-[#00c2b2] text-black hover:bg-[#009e91]">

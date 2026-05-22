@@ -1,5 +1,8 @@
-export const PRACTICAL_FLASHCARD_VENUES = ['BINANCE_SPOT', 'BINANCE_UM_FUTURES'] as const;
+export const PRACTICAL_FLASHCARD_VENUES = ['BINANCE_UM_FUTURES'] as const;
 export type PracticalFlashcardVenue = (typeof PRACTICAL_FLASHCARD_VENUES)[number];
+
+export const PRACTICAL_FLASHCARD_BINANCE_UM_SYMBOLS = ['BTCUSDT', 'BTCUSDC', 'ETHUSDT', 'ETHUSDC'] as const;
+export type PracticalFlashcardBinanceUmSymbol = (typeof PRACTICAL_FLASHCARD_BINANCE_UM_SYMBOLS)[number];
 
 export const PRACTICAL_FLASHCARD_DIRECTIONS = ['LONG', 'SHORT', 'NO_ENTRY'] as const;
 export type PracticalFlashcardDirection = (typeof PRACTICAL_FLASHCARD_DIRECTIONS)[number];
@@ -26,6 +29,7 @@ export type PracticalFlashcardCard = {
   venue: PracticalFlashcardVenue;
   symbolPairInfo: string;
   primaryInterval: PracticalFlashcardInterval;
+  timeZone?: string;
   entryTimeInfo: string;
   exitTimeInfo: string;
   snapshotStartTime: string;
@@ -50,7 +54,6 @@ export type PracticalFlashcardCard = {
 };
 
 export const PRACTICAL_FLASHCARD_LABELS: Record<string, string> = {
-  BINANCE_SPOT: 'Binance Spot',
   BINANCE_UM_FUTURES: 'Binance U 本位合约',
   ACTIVE: '可训练',
   DISABLED: '已停用',
