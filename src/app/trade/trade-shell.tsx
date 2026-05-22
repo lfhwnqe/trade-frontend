@@ -180,6 +180,22 @@ const tradeNavSections: NavSection[] = [
       },
     ],
   },
+  {
+    title: "实操闪卡",
+    icon: Layers,
+    items: [
+      {
+        title: "实操闪卡创建",
+        href: "/trade/practical-flashcard/create",
+        icon: Layers,
+      },
+      {
+        title: "实操闪卡管理",
+        href: "/trade/practical-flashcard/manage",
+        icon: ClipboardList,
+      },
+    ],
+  },
 ];
 
 const integrationItems: NavItem[] = [
