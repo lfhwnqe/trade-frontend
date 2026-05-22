@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Box, ChevronLeft, ChevronRight, ChevronsRight, Minus, MousePointer2, RotateCcw, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { Box, CheckCircle2, ChevronLeft, ChevronRight, ChevronsRight, Minus, MousePointer2, RotateCcw, Save, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import {
   CandlestickSeries,
   ColorType,
@@ -19,12 +19,18 @@ import {
 import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/components/common/alert";
-import { fetchPlaybookTypeOptions } from "../../../dictionary";
-import { getPracticalFlashcardCard } from "../../request";
+import {
+  createPracticalFlashcardAttemptTrade,
+  getPracticalFlashcardCard,
+  resolvePracticalFlashcardAttempt,
+  startPracticalFlashcardAttempt,
+} from "../../request";
 import {
   PRACTICAL_FLASHCARD_LABELS,
+  type PracticalFlashcardAttempt,
   type PracticalFlashcardCard,
   type PracticalFlashcardCandle,
+  type PracticalFlashcardTradeDirection,
 } from "../../types";
 
 type DrawingTool = "SELECT" | "RECT" | "HLINE" | "LONG_POSITION" | "SHORT_POSITION";
@@ -38,43 +44,168 @@ type DrawingPoint = { index: number; price: number };
 type RectHandle = "START_START" | "START_END" | "END_START" | "END_END";
 type PositionPriceField = "entryPrice" | "stopPrice" | "takeProfitPrice";
 type PositionLineHandle = "ENTRY" | "STOP" | "TAKE_PROFIT";
+type ReviewChoice = "CORRECT" | "WRONG";
+type OrderFlowReviewChoice = "NOT_USED" | "CORRECT" | "WRONG";
 
 export default function PracticalFlashcardReplayPage() {
   const params = useParams<{ cardId: string }>();
-  const [, errorAlert] = useAlert();
+  const [successAlert, errorAlert] = useAlert();
   const [card, setCard] = React.useState<PracticalFlashcardCard | null>(null);
+  const [attempt, setAttempt] = React.useState<PracticalFlashcardAttempt | null>(null);
   const [currentIndex, setCurrentIndex] = React.useState(0);
-  const [playbookOptions, setPlaybookOptions] = React.useState<Array<{ code: string; label: string }>>([]);
+  const [tradeDirection, setTradeDirection] = React.useState<PracticalFlashcardTradeDirection>("LONG");
+  const [stopLossPrice, setStopLossPrice] = React.useState("");
+  const [takeProfitPrice, setTakeProfitPrice] = React.useState("");
+  const [drawings, setDrawings] = React.useState<DrawingShape[]>([]);
+  const [preTradeMarketStructureAnalysis, setPreTradeMarketStructureAnalysis] = React.useState("");
+  const [preTradePriceActionAnalysis, setPreTradePriceActionAnalysis] = React.useState("");
+  const [preTradeOrderFlowAnalysis, setPreTradeOrderFlowAnalysis] = React.useState("");
+  const [marketStructureReview, setMarketStructureReview] = React.useState<ReviewChoice>("CORRECT");
+  const [priceActionReview, setPriceActionReview] = React.useState<ReviewChoice>("CORRECT");
+  const [orderFlowReview, setOrderFlowReview] = React.useState<OrderFlowReviewChoice>("NOT_USED");
+  const [riskRewardReview, setRiskRewardReview] = React.useState<ReviewChoice>("CORRECT");
+  const [reviewNotes, setReviewNotes] = React.useState("");
+  const [reviewSummary, setReviewSummary] = React.useState("");
+  const [submittingTrade, setSubmittingTrade] = React.useState(false);
+  const [resolvingAttempt, setResolvingAttempt] = React.useState(false);
+  const startedCardIdRef = React.useRef<string | null>(null);
+  const appliedPositionSourceRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     const cardId = params?.cardId;
     if (!cardId || typeof cardId !== "string") return;
+    if (startedCardIdRef.current === cardId) return;
+    startedCardIdRef.current = cardId;
+    setAttempt(null);
     getPracticalFlashcardCard(cardId)
       .then((res) => {
         setCard(res);
         setCurrentIndex(clampIndex(res.initialVisibleCandleIndex, res.candles.length));
+        return startPracticalFlashcardAttempt(res.cardId).then((attemptRes) => {
+          setAttempt(attemptRes.attempt);
+        });
       })
       .catch((error) => {
+        startedCardIdRef.current = null;
         errorAlert(error instanceof Error ? error.message : "获取实操闪卡失败");
       });
   }, [errorAlert, params]);
 
-  React.useEffect(() => {
-    let mounted = true;
-    fetchPlaybookTypeOptions().then((items) => mounted && setPlaybookOptions(items)).catch(() => mounted && setPlaybookOptions([]));
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const playbookLabel = React.useMemo(() => {
-    if (!card?.playbookType) return "--";
-    return playbookOptions.find((item) => item.code === card.playbookType)?.label || card.playbookType;
-  }, [card?.playbookType, playbookOptions]);
-
   const resultIndex = card?.resultCandleIndex ?? null;
   const maxIndex = Math.max((card?.candles.length || 1) - 1, 0);
-  const progressLabel = card ? `${currentIndex + 1} / ${card.candles.length}` : "--";
+  const currentCandle = card ? card.candles[clampIndex(currentIndex, card.candles.length)] : undefined;
+  const currentClose = currentCandle?.close;
+  const matchingPosition = React.useMemo(
+    () => findLatestPositionDrawing(drawings, tradeDirection),
+    [drawings, tradeDirection],
+  );
+
+  React.useEffect(() => {
+    if (!currentClose || attempt?.tradeOpenedCandleIndex !== undefined) return;
+    if (matchingPosition) return;
+    const risk = currentClose * 0.01;
+    if (tradeDirection === "LONG") {
+      setStopLossPrice(formatInputNumber(currentClose - risk));
+      setTakeProfitPrice(formatInputNumber(currentClose + risk * 2));
+    } else {
+      setStopLossPrice(formatInputNumber(currentClose + risk));
+      setTakeProfitPrice(formatInputNumber(currentClose - risk * 2));
+    }
+  }, [attempt?.tradeOpenedCandleIndex, currentClose, matchingPosition, tradeDirection]);
+
+  React.useEffect(() => {
+    if (!matchingPosition) {
+      appliedPositionSourceRef.current = null;
+      return;
+    }
+    if (attempt?.tradeOpenedCandleIndex !== undefined) return;
+    const source = `${tradeDirection}:${matchingPosition.id}:${matchingPosition.stopPrice}:${matchingPosition.takeProfitPrice}`;
+    if (appliedPositionSourceRef.current === source) return;
+    appliedPositionSourceRef.current = source;
+    setStopLossPrice(formatInputNumber(matchingPosition.stopPrice));
+    setTakeProfitPrice(formatInputNumber(matchingPosition.takeProfitPrice));
+  }, [attempt?.tradeOpenedCandleIndex, matchingPosition, tradeDirection]);
+
+  const handleConfirmTrade = React.useCallback(async () => {
+    if (!card || !attempt) return;
+    if (!preTradeMarketStructureAnalysis.trim()) {
+      errorAlert("确认交易前必须填写市场结构分析");
+      return;
+    }
+    const stop = Number(stopLossPrice);
+    const takeProfit = Number(takeProfitPrice);
+    if (!Number.isFinite(stop) || !Number.isFinite(takeProfit)) {
+      errorAlert("请填写有效的止损价和止盈价");
+      return;
+    }
+    setSubmittingTrade(true);
+    try {
+      const updated = await createPracticalFlashcardAttemptTrade(attempt.attemptId, {
+        direction: tradeDirection,
+        currentCandleIndex: currentIndex,
+        stopLossPrice: stop,
+        takeProfitPrice: takeProfit,
+        drawingSnapshot: readDrawingSnapshot(card.cardId),
+        preTradeMarketStructureAnalysis,
+        preTradePriceActionAnalysis,
+        preTradeOrderFlowAnalysis,
+      });
+      setAttempt(updated);
+      successAlert("交易已确认");
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "确认交易失败");
+    } finally {
+      setSubmittingTrade(false);
+    }
+  }, [
+    attempt,
+    card,
+    currentIndex,
+    errorAlert,
+    preTradeMarketStructureAnalysis,
+    preTradeOrderFlowAnalysis,
+    preTradePriceActionAnalysis,
+    stopLossPrice,
+    successAlert,
+    takeProfitPrice,
+    tradeDirection,
+  ]);
+
+  const handleResolveAttempt = React.useCallback(async () => {
+    if (!card || !attempt) return;
+    setResolvingAttempt(true);
+    try {
+      const result = await resolvePracticalFlashcardAttempt(attempt.attemptId, {
+        finalCandleIndex: currentIndex,
+        marketStructureAnalysisCorrect: marketStructureReview === "CORRECT",
+        priceActionAnalysisCorrect: priceActionReview === "CORRECT",
+        orderFlowAnalysisUsed: orderFlowReview !== "NOT_USED",
+        orderFlowAnalysisCorrect: orderFlowReview === "NOT_USED" ? undefined : orderFlowReview === "CORRECT",
+        riskRewardSetupCorrect: riskRewardReview === "CORRECT",
+        drawingSnapshot: readDrawingSnapshot(card.cardId),
+        notes: reviewNotes,
+        summary: reviewSummary,
+      });
+      setAttempt(result.attempt);
+      successAlert("训练已完成");
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "完成训练失败");
+    } finally {
+      setResolvingAttempt(false);
+    }
+  }, [
+    attempt,
+    card,
+    currentIndex,
+    errorAlert,
+    marketStructureReview,
+    orderFlowReview,
+    priceActionReview,
+    reviewNotes,
+    reviewSummary,
+    riskRewardReview,
+    successAlert,
+  ]);
 
   if (!card) {
     return (
@@ -119,7 +250,6 @@ export default function PracticalFlashcardReplayPage() {
             <div className="border-b border-[#27272a] px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
                 <div className="font-medium text-[#e5e7eb]">{card.symbolPairInfo}</div>
-                <div className="text-[#a1a1aa]">当前帧 {progressLabel}</div>
               </div>
               <input
                 type="range"
@@ -134,20 +264,55 @@ export default function PracticalFlashcardReplayPage() {
               card={card}
               candles={card.candles}
               currentIndex={currentIndex}
+              onDrawingsChange={setDrawings}
             />
           </section>
 
           <aside className="space-y-4">
             <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
-              <div className="text-sm font-semibold text-white">卡片信息</div>
-              <div className="mt-4 space-y-3 text-sm">
-                <InfoRow label="剧本" value={playbookLabel} />
-                <InfoRow label="行情源" value={PRACTICAL_FLASHCARD_LABELS[card.venue] || card.venue} />
-                <InfoRow label="状态" value={PRACTICAL_FLASHCARD_LABELS[card.status] || card.status} />
-                <InfoRow label="入场时间" value={card.entryTimeInfo} />
-                <InfoRow label="结果时间" value={card.exitTimeInfo} />
-                <InfoRow label="冻结范围" value={`${card.snapshotStartTime} -> ${card.snapshotEndTime}`} />
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold text-white">交易执行</div>
+                <div className="text-xs text-[#a1a1aa]">当前收盘 {formatPrice(currentClose)}</div>
               </div>
+              {attempt ? (
+                <div className="mt-4 space-y-3">
+                  {attempt.tradeOpenedCandleIndex === undefined ? (
+                    <PreTradeAnalysisForm
+                      marketStructure={preTradeMarketStructureAnalysis}
+                      priceAction={preTradePriceActionAnalysis}
+                      orderFlow={preTradeOrderFlowAnalysis}
+                      onMarketStructureChange={setPreTradeMarketStructureAnalysis}
+                      onPriceActionChange={setPreTradePriceActionAnalysis}
+                      onOrderFlowChange={setPreTradeOrderFlowAnalysis}
+                    />
+                  ) : null}
+                  <div className="grid grid-cols-2 gap-2">
+                    <TradeDirectionButton direction="LONG" active={tradeDirection === "LONG"} disabled={attempt.tradeOpenedCandleIndex !== undefined} onClick={() => setTradeDirection("LONG")} />
+                    <TradeDirectionButton direction="SHORT" active={tradeDirection === "SHORT"} disabled={attempt.tradeOpenedCandleIndex !== undefined} onClick={() => setTradeDirection("SHORT")} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <PriceField label="止损价" value={stopLossPrice} disabled={attempt.tradeOpenedCandleIndex !== undefined} onChange={setStopLossPrice} />
+                    <PriceField label="止盈价" value={takeProfitPrice} disabled={attempt.tradeOpenedCandleIndex !== undefined} onChange={setTakeProfitPrice} />
+                  </div>
+                  {attempt.tradeOpenedCandleIndex !== undefined ? (
+                    <div className="rounded-lg border border-[#164e63] bg-[#083344]/60 p-3 text-xs text-[#bae6fd]">
+                      已确认 {attempt.tradeDirection ? PRACTICAL_FLASHCARD_LABELS[attempt.tradeDirection] : "--"}，入场价 {formatPrice(attempt.entryPrice)}，计划 RR {formatRatio(attempt.plannedRr)}
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      disabled={submittingTrade || !attempt || currentClose === undefined}
+                      onClick={handleConfirmTrade}
+                      className="w-full gap-2 bg-[#00c2b2] text-[#031313] hover:bg-[#14d6c5] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <TrendingUp className="size-4" />
+                      按当前收盘价确认交易
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-lg border border-[#27272a] bg-[#18181b] p-3 text-sm text-[#a1a1aa]">正在创建本次训练记录...</div>
+              )}
             </section>
 
             <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
@@ -161,14 +326,51 @@ export default function PracticalFlashcardReplayPage() {
             </section>
 
             <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
-              <div className="text-sm font-semibold text-white">快照状态</div>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <Metric label="冻结 K 线" value={`${card.candles.length} 根`} />
-                <Metric label="当前可见" value={`${currentIndex + 1} 根`} />
-                <Metric label="未来隐藏" value={`${Math.max(card.candles.length - currentIndex - 1, 0)} 根`} />
-                <Metric label="回放起点" value={`第 ${clampIndex(card.initialVisibleCandleIndex, card.candles.length) + 1} 根`} />
-              </div>
+              <div className="text-sm font-semibold text-white">训练结算</div>
+              {attempt?.status === "RESOLVED" ? (
+                <div className="mt-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <Metric label="胜负" value={attempt.isWin ? "盈利" : "亏损"} />
+                    <Metric label="实现 R" value={formatRatio(attempt.realizedR)} />
+                    <Metric label="最大有利 R" value={formatRatio(attempt.maxFavorableR)} />
+                    <Metric label="最大不利 R" value={formatRatio(attempt.maxAdverseR)} />
+                  </div>
+                  <div className="flex items-center gap-2 rounded-lg border border-[#14532d] bg-[#052e16]/70 p-3 text-sm text-[#bbf7d0]">
+                    <CheckCircle2 className="size-4" />
+                    本次实操训练已保存
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <ReviewToggle label="市场结构" value={marketStructureReview} onChange={setMarketStructureReview} />
+                  <ReviewToggle label="价格行为" value={priceActionReview} onChange={setPriceActionReview} />
+                  <OrderFlowReviewToggle value={orderFlowReview} onChange={setOrderFlowReview} />
+                  <ReviewToggle label="止盈止损" value={riskRewardReview} onChange={setRiskRewardReview} />
+                  <textarea
+                    value={reviewNotes}
+                    onChange={(event) => setReviewNotes(event.target.value)}
+                    placeholder="备注"
+                    className="min-h-[72px] w-full rounded-lg border border-[#27272a] bg-[#18181b] px-3 py-2 text-sm text-[#e5e7eb] outline-none placeholder:text-[#52525b] focus:border-[#00c2b2]"
+                  />
+                  <textarea
+                    value={reviewSummary}
+                    onChange={(event) => setReviewSummary(event.target.value)}
+                    placeholder="总结"
+                    className="min-h-[72px] w-full rounded-lg border border-[#27272a] bg-[#18181b] px-3 py-2 text-sm text-[#e5e7eb] outline-none placeholder:text-[#52525b] focus:border-[#00c2b2]"
+                  />
+                  <Button
+                    type="button"
+                    disabled={!attempt || attempt.tradeOpenedCandleIndex === undefined || resolvingAttempt}
+                    onClick={handleResolveAttempt}
+                    className="w-full gap-2 bg-[#00c2b2] text-[#031313] hover:bg-[#14d6c5] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Save className="size-4" />
+                    完成训练并保存
+                  </Button>
+                </div>
+              )}
             </section>
+
           </aside>
         </div>
       </div>
@@ -180,10 +382,12 @@ function CandlestickReplayChart({
   card,
   candles,
   currentIndex,
+  onDrawingsChange,
 }: {
   card: PracticalFlashcardCard;
   candles: PracticalFlashcardCandle[];
   currentIndex: number;
+  onDrawingsChange: (drawings: DrawingShape[]) => void;
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const chartRef = React.useRef<IChartApi | null>(null);
@@ -312,13 +516,16 @@ function CandlestickReplayChart({
     setPendingRectStart(null);
     try {
       const raw = window.localStorage.getItem(getDrawingStorageKey(card.cardId));
-      setDrawings(raw ? parseStoredDrawings(raw) : []);
+      const nextDrawings = raw ? parseStoredDrawings(raw) : [];
+      setDrawings(nextDrawings);
+      onDrawingsChange(nextDrawings);
     } catch {
       setDrawings([]);
+      onDrawingsChange([]);
     } finally {
       drawingsHydratedRef.current = true;
     }
-  }, [card.cardId]);
+  }, [card.cardId, onDrawingsChange]);
 
   React.useEffect(() => {
     if (!drawingsHydratedRef.current) return;
@@ -327,7 +534,8 @@ function CandlestickReplayChart({
     } catch {
       // Drawing persistence is best effort; replay itself should keep working.
     }
-  }, [card.cardId, drawings]);
+    onDrawingsChange(drawings);
+  }, [card.cardId, drawings, onDrawingsChange]);
 
   const handleDrawingClick = React.useCallback((point: DrawingPoint) => {
     if (activeTool === "SELECT") {
@@ -479,9 +687,6 @@ function CandlestickReplayChart({
           onUpdatePositionPrice={updatePositionPrice}
           version={viewportVersion}
         />
-        <div className="pointer-events-none absolute left-4 top-4 rounded-md border border-[#27272a] bg-[#111827]/90 px-3 py-2 text-xs text-[#d4d4d8]">
-          已揭示 {visibleCandles.length} 根，未来隐藏 {Math.max(candles.length - safeCurrentIndex - 1, 0)} 根
-        </div>
       </div>
     </div>
   );
@@ -758,6 +963,14 @@ function findNearestDrawingId(drawings: DrawingShape[], point: DrawingPoint) {
   return nearest && nearest.score < Number.POSITIVE_INFINITY ? nearest.id : null;
 }
 
+function findLatestPositionDrawing(drawings: DrawingShape[], direction: PracticalFlashcardTradeDirection) {
+  const positions = drawings.filter(
+    (drawing): drawing is Extract<DrawingShape, { type: "POSITION" }> =>
+      drawing.type === "POSITION" && drawing.direction === direction,
+  );
+  return positions[positions.length - 1] || null;
+}
+
 function getDrawingDistance(drawing: DrawingShape, point: DrawingPoint) {
   if (drawing.type === "HLINE") return Math.abs(drawing.price - point.price);
   if (drawing.type === "RECT") {
@@ -791,6 +1004,20 @@ function parseStoredDrawings(raw: string): DrawingShape[] {
   return parsed.filter(isDrawingShape);
 }
 
+function readDrawingSnapshot(cardId: string): Record<string, unknown> | undefined {
+  try {
+    const raw = window.localStorage.getItem(getDrawingStorageKey(cardId));
+    const drawings = raw ? parseStoredDrawings(raw) : [];
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      drawings,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 function isDrawingShape(value: unknown): value is DrawingShape {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<DrawingShape>;
@@ -822,6 +1049,11 @@ function clampIndex(index: number | undefined, length: number) {
 function formatPrice(value?: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "--";
   return value.toLocaleString("en-US", { maximumFractionDigits: 8 });
+}
+
+function formatRatio(value?: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
+  return value.toFixed(2);
 }
 
 function ToolButton({
@@ -871,17 +1103,172 @@ function PositionPriceInput({
   );
 }
 
-function formatInputNumber(value: number) {
-  return Number.isFinite(value) ? Number(value.toFixed(8)).toString() : "";
+function PriceField({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs text-[#a1a1aa]">{label}</span>
+      <input
+        type="number"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 h-9 w-full rounded-md border border-[#27272a] bg-[#18181b] px-2 text-sm text-[#e5e7eb] outline-none focus:border-[#00c2b2] disabled:cursor-not-allowed disabled:opacity-60"
+      />
+    </label>
+  );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function PreTradeAnalysisForm({
+  marketStructure,
+  priceAction,
+  orderFlow,
+  onMarketStructureChange,
+  onPriceActionChange,
+  onOrderFlowChange,
+}: {
+  marketStructure: string;
+  priceAction: string;
+  orderFlow: string;
+  onMarketStructureChange: (value: string) => void;
+  onPriceActionChange: (value: string) => void;
+  onOrderFlowChange: (value: string) => void;
+}) {
   return (
-    <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-3">
-      <div className="text-[#71717a]">{label}</div>
-      <div className="break-words text-[#e5e7eb]">{value || "--"}</div>
+    <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+      <AnalysisField
+        label="市场结构"
+        required
+        value={marketStructure}
+        onChange={onMarketStructureChange}
+      />
+      <AnalysisField
+        label="价格行为"
+        value={priceAction}
+        onChange={onPriceActionChange}
+      />
+      <AnalysisField
+        label="足迹图分析"
+        value={orderFlow}
+        onChange={onOrderFlowChange}
+      />
     </div>
   );
+}
+
+function AnalysisField({
+  label,
+  required,
+  value,
+  onChange,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs text-[#a1a1aa]">
+        {label}
+        {required ? <span className="text-[#fb7185]"> *</span> : null}
+      </span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 min-h-[58px] w-full rounded-md border border-[#27272a] bg-[#121212] px-2 py-2 text-sm text-[#e5e7eb] outline-none placeholder:text-[#52525b] focus:border-[#00c2b2]"
+      />
+    </label>
+  );
+}
+
+function TradeDirectionButton({
+  direction,
+  active,
+  disabled,
+  onClick,
+}: {
+  direction: PracticalFlashcardTradeDirection;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      disabled={disabled}
+      onClick={onClick}
+      className={`gap-2 border disabled:cursor-not-allowed disabled:opacity-60 ${active ? "border-[#00c2b2] bg-[#00c2b2]/15 text-[#00c2b2]" : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]"}`}
+    >
+      {direction === "LONG" ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
+      {PRACTICAL_FLASHCARD_LABELS[direction]}
+    </Button>
+  );
+}
+
+function ReviewToggle({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: ReviewChoice;
+  onChange: (value: ReviewChoice) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1 text-xs text-[#a1a1aa]">{label}</div>
+      <div className="grid grid-cols-2 gap-2">
+        <ReviewButton active={value === "CORRECT"} onClick={() => onChange("CORRECT")} label="正确" />
+        <ReviewButton active={value === "WRONG"} onClick={() => onChange("WRONG")} label="错误" />
+      </div>
+    </div>
+  );
+}
+
+function OrderFlowReviewToggle({
+  value,
+  onChange,
+}: {
+  value: OrderFlowReviewChoice;
+  onChange: (value: OrderFlowReviewChoice) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1 text-xs text-[#a1a1aa]">足迹图分析</div>
+      <div className="grid grid-cols-3 gap-2">
+        <ReviewButton active={value === "NOT_USED"} onClick={() => onChange("NOT_USED")} label="未使用" />
+        <ReviewButton active={value === "CORRECT"} onClick={() => onChange("CORRECT")} label="正确" />
+        <ReviewButton active={value === "WRONG"} onClick={() => onChange("WRONG")} label="错误" />
+      </div>
+    </div>
+  );
+}
+
+function ReviewButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-8 rounded-md border text-xs ${active ? "border-[#00c2b2] bg-[#00c2b2]/15 text-[#5eead4]" : "border-[#27272a] bg-[#18181b] text-[#a1a1aa] hover:border-[#3f3f46] hover:text-[#e5e7eb]"}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function formatInputNumber(value: number) {
+  return Number.isFinite(value) ? Number(value.toFixed(8)).toString() : "";
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

@@ -6,9 +6,11 @@ export type PracticalFlashcardBinanceUmSymbol = (typeof PRACTICAL_FLASHCARD_BINA
 
 export const PRACTICAL_FLASHCARD_DIRECTIONS = ['LONG', 'SHORT', 'NO_ENTRY'] as const;
 export type PracticalFlashcardDirection = (typeof PRACTICAL_FLASHCARD_DIRECTIONS)[number];
+export type PracticalFlashcardTradeDirection = Exclude<PracticalFlashcardDirection, 'NO_ENTRY'>;
 
 export type PracticalFlashcardStatus = 'ACTIVE' | 'DISABLED';
 export type PracticalFlashcardInterval = '15m';
+export type PracticalFlashcardAttemptStatus = 'IN_PROGRESS' | 'RESOLVED' | 'ABANDONED';
 
 export type PracticalFlashcardCandle = {
   openTime: number;
@@ -51,6 +53,57 @@ export type PracticalFlashcardCard = {
   sourceTradeFlashcardId?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type PracticalFlashcardAttempt = {
+  id: string;
+  userId: string;
+  cardId: string;
+  entityType: 'PRACTICAL_FLASHCARD_ATTEMPT';
+  attemptId: string;
+  targetCardId: string;
+  status: PracticalFlashcardAttemptStatus;
+  decision?: PracticalFlashcardDirection;
+  tradeOpenedCandleIndex?: number;
+  tradeDirection?: PracticalFlashcardTradeDirection;
+  entryPrice?: number;
+  stopLossPrice?: number;
+  takeProfitPrice?: number;
+  plannedRr?: number;
+  preTradeMarketStructureAnalysis?: string;
+  preTradePriceActionAnalysis?: string;
+  preTradeOrderFlowAnalysis?: string;
+  realizedR?: number;
+  isWin?: boolean;
+  maxFavorableR?: number;
+  maxAdverseR?: number;
+  finalCandleIndex?: number;
+  currentCandleIndex?: number;
+  drawingSnapshot?: unknown;
+  usedOrderFlowReveal?: boolean;
+  orderFlowRevealEvents?: Array<{ imageUrl: string; candleIndex: number; revealedAt: string }>;
+  marketStructureAnalysisCorrect?: boolean;
+  priceActionAnalysisCorrect?: boolean;
+  orderFlowAnalysisCorrect?: boolean;
+  orderFlowAnalysisUsed?: boolean;
+  riskRewardSetupCorrect?: boolean;
+  mistakeReasons?: string[];
+  notes?: string;
+  summary?: string;
+  startedAt: string;
+  resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PracticalFlashcardRunningStats = {
+  attemptCount: number;
+  resolvedCount: number;
+  winRate: number | null;
+  avgRealizedR: number | null;
+  totalRealizedR: number;
+  avgPlannedRr: number | null;
+  orderFlowRevealRate: number | null;
 };
 
 export const PRACTICAL_FLASHCARD_LABELS: Record<string, string> = {

@@ -1,8 +1,11 @@
 import { fetchWithAuth } from '@/utils/fetchWithAuth';
 import type {
+  PracticalFlashcardAttempt,
   PracticalFlashcardCard,
   PracticalFlashcardDirection,
+  PracticalFlashcardRunningStats,
   PracticalFlashcardStatus,
+  PracticalFlashcardTradeDirection,
   PracticalFlashcardVenue,
 } from './types';
 
@@ -42,6 +45,30 @@ export type UpdatePracticalFlashcardPayload = {
   orderFlowRemark?: string | null;
   notes?: string | null;
   summary?: string | null;
+};
+
+export type CreatePracticalFlashcardAttemptTradePayload = {
+  direction: PracticalFlashcardTradeDirection;
+  currentCandleIndex: number;
+  stopLossPrice: number;
+  takeProfitPrice: number;
+  drawingSnapshot?: Record<string, unknown>;
+  preTradeMarketStructureAnalysis: string;
+  preTradePriceActionAnalysis?: string;
+  preTradeOrderFlowAnalysis?: string;
+};
+
+export type ResolvePracticalFlashcardAttemptPayload = {
+  finalCandleIndex?: number;
+  marketStructureAnalysisCorrect: boolean;
+  priceActionAnalysisCorrect: boolean;
+  orderFlowAnalysisUsed: boolean;
+  orderFlowAnalysisCorrect?: boolean;
+  riskRewardSetupCorrect: boolean;
+  drawingSnapshot?: Record<string, unknown>;
+  mistakeReasons?: string[];
+  notes?: string;
+  summary?: string;
 };
 
 export function getBrowserTimeZone() {
@@ -137,4 +164,57 @@ export async function updatePracticalFlashcardCard(
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '更新实操闪卡失败');
   return data.data as PracticalFlashcardCard;
+}
+
+export async function startPracticalFlashcardAttempt(
+  cardId: string,
+): Promise<{ attemptId: string; attempt: PracticalFlashcardAttempt; card: PracticalFlashcardCard }> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: 'practical-flashcard/attempts/start',
+      actualMethod: 'POST',
+    },
+    actualBody: { cardId },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '开始实操训练失败');
+  return data.data as { attemptId: string; attempt: PracticalFlashcardAttempt; card: PracticalFlashcardCard };
+}
+
+export async function createPracticalFlashcardAttemptTrade(
+  attemptId: string,
+  payload: CreatePracticalFlashcardAttemptTradePayload,
+): Promise<PracticalFlashcardAttempt> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/attempts/${attemptId}/trade`,
+      actualMethod: 'POST',
+    },
+    actualBody: sanitizePayload(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '确认交易失败');
+  return data.data as PracticalFlashcardAttempt;
+}
+
+export async function resolvePracticalFlashcardAttempt(
+  attemptId: string,
+  payload: ResolvePracticalFlashcardAttemptPayload,
+): Promise<{ attempt: PracticalFlashcardAttempt; runningStats: PracticalFlashcardRunningStats }> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/attempts/${attemptId}/resolve`,
+      actualMethod: 'POST',
+    },
+    actualBody: sanitizePayload(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '完成训练失败');
+  return data.data as { attempt: PracticalFlashcardAttempt; runningStats: PracticalFlashcardRunningStats };
 }
