@@ -2,6 +2,7 @@ import { fetchWithAuth } from '@/utils/fetchWithAuth';
 import type {
   PracticalFlashcardCard,
   PracticalFlashcardDirection,
+  PracticalFlashcardStatus,
   PracticalFlashcardVenue,
 } from './types';
 
@@ -23,6 +24,20 @@ export type CreatePracticalFlashcardPayload = {
   orderFlowRemark?: string;
   notes?: string;
   summary?: string;
+};
+
+export type UpdatePracticalFlashcardPayload = {
+  status?: PracticalFlashcardStatus;
+  expectedDirection?: PracticalFlashcardDirection | null;
+  standardEntryPrice?: number | null;
+  standardStopLossPrice?: number | null;
+  standardTakeProfitPrice?: number | null;
+  playbookType?: string;
+  tagCodes?: string[];
+  orderFlowImageUrls?: string[];
+  orderFlowRemark?: string | null;
+  notes?: string | null;
+  summary?: string | null;
 };
 
 function sanitizePayload<T extends object>(payload: T): Record<string, unknown> {
@@ -81,4 +96,37 @@ export async function listPracticalFlashcardCards(params?: {
     totalCount: typeof data.data?.totalCount === 'number' ? data.data.totalCount : 0,
     nextCursor: typeof data.data?.nextCursor === 'string' ? data.data.nextCursor : null,
   };
+}
+
+export async function getPracticalFlashcardCard(cardId: string): Promise<PracticalFlashcardCard> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/cards/${cardId}`,
+      actualMethod: 'GET',
+    },
+    actualBody: {},
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '获取实操闪卡失败');
+  return data.data as PracticalFlashcardCard;
+}
+
+export async function updatePracticalFlashcardCard(
+  cardId: string,
+  payload: UpdatePracticalFlashcardPayload,
+): Promise<PracticalFlashcardCard> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/cards/${cardId}`,
+      actualMethod: 'PATCH',
+    },
+    actualBody: Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '更新实操闪卡失败');
+  return data.data as PracticalFlashcardCard;
 }
