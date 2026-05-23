@@ -259,7 +259,7 @@ export default function PracticalFlashcardReplayPage() {
       const result = await resolvePracticalFlashcardAttempt(attempt.attemptId, {
         marketStructureAnalysisCorrect: marketStructureReview === "CORRECT",
         priceActionAnalysisCorrect: priceActionReview === "CORRECT",
-        orderFlowAnalysisUsed: orderFlowReview !== "NOT_USED" && orderFlowReview !== "",
+        orderFlowAnalysisUsed: orderFlowReview !== "NOT_USED",
         orderFlowAnalysisCorrect:
           orderFlowReview === "CORRECT" || orderFlowReview === "WRONG"
             ? orderFlowReview === "CORRECT"
@@ -562,7 +562,7 @@ function CandlestickReplayChart({
   const [drawings, setDrawings] = React.useState<DrawingShape[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = React.useState<string | null>(null);
   const [pendingRectStart, setPendingRectStart] = React.useState<DrawingPoint | null>(null);
-  const [viewportVersion, setViewportVersion] = React.useState(0);
+  const [, setViewportVersion] = React.useState(0);
   const drawingsHydratedRef = React.useRef(false);
   const safeCurrentIndex = clampIndex(currentIndex, candles.length);
   const browserTimeZone = React.useMemo(getBrowserTimeZone, []);
@@ -849,14 +849,12 @@ function CandlestickReplayChart({
           selectedDrawingId={selectedDrawingId}
           onUpdateRectHandle={updateRectHandle}
           onUpdatePositionPrice={updatePositionPrice}
-          version={viewportVersion}
         />
         <TradeExecutionMarkers
           chart={chartRef.current}
           series={seriesRef.current}
           candles={candles}
           attempt={attempt}
-          version={viewportVersion}
         />
       </div>
     </div>
@@ -868,13 +866,11 @@ function TradeExecutionMarkers({
   series,
   candles,
   attempt,
-  version: _version,
 }: {
   chart: IChartApi | null;
   series: ISeriesApi<"Candlestick"> | null;
   candles: PracticalFlashcardCandle[];
   attempt: PracticalFlashcardAttempt | null;
-  version: number;
 }) {
   if (!chart || !series || !attempt || attempt.tradeOpenedCandleIndex === undefined) return null;
   const paneSize = chart.paneSize();
@@ -924,7 +920,6 @@ function DrawingOverlay({
   selectedDrawingId,
   onUpdateRectHandle,
   onUpdatePositionPrice,
-  version: _version,
 }: {
   chart: IChartApi | null;
   series: ISeriesApi<"Candlestick"> | null;
@@ -932,7 +927,6 @@ function DrawingOverlay({
   selectedDrawingId: string | null;
   onUpdateRectHandle: (id: string, handle: RectHandle, point: DrawingPoint) => void;
   onUpdatePositionPrice: (id: string, field: PositionPriceField, value: number) => void;
-  version: number;
 }) {
   const svgRef = React.useRef<SVGSVGElement | null>(null);
   const [draggingHandle, setDraggingHandle] = React.useState<
