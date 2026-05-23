@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Box, CheckCircle2, ChevronLeft, ChevronRight, ChevronsRight, Minus, MousePointer2, RotateCcw, Save, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { Box, CheckCircle2, ChevronLeft, ChevronRight, ChevronsRight, Images, Minus, MousePointer2, RotateCcw, Save, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import {
   CandlestickSeries,
   ColorType,
@@ -18,6 +18,7 @@ import {
 } from "lightweight-charts";
 import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAlert } from "@/components/common/alert";
 import {
   createPracticalFlashcardAttemptTrade,
@@ -67,6 +68,8 @@ export default function PracticalFlashcardReplayPage() {
   const [riskRewardReview, setRiskRewardReview] = React.useState<ReviewChoice>("CORRECT");
   const [reviewNotes, setReviewNotes] = React.useState("");
   const [reviewSummary, setReviewSummary] = React.useState("");
+  const [revealedOrderFlowIndex, setRevealedOrderFlowIndex] = React.useState<number | null>(null);
+  const [previewOrderFlowUrl, setPreviewOrderFlowUrl] = React.useState<string | null>(null);
   const [submittingTrade, setSubmittingTrade] = React.useState(false);
   const [resolvingAttempt, setResolvingAttempt] = React.useState(false);
   const startedCardIdRef = React.useRef<string | null>(null);
@@ -109,12 +112,31 @@ export default function PracticalFlashcardReplayPage() {
 
   const resultIndex = card?.resultCandleIndex ?? null;
   const maxIndex = Math.max((card?.candles.length || 1) - 1, 0);
+  const orderFlowImageUrls = React.useMemo(() => card?.orderFlowImageUrls?.filter(Boolean) || [], [card?.orderFlowImageUrls]);
+  const revealedOrderFlowUrl = revealedOrderFlowIndex === null ? null : orderFlowImageUrls[revealedOrderFlowIndex] || null;
   const currentCandle = card ? card.candles[clampIndex(currentIndex, card.candles.length)] : undefined;
   const currentClose = currentCandle?.close;
   const matchingPosition = React.useMemo(
     () => findLatestPositionDrawing(drawings, tradeDirection),
     [drawings, tradeDirection],
   );
+
+  React.useEffect(() => {
+    if (revealedOrderFlowIndex !== null && revealedOrderFlowIndex >= orderFlowImageUrls.length) {
+      setRevealedOrderFlowIndex(orderFlowImageUrls.length ? 0 : null);
+    }
+  }, [orderFlowImageUrls.length, revealedOrderFlowIndex]);
+
+  const handleRevealNextOrderFlowImage = React.useCallback(() => {
+    if (orderFlowImageUrls.length === 0) {
+      errorAlert("当前实操闪卡没有足迹图附件");
+      return;
+    }
+    setRevealedOrderFlowIndex((value) => {
+      if (value === null) return 0;
+      return (value + 1) % orderFlowImageUrls.length;
+    });
+  }, [errorAlert, orderFlowImageUrls.length]);
 
   React.useEffect(() => {
     if (!currentClose || attempt?.tradeOpenedCandleIndex !== undefined) return;
@@ -239,6 +261,16 @@ export default function PracticalFlashcardReplayPage() {
             <Link href="/trade/practical-flashcard/manage" prefetch={false}>返回管理页</Link>
           </Button>
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              disabled={orderFlowImageUrls.length === 0}
+              onClick={handleRevealNextOrderFlowImage}
+              className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Images className="size-4" />
+              {revealedOrderFlowIndex === null ? "查看足迹图" : "下一张足迹图"}
+              {orderFlowImageUrls.length ? <span className="text-xs text-[#a1a1aa]">{revealedOrderFlowIndex === null ? `0/${orderFlowImageUrls.length}` : `${revealedOrderFlowIndex + 1}/${orderFlowImageUrls.length}`}</span> : null}
+            </Button>
             <Button variant="secondary" disabled={currentIndex <= 0} onClick={() => setCurrentIndex((value) => Math.max(value - 1, 0))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
               <ChevronLeft className="size-4" />
               上一帧
@@ -260,6 +292,42 @@ export default function PracticalFlashcardReplayPage() {
             </Button>
           </div>
         </div>
+
+        {revealedOrderFlowUrl ? (
+          <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#101010]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#27272a] px-4 py-3">
+              <div>
+                <div className="text-sm font-semibold text-white">足迹图附件 {revealedOrderFlowIndex! + 1}/{orderFlowImageUrls.length}</div>
+                {card.orderFlowRemark ? <div className="mt-1 text-xs text-[#a1a1aa]">{card.orderFlowRemark}</div> : null}
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleRevealNextOrderFlowImage}
+                className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]"
+              >
+                <ChevronRight className="size-4" />
+                下一张
+              </Button>
+            </div>
+            <div className="flex max-h-[420px] min-h-[240px] items-center justify-center bg-black p-3">
+              <button
+                type="button"
+                onClick={() => setPreviewOrderFlowUrl(revealedOrderFlowUrl)}
+                className="flex max-h-[396px] w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-lg border border-transparent outline-none transition hover:border-[#00c2b2] focus:border-[#00c2b2]"
+                aria-label="放大查看足迹图"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={revealedOrderFlowUrl}
+                  alt={`足迹图附件 ${revealedOrderFlowIndex! + 1}`}
+                  className="max-h-[396px] w-full object-contain"
+                />
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
           <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#101010]">
@@ -391,7 +459,35 @@ export default function PracticalFlashcardReplayPage() {
           </aside>
         </div>
       </div>
+      <OrderFlowImagePreviewDialog
+        previewUrl={previewOrderFlowUrl}
+        onClose={() => setPreviewOrderFlowUrl(null)}
+      />
     </TradePageShell>
+  );
+}
+
+function OrderFlowImagePreviewDialog({
+  previewUrl,
+  onClose,
+}: {
+  previewUrl: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={Boolean(previewUrl)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex h-[min(92vh,980px)] w-[min(100vw-24px,1400px)] max-w-none items-center justify-center border-none bg-black/95 p-3 shadow-none sm:w-[min(100vw-48px,1400px)] sm:max-w-none">
+        <DialogTitle className="sr-only">足迹图预览</DialogTitle>
+        {previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={previewUrl}
+            alt="足迹图预览"
+            className="max-h-full max-w-full object-contain"
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
 
