@@ -2,6 +2,7 @@ import { fetchWithAuth } from '@/utils/fetchWithAuth';
 import type {
   PracticalFlashcardAttempt,
   PracticalFlashcardCard,
+  PracticalFlashcardDashboardAnalytics,
   PracticalFlashcardDirection,
   PracticalFlashcardExitReason,
   PracticalFlashcardRunningStats,
@@ -61,11 +62,11 @@ export type CreatePracticalFlashcardAttemptTradePayload = {
 
 export type ResolvePracticalFlashcardAttemptPayload = {
   finalCandleIndex?: number;
-  marketStructureAnalysisCorrect: boolean;
-  priceActionAnalysisCorrect: boolean;
-  orderFlowAnalysisUsed: boolean;
+  marketStructureAnalysisCorrect?: boolean;
+  priceActionAnalysisCorrect?: boolean;
+  orderFlowAnalysisUsed?: boolean;
   orderFlowAnalysisCorrect?: boolean;
-  riskRewardSetupCorrect: boolean;
+  riskRewardSetupCorrect?: boolean;
   tradeClosedCandleIndex?: number;
   exitPrice?: number;
   exitReason?: PracticalFlashcardExitReason;
@@ -80,6 +81,13 @@ export type StartRandomPracticalFlashcardTrainingPayload = {
   playbookType?: string;
   tagCodes?: string[];
   excludeRecentlyResolved?: boolean;
+};
+
+export type PracticalFlashcardDashboardAnalyticsParams = {
+  from?: string;
+  to?: string;
+  playbookType?: string;
+  symbolPairInfo?: string;
 };
 
 export function getBrowserTimeZone() {
@@ -260,4 +268,24 @@ export async function resolvePracticalFlashcardAttempt(
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '完成训练失败');
   return data.data as { attempt: PracticalFlashcardAttempt; runningStats: PracticalFlashcardRunningStats };
+}
+
+export async function getPracticalFlashcardDashboardAnalytics(
+  params: PracticalFlashcardDashboardAnalyticsParams = {},
+): Promise<PracticalFlashcardDashboardAnalytics> {
+  const searchParams = new URLSearchParams();
+  if (params.from) searchParams.set('from', params.from);
+  if (params.to) searchParams.set('to', params.to);
+  if (params.playbookType) searchParams.set('playbookType', params.playbookType);
+  if (params.symbolPairInfo) searchParams.set('symbolPairInfo', params.symbolPairInfo);
+  const targetPath = `practical-flashcard/analytics/dashboard${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: { targetPath, actualMethod: 'GET' },
+    actualBody: {},
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '获取实操闪卡训练统计失败');
+  return data.data as PracticalFlashcardDashboardAnalytics;
 }

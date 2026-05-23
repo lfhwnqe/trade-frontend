@@ -18,6 +18,7 @@ import {
   Webhook,
   Link2,
   Menu,
+  BarChart3,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -188,6 +189,11 @@ const tradeNavSections: NavSection[] = [
         title: "实操闪卡训练",
         href: "/trade/practical-flashcard/train",
         icon: Repeat2,
+      },
+      {
+        title: "训练统计",
+        href: "/trade/practical-flashcard/dashboard",
+        icon: BarChart3,
       },
       {
         title: "实操闪卡创建",

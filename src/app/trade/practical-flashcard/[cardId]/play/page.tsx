@@ -46,8 +46,8 @@ type DrawingPoint = { index: number; price: number };
 type RectHandle = "START_START" | "START_END" | "END_START" | "END_END";
 type PositionPriceField = "entryPrice" | "stopPrice" | "takeProfitPrice";
 type PositionLineHandle = "ENTRY" | "STOP" | "TAKE_PROFIT";
-type ReviewChoice = "CORRECT" | "WRONG";
-type OrderFlowReviewChoice = "NOT_USED" | "CORRECT" | "WRONG";
+type ReviewChoice = "" | "CORRECT" | "WRONG";
+type OrderFlowReviewChoice = "" | "NOT_USED" | "CORRECT" | "WRONG";
 
 export default function PracticalFlashcardReplayPage() {
   const params = useParams<{ cardId: string }>();
@@ -62,16 +62,17 @@ export default function PracticalFlashcardReplayPage() {
   const [preTradeMarketStructureAnalysis, setPreTradeMarketStructureAnalysis] = React.useState("");
   const [preTradePriceActionAnalysis, setPreTradePriceActionAnalysis] = React.useState("");
   const [preTradeOrderFlowAnalysis, setPreTradeOrderFlowAnalysis] = React.useState("");
-  const [marketStructureReview, setMarketStructureReview] = React.useState<ReviewChoice>("CORRECT");
-  const [priceActionReview, setPriceActionReview] = React.useState<ReviewChoice>("CORRECT");
+  const [marketStructureReview, setMarketStructureReview] = React.useState<ReviewChoice>("");
+  const [priceActionReview, setPriceActionReview] = React.useState<ReviewChoice>("");
   const [orderFlowReview, setOrderFlowReview] = React.useState<OrderFlowReviewChoice>("NOT_USED");
-  const [riskRewardReview, setRiskRewardReview] = React.useState<ReviewChoice>("CORRECT");
+  const [riskRewardReview, setRiskRewardReview] = React.useState<ReviewChoice>("");
   const [reviewNotes, setReviewNotes] = React.useState("");
   const [reviewSummary, setReviewSummary] = React.useState("");
   const [revealedOrderFlowIndex, setRevealedOrderFlowIndex] = React.useState<number | null>(null);
   const [previewOrderFlowUrl, setPreviewOrderFlowUrl] = React.useState<string | null>(null);
+  const [feedbackPulseId, setFeedbackPulseId] = React.useState(0);
   const [submittingTrade, setSubmittingTrade] = React.useState(false);
-  const [resolvingAttempt, setResolvingAttempt] = React.useState(false);
+  const [savingReview, setSavingReview] = React.useState(false);
   const startedCardIdRef = React.useRef<string | null>(null);
   const appliedPositionSourceRef = React.useRef<string | null>(null);
 
@@ -164,6 +165,29 @@ export default function PracticalFlashcardReplayPage() {
     setTakeProfitPrice(formatInputNumber(matchingPosition.takeProfitPrice));
   }, [attempt?.tradeOpenedCandleIndex, matchingPosition, tradeDirection]);
 
+  React.useEffect(() => {
+    if (!attempt) return;
+    setMarketStructureReview(booleanToReviewChoice(attempt.marketStructureAnalysisCorrect));
+    setPriceActionReview(booleanToReviewChoice(attempt.priceActionAnalysisCorrect));
+    setOrderFlowReview(
+      attempt.orderFlowAnalysisUsed
+        ? booleanToReviewChoice(attempt.orderFlowAnalysisCorrect) || ""
+        : "NOT_USED",
+    );
+    setRiskRewardReview(booleanToReviewChoice(attempt.riskRewardSetupCorrect));
+    setReviewNotes(attempt.notes || "");
+    setReviewSummary(attempt.summary || "");
+  }, [
+    attempt?.attemptId,
+    attempt?.marketStructureAnalysisCorrect,
+    attempt?.notes,
+    attempt?.orderFlowAnalysisCorrect,
+    attempt?.orderFlowAnalysisUsed,
+    attempt?.priceActionAnalysisCorrect,
+    attempt?.riskRewardSetupCorrect,
+    attempt?.summary,
+  ]);
+
   const handleConfirmTrade = React.useCallback(async () => {
     if (!card || !attempt) return;
     if (!preTradeMarketStructureAnalysis.trim()) {
@@ -188,10 +212,23 @@ export default function PracticalFlashcardReplayPage() {
         preTradePriceActionAnalysis,
         preTradeOrderFlowAnalysis,
       });
-      setAttempt(updated);
-      successAlert("交易已确认");
+      const result = await resolvePracticalFlashcardAttempt(updated.attemptId, {
+        finalCandleIndex: card.resultCandleIndex ?? card.candles.length - 1,
+        drawingSnapshot: readDrawingSnapshot(card.cardId),
+        notes: reviewNotes,
+        summary: reviewSummary,
+      });
+      setAttempt(result.attempt);
+      setCurrentIndex(
+        clampIndex(
+          result.attempt.tradeClosedCandleIndex ?? result.attempt.finalCandleIndex ?? card.resultCandleIndex ?? card.candles.length - 1,
+          card.candles.length,
+        ),
+      );
+      setFeedbackPulseId((value) => value + 1);
+      successAlert(result.attempt.isWin ? "自动结算：止盈命中" : "自动结算：未通过");
     } catch (error) {
-      errorAlert(error instanceof Error ? error.message : "确认交易失败");
+      errorAlert(error instanceof Error ? error.message : "确认交易或自动结算失败");
     } finally {
       setSubmittingTrade(false);
     }
@@ -203,38 +240,45 @@ export default function PracticalFlashcardReplayPage() {
     preTradeMarketStructureAnalysis,
     preTradeOrderFlowAnalysis,
     preTradePriceActionAnalysis,
+    reviewNotes,
+    reviewSummary,
     stopLossPrice,
     successAlert,
     takeProfitPrice,
     tradeDirection,
   ]);
 
-  const handleResolveAttempt = React.useCallback(async () => {
+  const handleSaveReview = React.useCallback(async () => {
     if (!card || !attempt) return;
-    setResolvingAttempt(true);
+    if (!marketStructureReview || !priceActionReview || !orderFlowReview || !riskRewardReview) {
+      errorAlert("请完成市场结构、价格行为、足迹图/订单流、止盈止损设置的复盘判断");
+      return;
+    }
+    setSavingReview(true);
     try {
       const result = await resolvePracticalFlashcardAttempt(attempt.attemptId, {
-        finalCandleIndex: currentIndex,
         marketStructureAnalysisCorrect: marketStructureReview === "CORRECT",
         priceActionAnalysisCorrect: priceActionReview === "CORRECT",
-        orderFlowAnalysisUsed: orderFlowReview !== "NOT_USED",
-        orderFlowAnalysisCorrect: orderFlowReview === "NOT_USED" ? undefined : orderFlowReview === "CORRECT",
+        orderFlowAnalysisUsed: orderFlowReview !== "NOT_USED" && orderFlowReview !== "",
+        orderFlowAnalysisCorrect:
+          orderFlowReview === "CORRECT" || orderFlowReview === "WRONG"
+            ? orderFlowReview === "CORRECT"
+            : undefined,
         riskRewardSetupCorrect: riskRewardReview === "CORRECT",
         drawingSnapshot: readDrawingSnapshot(card.cardId),
         notes: reviewNotes,
         summary: reviewSummary,
       });
       setAttempt(result.attempt);
-      successAlert("训练已完成");
+      successAlert("复盘字段已保存");
     } catch (error) {
-      errorAlert(error instanceof Error ? error.message : "完成训练失败");
+      errorAlert(error instanceof Error ? error.message : "保存复盘字段失败");
     } finally {
-      setResolvingAttempt(false);
+      setSavingReview(false);
     }
   }, [
     attempt,
     card,
-    currentIndex,
     errorAlert,
     marketStructureReview,
     orderFlowReview,
@@ -380,19 +424,19 @@ export default function PracticalFlashcardReplayPage() {
                     <PriceField label="止盈价" value={takeProfitPrice} disabled={attempt.tradeOpenedCandleIndex !== undefined} onChange={setTakeProfitPrice} />
                   </div>
                   {attempt.tradeOpenedCandleIndex !== undefined ? (
-                    <div className="rounded-lg border border-[#164e63] bg-[#083344]/60 p-3 text-xs text-[#bae6fd]">
-                      已确认 {attempt.tradeDirection ? PRACTICAL_FLASHCARD_LABELS[attempt.tradeDirection] : "--"}，入场价 {formatPrice(attempt.entryPrice)}，计划 RR {formatRatio(attempt.plannedRr)}
-                    </div>
+                    <AutoTradeFeedback key={feedbackPulseId} attempt={attempt} />
                   ) : (
-                    <Button
-                      type="button"
-                      disabled={submittingTrade || !attempt || currentClose === undefined}
-                      onClick={handleConfirmTrade}
-                      className="w-full gap-2 bg-[#00c2b2] text-[#031313] hover:bg-[#14d6c5] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <TrendingUp className="size-4" />
-                      按当前收盘价确认交易
-                    </Button>
+                    <>
+                      <Button
+                        type="button"
+                        disabled={submittingTrade || !attempt || currentClose === undefined}
+                        onClick={handleConfirmTrade}
+                        className="w-full gap-2 bg-[#00c2b2] text-[#031313] hover:bg-[#14d6c5] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <TrendingUp className="size-4" />
+                        按当前收盘价确认交易
+                      </Button>
+                    </>
                   )}
                 </div>
               ) : (
@@ -411,51 +455,56 @@ export default function PracticalFlashcardReplayPage() {
             </section>
 
             <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
-              <div className="text-sm font-semibold text-white">训练结算</div>
+              <div className="text-sm font-semibold text-white">自动结算</div>
               {attempt?.status === "RESOLVED" ? (
                 <div className="mt-4 space-y-3">
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <Metric label="胜负" value={attempt.isWin ? "盈利" : "亏损"} />
+                    <Metric label="判断结果" value={attempt.isWin ? "正确 / 止盈" : "错误 / 未通过"} />
                     <Metric label="实现 R" value={formatRatio(attempt.realizedR)} />
                     <Metric label="最大有利 R" value={formatRatio(attempt.maxFavorableR)} />
                     <Metric label="最大不利 R" value={formatRatio(attempt.maxAdverseR)} />
+                    <Metric label="离场原因" value={formatExitReason(attempt.exitReason)} />
+                    <Metric label="离场价" value={formatPrice(attempt.exitPrice)} />
                   </div>
-                  <div className="flex items-center gap-2 rounded-lg border border-[#14532d] bg-[#052e16]/70 p-3 text-sm text-[#bbf7d0]">
-                    <CheckCircle2 className="size-4" />
-                    本次实操训练已保存
-                  </div>
+                  <ResultBanner key={`result-${feedbackPulseId}`} attempt={attempt} />
                 </div>
               ) : (
-                <div className="mt-4 space-y-3">
-                  <ReviewToggle label="市场结构" value={marketStructureReview} onChange={setMarketStructureReview} />
-                  <ReviewToggle label="价格行为" value={priceActionReview} onChange={setPriceActionReview} />
-                  <OrderFlowReviewToggle value={orderFlowReview} onChange={setOrderFlowReview} />
-                  <ReviewToggle label="止盈止损" value={riskRewardReview} onChange={setRiskRewardReview} />
-                  <textarea
-                    value={reviewNotes}
-                    onChange={(event) => setReviewNotes(event.target.value)}
-                    placeholder="备注"
-                    className="min-h-[72px] w-full rounded-lg border border-[#27272a] bg-[#18181b] px-3 py-2 text-sm text-[#e5e7eb] outline-none placeholder:text-[#52525b] focus:border-[#00c2b2]"
-                  />
-                  <textarea
-                    value={reviewSummary}
-                    onChange={(event) => setReviewSummary(event.target.value)}
-                    placeholder="总结"
-                    className="min-h-[72px] w-full rounded-lg border border-[#27272a] bg-[#18181b] px-3 py-2 text-sm text-[#e5e7eb] outline-none placeholder:text-[#52525b] focus:border-[#00c2b2]"
-                  />
-                  <Button
-                    type="button"
-                    disabled={!attempt || attempt.tradeOpenedCandleIndex === undefined || resolvingAttempt}
-                    onClick={handleResolveAttempt}
-                    className="w-full gap-2 bg-[#00c2b2] text-[#031313] hover:bg-[#14d6c5] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Save className="size-4" />
-                    完成训练并保存
-                  </Button>
+                <div className="mt-4 rounded-lg border border-[#27272a] bg-[#18181b] p-3 text-sm text-[#a1a1aa]">
+                  填写入场前分析、设置止损止盈并点击确认交易后，系统会直接按后续 K 线自动判断止盈 / 止损结果。
                 </div>
               )}
             </section>
 
+            <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
+              <div className="text-sm font-semibold text-white">复盘分析</div>
+              <div className="mt-4 space-y-3">
+                {attempt?.status === "RESOLVED" ? (
+                  <>
+                    <ReviewToggle label="市场结构分析" value={marketStructureReview} onChange={setMarketStructureReview} />
+                    <ReviewToggle label="价格行为分析" value={priceActionReview} onChange={setPriceActionReview} />
+                    <OrderFlowReviewToggle value={orderFlowReview} onChange={setOrderFlowReview} />
+                    <ReviewToggle label="止盈止损设置" value={riskRewardReview} onChange={setRiskRewardReview} />
+                  </>
+                ) : null}
+                <PostTradeNotesForm
+                  notes={reviewNotes}
+                  summary={reviewSummary}
+                  onNotesChange={setReviewNotes}
+                  onSummaryChange={setReviewSummary}
+                />
+                {attempt?.status === "RESOLVED" ? (
+                  <Button
+                    type="button"
+                    disabled={savingReview}
+                    onClick={handleSaveReview}
+                    className="w-full gap-2 bg-[#00c2b2] text-[#031313] hover:bg-[#14d6c5] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Save className="size-4" />
+                    {savingReview ? "保存中..." : "保存复盘字段"}
+                  </Button>
+                ) : null}
+              </div>
+            </section>
           </aside>
         </div>
       </div>
@@ -1304,6 +1353,20 @@ function formatRatio(value?: number) {
   return value.toFixed(2);
 }
 
+function formatExitReason(value?: PracticalFlashcardAttempt["exitReason"]) {
+  if (value === "TAKE_PROFIT") return "止盈命中";
+  if (value === "STOP_LOSS") return "止损命中";
+  if (value === "MANUAL_EXIT") return "手动离场";
+  if (value === "NO_EXIT_BY_FINAL_CANDLE") return "结果 K 线未触发";
+  return "--";
+}
+
+function booleanToReviewChoice(value?: boolean): ReviewChoice {
+  if (value === true) return "CORRECT";
+  if (value === false) return "WRONG";
+  return "";
+}
+
 function ToolButton({
   active,
   icon,
@@ -1439,28 +1502,30 @@ function AnalysisField({
   );
 }
 
-function TradeDirectionButton({
-  direction,
-  active,
-  disabled,
-  onClick,
+function PostTradeNotesForm({
+  notes,
+  summary,
+  onNotesChange,
+  onSummaryChange,
 }: {
-  direction: PracticalFlashcardTradeDirection;
-  active: boolean;
-  disabled?: boolean;
-  onClick: () => void;
+  notes: string;
+  summary: string;
+  onNotesChange: (value: string) => void;
+  onSummaryChange: (value: string) => void;
 }) {
   return (
-    <Button
-      type="button"
-      variant="secondary"
-      disabled={disabled}
-      onClick={onClick}
-      className={`gap-2 border disabled:cursor-not-allowed disabled:opacity-60 ${active ? "border-[#00c2b2] bg-[#00c2b2]/15 text-[#00c2b2]" : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]"}`}
-    >
-      {direction === "LONG" ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
-      {PRACTICAL_FLASHCARD_LABELS[direction]}
-    </Button>
+    <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+      <AnalysisField
+        label="备注"
+        value={notes}
+        onChange={onNotesChange}
+      />
+      <AnalysisField
+        label="总结"
+        value={summary}
+        onChange={onSummaryChange}
+      />
+    </div>
   );
 }
 
@@ -1493,7 +1558,7 @@ function OrderFlowReviewToggle({
 }) {
   return (
     <div>
-      <div className="mb-1 text-xs text-[#a1a1aa]">足迹图分析</div>
+      <div className="mb-1 text-xs text-[#a1a1aa]">足迹图 / 订单流分析</div>
       <div className="grid grid-cols-3 gap-2">
         <ReviewButton active={value === "NOT_USED"} onClick={() => onChange("NOT_USED")} label="未使用" />
         <ReviewButton active={value === "CORRECT"} onClick={() => onChange("CORRECT")} label="正确" />
@@ -1515,8 +1580,61 @@ function ReviewButton({ active, label, onClick }: { active: boolean; label: stri
   );
 }
 
+function TradeDirectionButton({
+  direction,
+  active,
+  disabled,
+  onClick,
+}: {
+  direction: PracticalFlashcardTradeDirection;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      disabled={disabled}
+      onClick={onClick}
+      className={`gap-2 border disabled:cursor-not-allowed disabled:opacity-60 ${active ? "border-[#00c2b2] bg-[#00c2b2]/15 text-[#00c2b2]" : "border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]"}`}
+    >
+      {direction === "LONG" ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
+      {PRACTICAL_FLASHCARD_LABELS[direction]}
+    </Button>
+  );
+}
+
 function formatInputNumber(value: number) {
   return Number.isFinite(value) ? Number(value.toFixed(8)).toString() : "";
+}
+
+function AutoTradeFeedback({ attempt }: { attempt: PracticalFlashcardAttempt }) {
+  return (
+    <div className={`rounded-lg border p-3 text-xs ${attempt.isWin ? "animate-pulse border-[#14532d] bg-[#052e16]/75 text-[#bbf7d0]" : "animate-pulse border-[#7f1d1d] bg-[#2a1111] text-[#fecaca]"}`}>
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        {attempt.isWin ? <CheckCircle2 className="size-4" /> : <TrendingDown className="size-4" />}
+        {attempt.isWin ? "正确，自动止盈" : "错误，自动未通过"}
+      </div>
+      <div className="mt-2 text-xs opacity-90">
+        {attempt.tradeDirection ? PRACTICAL_FLASHCARD_LABELS[attempt.tradeDirection] : "--"} · 入场 {formatPrice(attempt.entryPrice)} · 计划 RR {formatRatio(attempt.plannedRr)}
+      </div>
+    </div>
+  );
+}
+
+function ResultBanner({ attempt }: { attempt: PracticalFlashcardAttempt }) {
+  return (
+    <div className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${attempt.isWin ? "animate-pulse border-[#14532d] bg-[#052e16]/70 text-[#bbf7d0]" : "animate-pulse border-[#7f1d1d] bg-[#2a1111] text-[#fecaca]"}`}>
+      {attempt.isWin ? <CheckCircle2 className="mt-0.5 size-4 shrink-0" /> : <TrendingDown className="mt-0.5 size-4 shrink-0" />}
+      <div>
+        <div className="font-semibold">{attempt.isWin ? "正确反馈：止盈命中" : "错误反馈：这笔入场没有通过"}</div>
+        <div className="mt-1 text-xs opacity-90">
+          系统按冻结 K 线自动结算：{formatExitReason(attempt.exitReason)}，实现 R {formatRatio(attempt.realizedR)}。
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
