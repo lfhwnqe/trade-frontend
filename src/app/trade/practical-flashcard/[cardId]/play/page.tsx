@@ -7,6 +7,7 @@ import { Box, CheckCircle2, ChevronLeft, ChevronRight, ChevronsRight, Images, Mi
 import {
   CandlestickSeries,
   ColorType,
+  CrosshairMode,
   LineStyle,
   createChart,
   type CandlestickData,
@@ -14,6 +15,7 @@ import {
   type IPriceLine,
   type ISeriesApi,
   type Logical,
+  type MouseEventParams,
   type UTCTimestamp,
 } from "lightweight-charts";
 import TradePageShell from "../../../components/trade-page-shell";
@@ -49,6 +51,7 @@ type PositionPriceField = "entryPrice" | "stopPrice" | "takeProfitPrice";
 type PositionLineHandle = "ENTRY" | "STOP" | "TAKE_PROFIT";
 type ReviewChoice = "" | "CORRECT" | "WRONG";
 type OrderFlowReviewChoice = "" | "NOT_USED" | "CORRECT" | "WRONG";
+type HoveredCandleInfo = { candle: PracticalFlashcardCandle; price: number | null };
 
 export default function PracticalFlashcardReplayPage() {
   const params = useParams<{ cardId: string }>();
@@ -611,15 +614,25 @@ function CandlestickReplayChart({
   const [drawings, setDrawings] = React.useState<DrawingShape[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = React.useState<string | null>(null);
   const [pendingRectStart, setPendingRectStart] = React.useState<DrawingPoint | null>(null);
+  const [hoveredCandleInfo, setHoveredCandleInfo] = React.useState<HoveredCandleInfo | null>(null);
   const [, setViewportVersion] = React.useState(0);
   const drawingsHydratedRef = React.useRef(false);
   const previousHistoryOffsetRef = React.useRef(historyOffset);
+  const candlesRef = React.useRef<PracticalFlashcardCandle[]>(candles);
   const safeCurrentIndex = clampIndex(currentIndex + historyOffset, candles.length);
   const browserTimeZone = React.useMemo(getBrowserTimeZone, []);
   const visibleCandles = React.useMemo(
     () => candles.slice(0, safeCurrentIndex + 1).map((candle) => toCandlestickData(candle, browserTimeZone)),
     [browserTimeZone, candles, safeCurrentIndex],
   );
+  const displayedCandleInfo = hoveredCandleInfo || {
+    candle: candles[safeCurrentIndex],
+    price: null,
+  };
+
+  React.useEffect(() => {
+    candlesRef.current = candles.slice(0, safeCurrentIndex + 1);
+  }, [candles, safeCurrentIndex]);
 
   React.useEffect(() => {
     onNeedOlderHistoryRef.current = onNeedOlderHistory;
@@ -656,8 +669,9 @@ function CandlestickReplayChart({
         barSpacing: 8,
       },
       crosshair: {
-        vertLine: { color: "#52525b", labelBackgroundColor: "#18181b" },
-        horzLine: { color: "#52525b", labelBackgroundColor: "#18181b" },
+        mode: CrosshairMode.Normal,
+        vertLine: { color: "#52525b", labelVisible: true, labelBackgroundColor: "#18181b" },
+        horzLine: { color: "#52525b", labelVisible: true, labelBackgroundColor: "#18181b" },
       },
       handleScale: {
         mouseWheel: true,
@@ -691,6 +705,28 @@ function CandlestickReplayChart({
       if (!drawingPoint) return;
       handleChartClickRef.current?.({ ...drawingPoint, index: drawingPoint.index - historyOffsetRef.current });
     });
+    const handleCrosshairMove = (param: MouseEventParams) => {
+      if (!param.point) {
+        setHoveredCandleInfo(null);
+        return;
+      }
+      const logical = chart.timeScale().coordinateToLogical(param.point.x);
+      if (logical === null) {
+        setHoveredCandleInfo(null);
+        return;
+      }
+      const candleIndex = Math.round(logical as number);
+      const candle = candlesRef.current[candleIndex];
+      if (!candle) {
+        setHoveredCandleInfo(null);
+        return;
+      }
+      setHoveredCandleInfo({
+        candle,
+        price: series.coordinateToPrice(param.point.y),
+      });
+    };
+    chart.subscribeCrosshairMove(handleCrosshairMove);
     chart.timeScale().subscribeVisibleLogicalRangeChange(refreshOverlay);
 
     const observer = new ResizeObserver(() => {
@@ -705,6 +741,7 @@ function CandlestickReplayChart({
     return () => {
       observer.disconnect();
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(refreshOverlay);
+      chart.unsubscribeCrosshairMove(handleCrosshairMove);
       priceLinesRef.current = [];
       chart.remove();
       chartRef.current = null;
@@ -914,6 +951,16 @@ function CandlestickReplayChart({
       </div>
       <div className="relative h-[560px] w-full overflow-hidden bg-[#0b0b0b]">
         <div ref={containerRef} className="h-full w-full" />
+        {displayedCandleInfo.candle ? (
+          <div className="pointer-events-none absolute left-3 top-3 z-30 flex max-w-[calc(100%-24px)] flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-[#27272a]/90 bg-[#0b0b0b]/90 px-3 py-2 text-xs text-[#d4d4d8] shadow-lg shadow-black/30">
+            <span className="font-semibold text-white">{formatCandleTime(displayedCandleInfo.candle.openTime, browserTimeZone)}</span>
+            <span>开 {formatPrice(displayedCandleInfo.candle.open)}</span>
+            <span>高 {formatPrice(displayedCandleInfo.candle.high)}</span>
+            <span>低 {formatPrice(displayedCandleInfo.candle.low)}</span>
+            <span>收 {formatPrice(displayedCandleInfo.candle.close)}</span>
+            {displayedCandleInfo.price !== null ? <span className="text-[#00c2b2]">Y {formatPrice(displayedCandleInfo.price)}</span> : null}
+          </div>
+        ) : null}
         <DrawingOverlay
           chart={chartRef.current}
           series={seriesRef.current}
@@ -1419,6 +1466,27 @@ function clampIndex(index: number | undefined, length: number) {
 function formatPrice(value?: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "--";
   return value.toLocaleString("en-US", { maximumFractionDigits: 8 });
+}
+
+function formatCandleTime(utcMs: number, timeZone: string) {
+  try {
+    return new Intl.DateTimeFormat("zh-CN", {
+      timeZone,
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(utcMs));
+  } catch {
+    return new Date(utcMs).toLocaleString("zh-CN", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    });
+  }
 }
 
 function formatRatio(value?: number) {
