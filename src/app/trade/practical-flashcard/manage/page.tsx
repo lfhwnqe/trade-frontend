@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Edit3, Play, Plus, RefreshCw } from "lucide-react";
+import { Ban, CheckCircle2, Edit3, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import { useAlert } from "@/components/common/alert";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
-import { getBrowserTimeZone, listPracticalFlashcardCards, updatePracticalFlashcardCard } from "../request";
+import { deletePracticalFlashcardCard, getBrowserTimeZone, listPracticalFlashcardCards, updatePracticalFlashcardCard } from "../request";
 import type { ImageResource } from "../../config";
 import {
   PRACTICAL_FLASHCARD_DIRECTIONS,
@@ -25,6 +25,12 @@ import {
 
 const EMPTY_SELECT_VALUE = "__NONE__";
 const PRACTICAL_FLASHCARD_STATUSES: PracticalFlashcardStatus[] = ["ACTIVE", "DISABLED"];
+const STATUS_FILTER_OPTIONS = [
+  { value: "ALL", label: "全部闪卡" },
+  { value: "ACTIVE", label: "未停用闪卡" },
+  { value: "DISABLED", label: "已停用闪卡" },
+] as const;
+type StatusFilter = (typeof STATUS_FILTER_OPTIONS)[number]["value"];
 
 type DictionaryOption = { code: string; label: string; color?: string };
 
@@ -49,8 +55,10 @@ export default function PracticalFlashcardManagePage() {
   const [items, setItems] = React.useState<PracticalFlashcardCard[]>([]);
   const [totalCount, setTotalCount] = React.useState(0);
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("ALL");
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [actionCardId, setActionCardId] = React.useState<string | null>(null);
   const [editingCard, setEditingCard] = React.useState<PracticalFlashcardCard | null>(null);
   const [draft, setDraft] = React.useState<EditDraft | null>(null);
   const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<DictionaryOption[]>([]);
@@ -66,6 +74,7 @@ export default function PracticalFlashcardManagePage() {
     try {
       const res = await listPracticalFlashcardCards({
         pageSize: 50,
+        status: statusFilter === "ALL" ? undefined : statusFilter,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
       });
       setItems(res.items);
@@ -75,7 +84,7 @@ export default function PracticalFlashcardManagePage() {
     } finally {
       setLoading(false);
     }
-  }, [errorAlert, symbolPairInfo]);
+  }, [errorAlert, statusFilter, symbolPairInfo]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -157,14 +166,61 @@ export default function PracticalFlashcardManagePage() {
     }
   }, [draft, editingCard, errorAlert, successAlert]);
 
+  const handleToggleStatus = React.useCallback(async (card: PracticalFlashcardCard) => {
+    const nextStatus: PracticalFlashcardStatus = card.status === "DISABLED" ? "ACTIVE" : "DISABLED";
+    const message = nextStatus === "DISABLED" ? "确认停用这张实操闪卡？停用后不会进入随机训练。" : "确认启用这张实操闪卡？";
+    if (!window.confirm(message)) return;
+    setActionCardId(card.cardId);
+    try {
+      const updated = await updatePracticalFlashcardCard(card.cardId, { status: nextStatus });
+      setItems((current) => current
+        .map((item) => (item.cardId === updated.cardId ? updated : item))
+        .filter((item) => statusFilter === "ALL" || item.status === statusFilter));
+      if (statusFilter !== "ALL") {
+        setTotalCount((current) => Math.max(0, current - 1));
+      }
+      successAlert(nextStatus === "DISABLED" ? "实操闪卡已停用" : "实操闪卡已启用");
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "状态更新失败");
+    } finally {
+      setActionCardId(null);
+    }
+  }, [errorAlert, statusFilter, successAlert]);
+
+  const handleDelete = React.useCallback(async (card: PracticalFlashcardCard) => {
+    if (!window.confirm(`确认删除 ${card.symbolPairInfo} 这张实操闪卡？`)) return;
+    setActionCardId(card.cardId);
+    try {
+      await deletePracticalFlashcardCard(card.cardId);
+      setItems((current) => current.filter((item) => item.cardId !== card.cardId));
+      setTotalCount((current) => Math.max(0, current - 1));
+      successAlert("实操闪卡已删除");
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "删除失败");
+    } finally {
+      setActionCardId(null);
+    }
+  }, [errorAlert, successAlert]);
+
   return (
     <TradePageShell title="实操闪卡管理" subtitle="查看和编辑已冻结行情快照的实操闪卡" showAddButton={false}>
       <div className="space-y-4">
         <div className="flex flex-col gap-3 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:flex-row md:items-end md:justify-between">
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-[#d4d4d8]">交易对筛选</span>
-            <Input value={symbolPairInfo} onChange={(e) => setSymbolPairInfo(e.target.value)} placeholder="BTCUSDT" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] md:w-64" />
-          </label>
+          <div className="grid gap-3 md:grid-cols-[260px_180px]">
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-[#d4d4d8]">交易对筛选</span>
+              <Input value={symbolPairInfo} onChange={(e) => setSymbolPairInfo(e.target.value)} placeholder="BTCUSDT" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-[#d4d4d8]">状态筛选</span>
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+                <SelectTrigger className="h-9 w-full border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                  {STATUS_FILTER_OPTIONS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </label>
+          </div>
           <div className="flex gap-2">
             <Button onClick={load} disabled={loading} variant="secondary" className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
               <RefreshCw className="size-4" />
@@ -219,6 +275,14 @@ export default function PracticalFlashcardManagePage() {
                         <Button type="button" size="sm" variant="secondary" onClick={() => openEdit(item)} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
                           <Edit3 className="size-4" />
                           编辑
+                        </Button>
+                        <Button type="button" size="sm" variant="secondary" disabled={actionCardId === item.cardId} onClick={() => void handleToggleStatus(item)} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+                          {item.status === "DISABLED" ? <CheckCircle2 className="size-4" /> : <Ban className="size-4" />}
+                          {item.status === "DISABLED" ? "启用" : "停用"}
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" disabled={actionCardId === item.cardId} onClick={() => void handleDelete(item)} className="gap-2 border-[#7f1d1d] bg-[#1e1e1e] text-[#fecaca] hover:bg-[#2a1111]">
+                          <Trash2 className="size-4" />
+                          删除
                         </Button>
                       </div>
                     </td>

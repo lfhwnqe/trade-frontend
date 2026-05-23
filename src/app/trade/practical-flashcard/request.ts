@@ -185,6 +185,20 @@ export async function updatePracticalFlashcardCard(
   return data.data as PracticalFlashcardCard;
 }
 
+export async function deletePracticalFlashcardCard(cardId: string): Promise<void> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/cards/${cardId}`,
+      actualMethod: 'DELETE',
+    },
+    actualBody: {},
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '删除实操闪卡失败');
+}
+
 export async function startPracticalFlashcardAttempt(
   cardId: string,
 ): Promise<{ attemptId: string; attempt: PracticalFlashcardAttempt; card: PracticalFlashcardCard }> {
@@ -232,6 +246,20 @@ export async function getPracticalFlashcardAttempt(attemptId: string): Promise<P
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '获取实操训练记录失败');
   return data.data as PracticalFlashcardAttempt;
+}
+
+export async function deletePracticalFlashcardAttempt(attemptId: string): Promise<void> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/attempts/${attemptId}`,
+      actualMethod: 'DELETE',
+    },
+    actualBody: {},
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '删除实操训练记录失败');
 }
 
 export async function createPracticalFlashcardAttemptTrade(

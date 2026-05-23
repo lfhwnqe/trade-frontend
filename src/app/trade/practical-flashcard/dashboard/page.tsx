@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { ArrowRight, BarChart3, RefreshCw, Target, TrendingUp } from "lucide-react";
+import { ArrowRight, BarChart3, RefreshCw, Target, Trash2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TradePageShell from "../../components/trade-page-shell";
 import { fetchPlaybookTypeOptions } from "../../dictionary";
-import { getPracticalFlashcardDashboardAnalytics } from "../request";
+import { deletePracticalFlashcardAttempt, getPracticalFlashcardDashboardAnalytics } from "../request";
 import type {
   PracticalFlashcardAnalyticsAttemptSample,
   PracticalFlashcardAnalyticsGroup,
@@ -24,6 +24,7 @@ export default function PracticalFlashcardDashboardPage() {
   const [playbookOptions, setPlaybookOptions] = React.useState<DictionaryOption[]>([]);
   const [filters, setFilters] = React.useState({ from: "", to: "", playbookType: "", symbolPairInfo: "" });
   const [loading, setLoading] = React.useState(true);
+  const [deletingAttemptId, setDeletingAttemptId] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState("");
 
   const playbookLabelMap = React.useMemo(
@@ -63,6 +64,20 @@ export default function PracticalFlashcardDashboardPage() {
     (value?: string) => (value ? playbookLabelMap.get(value) || value : "未知剧本"),
     [playbookLabelMap],
   );
+
+  const handleDeleteAttempt = React.useCallback(async (attemptId: string) => {
+    if (!window.confirm("确认删除这条训练记录？删除后统计结果会重新计算。")) return;
+    setDeletingAttemptId(attemptId);
+    setErrorMessage("");
+    try {
+      await deletePracticalFlashcardAttempt(attemptId);
+      await loadAnalytics();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "删除训练记录失败");
+    } finally {
+      setDeletingAttemptId(null);
+    }
+  }, [loadAnalytics]);
 
   return (
     <TradePageShell title="实操闪卡训练统计" subtitle="基于已完成实操训练记录聚合" showAddButton={false}>
@@ -159,7 +174,13 @@ export default function PracticalFlashcardDashboardPage() {
 
               <section className="rounded-lg border border-[#27272a] bg-[#121212] p-4">
                 <div className="mb-4 text-sm font-medium text-[#e5e7eb]">最近错误样本</div>
-                <AttemptList items={analytics.recentWrongAttempts} resolvePlaybookLabel={resolvePlaybookLabel} emptyText="暂无错误样本" />
+                <AttemptList
+                  items={analytics.recentWrongAttempts}
+                  resolvePlaybookLabel={resolvePlaybookLabel}
+                  emptyText="暂无错误样本"
+                  deletingAttemptId={deletingAttemptId}
+                  onDeleteAttempt={handleDeleteAttempt}
+                />
               </section>
             </div>
 
@@ -171,7 +192,13 @@ export default function PracticalFlashcardDashboardPage() {
 
             <section className="rounded-lg border border-[#27272a] bg-[#121212] p-4">
               <div className="mb-4 text-sm font-medium text-[#e5e7eb]">最近训练记录</div>
-              <AttemptList items={analytics.recentAttempts} resolvePlaybookLabel={resolvePlaybookLabel} emptyText="暂无训练记录" />
+              <AttemptList
+                items={analytics.recentAttempts}
+                resolvePlaybookLabel={resolvePlaybookLabel}
+                emptyText="暂无训练记录"
+                deletingAttemptId={deletingAttemptId}
+                onDeleteAttempt={handleDeleteAttempt}
+              />
             </section>
           </>
         ) : null}
@@ -227,10 +254,14 @@ function AttemptList({
   items,
   resolvePlaybookLabel,
   emptyText,
+  deletingAttemptId,
+  onDeleteAttempt,
 }: {
   items: PracticalFlashcardAnalyticsAttemptSample[];
   resolvePlaybookLabel: (value?: string) => string;
   emptyText: string;
+  deletingAttemptId?: string | null;
+  onDeleteAttempt?: (attemptId: string) => void;
 }) {
   if (!items.length) return <div className="text-sm text-[#71717a]">{emptyText}</div>;
   return (
@@ -248,11 +279,24 @@ function AttemptList({
               {formatDateTime(item.resolvedAt)} · {PRACTICAL_FLASHCARD_LABELS[item.tradeDirection || ""] || "-"} · R {formatSignedNumber(item.realizedR)}
             </div>
           </div>
-          <Link href={`/trade/practical-flashcard/${item.targetCardId}/play?attemptId=${item.attemptId}`} prefetch={false}>
-            <Button variant="outline" className="w-full border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424] sm:w-auto">
-              详情<ArrowRight className="size-4" />
-            </Button>
-          </Link>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <Link href={`/trade/practical-flashcard/${item.targetCardId}/play?attemptId=${item.attemptId}`} prefetch={false}>
+              <Button variant="outline" className="w-full border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424] sm:w-auto">
+                详情<ArrowRight className="size-4" />
+              </Button>
+            </Link>
+            {onDeleteAttempt ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={deletingAttemptId === item.attemptId}
+                onClick={() => onDeleteAttempt(item.attemptId)}
+                className="w-full border-[#7f1d1d] bg-[#121212] text-[#fecaca] hover:bg-[#2a1111] sm:w-auto"
+              >
+                <Trash2 className="size-4" />删除
+              </Button>
+            ) : null}
+          </div>
         </div>
       ))}
     </div>
