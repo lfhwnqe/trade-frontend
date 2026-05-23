@@ -2,6 +2,7 @@ import { fetchWithAuth } from '@/utils/fetchWithAuth';
 import type {
   PracticalFlashcardAttempt,
   PracticalFlashcardCard,
+  PracticalFlashcardCandle,
   PracticalFlashcardDashboardAnalytics,
   PracticalFlashcardDirection,
   PracticalFlashcardExitReason,
@@ -165,6 +166,30 @@ export async function getPracticalFlashcardCard(cardId: string): Promise<Practic
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '获取实操闪卡失败');
   return data.data as PracticalFlashcardCard;
+}
+
+export async function getPracticalFlashcardCandlesBefore(
+  cardId: string,
+  params: { beforeOpenTime: number; limit?: number },
+): Promise<{ items: PracticalFlashcardCandle[]; beforeOpenTime: number }> {
+  const searchParams = new URLSearchParams();
+  searchParams.set('beforeOpenTime', String(params.beforeOpenTime));
+  if (params.limit) searchParams.set('limit', String(params.limit));
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/cards/${cardId}/candles/before?${searchParams.toString()}`,
+      actualMethod: 'GET',
+    },
+    actualBody: {},
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '拉取更早 K 线失败');
+  return {
+    items: (data.data?.items || []) as PracticalFlashcardCandle[],
+    beforeOpenTime: Number(data.data?.beforeOpenTime || params.beforeOpenTime),
+  };
 }
 
 export async function updatePracticalFlashcardCard(

@@ -24,6 +24,7 @@ import {
   createPracticalFlashcardAttemptTrade,
   getPracticalFlashcardAttempt,
   getPracticalFlashcardCard,
+  getPracticalFlashcardCandlesBefore,
   resolvePracticalFlashcardAttempt,
   startPracticalFlashcardAttempt,
 } from "../../request";
@@ -73,6 +74,9 @@ export default function PracticalFlashcardReplayPage() {
   const [feedbackPulseId, setFeedbackPulseId] = React.useState(0);
   const [submittingTrade, setSubmittingTrade] = React.useState(false);
   const [savingReview, setSavingReview] = React.useState(false);
+  const [historicalCandles, setHistoricalCandles] = React.useState<PracticalFlashcardCandle[]>([]);
+  const [loadingHistoricalCandles, setLoadingHistoricalCandles] = React.useState(false);
+  const [historicalCandlesExhausted, setHistoricalCandlesExhausted] = React.useState(false);
   const startedCardIdRef = React.useRef<string | null>(null);
   const appliedPositionSourceRef = React.useRef<string | null>(null);
 
@@ -82,6 +86,8 @@ export default function PracticalFlashcardReplayPage() {
     if (startedCardIdRef.current === cardId) return;
     startedCardIdRef.current = cardId;
     setAttempt(null);
+    setHistoricalCandles([]);
+    setHistoricalCandlesExhausted(false);
     getPracticalFlashcardCard(cardId)
       .then((res) => {
         setCard(res);
@@ -113,6 +119,11 @@ export default function PracticalFlashcardReplayPage() {
 
   const resultIndex = card?.resultCandleIndex ?? null;
   const maxIndex = Math.max((card?.candles.length || 1) - 1, 0);
+  const displayCandles = React.useMemo(
+    () => (card ? [...historicalCandles, ...card.candles] : []),
+    [card, historicalCandles],
+  );
+  const historicalOffset = historicalCandles.length;
   const orderFlowImageUrls = React.useMemo(() => card?.orderFlowImageUrls?.filter(Boolean) || [], [card?.orderFlowImageUrls]);
   const revealedOrderFlowUrl = revealedOrderFlowIndex === null ? null : orderFlowImageUrls[revealedOrderFlowIndex] || null;
   const currentCandle = card ? card.candles[clampIndex(currentIndex, card.candles.length)] : undefined;
@@ -121,6 +132,33 @@ export default function PracticalFlashcardReplayPage() {
     () => findLatestPositionDrawing(drawings, tradeDirection),
     [drawings, tradeDirection],
   );
+
+  const handleNeedOlderHistory = React.useCallback(async () => {
+    if (!card || loadingHistoricalCandles || historicalCandlesExhausted) return;
+    const firstOpenTime = (historicalCandles[0] || card.candles[0])?.openTime;
+    if (!firstOpenTime) return;
+    setLoadingHistoricalCandles(true);
+    try {
+      const result = await getPracticalFlashcardCandlesBefore(card.cardId, {
+        beforeOpenTime: firstOpenTime,
+        limit: 500,
+      });
+      const nextItems = result.items.filter((item) => item.openTime < firstOpenTime);
+      if (nextItems.length === 0) {
+        setHistoricalCandlesExhausted(true);
+        return;
+      }
+      setHistoricalCandles((current) => {
+        const existingOpenTimes = new Set(current.map((item) => item.openTime));
+        const deduped = nextItems.filter((item) => !existingOpenTimes.has(item.openTime));
+        return [...deduped, ...current].sort((a, b) => a.openTime - b.openTime);
+      });
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "拉取更早 K 线失败");
+    } finally {
+      setLoadingHistoricalCandles(false);
+    }
+  }, [card, errorAlert, historicalCandles, historicalCandlesExhausted, loadingHistoricalCandles]);
 
   React.useEffect(() => {
     if (revealedOrderFlowIndex !== null && revealedOrderFlowIndex >= orderFlowImageUrls.length) {
@@ -378,6 +416,9 @@ export default function PracticalFlashcardReplayPage() {
             <div className="border-b border-[#27272a] px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
                 <div className="font-medium text-[#e5e7eb]">{card.symbolPairInfo}</div>
+                <div className="text-xs text-[#a1a1aa]">
+                  {loadingHistoricalCandles ? "正在加载更早 K 线..." : historicalOffset > 0 ? `已临时扩展 ${historicalOffset} 根更早 K 线` : "向左滚动可自动加载更早 K 线"}
+                </div>
               </div>
               <input
                 type="range"
@@ -391,8 +432,10 @@ export default function PracticalFlashcardReplayPage() {
             <CandlestickReplayChart
               card={card}
               attempt={attempt}
-              candles={card.candles}
+              candles={displayCandles}
               currentIndex={currentIndex}
+              historyOffset={historicalOffset}
+              onNeedOlderHistory={handleNeedOlderHistory}
               onDrawingsChange={setDrawings}
             />
           </section>
@@ -545,12 +588,16 @@ function CandlestickReplayChart({
   attempt,
   candles,
   currentIndex,
+  historyOffset,
+  onNeedOlderHistory,
   onDrawingsChange,
 }: {
   card: PracticalFlashcardCard;
   attempt: PracticalFlashcardAttempt | null;
   candles: PracticalFlashcardCandle[];
   currentIndex: number;
+  historyOffset: number;
+  onNeedOlderHistory: () => void;
   onDrawingsChange: (drawings: DrawingShape[]) => void;
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -558,18 +605,29 @@ function CandlestickReplayChart({
   const seriesRef = React.useRef<ISeriesApi<"Candlestick"> | null>(null);
   const priceLinesRef = React.useRef<IPriceLine[]>([]);
   const initialRangeAppliedRef = React.useRef(false);
+  const onNeedOlderHistoryRef = React.useRef(onNeedOlderHistory);
+  const historyOffsetRef = React.useRef(historyOffset);
   const [activeTool, setActiveTool] = React.useState<DrawingTool>("SELECT");
   const [drawings, setDrawings] = React.useState<DrawingShape[]>([]);
   const [selectedDrawingId, setSelectedDrawingId] = React.useState<string | null>(null);
   const [pendingRectStart, setPendingRectStart] = React.useState<DrawingPoint | null>(null);
   const [, setViewportVersion] = React.useState(0);
   const drawingsHydratedRef = React.useRef(false);
-  const safeCurrentIndex = clampIndex(currentIndex, candles.length);
+  const previousHistoryOffsetRef = React.useRef(historyOffset);
+  const safeCurrentIndex = clampIndex(currentIndex + historyOffset, candles.length);
   const browserTimeZone = React.useMemo(getBrowserTimeZone, []);
   const visibleCandles = React.useMemo(
     () => candles.slice(0, safeCurrentIndex + 1).map((candle) => toCandlestickData(candle, browserTimeZone)),
     [browserTimeZone, candles, safeCurrentIndex],
   );
+
+  React.useEffect(() => {
+    onNeedOlderHistoryRef.current = onNeedOlderHistory;
+  }, [onNeedOlderHistory]);
+
+  React.useEffect(() => {
+    historyOffsetRef.current = historyOffset;
+  }, [historyOffset]);
 
   React.useEffect(() => {
     const container = containerRef.current;
@@ -623,12 +681,15 @@ function CandlestickReplayChart({
     chartRef.current = chart;
     seriesRef.current = series;
 
-    const refreshOverlay = () => setViewportVersion((value) => value + 1);
+    const refreshOverlay = (range?: { from: Logical; to: Logical } | null) => {
+      if (range && Number(range.from) <= 18) onNeedOlderHistoryRef.current();
+      setViewportVersion((value) => value + 1);
+    };
     chart.subscribeClick((param) => {
       if (!param.point) return;
       const drawingPoint = resolveDrawingPoint(chart, series, param.point.x, param.point.y);
       if (!drawingPoint) return;
-      handleChartClickRef.current?.(drawingPoint);
+      handleChartClickRef.current?.({ ...drawingPoint, index: drawingPoint.index - historyOffsetRef.current });
     });
     chart.timeScale().subscribeVisibleLogicalRangeChange(refreshOverlay);
 
@@ -657,6 +718,17 @@ function CandlestickReplayChart({
     if (!chart || !series) return;
 
     series.setData(visibleCandles);
+    if (initialRangeAppliedRef.current && previousHistoryOffsetRef.current !== historyOffset) {
+      const delta = historyOffset - previousHistoryOffsetRef.current;
+      const currentRange = chart.timeScale().getVisibleLogicalRange();
+      if (currentRange && delta > 0) {
+        chart.timeScale().setVisibleLogicalRange({
+          from: ((currentRange.from as number) + delta) as Logical,
+          to: ((currentRange.to as number) + delta) as Logical,
+        });
+      }
+      previousHistoryOffsetRef.current = historyOffset;
+    }
     if (!initialRangeAppliedRef.current && visibleCandles.length > 0) {
       chart.timeScale().setVisibleLogicalRange({
         from: Math.max(0, visibleCandles.length - 90),
@@ -665,7 +737,7 @@ function CandlestickReplayChart({
       initialRangeAppliedRef.current = true;
     }
     setViewportVersion((value) => value + 1);
-  }, [visibleCandles]);
+  }, [historyOffset, visibleCandles]);
 
   React.useEffect(() => {
     const series = seriesRef.current;
@@ -708,7 +780,7 @@ function CandlestickReplayChart({
     }
     if (activeTool === "HLINE") {
       const id = nanoId();
-      setDrawings((current) => [...current, { id, type: "HLINE", price: point.price, startIndex: 0, endIndex: safeCurrentIndex }]);
+      setDrawings((current) => [...current, { id, type: "HLINE", price: point.price, startIndex: -historyOffset, endIndex: currentIndex }]);
       setSelectedDrawingId(id);
       setActiveTool("SELECT");
       setPendingRectStart(null);
@@ -756,7 +828,7 @@ function CandlestickReplayChart({
       setPendingRectStart(null);
       setActiveTool("SELECT");
     }
-  }, [activeTool, drawings, pendingRectStart, safeCurrentIndex]);
+  }, [activeTool, currentIndex, drawings, historyOffset, pendingRectStart]);
 
   const handleChartClickRef = React.useRef<(point: DrawingPoint) => void>(() => {});
   React.useEffect(() => {
@@ -846,6 +918,7 @@ function CandlestickReplayChart({
           chart={chartRef.current}
           series={seriesRef.current}
           drawings={drawings}
+          historyOffset={historyOffset}
           selectedDrawingId={selectedDrawingId}
           onUpdateRectHandle={updateRectHandle}
           onUpdatePositionPrice={updatePositionPrice}
@@ -854,6 +927,7 @@ function CandlestickReplayChart({
           chart={chartRef.current}
           series={seriesRef.current}
           candles={candles}
+          historyOffset={historyOffset}
           attempt={attempt}
         />
       </div>
@@ -865,16 +939,18 @@ function TradeExecutionMarkers({
   chart,
   series,
   candles,
+  historyOffset,
   attempt,
 }: {
   chart: IChartApi | null;
   series: ISeriesApi<"Candlestick"> | null;
   candles: PracticalFlashcardCandle[];
+  historyOffset: number;
   attempt: PracticalFlashcardAttempt | null;
 }) {
   if (!chart || !series || !attempt || attempt.tradeOpenedCandleIndex === undefined) return null;
   const paneSize = chart.paneSize();
-  const markers = buildTradeExecutionMarkers(chart, series, candles, attempt);
+  const markers = buildTradeExecutionMarkers(chart, series, candles, attempt, historyOffset);
   if (markers.length === 0) return null;
 
   return (
@@ -917,6 +993,7 @@ function DrawingOverlay({
   chart,
   series,
   drawings,
+  historyOffset,
   selectedDrawingId,
   onUpdateRectHandle,
   onUpdatePositionPrice,
@@ -924,6 +1001,7 @@ function DrawingOverlay({
   chart: IChartApi | null;
   series: ISeriesApi<"Candlestick"> | null;
   drawings: DrawingShape[];
+  historyOffset: number;
   selectedDrawingId: string | null;
   onUpdateRectHandle: (id: string, handle: RectHandle, point: DrawingPoint) => void;
   onUpdatePositionPrice: (id: string, field: PositionPriceField, value: number) => void;
@@ -960,7 +1038,7 @@ function DrawingOverlay({
 
   if (!chart || !series || drawings.length === 0) return null;
   const paneSize = chart.paneSize();
-  const toX = (index: number) => chart.timeScale().logicalToCoordinate(index as Logical);
+  const toX = (index: number) => chart.timeScale().logicalToCoordinate((index + historyOffset) as Logical);
   const toY = (price: number) => series.priceToCoordinate(price);
 
   return (
@@ -1127,7 +1205,7 @@ function resolveDrawingPoint(
   const price = series.coordinateToPrice(y);
   if (logical === null || price === null) return null;
   return {
-    index: Math.max(0, Math.round(logical as number)),
+    index: Math.round(logical as number),
     price,
   };
 }
@@ -1172,6 +1250,7 @@ function buildTradeExecutionMarkers(
   series: ISeriesApi<"Candlestick">,
   candles: PracticalFlashcardCandle[],
   attempt: PracticalFlashcardAttempt,
+  historyOffset: number,
 ) {
   const markers: Array<{
     key: string;
@@ -1186,16 +1265,16 @@ function buildTradeExecutionMarkers(
 
   const entryIndex = attempt.tradeOpenedCandleIndex;
   if (entryIndex === undefined) return markers;
-  const entryPrice = typeof attempt.entryPrice === "number" ? attempt.entryPrice : candles[entryIndex]?.close;
-  const entryMarker = buildTradeExecutionMarker(chart, series, entryIndex, entryPrice, "入场", "#38bdf8", "up");
+  const entryPrice = typeof attempt.entryPrice === "number" ? attempt.entryPrice : candles[entryIndex + historyOffset]?.close;
+  const entryMarker = buildTradeExecutionMarker(chart, series, entryIndex + historyOffset, entryPrice, "入场", "#38bdf8", "up");
   if (entryMarker) markers.push({ key: "entry", ...entryMarker });
 
   if (attempt.tradeClosedCandleIndex !== undefined) {
-    const exitPrice = typeof attempt.exitPrice === "number" ? attempt.exitPrice : candles[attempt.tradeClosedCandleIndex]?.close;
+    const exitPrice = typeof attempt.exitPrice === "number" ? attempt.exitPrice : candles[attempt.tradeClosedCandleIndex + historyOffset]?.close;
     const exitMarker = buildTradeExecutionMarker(
       chart,
       series,
-      attempt.tradeClosedCandleIndex,
+      attempt.tradeClosedCandleIndex + historyOffset,
       exitPrice,
       getExitMarkerLabel(attempt.exitReason),
       attempt.exitReason === "STOP_LOSS" ? "#fb7185" : "#2dd4bf",
