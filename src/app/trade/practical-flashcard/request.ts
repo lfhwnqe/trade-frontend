@@ -3,6 +3,7 @@ import type {
   PracticalFlashcardAttempt,
   PracticalFlashcardCard,
   PracticalFlashcardDirection,
+  PracticalFlashcardExitReason,
   PracticalFlashcardRunningStats,
   PracticalFlashcardStatus,
   PracticalFlashcardTradeDirection,
@@ -65,10 +66,20 @@ export type ResolvePracticalFlashcardAttemptPayload = {
   orderFlowAnalysisUsed: boolean;
   orderFlowAnalysisCorrect?: boolean;
   riskRewardSetupCorrect: boolean;
+  tradeClosedCandleIndex?: number;
+  exitPrice?: number;
+  exitReason?: PracticalFlashcardExitReason;
   drawingSnapshot?: Record<string, unknown>;
   mistakeReasons?: string[];
   notes?: string;
   summary?: string;
+};
+
+export type StartRandomPracticalFlashcardTrainingPayload = {
+  symbolPairInfo?: string;
+  playbookType?: string;
+  tagCodes?: string[];
+  excludeRecentlyResolved?: boolean;
 };
 
 export function getBrowserTimeZone() {
@@ -181,6 +192,38 @@ export async function startPracticalFlashcardAttempt(
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '开始实操训练失败');
   return data.data as { attemptId: string; attempt: PracticalFlashcardAttempt; card: PracticalFlashcardCard };
+}
+
+export async function startRandomPracticalFlashcardTraining(
+  payload: StartRandomPracticalFlashcardTrainingPayload = {},
+): Promise<{ attemptId: string; attempt: PracticalFlashcardAttempt; card: PracticalFlashcardCard }> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: 'practical-flashcard/training/random/start',
+      actualMethod: 'POST',
+    },
+    actualBody: sanitizePayload(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '开始随机实操训练失败');
+  return data.data as { attemptId: string; attempt: PracticalFlashcardAttempt; card: PracticalFlashcardCard };
+}
+
+export async function getPracticalFlashcardAttempt(attemptId: string): Promise<PracticalFlashcardAttempt> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/attempts/${attemptId}`,
+      actualMethod: 'GET',
+    },
+    actualBody: {},
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '获取实操训练记录失败');
+  return data.data as PracticalFlashcardAttempt;
 }
 
 export async function createPracticalFlashcardAttemptTrade(

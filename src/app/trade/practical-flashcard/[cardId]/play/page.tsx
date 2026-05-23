@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useAlert } from "@/components/common/alert";
 import {
   createPracticalFlashcardAttemptTrade,
+  getPracticalFlashcardAttempt,
   getPracticalFlashcardCard,
   resolvePracticalFlashcardAttempt,
   startPracticalFlashcardAttempt,
@@ -81,6 +82,21 @@ export default function PracticalFlashcardReplayPage() {
       .then((res) => {
         setCard(res);
         setCurrentIndex(clampIndex(res.initialVisibleCandleIndex, res.candles.length));
+        const requestedAttemptId = new URLSearchParams(window.location.search).get("attemptId");
+        if (requestedAttemptId) {
+          return getPracticalFlashcardAttempt(requestedAttemptId).then((existingAttempt) => {
+            if (existingAttempt.targetCardId !== res.cardId) {
+              throw new Error("训练记录与当前实操闪卡不匹配");
+            }
+            setCurrentIndex(
+              clampIndex(
+                existingAttempt.currentCandleIndex ?? existingAttempt.finalCandleIndex ?? res.initialVisibleCandleIndex,
+                res.candles.length,
+              ),
+            );
+            setAttempt(existingAttempt);
+          });
+        }
         return startPracticalFlashcardAttempt(res.cardId).then((attemptRes) => {
           setAttempt(attemptRes.attempt);
         });
@@ -262,6 +278,7 @@ export default function PracticalFlashcardReplayPage() {
             </div>
             <CandlestickReplayChart
               card={card}
+              attempt={attempt}
               candles={card.candles}
               currentIndex={currentIndex}
               onDrawingsChange={setDrawings}
@@ -380,11 +397,13 @@ export default function PracticalFlashcardReplayPage() {
 
 function CandlestickReplayChart({
   card,
+  attempt,
   candles,
   currentIndex,
   onDrawingsChange,
 }: {
   card: PracticalFlashcardCard;
+  attempt: PracticalFlashcardAttempt | null;
   candles: PracticalFlashcardCandle[];
   currentIndex: number;
   onDrawingsChange: (drawings: DrawingShape[]) => void;
@@ -687,8 +706,69 @@ function CandlestickReplayChart({
           onUpdatePositionPrice={updatePositionPrice}
           version={viewportVersion}
         />
+        <TradeExecutionMarkers
+          chart={chartRef.current}
+          series={seriesRef.current}
+          candles={candles}
+          attempt={attempt}
+          version={viewportVersion}
+        />
       </div>
     </div>
+  );
+}
+
+function TradeExecutionMarkers({
+  chart,
+  series,
+  candles,
+  attempt,
+  version: _version,
+}: {
+  chart: IChartApi | null;
+  series: ISeriesApi<"Candlestick"> | null;
+  candles: PracticalFlashcardCandle[];
+  attempt: PracticalFlashcardAttempt | null;
+  version: number;
+}) {
+  if (!chart || !series || !attempt || attempt.tradeOpenedCandleIndex === undefined) return null;
+  const paneSize = chart.paneSize();
+  const markers = buildTradeExecutionMarkers(chart, series, candles, attempt);
+  if (markers.length === 0) return null;
+
+  return (
+    <svg className="pointer-events-none absolute left-0 top-0 z-20" width={paneSize.width} height={paneSize.height}>
+      {markers.map((marker) => (
+        <g key={marker.key} transform={`translate(${marker.x}, ${marker.y})`}>
+          <line y1={marker.direction === "up" ? 8 : -8} y2={marker.direction === "up" ? 24 : -24} stroke={marker.color} strokeWidth={2} />
+          <path
+            d={marker.direction === "up" ? "M0 0 L-6 10 L6 10 Z" : "M0 0 L-6 -10 L6 -10 Z"}
+            fill={marker.color}
+            stroke="#0b0b0b"
+            strokeWidth={1.5}
+          />
+          <rect
+            x={marker.labelX}
+            y={marker.direction === "up" ? 26 : -48}
+            width={marker.labelWidth}
+            height={22}
+            rx={5}
+            fill="#111827"
+            stroke={marker.color}
+            strokeWidth={1}
+          />
+          <text
+            x={marker.labelX + marker.labelWidth / 2}
+            y={marker.direction === "up" ? 41 : -33}
+            fill="#f9fafb"
+            fontSize={12}
+            textAnchor="middle"
+          >
+            {marker.label}
+          </text>
+        </g>
+      ))}
+    </svg>
   );
 }
 
@@ -946,6 +1026,78 @@ function buildStandardPriceLines(card: PracticalFlashcardCard) {
         }
       : null,
   ].filter((line): line is NonNullable<typeof line> => Boolean(line));
+}
+
+function buildTradeExecutionMarkers(
+  chart: IChartApi,
+  series: ISeriesApi<"Candlestick">,
+  candles: PracticalFlashcardCandle[],
+  attempt: PracticalFlashcardAttempt,
+) {
+  const markers: Array<{
+    key: string;
+    x: number;
+    y: number;
+    label: string;
+    labelX: number;
+    labelWidth: number;
+    color: string;
+    direction: "up" | "down";
+  }> = [];
+
+  const entryIndex = attempt.tradeOpenedCandleIndex;
+  if (entryIndex === undefined) return markers;
+  const entryPrice = typeof attempt.entryPrice === "number" ? attempt.entryPrice : candles[entryIndex]?.close;
+  const entryMarker = buildTradeExecutionMarker(chart, series, entryIndex, entryPrice, "入场", "#38bdf8", "up");
+  if (entryMarker) markers.push({ key: "entry", ...entryMarker });
+
+  if (attempt.tradeClosedCandleIndex !== undefined) {
+    const exitPrice = typeof attempt.exitPrice === "number" ? attempt.exitPrice : candles[attempt.tradeClosedCandleIndex]?.close;
+    const exitMarker = buildTradeExecutionMarker(
+      chart,
+      series,
+      attempt.tradeClosedCandleIndex,
+      exitPrice,
+      getExitMarkerLabel(attempt.exitReason),
+      attempt.exitReason === "STOP_LOSS" ? "#fb7185" : "#2dd4bf",
+      "down",
+    );
+    if (exitMarker) markers.push({ key: "exit", ...exitMarker });
+  }
+
+  return markers;
+}
+
+function buildTradeExecutionMarker(
+  chart: IChartApi,
+  series: ISeriesApi<"Candlestick">,
+  candleIndex: number,
+  price: number | undefined,
+  label: string,
+  color: string,
+  direction: "up" | "down",
+) {
+  if (typeof price !== "number" || !Number.isFinite(price)) return null;
+  const x = chart.timeScale().logicalToCoordinate(candleIndex as Logical);
+  const y = series.priceToCoordinate(price);
+  if (x === null || y === null) return null;
+  const labelWidth = Math.max(44, label.length * 14);
+  return {
+    x,
+    y,
+    label,
+    labelX: -labelWidth / 2,
+    labelWidth,
+    color,
+    direction,
+  };
+}
+
+function getExitMarkerLabel(reason?: PracticalFlashcardAttempt["exitReason"]) {
+  if (reason === "TAKE_PROFIT") return "止盈离场";
+  if (reason === "STOP_LOSS") return "止损离场";
+  if (reason === "NO_EXIT_BY_FINAL_CANDLE") return "最终离场";
+  return "离场";
 }
 
 function calculatePositionRr(position: Extract<DrawingShape, { type: "POSITION" }>) {

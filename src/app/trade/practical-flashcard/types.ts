@@ -11,6 +11,8 @@ export type PracticalFlashcardTradeDirection = Exclude<PracticalFlashcardDirecti
 export type PracticalFlashcardStatus = 'ACTIVE' | 'DISABLED';
 export type PracticalFlashcardInterval = '15m';
 export type PracticalFlashcardAttemptStatus = 'IN_PROGRESS' | 'RESOLVED' | 'ABANDONED';
+export type PracticalFlashcardTrainingMode = 'DIRECT_CARD' | 'RANDOM_TRAINING';
+export type PracticalFlashcardExitReason = 'TAKE_PROFIT' | 'STOP_LOSS' | 'MANUAL_EXIT' | 'NO_EXIT_BY_FINAL_CANDLE';
 
 export type PracticalFlashcardCandle = {
   openTime: number;
@@ -63,6 +65,14 @@ export type PracticalFlashcardAttempt = {
   attemptId: string;
   targetCardId: string;
   status: PracticalFlashcardAttemptStatus;
+  trainingMode?: PracticalFlashcardTrainingMode;
+  cardSnapshot?: {
+    playbookType: string;
+    tagCodes?: string[];
+    symbolPairInfo: string;
+    primaryInterval: PracticalFlashcardInterval;
+    expectedDirection?: PracticalFlashcardDirection;
+  };
   decision?: PracticalFlashcardDirection;
   tradeOpenedCandleIndex?: number;
   tradeDirection?: PracticalFlashcardTradeDirection;
@@ -70,6 +80,9 @@ export type PracticalFlashcardAttempt = {
   stopLossPrice?: number;
   takeProfitPrice?: number;
   plannedRr?: number;
+  tradeClosedCandleIndex?: number;
+  exitPrice?: number;
+  exitReason?: PracticalFlashcardExitReason;
   preTradeMarketStructureAnalysis?: string;
   preTradePriceActionAnalysis?: string;
   preTradeOrderFlowAnalysis?: string;
@@ -80,6 +93,18 @@ export type PracticalFlashcardAttempt = {
   finalCandleIndex?: number;
   currentCandleIndex?: number;
   drawingSnapshot?: unknown;
+  tradeExecutionSnapshot?: {
+    entryCandleIndex: number;
+    entryCandleOpenTime: number;
+    entryPrice: number;
+    exitCandleIndex?: number;
+    exitCandleOpenTime?: number;
+    exitPrice?: number;
+    exitReason?: PracticalFlashcardExitReason;
+    stopLossPrice: number;
+    takeProfitPrice: number;
+    tradeDirection: PracticalFlashcardTradeDirection;
+  };
   usedOrderFlowReveal?: boolean;
   orderFlowRevealEvents?: Array<{ imageUrl: string; candleIndex: number; revealedAt: string }>;
   marketStructureAnalysisCorrect?: boolean;

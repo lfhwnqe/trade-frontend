@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
+import { ImageUploader } from "@/components/common/ImageUploader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/components/common/alert";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 import { createPracticalFlashcardCard, getBrowserTimeZone } from "../request";
+import type { ImageResource } from "../../config";
 import {
   PRACTICAL_FLASHCARD_BINANCE_UM_SYMBOLS,
   PRACTICAL_FLASHCARD_DIRECTIONS,
@@ -30,7 +32,7 @@ export default function PracticalFlashcardCreatePage() {
   const [standardTakeProfitPrice, setStandardTakeProfitPrice] = React.useState("");
   const [playbookType, setPlaybookType] = React.useState("");
   const [tagCodes, setTagCodes] = React.useState<string[]>([]);
-  const [orderFlowImageUrls, setOrderFlowImageUrls] = React.useState("");
+  const [orderFlowImages, setOrderFlowImages] = React.useState<ImageResource[]>([]);
   const [orderFlowRemark, setOrderFlowRemark] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [summary, setSummary] = React.useState("");
@@ -75,10 +77,7 @@ export default function PracticalFlashcardCreatePage() {
         standardTakeProfitPrice: parseOptionalNumber(standardTakeProfitPrice),
         playbookType,
         tagCodes: tagCodes.length ? tagCodes : undefined,
-        orderFlowImageUrls: orderFlowImageUrls
-          .split(/\n|,/)
-          .map((item) => item.trim())
-          .filter(Boolean),
+        orderFlowImageUrls: orderFlowImages.map((item) => item.url).filter(Boolean),
         orderFlowRemark: orderFlowRemark.trim() || undefined,
         notes: notes.trim() || undefined,
         summary: summary.trim() || undefined,
@@ -93,7 +92,7 @@ export default function PracticalFlashcardCreatePage() {
       setStandardTakeProfitPrice("");
       setPlaybookType("");
       setTagCodes([]);
-      setOrderFlowImageUrls("");
+      setOrderFlowImages([]);
       setOrderFlowRemark("");
       setNotes("");
       setSummary("");
@@ -102,7 +101,7 @@ export default function PracticalFlashcardCreatePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [entryTimeInfo, errorAlert, exitTimeInfo, expectedDirection, notes, orderFlowImageUrls, orderFlowRemark, playbookType, standardEntryPrice, standardStopLossPrice, standardTakeProfitPrice, successAlert, summary, symbolPairInfo, tagCodes]);
+  }, [entryTimeInfo, errorAlert, exitTimeInfo, expectedDirection, notes, orderFlowImages, orderFlowRemark, playbookType, standardEntryPrice, standardStopLossPrice, standardTakeProfitPrice, successAlert, summary, symbolPairInfo, tagCodes]);
 
   return (
     <TradePageShell title="实操闪卡创建" subtitle="创建时拉取 Binance U 本位合约公开 K 线并保存冻结快照" showAddButton={false}>
@@ -179,8 +178,8 @@ export default function PracticalFlashcardCreatePage() {
                 {tagOptions.length === 0 ? <span className="text-xs text-[#71717a]">暂无标签</span> : null}
               </div>
             </Field>
-            <Field label="足迹图 URL（逗号或换行分隔）">
-              <Textarea value={orderFlowImageUrls} onChange={(e) => setOrderFlowImageUrls(e.target.value)} rows={3} className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+            <Field label="足迹图（选填，最多 5 张）">
+              <ImageUploader value={orderFlowImages} onChange={setOrderFlowImages} max={5} />
             </Field>
             <Field label="足迹图说明">
               <Textarea value={orderFlowRemark} onChange={(e) => setOrderFlowRemark(e.target.value)} rows={3} className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
@@ -212,9 +211,9 @@ export default function PracticalFlashcardCreatePage() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block space-y-2">
+    <div className="block space-y-2">
       <span className="text-sm font-medium text-[#d4d4d8]">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }

@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
+import { ImageUploader } from "@/components/common/ImageUploader";
 import { useAlert } from "@/components/common/alert";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 import { getBrowserTimeZone, listPracticalFlashcardCards, updatePracticalFlashcardCard } from "../request";
+import type { ImageResource } from "../../config";
 import {
   PRACTICAL_FLASHCARD_DIRECTIONS,
   PRACTICAL_FLASHCARD_LABELS,
@@ -36,7 +38,7 @@ type EditDraft = {
   standardTakeProfitPrice: string;
   playbookType: string;
   tagCodes: string[];
-  orderFlowImageUrls: string;
+  orderFlowImages: ImageResource[];
   orderFlowRemark: string;
   notes: string;
   summary: string;
@@ -100,7 +102,7 @@ export default function PracticalFlashcardManagePage() {
       standardTakeProfitPrice: stringifyNumber(card.standardTakeProfitPrice),
       playbookType: card.playbookType || "",
       tagCodes: Array.isArray(card.tagCodes) ? card.tagCodes : [],
-      orderFlowImageUrls: (card.orderFlowImageUrls || []).join("\n"),
+      orderFlowImages: imageResourcesFromUrls(card.orderFlowImageUrls || []),
       orderFlowRemark: card.orderFlowRemark || "",
       notes: card.notes || "",
       summary: card.summary || "",
@@ -139,7 +141,7 @@ export default function PracticalFlashcardManagePage() {
         standardTakeProfitPrice: parseOptionalNumber(draft.standardTakeProfitPrice),
         playbookType: draft.playbookType,
         tagCodes: draft.tagCodes,
-        orderFlowImageUrls: splitUrls(draft.orderFlowImageUrls),
+        orderFlowImageUrls: draft.orderFlowImages.map((item) => item.url).filter(Boolean),
         orderFlowRemark: draft.orderFlowRemark.trim() || null,
         notes: draft.notes.trim() || null,
         summary: draft.summary.trim() || null,
@@ -229,13 +231,13 @@ export default function PracticalFlashcardManagePage() {
       </div>
 
       <Dialog open={Boolean(editingCard && draft)} onOpenChange={(open) => { if (!open) { setEditingCard(null); setDraft(null); } }}>
-        <DialogContent className="max-h-[92vh] w-[min(96vw,980px)] max-w-none overflow-y-auto border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+        <DialogContent className="max-h-[92vh] w-[min(98vw,1240px)] max-w-none overflow-y-auto border border-[#27272a] bg-[#121212] text-[#e5e7eb] sm:max-w-none">
           <DialogHeader>
             <DialogTitle>编辑实操闪卡</DialogTitle>
           </DialogHeader>
           {editingCard && draft ? (
             <div className="space-y-5">
-              <div className="grid gap-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 text-sm text-[#a1a1aa] md:grid-cols-3">
+              <div className="grid gap-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 text-sm text-[#a1a1aa] md:grid-cols-4">
                 <ReadonlyField label="交易对" value={editingCard.symbolPairInfo} />
                 <ReadonlyField label="行情源" value={PRACTICAL_FLASHCARD_LABELS[editingCard.venue] || editingCard.venue} />
                 <ReadonlyField label="K 线快照" value={`${editingCard.candles.length} 根；修改时间保存后会重新拉取`} />
@@ -303,8 +305,12 @@ export default function PracticalFlashcardManagePage() {
                 </div>
               </Field>
 
-              <Field label="足迹图 URL（逗号或换行分隔）">
-                <Textarea value={draft.orderFlowImageUrls} onChange={(e) => updateDraft({ orderFlowImageUrls: e.target.value })} rows={3} className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+              <Field label="足迹图（选填，最多 5 张）">
+                <ImageUploader
+                  value={draft.orderFlowImages}
+                  onChange={(value) => updateDraft({ orderFlowImages: value })}
+                  max={5}
+                />
               </Field>
               <Field label="足迹图说明">
                 <Textarea value={draft.orderFlowRemark} onChange={(e) => updateDraft({ orderFlowRemark: e.target.value })} rows={3} className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
@@ -338,19 +344,19 @@ function parseOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function splitUrls(value: string) {
-  return value
-    .split(/\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+function imageResourcesFromUrls(urls: string[]): ImageResource[] {
+  return urls
+    .map((url) => url.trim())
+    .filter(Boolean)
+    .map((url, index) => ({ key: `order-flow-${index}`, url }));
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block space-y-2">
+    <div className="block space-y-2">
       <span className="text-sm font-medium text-[#d4d4d8]">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 

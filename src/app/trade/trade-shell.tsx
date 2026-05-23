@@ -185,6 +185,11 @@ const tradeNavSections: NavSection[] = [
     icon: Layers,
     items: [
       {
+        title: "实操闪卡训练",
+        href: "/trade/practical-flashcard/train",
+        icon: Repeat2,
+      },
+      {
         title: "实操闪卡创建",
         href: "/trade/practical-flashcard/create",
         icon: Layers,
