@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ClipboardList,
@@ -47,6 +47,7 @@ type NavItem = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   activePaths?: string[];
+  adminOnly?: boolean;
 };
 
 type NavSection = {
@@ -166,11 +167,13 @@ const tradeNavSections: NavSection[] = [
         title: "实操闪卡创建",
         href: "/trade/practical-flashcard/create",
         icon: Layers,
+        adminOnly: true,
       },
       {
         title: "实操闪卡管理",
         href: "/trade/practical-flashcard/manage",
         icon: ClipboardList,
+        adminOnly: true,
       },
     ],
   },
@@ -202,6 +205,16 @@ const isNavSectionActive = (pathname: string | null, section: NavSection) =>
   Boolean(section.isActive?.(pathname)) ||
   section.items.some((item) => isNavItemActive(pathname, item));
 
+const isAdminRole = (role: string) => role === "Admins" || role === "SuperAdmins";
+
+const filterNavSectionsByRole = (sections: NavSection[], role: string) =>
+  sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.adminOnly || isAdminRole(role)),
+    }))
+    .filter((section) => section.items.length > 0);
+
 export default function TradeShell({
   children,
 }: {
@@ -219,6 +232,10 @@ export default function TradeShell({
   const [user, setUser] = useAtomImmer(userAtom);
   const displayName = user.username || "User";
   const userRole = user.role || "FreePlan";
+  const visibleTradeNavSections = useMemo(
+    () => filterNavSectionsByRole(tradeNavSections, userRole),
+    [userRole],
+  );
   const initials =
     displayName
       .split(/\s+/)
@@ -257,12 +274,12 @@ export default function TradeShell({
   };
 
   useEffect(() => {
-    const activeSection = tradeNavSections.find((section) =>
+    const activeSection = visibleTradeNavSections.find((section) =>
       isNavSectionActive(pathname, section),
     );
 
     setOpenSection(activeSection?.title ?? null);
-  }, [pathname]);
+  }, [pathname, visibleTradeNavSections]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -369,7 +386,7 @@ export default function TradeShell({
             );
           })()}
 
-          {tradeNavSections.map((section) => {
+          {visibleTradeNavSections.map((section) => {
             const isOpen = openSection === section.title;
             const isActive = isNavSectionActive(pathname, section);
             return (
@@ -529,7 +546,7 @@ export default function TradeShell({
                     </div>
                   </div>
 
-                  {tradeNavSections.map((section) => (
+                  {visibleTradeNavSections.map((section) => (
                     <div key={section.title}>
                       <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
                         <section.icon className="h-3.5 w-3.5" />

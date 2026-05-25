@@ -18,10 +18,35 @@ import {
   PRACTICAL_FLASHCARD_LABELS,
   type PracticalFlashcardDirection,
 } from "../types";
+import { usePracticalFlashcardAdminAccess } from "../use-practical-flashcard-admin-access";
 
 const EMPTY_SELECT_VALUE = "__NONE__";
 
 export default function PracticalFlashcardCreatePage() {
+  const { loaded, isAdmin } = usePracticalFlashcardAdminAccess();
+
+  if (!loaded) {
+    return (
+      <TradePageShell title="实操闪卡创建" subtitle="正在确认权限" showAddButton={false}>
+        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 text-sm text-[#a1a1aa]">加载中...</div>
+      </TradePageShell>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <TradePageShell title="无权限访问" subtitle="实操闪卡题库由管理员维护" showAddButton={false}>
+        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 text-sm text-[#a1a1aa]">
+          当前账号不能创建实操闪卡。你仍然可以从训练统计页进入实操训练。
+        </div>
+      </TradePageShell>
+    );
+  }
+
+  return <PracticalFlashcardCreateForm />;
+}
+
+function PracticalFlashcardCreateForm() {
   const [successAlert, errorAlert] = useAlert();
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
   const [entryTimeInfo, setEntryTimeInfo] = React.useState("");

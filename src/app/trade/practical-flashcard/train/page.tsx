@@ -8,10 +8,12 @@ import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "@/components/common/alert";
 import { startRandomPracticalFlashcardTraining } from "../request";
+import { usePracticalFlashcardAdminAccess } from "../use-practical-flashcard-admin-access";
 
 export default function PracticalFlashcardRandomTrainingPage() {
   const router = useRouter();
   const [, errorAlert] = useAlert();
+  const { isAdmin } = usePracticalFlashcardAdminAccess();
   const [loading, setLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState("");
   const startedRef = React.useRef(false);
@@ -65,9 +67,9 @@ export default function PracticalFlashcardRandomTrainingPage() {
                 重新抽取
               </Button>
               <Button asChild variant="outline" className="gap-2 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]">
-                <Link href="/trade/practical-flashcard/manage" prefetch={false}>
+                <Link href={isAdmin ? "/trade/practical-flashcard/manage" : "/trade/practical-flashcard/dashboard"} prefetch={false}>
                   <ClipboardList className="size-4" />
-                  查看实操闪卡
+                  {isAdmin ? "查看实操闪卡" : "返回训练统计"}
                 </Link>
               </Button>
             </div>

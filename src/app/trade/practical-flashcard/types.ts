@@ -27,6 +27,7 @@ export type PracticalFlashcardCandle = {
 export type PracticalFlashcardCard = {
   id: string;
   userId: string;
+  ownerRole?: string;
   cardId: string;
   entityType: 'PRACTICAL_FLASHCARD';
   status: PracticalFlashcardStatus;
@@ -64,6 +65,7 @@ export type PracticalFlashcardAttempt = {
   entityType: 'PRACTICAL_FLASHCARD_ATTEMPT';
   attemptId: string;
   targetCardId: string;
+  targetCardOwnerUserId?: string;
   status: PracticalFlashcardAttemptStatus;
   trainingMode?: PracticalFlashcardTrainingMode;
   cardSnapshot?: {

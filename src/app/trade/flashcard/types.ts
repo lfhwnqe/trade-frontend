@@ -152,6 +152,7 @@ export type MistakeSourceType = "FLASHCARD_SIMULATION" | "TRADE_FLASHCARD";
 export type FlashcardCard = {
   id: string;
   userId: string;
+  ownerRole?: string;
   cardId: string;
   prefilledRevealProgress?: number;
   prefilledHorizontalViewportPercent?: number;
@@ -236,6 +237,8 @@ export type FlashcardDrillSessionHistoryItem = {
 
 export type FlashcardDrillSessionAttemptDetail = {
   cardId: string;
+  targetCardOwnerUserId?: string;
+  targetCardScope?: "USER" | "SYSTEM";
   userAction: FlashcardAction;
   expectedAction: FlashcardAction;
   isCorrect: boolean;
