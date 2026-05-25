@@ -226,6 +226,11 @@ export default function PracticalFlashcardManagePage() {
               <RefreshCw className="size-4" />
               {loading ? "刷新中..." : "刷新"}
             </Button>
+            <Button asChild variant="secondary" className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+              <Link href="/trade/practical-flashcard/train" prefetch={false}>
+                <Play className="size-4" />开始训练
+              </Link>
+            </Button>
             <Button asChild className="gap-2 bg-[#00c2b2] text-black hover:bg-[#009e91]">
               <Link href="/trade/practical-flashcard/create" prefetch={false}><Plus className="size-4" />新建实操闪卡</Link>
             </Button>

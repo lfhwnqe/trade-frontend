@@ -27,12 +27,102 @@ type FillItem = {
   realizedPnl?: string;
   commission?: string;
   commissionAsset?: string;
+  raw?: {
+    quoteQty?: string | number;
+    [key: string]: unknown;
+  };
 };
 
 type FillListResponse = {
   items: FillItem[];
   nextToken: string | null;
 };
+
+type AutoMergeCandidate = {
+  id: string;
+  symbol: string;
+  tradeKeys: string[];
+  startTime: number;
+  endTime: number;
+  sides: string;
+  fillCount: number;
+  qty: number;
+  quoteQty: number;
+  realizedPnl: number;
+  commission: number;
+  commissionAsset?: string;
+};
+
+const AUTO_MERGE_WINDOW_MS = 10_000;
+
+function toFiniteNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function fillQuoteQty(fill: FillItem) {
+  const rawQuoteQty = fill.raw?.quoteQty;
+  if (rawQuoteQty !== undefined && rawQuoteQty !== null) {
+    return toFiniteNumber(rawQuoteQty);
+  }
+  return toFiniteNumber(fill.price) * toFiniteNumber(fill.qty);
+}
+
+function buildAutoMergeCandidates(fills: FillItem[]): AutoMergeCandidate[] {
+  const bySymbol = new Map<string, FillItem[]>();
+  fills.forEach((fill) => {
+    if (!fill.tradeKey || !fill.symbol || !Number.isFinite(Number(fill.time))) return;
+    const symbol = fill.symbol.toUpperCase();
+    bySymbol.set(symbol, [...(bySymbol.get(symbol) || []), fill]);
+  });
+
+  const candidates: AutoMergeCandidate[] = [];
+  bySymbol.forEach((symbolFills, symbol) => {
+    const sorted = symbolFills.slice().sort((a, b) => Number(a.time) - Number(b.time));
+    let index = 0;
+    while (index < sorted.length) {
+      const start = sorted[index];
+      const startTime = Number(start.time);
+      const cluster = [start];
+      let nextIndex = index + 1;
+
+      while (
+        nextIndex < sorted.length &&
+        Number(sorted[nextIndex].time) - startTime <= AUTO_MERGE_WINDOW_MS
+      ) {
+        cluster.push(sorted[nextIndex]);
+        nextIndex += 1;
+      }
+
+      const sides = new Set(cluster.map((item) => String(item.side || "").toUpperCase()));
+      const hasBuyAndSell = sides.has("BUY") && sides.has("SELL");
+      if (cluster.length > 1 && hasBuyAndSell) {
+        const endTime = Math.max(...cluster.map((item) => Number(item.time)));
+        const tradeKeys = cluster.map((item) => item.tradeKey);
+        candidates.push({
+          id: `${symbol}#${startTime}#${endTime}#${tradeKeys.join("|")}`,
+          symbol,
+          tradeKeys,
+          startTime,
+          endTime,
+          sides: Array.from(sides).sort().join(" / "),
+          fillCount: cluster.length,
+          qty: cluster.reduce((sum, item) => sum + toFiniteNumber(item.qty), 0),
+          quoteQty: cluster.reduce((sum, item) => sum + fillQuoteQty(item), 0),
+          realizedPnl: cluster.reduce((sum, item) => sum + toFiniteNumber(item.realizedPnl), 0),
+          commission: cluster.reduce((sum, item) => sum + toFiniteNumber(item.commission), 0),
+          commissionAsset: cluster.find((item) => item.commissionAsset)?.commissionAsset,
+        });
+        index = nextIndex;
+        continue;
+      }
+
+      index += 1;
+    }
+  });
+
+  return candidates.sort((a, b) => b.endTime - a.endTime);
+}
 
 async function getKeyStatus() {
   const res = await fetchWithAuth("/api/proxy-post", {
@@ -222,6 +312,8 @@ export default function BinanceFuturesIntegrationPage() {
   const [fillsLoading, setFillsLoading] = React.useState(false);
   const [fillsNextToken, setFillsNextToken] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<Record<string, boolean>>({});
+  const [selectionAnchorKey, setSelectionAnchorKey] = React.useState<string | null>(null);
+  const [aggregateTradeKeys, setAggregateTradeKeys] = React.useState<string[]>([]);
   const [converting, setConverting] = React.useState(false);
   const [aggregating, setAggregating] = React.useState(false);
   const [aggregateResult, setAggregateResult] = React.useState<unknown>(null);
@@ -261,6 +353,62 @@ export default function BinanceFuturesIntegrationPage() {
     () => Object.keys(selected).filter((k) => selected[k]),
     [selected],
   );
+  const activeAggregateKeys = aggregateTradeKeys.length > 0 ? aggregateTradeKeys : selectedKeys;
+  const autoMergeCandidates = React.useMemo(
+    () => buildAutoMergeCandidates(fills),
+    [fills],
+  );
+
+  const openAggregatePreview = React.useCallback(
+    async (tradeKeys: string[]) => {
+      try {
+        setAggregating(true);
+        setAggregateTradeKeys(tradeKeys);
+        const res = await aggregatePreview(tradeKeys, previewLeverage);
+        setAggregateResult(res);
+        setAggregateOpen(true);
+        successAlert(
+          `预览完成：netQty=${res?.data?.totals?.netQty ?? 0}`,
+        );
+      } catch (e) {
+        console.error(e);
+        errorAlert("聚合预览失败");
+      } finally {
+        setAggregating(false);
+      }
+    },
+    [errorAlert, previewLeverage, successAlert],
+  );
+
+  const updateFillSelection = React.useCallback(
+    (tradeKey: string, checked: boolean) => {
+      setAggregateTradeKeys([]);
+
+      if (!checked) {
+        setSelected((prev) => ({ ...prev, [tradeKey]: false }));
+        setSelectionAnchorKey((current) => (current === tradeKey ? null : current));
+        return;
+      }
+
+      setSelected((prev) => {
+        const next = { ...prev, [tradeKey]: true };
+        if (selectionAnchorKey && selectionAnchorKey !== tradeKey) {
+          const startIndex = fills.findIndex((item) => item.tradeKey === selectionAnchorKey);
+          const endIndex = fills.findIndex((item) => item.tradeKey === tradeKey);
+          if (startIndex >= 0 && endIndex >= 0) {
+            const from = Math.min(startIndex, endIndex);
+            const to = Math.max(startIndex, endIndex);
+            fills.slice(from, to + 1).forEach((item) => {
+              next[item.tradeKey] = true;
+            });
+          }
+        }
+        return next;
+      });
+      setSelectionAnchorKey(tradeKey);
+    },
+    [fills, selectionAnchorKey],
+  );
 
   const loadFills = React.useCallback(
     async (mode: "reset" | "more") => {
@@ -274,6 +422,11 @@ export default function BinanceFuturesIntegrationPage() {
           mode === "more" ? [...prev, ...(data.items || [])] : data.items || [],
         );
         setFillsNextToken(data.nextToken || null);
+        if (mode === "reset") {
+          setSelected({});
+          setAggregateTradeKeys([]);
+          setSelectionAnchorKey(null);
+        }
       } catch (e) {
         console.error(e);
         errorAlert("加载同步记录失败");
@@ -329,6 +482,8 @@ export default function BinanceFuturesIntegrationPage() {
                 setFills([]);
                 setFillsNextToken(null);
                 setSelected({});
+                setAggregateTradeKeys([]);
+                setSelectionAnchorKey(null);
               } catch (e) {
                 console.error(e);
                 errorAlert("清空失败");
@@ -345,22 +500,7 @@ export default function BinanceFuturesIntegrationPage() {
             <>
               <Button
                 variant="secondary"
-                onClick={async () => {
-                  try {
-                    setAggregating(true);
-                    const res = await aggregatePreview(selectedKeys, previewLeverage);
-                    setAggregateResult(res);
-                    setAggregateOpen(true);
-                    successAlert(
-                      `预览完成：netQty=${res?.data?.totals?.netQty ?? 0}`,
-                    );
-                  } catch (e) {
-                    console.error(e);
-                    errorAlert("聚合预览失败");
-                  } finally {
-                    setAggregating(false);
-                  }
-                }}
+                onClick={() => void openAggregatePreview(selectedKeys)}
                 disabled={aggregating}
               >
                 {aggregating ? "处理中..." : `合并成交预览（${selectedKeys.length}）`}
@@ -503,7 +643,7 @@ export default function BinanceFuturesIntegrationPage() {
                       onClick={async () => {
                         try {
                           setAggregating(true);
-                          const res = await aggregatePreview(selectedKeys, previewLeverage);
+                          const res = await aggregatePreview(activeAggregateKeys, previewLeverage);
                           setAggregateResult(res);
                         } catch (e) {
                           console.error(e);
@@ -512,7 +652,7 @@ export default function BinanceFuturesIntegrationPage() {
                           setAggregating(false);
                         }
                       }}
-                      disabled={aggregating || selectedKeys.length === 0}
+                      disabled={aggregating || activeAggregateKeys.length === 0}
                     >
                       刷新
                     </Button>
@@ -529,9 +669,11 @@ export default function BinanceFuturesIntegrationPage() {
                     onClick={async () => {
                       try {
                         setConverting(true);
-                        const res = await aggregateConvert(selectedKeys, previewLeverage);
+                        const res = await aggregateConvert(activeAggregateKeys, previewLeverage);
                         successAlert("已生成 1 笔交易记录（可编辑）");
                         setSelected({});
+                        setAggregateTradeKeys([]);
+                        setSelectionAnchorKey(null);
                         const tid = res?.data?.transactionId;
                         if (tid) {
                           window.location.href = `/trade/detail?id=${encodeURIComponent(tid)}`;
@@ -543,9 +685,9 @@ export default function BinanceFuturesIntegrationPage() {
                         setConverting(false);
                       }
                     }}
-                    disabled={converting || selectedKeys.length === 0}
+                    disabled={converting || activeAggregateKeys.length === 0}
                   >
-                    {converting ? "生成中..." : `转为复盘交易（${selectedKeys.length}）`}
+                    {converting ? "生成中..." : `转为复盘交易（${activeAggregateKeys.length}）`}
                   </Button>
 
                   <Button variant="secondary" onClick={() => setAggregateOpen(false)} disabled={converting}>
@@ -580,6 +722,80 @@ export default function BinanceFuturesIntegrationPage() {
         </div>
 
         {fills.length > 0 ? (
+          <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6">
+            <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+              <div>
+                <div className="text-lg font-semibold text-white">自动合并候选</div>
+                <div className="mt-2 text-xs text-[#6b7280]">
+                  自动把同一币对 10 秒内同时包含 BUY / SELL 的成交合并为一条待转换交易；单选候选即可预览或生成 Trade。
+                </div>
+              </div>
+              <div className="text-xs text-[#9ca3af]">
+                当前已加载 {fills.length} 条，识别 {autoMergeCandidates.length} 组
+              </div>
+            </div>
+
+            {autoMergeCandidates.length > 0 ? (
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                {autoMergeCandidates.map((candidate) => (
+                  <div key={candidate.id} className="rounded-lg border border-[#27272a] bg-[#0b0b0b] p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="font-mono text-sm font-semibold text-white">
+                          {candidate.symbol} · {candidate.sides}
+                        </div>
+                        <div className="mt-1 text-xs text-[#9ca3af]">
+                          {new Date(candidate.startTime).toLocaleString()} - {new Date(candidate.endTime).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className={candidate.realizedPnl >= 0 ? "font-mono text-sm text-[#00c2b2]" : "font-mono text-sm text-red-400"}>
+                        {candidate.realizedPnl.toFixed(8)}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[#9ca3af] md:grid-cols-4">
+                      <div>成交数 <span className="font-mono text-[#e5e7eb]">{candidate.fillCount}</span></div>
+                      <div>数量 <span className="font-mono text-[#e5e7eb]">{candidate.qty.toFixed(8)}</span></div>
+                      <div>金额 <span className="font-mono text-[#e5e7eb]">{candidate.quoteQty.toFixed(2)}</span></div>
+                      <div>手续费 <span className="font-mono text-[#e5e7eb]">{candidate.commission.toFixed(8)} {candidate.commissionAsset || ""}</span></div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-[#00c2b2] text-black hover:bg-[#00a79a]"
+                        disabled={aggregating}
+                        onClick={() => void openAggregatePreview(candidate.tradeKeys)}
+                      >
+                        {aggregating ? "处理中..." : `预览 / 转换（${candidate.tradeKeys.length}）`}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]"
+                        onClick={() => {
+                          setSelected(Object.fromEntries(candidate.tradeKeys.map((key) => [key, true])));
+                          setAggregateTradeKeys(candidate.tradeKeys);
+                          setSelectionAnchorKey(null);
+                        }}
+                      >
+                        标记来源成交
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-lg border border-[#27272a] bg-[#0b0b0b] p-4 text-sm text-[#71717a]">
+                当前已加载记录中没有发现 10 秒内可自动合并的入离场成交。
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {fills.length > 0 ? (
           <div className="rounded-xl border border-[#27272a] bg-[#121212] p-6 overflow-x-auto">
             <div className="text-lg font-semibold text-white">已同步成交记录</div>
             <table className="mt-4 w-full text-sm">
@@ -599,24 +815,14 @@ export default function BinanceFuturesIntegrationPage() {
                   <tr
                     key={f.tradeKey}
                     className="border-b border-[#27272a] hover:bg-white/5 cursor-pointer"
-                    onClick={() =>
-                      setSelected((prev) => ({
-                        ...prev,
-                        [f.tradeKey]: !Boolean(prev[f.tradeKey]),
-                      }))
-                    }
+                    onClick={() => updateFillSelection(f.tradeKey, !Boolean(selected[f.tradeKey]))}
                   >
                     <td className="py-2 pr-3">
                       <input
                         type="checkbox"
                         checked={Boolean(selected[f.tradeKey])}
                         onClick={(e) => e.stopPropagation()}
-                        onChange={(e) =>
-                          setSelected((prev) => ({
-                            ...prev,
-                            [f.tradeKey]: e.target.checked,
-                          }))
-                        }
+                        onChange={(e) => updateFillSelection(f.tradeKey, e.target.checked)}
                       />
                     </td>
                     <td className="py-2 pr-3 text-[#e5e7eb] whitespace-nowrap">

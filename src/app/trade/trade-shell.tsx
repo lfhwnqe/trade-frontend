@@ -84,7 +84,6 @@ const priorityPrefetchRoutes = [
   "/trade/home",
   "/trade/list",
   "/trade/flashcard/drill/setup",
-  "/trade/flashcard/simulation/setup",
 ];
 
 const tradeNavSections: NavSection[] = [
@@ -155,41 +154,9 @@ const tradeNavSections: NavSection[] = [
     ],
   },
   {
-    title: "模拟盘训练",
-    icon: Repeat2,
-    items: [
-      {
-        title: "模拟盘训练",
-        href: "/trade/flashcard/simulation/setup",
-        icon: Repeat2,
-        activePaths: ["/trade/flashcard/simulation/play"],
-      },
-      {
-        title: "模拟盘历史",
-        href: "/trade/flashcard/simulation/history",
-        icon: Trophy,
-      },
-      {
-        title: "训练记录管理",
-        href: "/trade/flashcard/simulation/attempts",
-        icon: ClipboardList,
-      },
-      {
-        title: "Mistake Records",
-        href: "/trade/flashcard/mistakes/records",
-        icon: ScrollText,
-      },
-    ],
-  },
-  {
     title: "实操闪卡",
     icon: Layers,
     items: [
-      {
-        title: "实操闪卡训练",
-        href: "/trade/practical-flashcard/train",
-        icon: Repeat2,
-      },
       {
         title: "训练统计",
         href: "/trade/practical-flashcard/dashboard",

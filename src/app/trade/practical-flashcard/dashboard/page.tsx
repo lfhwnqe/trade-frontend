@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { ArrowRight, BarChart3, RefreshCw, Target, Trash2, TrendingUp } from "lucide-react";
+import { ArrowRight, BarChart3, Play, RefreshCw, Target, Trash2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TradePageShell from "../../components/trade-page-shell";
@@ -133,6 +133,11 @@ export default function PracticalFlashcardDashboardPage() {
             className="bg-[#00c2b2] text-black hover:bg-[#00a89a]"
           >
             <RefreshCw className="size-4" />刷新
+          </Button>
+          <Button asChild variant="secondary" className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+            <Link href="/trade/practical-flashcard/train" prefetch={false}>
+              <Play className="size-4" />开始训练
+            </Link>
           </Button>
         </div>
 
