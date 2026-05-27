@@ -5,6 +5,7 @@ import type {
   TradeFlashcardCardSortBy,
   TradeFlashcardCardSortOrder,
   TradeFlashcardLifecycleStatus,
+  TradeFlashcardPlaybookCondition,
   TradeFlashcardProcessResult,
   TradeFlashcardType,
 } from './types';
@@ -32,6 +33,12 @@ type CreateTradeFlashcardPayload = {
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   playbookType?: string;
+  marketStructure?: string;
+  possiblePlaybookTypes?: string[];
+  playbookConditions?: TradeFlashcardPlaybookCondition[];
+  firstSignal?: string;
+  secondSignalConfirmation?: string;
+  stopLossSetting?: string;
   notes?: string;
   summary?: string;
   tagCodes?: string[];

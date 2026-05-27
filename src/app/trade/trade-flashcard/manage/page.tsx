@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
+import { MultiSelectDropdown } from "@/components/common/MultiSelectDropdown";
 import { useAlert } from "@/components/common/alert";
 import { ImagePreviewDialog } from "../../flashcard/components/ImagePreviewDialog";
 import type { ImageResource } from "../../config";
@@ -113,6 +114,12 @@ export default function TradeFlashcardManagePage() {
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([...TRADE_PERIOD_PRESETS]);
   const [playbookType, setPlaybookType] = React.useState("");
+  const [marketStructure, setMarketStructure] = React.useState("");
+  const [possiblePlaybookTypes, setPossiblePlaybookTypes] = React.useState<string[]>([]);
+  const [playbookConditions, setPlaybookConditions] = React.useState<Array<{ playbookType: string; condition: string }>>([]);
+  const [firstSignal, setFirstSignal] = React.useState("");
+  const [secondSignalConfirmation, setSecondSignalConfirmation] = React.useState("");
+  const [stopLossSetting, setStopLossSetting] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [summary, setSummary] = React.useState("");
   const [tagCodes, setTagCodes] = React.useState<string[]>([]);
@@ -229,6 +236,14 @@ export default function TradeFlashcardManagePage() {
     }
   }, [errorAlert, notes, successAlert]);
 
+  const handlePossiblePlaybookTypesChange = React.useCallback((next: string[]) => {
+    setPossiblePlaybookTypes(next);
+    setPlaybookConditions((prev) => next.map((code) => ({
+      playbookType: code,
+      condition: prev.find((item) => item.playbookType === code)?.condition || "",
+    })));
+  }, []);
+
   const openEdit = React.useCallback((card: TradeFlashcardCard) => {
     setEditingCard(card);
     setTradeFlashcardType(card.tradeFlashcardType);
@@ -242,6 +257,15 @@ export default function TradeFlashcardManagePage() {
     setEntryTimeInfo(card.entryTimeInfo || "");
     setSymbolPairInfo(card.symbolPairInfo || "");
     setPlaybookType(card.playbookType || "");
+    setMarketStructure(card.marketStructure || "");
+    setPossiblePlaybookTypes(card.possiblePlaybookTypes || []);
+    setPlaybookConditions((card.possiblePlaybookTypes || []).map((code) => ({
+      playbookType: code,
+      condition: card.playbookConditions?.find((item) => item.playbookType === code)?.condition || "",
+    })));
+    setFirstSignal(card.firstSignal || "");
+    setSecondSignalConfirmation(card.secondSignalConfirmation || "");
+    setStopLossSetting(card.stopLossSetting || "");
     setNotes(card.notes || "");
     setSummary(card.summary || "");
     setTagCodes(card.tagCodes || []);
@@ -250,6 +274,8 @@ export default function TradeFlashcardManagePage() {
   const handleSave = React.useCallback(async () => {
     if (!editingCard) return;
     if (!tradeFlashcardType || !preEntryImages[0]?.url) return errorAlert("类型和入场前截图不能为空");
+    const missingCondition = playbookConditions.find((item) => !item.condition.trim());
+    if (possiblePlaybookTypes.length && missingCondition) return errorAlert("请填写每个可能剧本的出现条件");
     try {
       await updateTradeFlashcardCard(editingCard.cardId, {
         tradeFlashcardType,
@@ -263,6 +289,17 @@ export default function TradeFlashcardManagePage() {
         marketTimeInfo: marketTimeInfo.trim() || "",
         symbolPairInfo: symbolPairInfo.trim() || "",
         playbookType: playbookType || "",
+        marketStructure: marketStructure.trim() || "",
+        possiblePlaybookTypes,
+        playbookConditions: possiblePlaybookTypes.length
+          ? playbookConditions.map((item) => ({
+              playbookType: item.playbookType,
+              condition: item.condition.trim(),
+            }))
+          : [],
+        firstSignal: firstSignal.trim() || "",
+        secondSignalConfirmation: secondSignalConfirmation.trim() || "",
+        stopLossSetting: stopLossSetting.trim() || "",
         notes: notes.trim() || "",
         summary: summary.trim() || "",
         tagCodes,
@@ -274,7 +311,7 @@ export default function TradeFlashcardManagePage() {
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "保存失败");
     }
-  }, [activeQuery, editingCard, entryImages, entryTimeInfo, errorAlert, fetchPage, finalTrendImages, isSystemAligned, marketTimeInfo, notes, page, playbookType, preEntryImages, processResult, rememberSymbolPair, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
+  }, [activeQuery, editingCard, entryImages, entryTimeInfo, errorAlert, fetchPage, finalTrendImages, firstSignal, isSystemAligned, marketStructure, marketTimeInfo, notes, page, playbookConditions, playbookType, possiblePlaybookTypes, preEntryImages, processResult, rememberSymbolPair, secondSignalConfirmation, stopLossSetting, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
 
   const handleDelete = React.useCallback(async (cardId: string) => {
     if (!window.confirm("确认删除这张交易闪卡吗？")) return;
@@ -292,7 +329,7 @@ export default function TradeFlashcardManagePage() {
     setConvertingCard(card);
     setConvertMarketTimeInfo(card.entryTimeInfo || card.marketTimeInfo || "");
     setConvertSymbolPairInfo(card.symbolPairInfo || "");
-    setConvertPlaybookType(card.playbookType || "");
+    setConvertPlaybookType(card.playbookType || (card.possiblePlaybookTypes?.length === 1 ? card.possiblePlaybookTypes[0] : ""));
     setConfirmConvertCardId(null);
   }, []);
 
@@ -462,6 +499,43 @@ export default function TradeFlashcardManagePage() {
               <Field label="币对"><><Input value={symbolPairInfo} onChange={(e) => setSymbolPairInfo(e.target.value)} onBlur={(e) => rememberSymbolPair(e.target.value)} list="trade-flashcard-symbol-pair-presets" className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /><datalist id="trade-flashcard-symbol-pair-presets">{symbolPairOptions.map((item) => <option key={item} value={item} />)}</datalist></></Field>
               <Field label="剧本类型"><Select value={playbookType || EMPTY_SELECT_VALUE} onValueChange={(value) => setPlaybookType(value === EMPTY_SELECT_VALUE ? "" : value)}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue placeholder="选择剧本类型" /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]"><SelectItem value={EMPTY_SELECT_VALUE}>未设置</SelectItem>{playbookTypeOptions.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}</SelectContent></Select></Field>
             </div>
+            <div className="rounded-xl border border-[#27272a] bg-[#0f0f10] p-4">
+              <div className="mb-4 text-sm font-medium text-[#e5e7eb]">交易逻辑</div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="市场结构"><Textarea value={marketStructure} onChange={(e) => setMarketStructure(e.target.value)} placeholder="记录关键价格区域、支撑阻力、SMC 区域、BOS / CHOCH、趋势通道等" className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>
+                <Field label="可能出现的剧本">
+                  <MultiSelectDropdown
+                    options={playbookTypeOptions.map((item) => ({ value: item.code, label: item.label, color: item.color }))}
+                    value={possiblePlaybookTypes}
+                    onChange={handlePossiblePlaybookTypesChange}
+                    placeholder="选择可能剧本"
+                    emptyText="暂无可用 playbook_type，可先到字典管理维护"
+                    className="h-9 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
+                  />
+                </Field>
+                {possiblePlaybookTypes.length ? (
+                  <div className="space-y-3 md:col-span-2">
+                    <div className="text-xs text-[#9ca3af]">剧本出现条件</div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {playbookConditions.map((item) => (
+                        <div key={item.playbookType} className="space-y-2 rounded-lg border border-[#27272a] bg-[#1e1e1e] p-3">
+                          <div className="text-xs text-[#d4d4d8]">{getPlaybookLabel(playbookTypeOptions, item.playbookType)}</div>
+                          <Textarea
+                            value={item.condition}
+                            onChange={(e) => setPlaybookConditions((prev) => prev.map((current) => current.playbookType === item.playbookType ? { ...current, condition: e.target.value } : current))}
+                            placeholder="填写这个剧本成立的条件"
+                            className="min-h-20 border-[#27272a] bg-[#121212] text-[#e5e7eb]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                <Field label="第一次信号"><Textarea value={firstSignal} onChange={(e) => setFirstSignal(e.target.value)} placeholder="作为前置预警记录，不直接入场" className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>
+                <Field label="第二次信号确认"><Textarea value={secondSignalConfirmation} onChange={(e) => setSecondSignalConfirmation(e.target.value)} placeholder="记录入场前最后质检理由；确认信号必须基于 K 线收盘后成立" className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>
+                <Field label="止损设置"><Textarea value={stopLossSetting} onChange={(e) => setStopLossSetting(e.target.value)} placeholder="记录止损为什么放在这里，以及 RR 设计" className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>
+              </div>
+            </div>
             <Field label="字典标签"><div className="flex flex-wrap gap-2 rounded-xl border border-[#27272a] bg-[#1e1e1e] p-3">{tagOptions.map((item) => { const active = tagCodes.includes(item.code); return <button key={item.code} type="button" onClick={() => setTagCodes((prev) => prev.includes(item.code) ? prev.filter((code) => code !== item.code) : [...prev, item.code])} className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${active ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]" : "border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424]"}`}>{item.color ? <span className="inline-block h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: item.color }} /> : null}{item.label}</button>; })}</div></Field>
             <div className="grid gap-6 md:grid-cols-3"><UploadCard title="入场前走势截图"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={PRE_ENTRY_IMAGE_LIMIT} /></UploadCard><UploadCard title="入场时截图"><ImageUploader value={entryImages} onChange={setEntryImages} max={ENTRY_IMAGE_LIMIT} /></UploadCard><UploadCard title="最终走势截图"><ImageUploader value={finalTrendImages} onChange={setFinalTrendImages} max={1} /></UploadCard></div>
             <div className="space-y-3">
@@ -518,6 +592,11 @@ function getPlaybookLabel(playbookTypeOptions: Array<{ code: string; label: stri
   return playbookTypeOptions.find((item) => item.code === playbookType)?.label || playbookType;
 }
 
+function getPlaybookLabels(playbookTypeOptions: Array<{ code: string; label: string }>, playbookTypes?: string[]) {
+  if (!playbookTypes?.length) return "--";
+  return playbookTypes.map((code) => getPlaybookLabel(playbookTypeOptions, code)).join(" / ");
+}
+
 function ImageBlock({ title, url, onPreview, compact = false }: { title: string; url?: string; onPreview: (url: string) => void; compact?: boolean }) {
   return <div className="space-y-2"><div className="text-sm font-medium text-[#e5e7eb]">{title}</div><button type="button" className={`relative aspect-video w-full overflow-hidden rounded border border-[#27272a] bg-[#0f0f10] ${compact ? "max-w-[320px]" : ""}`} onClick={() => url && onPreview(url)}>{url ? <img src={url} alt={title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-[#71717a]">暂无</div>}</button></div>;
 }
@@ -532,6 +611,7 @@ function TradeFlashcardMetaSummary({ card, playbookTypeOptions }: { card: TradeF
     { label: "行情时间", value: card.marketTimeInfo || "--" },
     { label: "入场时间", value: card.entryTimeInfo || "--" },
     { label: "剧本", value: getPlaybookLabel(playbookTypeOptions, card.playbookType) },
+    { label: "可能剧本", value: getPlaybookLabels(playbookTypeOptions, card.possiblePlaybookTypes) },
     { label: "系统一致性", value: typeof card.isSystemAligned === "boolean" ? (card.isSystemAligned ? "符合" : "不符合") : "--" },
     { label: "转换状态", value: card.convertedToFlashcardAt ? `已转换（${formatDateTime(card.convertedToFlashcardAt)}）` : "未转换" },
     { label: "标签", value: card.tagItems?.length ? card.tagItems.map((item) => item.label).join(" / ") : "--" },
@@ -562,6 +642,24 @@ function ReadonlyContent({ card, playbookTypeOptions, onPreview }: { card: Trade
         <div>入场时间：{card.entryTimeInfo || "--"}</div>
         <div>币对：{card.symbolPairInfo || "--"}</div>
         <div className="md:col-span-2">剧本：{getPlaybookLabel(playbookTypeOptions, card.playbookType)}</div>
+        <div className="md:col-span-2">市场结构：{card.marketStructure || "--"}</div>
+        <div className="md:col-span-2">可能剧本：{getPlaybookLabels(playbookTypeOptions, card.possiblePlaybookTypes)}</div>
+        <div className="md:col-span-2">
+          剧本出现条件：
+          {card.playbookConditions?.length ? (
+            <div className="mt-2 space-y-2">
+              {card.playbookConditions.map((item) => (
+                <div key={item.playbookType} className="rounded border border-[#27272a] bg-[#0f0f10] p-2">
+                  <div className="text-xs text-[#9ca3af]">{getPlaybookLabel(playbookTypeOptions, item.playbookType)}</div>
+                  <div className="mt-1 whitespace-pre-wrap">{item.condition}</div>
+                </div>
+              ))}
+            </div>
+          ) : " --"}
+        </div>
+        <div className="md:col-span-2">第一次信号：{card.firstSignal || "--"}</div>
+        <div className="md:col-span-2">第二次信号确认：{card.secondSignalConfirmation || "--"}</div>
+        <div className="md:col-span-2">止损设置：{card.stopLossSetting || "--"}</div>
         <div className="md:col-span-2">备注：{card.notes || "--"}</div>
         <div className="md:col-span-2">总结：{card.summary || "--"}</div>
       </div>

@@ -20,6 +20,11 @@ export type TradeFlashcardDictionaryTagItem = {
   status?: string;
 };
 
+export type TradeFlashcardPlaybookCondition = {
+  playbookType: string;
+  condition: string;
+};
+
 export type TradeFlashcardCard = {
   id: string;
   userId: string;
@@ -39,6 +44,12 @@ export type TradeFlashcardCard = {
   marketTimeInfo?: string;
   symbolPairInfo?: string;
   playbookType?: string;
+  marketStructure?: string;
+  possiblePlaybookTypes?: string[];
+  playbookConditions?: TradeFlashcardPlaybookCondition[];
+  firstSignal?: string;
+  secondSignalConfirmation?: string;
+  stopLossSetting?: string;
   notes?: string;
   summary?: string;
   convertedToFlashcardAt?: string;

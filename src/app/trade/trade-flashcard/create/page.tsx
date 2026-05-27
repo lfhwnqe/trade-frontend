@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import { DateCalendarPicker } from "@/components/common/DateCalendarPicker";
+import { MultiSelectDropdown } from "@/components/common/MultiSelectDropdown";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/components/common/alert";
 import type { ImageResource } from "../../config";
@@ -55,6 +56,12 @@ export default function TradeFlashcardCreatePage() {
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
   const [symbolPairOptions, setSymbolPairOptions] = React.useState<string[]>([...TRADE_PERIOD_PRESETS]);
   const [playbookType, setPlaybookType] = React.useState("");
+  const [marketStructure, setMarketStructure] = React.useState("");
+  const [possiblePlaybookTypes, setPossiblePlaybookTypes] = React.useState<string[]>([]);
+  const [playbookConditions, setPlaybookConditions] = React.useState<Array<{ playbookType: string; condition: string }>>([]);
+  const [firstSignal, setFirstSignal] = React.useState("");
+  const [secondSignalConfirmation, setSecondSignalConfirmation] = React.useState("");
+  const [stopLossSetting, setStopLossSetting] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [summary, setSummary] = React.useState("");
   const [tagCodes, setTagCodes] = React.useState<string[]>([]);
@@ -111,9 +118,19 @@ export default function TradeFlashcardCreatePage() {
     }
   }, [errorAlert, notes, successAlert]);
 
+  const handlePossiblePlaybookTypesChange = React.useCallback((next: string[]) => {
+    setPossiblePlaybookTypes(next);
+    setPlaybookConditions((prev) => next.map((code) => ({
+      playbookType: code,
+      condition: prev.find((item) => item.playbookType === code)?.condition || "",
+    })));
+  }, []);
+
   const handleSubmit = React.useCallback(async () => {
     if (!tradeFlashcardType) return errorAlert("请选择交易闪卡类型");
     if (!preEntryImages[0]?.url) return errorAlert("请先上传入场前截图");
+    const missingCondition = playbookConditions.find((item) => !item.condition.trim());
+    if (possiblePlaybookTypes.length && missingCondition) return errorAlert("请填写每个可能剧本的出现条件");
 
     setSubmitting(true);
     try {
@@ -129,6 +146,17 @@ export default function TradeFlashcardCreatePage() {
         marketTimeInfo: marketTimeInfo.trim() || undefined,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
         playbookType: playbookType || undefined,
+        marketStructure: marketStructure.trim() || undefined,
+        possiblePlaybookTypes: possiblePlaybookTypes.length ? possiblePlaybookTypes : undefined,
+        playbookConditions: possiblePlaybookTypes.length
+          ? playbookConditions.map((item) => ({
+              playbookType: item.playbookType,
+              condition: item.condition.trim(),
+            }))
+          : undefined,
+        firstSignal: firstSignal.trim() || undefined,
+        secondSignalConfirmation: secondSignalConfirmation.trim() || undefined,
+        stopLossSetting: stopLossSetting.trim() || undefined,
         notes: notes.trim() || undefined,
         summary: summary.trim() || undefined,
         tagCodes: tagCodes.length ? tagCodes : undefined,
@@ -146,6 +174,12 @@ export default function TradeFlashcardCreatePage() {
       setEntryTimeInfo("");
       setSymbolPairInfo("");
       setPlaybookType("");
+      setMarketStructure("");
+      setPossiblePlaybookTypes([]);
+      setPlaybookConditions([]);
+      setFirstSignal("");
+      setSecondSignalConfirmation("");
+      setStopLossSetting("");
       setNotes("");
       setSummary("");
       setTagCodes([]);
@@ -155,7 +189,7 @@ export default function TradeFlashcardCreatePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [entryImages, entryTimeInfo, errorAlert, finalTrendImages, isSystemAligned, marketTimeInfo, notes, playbookType, preEntryImages, processResult, rememberSymbolPair, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
+  }, [entryImages, entryTimeInfo, errorAlert, finalTrendImages, firstSignal, isSystemAligned, marketStructure, marketTimeInfo, notes, playbookConditions, playbookType, possiblePlaybookTypes, preEntryImages, processResult, rememberSymbolPair, secondSignalConfirmation, stopLossSetting, successAlert, summary, symbolPairInfo, tagCodes, tradeFlashcardType]);
 
   return (
     <TradePageShell title="交易闪卡录入" subtitle="过程状态会根据图片自动推导，避免手动误操作" showAddButton={false}>
@@ -247,6 +281,52 @@ export default function TradeFlashcardCreatePage() {
           </div>
         </div>
 
+        <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm">
+          <div className="mb-4 text-sm font-medium text-[#e5e7eb]">交易逻辑</div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="市场结构">
+              <Textarea value={marketStructure} onChange={(e) => setMarketStructure(e.target.value)} placeholder="记录关键价格区域、支撑阻力、SMC 区域、BOS / CHOCH、趋势通道等" className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+            </Field>
+            <Field label="可能出现的剧本">
+              <MultiSelectDropdown
+                options={playbookTypeOptions.map((item) => ({ value: item.code, label: item.label, color: item.color }))}
+                value={possiblePlaybookTypes}
+                onChange={handlePossiblePlaybookTypesChange}
+                placeholder="选择可能剧本"
+                emptyText="暂无可用 playbook_type，可先到字典管理维护"
+                className="h-9 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]"
+              />
+            </Field>
+            {possiblePlaybookTypes.length ? (
+              <div className="space-y-3 md:col-span-2">
+                <div className="text-xs font-medium text-[#9ca3af]">剧本出现条件</div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {playbookConditions.map((item) => (
+                    <div key={item.playbookType} className="space-y-2 rounded-lg border border-[#27272a] bg-[#1e1e1e] p-3">
+                      <div className="text-xs text-[#d4d4d8]">{getPlaybookLabel(playbookTypeOptions, item.playbookType)}</div>
+                      <Textarea
+                        value={item.condition}
+                        onChange={(e) => setPlaybookConditions((prev) => prev.map((current) => current.playbookType === item.playbookType ? { ...current, condition: e.target.value } : current))}
+                        placeholder="填写这个剧本成立的条件"
+                        className="min-h-20 border-[#27272a] bg-[#121212] text-[#e5e7eb]"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <Field label="第一次信号">
+              <Textarea value={firstSignal} onChange={(e) => setFirstSignal(e.target.value)} placeholder="作为前置预警记录，不直接入场；可记录已经出现过的位置和方向性依据" className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+            </Field>
+            <Field label="第二次信号确认">
+              <Textarea value={secondSignalConfirmation} onChange={(e) => setSecondSignalConfirmation(e.target.value)} placeholder="记录入场前最后质检理由；确认信号必须基于 K 线收盘后成立" className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+            </Field>
+            <Field label="止损设置">
+              <Textarea value={stopLossSetting} onChange={(e) => setStopLossSetting(e.target.value)} placeholder="记录止损为什么放在这里，以及最低 1.5 RR 或当前 RR 设计" className="min-h-24 border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" />
+            </Field>
+          </div>
+        </div>
+
         <div className="grid gap-6 md:grid-cols-3">
           <UploadCard title="入场前走势截图（必填，最多 10 张）"><ImageUploader value={preEntryImages} onChange={setPreEntryImages} max={PRE_ENTRY_IMAGE_LIMIT} /></UploadCard>
           <UploadCard title="入场时截图（最多 5 张）"><ImageUploader value={entryImages} onChange={setEntryImages} max={ENTRY_IMAGE_LIMIT} /></UploadCard>
@@ -267,4 +347,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function UploadCard({ title, children }: { title: string; children: React.ReactNode }) {
   return <div className="rounded-xl border border-[#27272a] bg-[#121212] p-4 shadow-sm"><div className="mb-2 text-sm font-medium text-[#e5e7eb]">{title}</div>{children}</div>;
+}
+
+function getPlaybookLabel(options: Array<{ code: string; label: string }>, code: string) {
+  return options.find((item) => item.code === code)?.label || code;
 }
