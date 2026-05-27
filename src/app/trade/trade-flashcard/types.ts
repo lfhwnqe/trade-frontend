@@ -54,6 +54,8 @@ export type TradeFlashcardCard = {
   summary?: string;
   convertedToFlashcardAt?: string;
   convertedFlashcardId?: string;
+  convertedToPracticalFlashcardAt?: string;
+  convertedPracticalFlashcardId?: string;
   tagCodes?: string[];
   tagItems?: TradeFlashcardDictionaryTagItem[];
   createdAt: string;
@@ -68,6 +70,7 @@ export const TRADE_FLASHCARD_LABELS: Record<string, string> = {
   SUCCESS: '成功',
   FAIL: '失败',
   CONVERTED_TO_FLASHCARD: '已转训练闪卡',
+  CONVERTED_TO_PRACTICAL_FLASHCARD: '已转实操闪卡',
   CREATED_AT: '创建时间',
   UPDATED_AT: '最后编辑时间',
 };

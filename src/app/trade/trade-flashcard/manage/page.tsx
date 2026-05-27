@@ -16,6 +16,7 @@ import type { ImageResource } from "../../config";
 import { TRADE_PERIOD_PRESETS } from "../../config";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 import { FLASHCARD_DIRECTIONS, FLASHCARD_LABELS, FLASHCARD_SYSTEM_OUTCOME_TYPES, type FlashcardDirection, type FlashcardSystemOutcomeType } from "../../flashcard/types";
+import { convertTradeFlashcardToPracticalFlashcard, getBrowserTimeZone } from "../../practical-flashcard/request";
 import { convertTradeFlashcardToFlashcard, deleteTradeFlashcardCard, listTradeFlashcardCards, updateTradeFlashcardCard } from "../request";
 import {
   TRADE_FLASHCARD_CARD_SORT_BYS,
@@ -36,6 +37,7 @@ const EMPTY_SELECT_VALUE = "__NONE__";
 const SYMBOL_PAIR_HISTORY_KEY = "flashcard-symbol-pair-history";
 const PRE_ENTRY_IMAGE_LIMIT = 10;
 const ENTRY_IMAGE_LIMIT = 5;
+const PRACTICAL_FLASHCARD_SYMBOLS = new Set(["BTCUSDT", "BTCUSDC", "ETHUSDT", "ETHUSDC"]);
 const NOTE_TEMPLATE = `【交易前】
 - 背景 / 市场环境：
 - 核心观察：
@@ -95,6 +97,17 @@ function getFinalTrendImageUrl(card: TradeFlashcardCard) {
   return card.finalTrendImageUrl || card.postEntryImageUrl || "";
 }
 
+function normalizePracticalSymbol(value?: string) {
+  return (value || "").replace(/[^a-zA-Z0-9]/g, "").trim().toUpperCase();
+}
+
+function parseOptionalNumber(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export default function TradeFlashcardManagePage() {
   const [successAlert, errorAlert] = useAlert();
   const [items, setItems] = React.useState<TradeFlashcardCard[]>([]);
@@ -138,6 +151,14 @@ export default function TradeFlashcardManagePage() {
   const [convertPlaybookType, setConvertPlaybookType] = React.useState("");
   const [convertNotes, setConvertNotes] = React.useState("");
   const [converting, setConverting] = React.useState(false);
+  const [practicalConvertingCard, setPracticalConvertingCard] = React.useState<TradeFlashcardCard | null>(null);
+  const [practicalExitTimeInfo, setPracticalExitTimeInfo] = React.useState("");
+  const [practicalSnapshotStartTime, setPracticalSnapshotStartTime] = React.useState("");
+  const [practicalSnapshotEndTime, setPracticalSnapshotEndTime] = React.useState("");
+  const [practicalStandardEntryPrice, setPracticalStandardEntryPrice] = React.useState("");
+  const [practicalStandardStopLossPrice, setPracticalStandardStopLossPrice] = React.useState("");
+  const [practicalStandardTakeProfitPrice, setPracticalStandardTakeProfitPrice] = React.useState("");
+  const [convertingPractical, setConvertingPractical] = React.useState(false);
   const [copyingTemplate, setCopyingTemplate] = React.useState(false);
 
   const [queryForm, setQueryForm] = React.useState<TradeFlashcardQuery>({
@@ -366,6 +387,53 @@ export default function TradeFlashcardManagePage() {
     }
   }, [activeQuery, convertExpectedAction, convertMarketTimeInfo, convertNotes, convertPlaybookType, convertSymbolPairInfo, convertSystemOutcomeType, convertingCard, errorAlert, fetchPage, page, rememberSymbolPair, successAlert]);
 
+  const openPracticalConvert = React.useCallback((card: TradeFlashcardCard) => {
+    setPracticalConvertingCard(card);
+    setPracticalExitTimeInfo("");
+    setPracticalSnapshotStartTime("");
+    setPracticalSnapshotEndTime("");
+    setPracticalStandardEntryPrice("");
+    setPracticalStandardStopLossPrice("");
+    setPracticalStandardTakeProfitPrice("");
+  }, []);
+
+  const handlePracticalConvert = React.useCallback(async () => {
+    if (!practicalConvertingCard) return;
+    const symbol = normalizePracticalSymbol(practicalConvertingCard.symbolPairInfo);
+    if (!PRACTICAL_FLASHCARD_SYMBOLS.has(symbol)) {
+      errorAlert("实操闪卡当前只支持 BTCUSDT / BTCUSDC / ETHUSDT / ETHUSDC 的 Binance U 本位合约币对");
+      return;
+    }
+    if (!practicalConvertingCard.playbookType || !(practicalConvertingCard.entryTimeInfo || practicalConvertingCard.marketTimeInfo)) {
+      errorAlert("请先补齐交易闪卡的入场时间、币对和主剧本");
+      return;
+    }
+    if (!practicalExitTimeInfo.trim()) {
+      errorAlert("请填写实操闪卡结果确认时间");
+      return;
+    }
+    setConvertingPractical(true);
+    try {
+      await convertTradeFlashcardToPracticalFlashcard(practicalConvertingCard.cardId, {
+        exitTimeInfo: practicalExitTimeInfo.trim(),
+        primaryInterval: "15m",
+        timeZone: getBrowserTimeZone(),
+        snapshotStartTime: practicalSnapshotStartTime.trim() || undefined,
+        snapshotEndTime: practicalSnapshotEndTime.trim() || undefined,
+        standardEntryPrice: parseOptionalNumber(practicalStandardEntryPrice),
+        standardStopLossPrice: parseOptionalNumber(practicalStandardStopLossPrice),
+        standardTakeProfitPrice: parseOptionalNumber(practicalStandardTakeProfitPrice),
+      });
+      setPracticalConvertingCard(null);
+      successAlert("已转换为实操闪卡");
+      await fetchPage(page, activeQuery);
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "转换为实操闪卡失败");
+    } finally {
+      setConvertingPractical(false);
+    }
+  }, [activeQuery, errorAlert, fetchPage, page, practicalConvertingCard, practicalExitTimeInfo, practicalSnapshotEndTime, practicalSnapshotStartTime, practicalStandardEntryPrice, practicalStandardStopLossPrice, practicalStandardTakeProfitPrice, successAlert]);
+
   const handleQuerySubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setActiveQuery({ ...queryForm });
@@ -418,6 +486,11 @@ export default function TradeFlashcardManagePage() {
             const confirmMode = confirmConvertCardId === card.cardId;
             const hasConversionImages = Boolean(getFirstEntryImageUrl(card) && getFinalTrendImageUrl(card));
             const canConvert = card.lifecycleStatus === "COMPLETED" && !card.convertedToFlashcardAt && hasConversionImages;
+            const practicalSymbol = normalizePracticalSymbol(card.symbolPairInfo);
+            const canConvertPractical = card.lifecycleStatus === "COMPLETED"
+              && !card.convertedToPracticalFlashcardAt
+              && Boolean(card.symbolPairInfo && (card.entryTimeInfo || card.marketTimeInfo) && card.playbookType)
+              && PRACTICAL_FLASHCARD_SYMBOLS.has(practicalSymbol);
             const convertTitle = card.convertedToFlashcardAt
               ? `已于 ${formatDateTime(card.convertedToFlashcardAt)} 转为训练闪卡`
               : canConvert
@@ -425,6 +498,15 @@ export default function TradeFlashcardManagePage() {
                 : card.lifecycleStatus !== "COMPLETED"
                   ? "仅已完成的交易闪卡可转为常规训练闪卡"
                   : "请先补齐入场时截图和最终走势截图";
+            const practicalConvertTitle = card.convertedToPracticalFlashcardAt
+              ? `已于 ${formatDateTime(card.convertedToPracticalFlashcardAt)} 转为实操闪卡`
+              : canConvertPractical
+                ? "把这条已完成记录转为实操闪卡"
+                : card.lifecycleStatus !== "COMPLETED"
+                  ? "仅已完成的交易闪卡可转为实操闪卡"
+                  : !PRACTICAL_FLASHCARD_SYMBOLS.has(practicalSymbol)
+                    ? "实操闪卡当前只支持 BTCUSDT / BTCUSDC / ETHUSDT / ETHUSDC"
+                    : "请先补齐入场时间、币对和主剧本";
             return (
               <div key={card.cardId} className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -434,6 +516,7 @@ export default function TradeFlashcardManagePage() {
                       <span className="rounded-full bg-[#1e1e1e] px-2 py-1 text-xs">{TRADE_FLASHCARD_LABELS[card.lifecycleStatus]}</span>
                       {card.processResult ? <span className="rounded-full bg-[#1e1e1e] px-2 py-1 text-xs">结果：{TRADE_FLASHCARD_LABELS[card.processResult]}</span> : null}
                       {card.convertedToFlashcardAt ? <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300">{TRADE_FLASHCARD_LABELS.CONVERTED_TO_FLASHCARD}</span> : null}
+                      {card.convertedToPracticalFlashcardAt ? <span className="rounded-full bg-cyan-500/10 px-2 py-1 text-xs text-cyan-300">{TRADE_FLASHCARD_LABELS.CONVERTED_TO_PRACTICAL_FLASHCARD}</span> : null}
                     </div>
                     <div className="text-xs text-[#71717a]">创建于 {formatDateTime(card.createdAt)}，更新于 {formatDateTime(card.updatedAt)}</div>
                   </div>
@@ -456,6 +539,15 @@ export default function TradeFlashcardManagePage() {
                         {card.convertedToFlashcardAt ? "已转训练闪卡" : "转训练闪卡"}
                       </Button>
                     )}
+                    <Button
+                      variant="outline"
+                      className={canConvertPractical ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20" : "border-[#27272a] bg-[#1e1e1e] text-[#71717a] hover:bg-[#1e1e1e]"}
+                      onClick={() => canConvertPractical ? openPracticalConvert(card) : undefined}
+                      disabled={!canConvertPractical}
+                      title={practicalConvertTitle}
+                    >
+                      {card.convertedToPracticalFlashcardAt ? "已转实操闪卡" : "转实操闪卡"}
+                    </Button>
                     <Button variant="outline" className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20" onClick={() => void handleDelete(card.cardId)}>删除</Button>
                   </div>
                 </div>
@@ -574,6 +666,34 @@ export default function TradeFlashcardManagePage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!practicalConvertingCard} onOpenChange={(open) => !open && setPracticalConvertingCard(null)}>
+        <DialogContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb] sm:max-w-2xl">
+          <DialogHeader><DialogTitle>转为实操闪卡</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {practicalConvertingCard ? (
+              <div className="grid gap-3 rounded-xl border border-[#27272a] bg-[#0f0f10] p-3 text-sm text-[#d4d4d8] md:grid-cols-2">
+                <div>币对：{normalizePracticalSymbol(practicalConvertingCard.symbolPairInfo)}</div>
+                <div>入场时间：{practicalConvertingCard.entryTimeInfo || practicalConvertingCard.marketTimeInfo || "--"}</div>
+                <div>剧本：{getPlaybookLabel(playbookTypeOptions, practicalConvertingCard.playbookType)}</div>
+                <div>周期：15m</div>
+              </div>
+            ) : null}
+            <Field label="结果确认时间"><DateCalendarPicker analysisTime={practicalExitTimeInfo} updateForm={(patch) => setPracticalExitTimeInfo(patch.analysisTime)} showSeconds={false} placeholder="选择结果确认时间" /></Field>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="快照开始时间"><DateCalendarPicker analysisTime={practicalSnapshotStartTime} updateForm={(patch) => setPracticalSnapshotStartTime(patch.analysisTime)} showSeconds={false} placeholder="默认入场前 5 天" /></Field>
+              <Field label="快照结束时间"><DateCalendarPicker analysisTime={practicalSnapshotEndTime} updateForm={(patch) => setPracticalSnapshotEndTime(patch.analysisTime)} showSeconds={false} placeholder="默认结果后 2 小时" /></Field>
+              <Field label="标准入场价"><Input type="number" value={practicalStandardEntryPrice} onChange={(e) => setPracticalStandardEntryPrice(e.target.value)} className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>
+              <Field label="标准止损价"><Input type="number" value={practicalStandardStopLossPrice} onChange={(e) => setPracticalStandardStopLossPrice(e.target.value)} className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>
+              <Field label="标准止盈价"><Input type="number" value={practicalStandardTakeProfitPrice} onChange={(e) => setPracticalStandardTakeProfitPrice(e.target.value)} className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]" onClick={() => setPracticalConvertingCard(null)}>取消</Button>
+            <Button className="bg-[#00c2b2] text-black hover:bg-[#009e91]" disabled={convertingPractical} onClick={() => void handlePracticalConvert()}>{convertingPractical ? "转换中..." : "确认转换"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ImagePreviewDialog previewUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
     </TradePageShell>
   );
@@ -614,6 +734,7 @@ function TradeFlashcardMetaSummary({ card, playbookTypeOptions }: { card: TradeF
     { label: "可能剧本", value: getPlaybookLabels(playbookTypeOptions, card.possiblePlaybookTypes) },
     { label: "系统一致性", value: typeof card.isSystemAligned === "boolean" ? (card.isSystemAligned ? "符合" : "不符合") : "--" },
     { label: "转换状态", value: card.convertedToFlashcardAt ? `已转换（${formatDateTime(card.convertedToFlashcardAt)}）` : "未转换" },
+    { label: "实操转换", value: card.convertedToPracticalFlashcardAt ? `已转换（${formatDateTime(card.convertedToPracticalFlashcardAt)}）` : "未转换" },
     { label: "标签", value: card.tagItems?.length ? card.tagItems.map((item) => item.label).join(" / ") : "--" },
     { label: "总结", value: card.summary || card.notes || "--" },
   ];

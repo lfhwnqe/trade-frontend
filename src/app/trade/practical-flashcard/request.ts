@@ -33,6 +33,17 @@ export type CreatePracticalFlashcardPayload = {
   summary?: string;
 };
 
+export type ConvertTradeFlashcardToPracticalFlashcardPayload = {
+  exitTimeInfo: string;
+  primaryInterval?: '15m';
+  timeZone?: string;
+  snapshotStartTime?: string;
+  snapshotEndTime?: string;
+  standardEntryPrice?: number;
+  standardStopLossPrice?: number;
+  standardTakeProfitPrice?: number;
+};
+
 export type UpdatePracticalFlashcardPayload = {
   status?: PracticalFlashcardStatus;
   entryTimeInfo?: string;
@@ -120,6 +131,24 @@ export async function createPracticalFlashcardCard(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || '创建实操闪卡失败');
+  return data.data as PracticalFlashcardCard;
+}
+
+export async function convertTradeFlashcardToPracticalFlashcard(
+  tradeFlashcardId: string,
+  payload: ConvertTradeFlashcardToPracticalFlashcardPayload,
+): Promise<PracticalFlashcardCard> {
+  const res = await fetchWithAuth('/api/proxy-post', {
+    method: 'POST',
+    credentials: 'include',
+    proxyParams: {
+      targetPath: `practical-flashcard/cards/from-trade-flashcard/${tradeFlashcardId}`,
+      actualMethod: 'POST',
+    },
+    actualBody: sanitizePayload(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '转换为实操闪卡失败');
   return data.data as PracticalFlashcardCard;
 }
 
