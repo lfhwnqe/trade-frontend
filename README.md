@@ -34,3 +34,5 @@ pnpm dev
 - 环境变量清单：见 `../docs/env.md`
 
 > 建议：后续做一个脚本/CI 检查 `config.ts` 与后端 DTO 枚举/字段是否一致，避免“前后端字段漂移”。
+
+test
