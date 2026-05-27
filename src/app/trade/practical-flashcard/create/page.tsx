@@ -192,15 +192,33 @@ function PracticalFlashcardCreateForm() {
           <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4 space-y-4">
             <Field label="字典标签">
               <div className="flex flex-wrap gap-2 rounded-xl border border-[#27272a] bg-[#1e1e1e] p-3">
-                {tagOptions.map((item) => {
-                  const active = tagCodes.includes(item.code);
-                  return (
-                    <button key={item.code} type="button" onClick={() => setTagCodes((prev) => active ? prev.filter((code) => code !== item.code) : [...prev, item.code])} className={`rounded-md border px-2.5 py-1 text-xs transition ${active ? "border-[#00c2b2] bg-[#00c2b2]/15 text-[#00c2b2]" : "border-[#27272a] bg-[#121212] text-[#a1a1aa] hover:border-[#3f3f46]"}`}>
-                      {item.label}
-                    </button>
-                  );
-                })}
-                {tagOptions.length === 0 ? <span className="text-xs text-[#71717a]">暂无标签</span> : null}
+                {tagOptions.length === 0 ? (
+                  <span className="text-xs text-[#9ca3af]">暂无可用 flashcard_tag，可先到后台字典管理中维护</span>
+                ) : (
+                  tagOptions.map((item) => {
+                    const active = tagCodes.includes(item.code);
+                    return (
+                      <button
+                        key={item.code}
+                        type="button"
+                        onClick={() => setTagCodes((prev) => active ? prev.filter((code) => code !== item.code) : [...prev, item.code])}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition ${
+                          active
+                            ? "border-[#00c2b2] bg-[#00c2b2]/20 text-[#00c2b2]"
+                            : "border-[#27272a] bg-[#121212] text-[#e5e7eb] hover:bg-[#242424]"
+                        }`}
+                      >
+                        {item.color ? (
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full border border-white/20"
+                            style={{ backgroundColor: item.color }}
+                          />
+                        ) : null}
+                        {item.label}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </Field>
             <Field label="足迹图（选填，最多 5 张）">
