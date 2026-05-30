@@ -15,8 +15,10 @@ import type { ImageResource } from "../../config";
 import {
   PRACTICAL_FLASHCARD_BINANCE_UM_SYMBOLS,
   PRACTICAL_FLASHCARD_DIRECTIONS,
+  PRACTICAL_FLASHCARD_INTERVALS,
   PRACTICAL_FLASHCARD_LABELS,
   type PracticalFlashcardDirection,
+  type PracticalFlashcardInterval,
 } from "../types";
 import { usePracticalFlashcardAdminAccess } from "../use-practical-flashcard-admin-access";
 
@@ -49,6 +51,7 @@ export default function PracticalFlashcardCreatePage() {
 function PracticalFlashcardCreateForm() {
   const [successAlert, errorAlert] = useAlert();
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
+  const [primaryInterval, setPrimaryInterval] = React.useState<PracticalFlashcardInterval>("15m");
   const [entryTimeInfo, setEntryTimeInfo] = React.useState("");
   const [exitTimeInfo, setExitTimeInfo] = React.useState("");
   const [expectedDirection, setExpectedDirection] = React.useState<PracticalFlashcardDirection | "">("");
@@ -94,7 +97,7 @@ function PracticalFlashcardCreateForm() {
         symbolPairInfo: symbolPairInfo.trim(),
         entryTimeInfo,
         exitTimeInfo,
-        primaryInterval: "15m",
+        primaryInterval,
         timeZone: getBrowserTimeZone(),
         expectedDirection: expectedDirection || undefined,
         standardEntryPrice: parseOptionalNumber(standardEntryPrice),
@@ -107,8 +110,9 @@ function PracticalFlashcardCreateForm() {
         notes: notes.trim() || undefined,
         summary: summary.trim() || undefined,
       });
-      successAlert(`实操闪卡已创建，冻结 ${created.candles.length} 根 15m K 线`);
+      successAlert(`实操闪卡已创建，周期：${PRACTICAL_FLASHCARD_LABELS[created.primaryInterval] || created.primaryInterval}`);
       setSymbolPairInfo("");
+      setPrimaryInterval("15m");
       setEntryTimeInfo("");
       setExitTimeInfo("");
       setExpectedDirection("");
@@ -126,10 +130,10 @@ function PracticalFlashcardCreateForm() {
     } finally {
       setSubmitting(false);
     }
-  }, [entryTimeInfo, errorAlert, exitTimeInfo, expectedDirection, notes, orderFlowImages, orderFlowRemark, playbookType, standardEntryPrice, standardStopLossPrice, standardTakeProfitPrice, successAlert, summary, symbolPairInfo, tagCodes]);
+  }, [entryTimeInfo, errorAlert, exitTimeInfo, expectedDirection, notes, orderFlowImages, orderFlowRemark, playbookType, primaryInterval, standardEntryPrice, standardStopLossPrice, standardTakeProfitPrice, successAlert, summary, symbolPairInfo, tagCodes]);
 
   return (
-    <TradePageShell title="实操闪卡创建" subtitle="创建时拉取 Binance U 本位合约公开 K 线并保存冻结快照" showAddButton={false}>
+    <TradePageShell title="实操闪卡创建" subtitle="创建时拉取 Binance U 本位合约公开 K 线并保存快照参数" showAddButton={false}>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
@@ -145,6 +149,14 @@ function PracticalFlashcardCreateForm() {
                   <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
                     <SelectItem value={EMPTY_SELECT_VALUE}>请选择</SelectItem>
                     {PRACTICAL_FLASHCARD_BINANCE_UM_SYMBOLS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="时间周期 *">
+                <Select value={primaryInterval} onValueChange={(value) => setPrimaryInterval(value as PracticalFlashcardInterval)}>
+                  <SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                  <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                    {PRACTICAL_FLASHCARD_INTERVALS.map((item) => <SelectItem key={item} value={item}>{PRACTICAL_FLASHCARD_LABELS[item]}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Field>
@@ -240,7 +252,7 @@ function PracticalFlashcardCreateForm() {
           <div>
             <div className="text-sm font-semibold text-white">PF-M1 创建口径</div>
             <div className="mt-2 text-sm leading-6 text-[#a1a1aa]">
-              保存前会固定使用 Binance U 本位合约 15m K 线，按入场时间向前 5 天、离场时间向后 2 小时拉取，并把结果写入卡片快照。当前可选币对：BTCUSDT、BTCUSDC、ETHUSDT、ETHUSDC。
+              保存前会使用所选时间周期拉取 Binance U 本位合约 K 线，按入场时间向前 5 天、离场时间向后 2 小时拉取，并把快照参数写入卡片。当前可选周期：1 分钟、2 分钟、15 分钟；当前可选币对：BTCUSDT、BTCUSDC、ETHUSDT、ETHUSDC。
             </div>
           </div>
           <Button onClick={handleSubmit} disabled={submitting} className="w-full bg-[#00c2b2] text-black hover:bg-[#009e91]">

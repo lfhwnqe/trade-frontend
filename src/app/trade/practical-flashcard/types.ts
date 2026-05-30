@@ -9,7 +9,8 @@ export type PracticalFlashcardDirection = (typeof PRACTICAL_FLASHCARD_DIRECTIONS
 export type PracticalFlashcardTradeDirection = Exclude<PracticalFlashcardDirection, 'NO_ENTRY'>;
 
 export type PracticalFlashcardStatus = 'ACTIVE' | 'DISABLED';
-export type PracticalFlashcardInterval = '15m';
+export const PRACTICAL_FLASHCARD_INTERVALS = ['1m', '2m', '15m'] as const;
+export type PracticalFlashcardInterval = (typeof PRACTICAL_FLASHCARD_INTERVALS)[number];
 export type PracticalFlashcardAttemptStatus = 'IN_PROGRESS' | 'RESOLVED' | 'ABANDONED';
 export type PracticalFlashcardTrainingMode = 'DIRECT_CARD' | 'RANDOM_TRAINING';
 export type PracticalFlashcardExitReason = 'TAKE_PROFIT' | 'STOP_LOSS' | 'MANUAL_EXIT' | 'NO_EXIT_BY_FINAL_CANDLE';
@@ -189,4 +190,7 @@ export const PRACTICAL_FLASHCARD_LABELS: Record<string, string> = {
   LONG: '做多',
   SHORT: '做空',
   NO_ENTRY: '不入场',
+  '1m': '1 分钟',
+  '2m': '2 分钟',
+  '15m': '15 分钟',
 };

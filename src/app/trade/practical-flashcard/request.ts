@@ -6,6 +6,7 @@ import type {
   PracticalFlashcardDashboardAnalytics,
   PracticalFlashcardDirection,
   PracticalFlashcardExitReason,
+  PracticalFlashcardInterval,
   PracticalFlashcardRunningStats,
   PracticalFlashcardStatus,
   PracticalFlashcardTradeDirection,
@@ -17,7 +18,7 @@ export type CreatePracticalFlashcardPayload = {
   symbolPairInfo: string;
   entryTimeInfo: string;
   exitTimeInfo: string;
-  primaryInterval?: '15m';
+  primaryInterval: PracticalFlashcardInterval;
   timeZone?: string;
   snapshotStartTime?: string;
   snapshotEndTime?: string;
@@ -35,7 +36,7 @@ export type CreatePracticalFlashcardPayload = {
 
 export type ConvertTradeFlashcardToPracticalFlashcardPayload = {
   exitTimeInfo: string;
-  primaryInterval?: '15m';
+  primaryInterval: PracticalFlashcardInterval;
   timeZone?: string;
   snapshotStartTime?: string;
   snapshotEndTime?: string;
@@ -48,6 +49,7 @@ export type UpdatePracticalFlashcardPayload = {
   status?: PracticalFlashcardStatus;
   entryTimeInfo?: string;
   exitTimeInfo?: string;
+  primaryInterval?: PracticalFlashcardInterval;
   timeZone?: string;
   expectedDirection?: PracticalFlashcardDirection | null;
   standardEntryPrice?: number | null;

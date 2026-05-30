@@ -17,6 +17,7 @@ import { TRADE_PERIOD_PRESETS } from "../../config";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 import { FLASHCARD_DIRECTIONS, FLASHCARD_LABELS, FLASHCARD_SYSTEM_OUTCOME_TYPES, type FlashcardDirection, type FlashcardSystemOutcomeType } from "../../flashcard/types";
 import { convertTradeFlashcardToPracticalFlashcard, getBrowserTimeZone } from "../../practical-flashcard/request";
+import { PRACTICAL_FLASHCARD_INTERVALS, PRACTICAL_FLASHCARD_LABELS, type PracticalFlashcardInterval } from "../../practical-flashcard/types";
 import { convertTradeFlashcardToFlashcard, deleteTradeFlashcardCard, listTradeFlashcardCards, updateTradeFlashcardCard } from "../request";
 import {
   TRADE_FLASHCARD_CARD_SORT_BYS,
@@ -153,6 +154,7 @@ export default function TradeFlashcardManagePage() {
   const [converting, setConverting] = React.useState(false);
   const [practicalConvertingCard, setPracticalConvertingCard] = React.useState<TradeFlashcardCard | null>(null);
   const [practicalExitTimeInfo, setPracticalExitTimeInfo] = React.useState("");
+  const [practicalPrimaryInterval, setPracticalPrimaryInterval] = React.useState<PracticalFlashcardInterval>("15m");
   const [practicalSnapshotStartTime, setPracticalSnapshotStartTime] = React.useState("");
   const [practicalSnapshotEndTime, setPracticalSnapshotEndTime] = React.useState("");
   const [practicalStandardEntryPrice, setPracticalStandardEntryPrice] = React.useState("");
@@ -390,6 +392,7 @@ export default function TradeFlashcardManagePage() {
   const openPracticalConvert = React.useCallback((card: TradeFlashcardCard) => {
     setPracticalConvertingCard(card);
     setPracticalExitTimeInfo("");
+    setPracticalPrimaryInterval("15m");
     setPracticalSnapshotStartTime("");
     setPracticalSnapshotEndTime("");
     setPracticalStandardEntryPrice("");
@@ -416,7 +419,7 @@ export default function TradeFlashcardManagePage() {
     try {
       await convertTradeFlashcardToPracticalFlashcard(practicalConvertingCard.cardId, {
         exitTimeInfo: practicalExitTimeInfo.trim(),
-        primaryInterval: "15m",
+        primaryInterval: practicalPrimaryInterval,
         timeZone: getBrowserTimeZone(),
         snapshotStartTime: practicalSnapshotStartTime.trim() || undefined,
         snapshotEndTime: practicalSnapshotEndTime.trim() || undefined,
@@ -432,7 +435,7 @@ export default function TradeFlashcardManagePage() {
     } finally {
       setConvertingPractical(false);
     }
-  }, [activeQuery, errorAlert, fetchPage, page, practicalConvertingCard, practicalExitTimeInfo, practicalSnapshotEndTime, practicalSnapshotStartTime, practicalStandardEntryPrice, practicalStandardStopLossPrice, practicalStandardTakeProfitPrice, successAlert]);
+  }, [activeQuery, errorAlert, fetchPage, page, practicalConvertingCard, practicalExitTimeInfo, practicalPrimaryInterval, practicalSnapshotEndTime, practicalSnapshotStartTime, practicalStandardEntryPrice, practicalStandardStopLossPrice, practicalStandardTakeProfitPrice, successAlert]);
 
   const handleQuerySubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -675,11 +678,12 @@ export default function TradeFlashcardManagePage() {
                 <div>币对：{normalizePracticalSymbol(practicalConvertingCard.symbolPairInfo)}</div>
                 <div>入场时间：{practicalConvertingCard.entryTimeInfo || practicalConvertingCard.marketTimeInfo || "--"}</div>
                 <div>剧本：{getPlaybookLabel(playbookTypeOptions, practicalConvertingCard.playbookType)}</div>
-                <div>周期：15m</div>
+                <div>周期：{PRACTICAL_FLASHCARD_LABELS[practicalPrimaryInterval]}</div>
               </div>
             ) : null}
             <Field label="结果确认时间"><DateCalendarPicker analysisTime={practicalExitTimeInfo} updateForm={(patch) => setPracticalExitTimeInfo(patch.analysisTime)} showSeconds={false} placeholder="选择结果确认时间" /></Field>
             <div className="grid gap-4 md:grid-cols-2">
+              <Field label="时间周期"><Select value={practicalPrimaryInterval} onValueChange={(value) => setPracticalPrimaryInterval(value as PracticalFlashcardInterval)}><SelectTrigger className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger><SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">{PRACTICAL_FLASHCARD_INTERVALS.map((item) => <SelectItem key={item} value={item}>{PRACTICAL_FLASHCARD_LABELS[item]}</SelectItem>)}</SelectContent></Select></Field>
               <Field label="快照开始时间"><DateCalendarPicker analysisTime={practicalSnapshotStartTime} updateForm={(patch) => setPracticalSnapshotStartTime(patch.analysisTime)} showSeconds={false} placeholder="默认入场前 5 天" /></Field>
               <Field label="快照结束时间"><DateCalendarPicker analysisTime={practicalSnapshotEndTime} updateForm={(patch) => setPracticalSnapshotEndTime(patch.analysisTime)} showSeconds={false} placeholder="默认结果后 2 小时" /></Field>
               <Field label="标准入场价"><Input type="number" value={practicalStandardEntryPrice} onChange={(e) => setPracticalStandardEntryPrice(e.target.value)} className="h-9 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]" /></Field>

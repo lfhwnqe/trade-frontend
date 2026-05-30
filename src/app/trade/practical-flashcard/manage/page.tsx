@@ -17,9 +17,11 @@ import { deletePracticalFlashcardCard, getBrowserTimeZone, listPracticalFlashcar
 import type { ImageResource } from "../../config";
 import {
   PRACTICAL_FLASHCARD_DIRECTIONS,
+  PRACTICAL_FLASHCARD_INTERVALS,
   PRACTICAL_FLASHCARD_LABELS,
   type PracticalFlashcardCard,
   type PracticalFlashcardDirection,
+  type PracticalFlashcardInterval,
   type PracticalFlashcardStatus,
 } from "../types";
 import { usePracticalFlashcardAdminAccess } from "../use-practical-flashcard-admin-access";
@@ -37,6 +39,7 @@ type DictionaryOption = { code: string; label: string; color?: string };
 
 type EditDraft = {
   status: PracticalFlashcardStatus;
+  primaryInterval: PracticalFlashcardInterval;
   entryTimeInfo: string;
   exitTimeInfo: string;
   expectedDirection: PracticalFlashcardDirection | "";
@@ -128,6 +131,7 @@ function PracticalFlashcardManageContent() {
     setEditingCard(card);
     setDraft({
       status: card.status,
+      primaryInterval: card.primaryInterval || "15m",
       entryTimeInfo: card.entryTimeInfo,
       exitTimeInfo: card.exitTimeInfo,
       expectedDirection: card.expectedDirection || "",
@@ -166,6 +170,7 @@ function PracticalFlashcardManageContent() {
     try {
       const updated = await updatePracticalFlashcardCard(editingCard.cardId, {
         status: draft.status,
+        primaryInterval: draft.primaryInterval,
         entryTimeInfo: draft.entryTimeInfo,
         exitTimeInfo: draft.exitTimeInfo,
         timeZone: getBrowserTimeZone(),
@@ -273,6 +278,7 @@ function PracticalFlashcardManageContent() {
                   <th className="px-4 py-3 font-medium">交易对</th>
                   <th className="px-4 py-3 font-medium">剧本</th>
                   <th className="px-4 py-3 font-medium">行情源</th>
+                  <th className="px-4 py-3 font-medium">周期</th>
                   <th className="px-4 py-3 font-medium">时间范围</th>
                   <th className="px-4 py-3 font-medium">K 线数</th>
                   <th className="px-4 py-3 font-medium">状态</th>
@@ -281,18 +287,19 @@ function PracticalFlashcardManageContent() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td className="px-4 py-8 text-center text-[#71717a]" colSpan={7}>加载中...</td></tr>
+                  <tr><td className="px-4 py-8 text-center text-[#71717a]" colSpan={8}>加载中...</td></tr>
                 ) : items.length === 0 ? (
-                  <tr><td className="px-4 py-8 text-center text-[#71717a]" colSpan={7}>暂无实操闪卡</td></tr>
+                  <tr><td className="px-4 py-8 text-center text-[#71717a]" colSpan={8}>暂无实操闪卡</td></tr>
                 ) : items.map((item) => (
                   <tr key={item.cardId} className="border-t border-[#27272a] text-[#e5e7eb]">
                     <td className="px-4 py-3 font-medium">{item.symbolPairInfo}</td>
                     <td className="px-4 py-3">{playbookLabelMap.get(item.playbookType) || item.playbookType}</td>
                     <td className="px-4 py-3">{PRACTICAL_FLASHCARD_LABELS[item.venue] || item.venue}</td>
+                    <td className="px-4 py-3">{PRACTICAL_FLASHCARD_LABELS[item.primaryInterval] || item.primaryInterval || "15m"}</td>
                     <td className="px-4 py-3 text-[#a1a1aa]">
                       {item.entryTimeInfo} {"->"} {item.exitTimeInfo}
                     </td>
-                    <td className="px-4 py-3">{item.candles.length}</td>
+                    <td className="px-4 py-3">{formatCandleCount(item)}</td>
                     <td className="px-4 py-3">{PRACTICAL_FLASHCARD_LABELS[item.status] || item.status}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
@@ -334,7 +341,8 @@ function PracticalFlashcardManageContent() {
               <div className="grid gap-3 rounded-lg border border-[#27272a] bg-[#18181b] p-3 text-sm text-[#a1a1aa] md:grid-cols-4">
                 <ReadonlyField label="交易对" value={editingCard.symbolPairInfo} />
                 <ReadonlyField label="行情源" value={PRACTICAL_FLASHCARD_LABELS[editingCard.venue] || editingCard.venue} />
-                <ReadonlyField label="K 线快照" value={`${editingCard.candles.length} 根；修改时间保存后会重新拉取`} />
+                <ReadonlyField label="时间周期" value={PRACTICAL_FLASHCARD_LABELS[draft.primaryInterval] || draft.primaryInterval} />
+                <ReadonlyField label="K 线快照" value={`${formatCandleCount(editingCard)}；修改时间或周期保存后会重新拉取`} />
                 <ReadonlyField label="快照范围" value={`${editingCard.snapshotStartTime} -> ${editingCard.snapshotEndTime}`} />
               </div>
 
@@ -344,6 +352,14 @@ function PracticalFlashcardManageContent() {
                 </Field>
                 <Field label="离场 / 结果确认时间">
                   <DateCalendarPicker analysisTime={draft.exitTimeInfo} updateForm={(patch) => updateDraft({ exitTimeInfo: patch.analysisTime })} placeholder="选择离场时间" />
+                </Field>
+                <Field label="时间周期 *">
+                  <Select value={draft.primaryInterval} onValueChange={(value) => updateDraft({ primaryInterval: value as PracticalFlashcardInterval })}>
+                    <SelectTrigger className="h-9 w-full border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="border border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+                      {PRACTICAL_FLASHCARD_INTERVALS.map((item) => <SelectItem key={item} value={item}>{PRACTICAL_FLASHCARD_LABELS[item]}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </Field>
                 <Field label="状态">
                   <Select value={draft.status} onValueChange={(value) => updateDraft({ status: value as PracticalFlashcardStatus })}>
@@ -461,4 +477,11 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
       <div className="mt-1 break-words text-[#e5e7eb]">{value || "--"}</div>
     </div>
   );
+}
+
+function formatCandleCount(card: PracticalFlashcardCard) {
+  if (!Array.isArray(card.candles) || card.candles.length === 0) {
+    return "按需拉取";
+  }
+  return `${card.candles.length} 根`;
 }
