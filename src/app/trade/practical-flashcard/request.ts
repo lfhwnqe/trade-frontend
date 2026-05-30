@@ -66,6 +66,7 @@ export type UpdatePracticalFlashcardPayload = {
 export type CreatePracticalFlashcardAttemptTradePayload = {
   direction: PracticalFlashcardTradeDirection;
   currentCandleIndex: number;
+  replayInterval?: PracticalFlashcardInterval;
   stopLossPrice: number;
   takeProfitPrice: number;
   drawingSnapshot?: Record<string, unknown>;
@@ -184,12 +185,18 @@ export async function listPracticalFlashcardCards(params?: {
   };
 }
 
-export async function getPracticalFlashcardCard(cardId: string): Promise<PracticalFlashcardCard> {
+export async function getPracticalFlashcardCard(
+  cardId: string,
+  params?: { replayInterval?: PracticalFlashcardInterval },
+): Promise<PracticalFlashcardCard> {
+  const searchParams = new URLSearchParams();
+  if (params?.replayInterval) searchParams.set('replayInterval', params.replayInterval);
+  const targetPath = `practical-flashcard/cards/${cardId}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
   const res = await fetchWithAuth('/api/proxy-post', {
     method: 'POST',
     credentials: 'include',
     proxyParams: {
-      targetPath: `practical-flashcard/cards/${cardId}`,
+      targetPath,
       actualMethod: 'GET',
     },
     actualBody: {},
@@ -201,11 +208,12 @@ export async function getPracticalFlashcardCard(cardId: string): Promise<Practic
 
 export async function getPracticalFlashcardCandlesBefore(
   cardId: string,
-  params: { beforeOpenTime: number; limit?: number },
+  params: { beforeOpenTime: number; limit?: number; replayInterval?: PracticalFlashcardInterval },
 ): Promise<{ items: PracticalFlashcardCandle[]; beforeOpenTime: number }> {
   const searchParams = new URLSearchParams();
   searchParams.set('beforeOpenTime', String(params.beforeOpenTime));
   if (params.limit) searchParams.set('limit', String(params.limit));
+  if (params.replayInterval) searchParams.set('replayInterval', params.replayInterval);
   const res = await fetchWithAuth('/api/proxy-post', {
     method: 'POST',
     credentials: 'include',

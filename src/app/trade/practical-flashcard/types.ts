@@ -76,6 +76,8 @@ export type PracticalFlashcardAttempt = {
     primaryInterval: PracticalFlashcardInterval;
     expectedDirection?: PracticalFlashcardDirection;
   };
+  replayInterval?: PracticalFlashcardInterval;
+  tradeExecutionInterval?: PracticalFlashcardInterval;
   decision?: PracticalFlashcardDirection;
   tradeOpenedCandleIndex?: number;
   tradeDirection?: PracticalFlashcardTradeDirection;
@@ -97,6 +99,7 @@ export type PracticalFlashcardAttempt = {
   currentCandleIndex?: number;
   drawingSnapshot?: unknown;
   tradeExecutionSnapshot?: {
+    interval?: PracticalFlashcardInterval;
     entryCandleIndex: number;
     entryCandleOpenTime: number;
     entryPrice: number;

@@ -21,6 +21,7 @@ import {
 import TradePageShell from "../../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/components/common/alert";
 import {
   createPracticalFlashcardAttemptTrade,
@@ -32,18 +33,20 @@ import {
 } from "../../request";
 import {
   PRACTICAL_FLASHCARD_LABELS,
+  PRACTICAL_FLASHCARD_INTERVALS,
   type PracticalFlashcardAttempt,
   type PracticalFlashcardCard,
   type PracticalFlashcardCandle,
+  type PracticalFlashcardInterval,
   type PracticalFlashcardTradeDirection,
 } from "../../types";
 
 type DrawingTool = "SELECT" | "RECT" | "HLINE" | "LONG_POSITION" | "SHORT_POSITION";
 
 type DrawingShape =
-  | { id: string; type: "RECT"; startIndex: number; endIndex: number; startPrice: number; endPrice: number }
-  | { id: string; type: "HLINE"; price: number; startIndex: number; endIndex: number }
-  | { id: string; type: "POSITION"; direction: "LONG" | "SHORT"; index: number; entryPrice: number; stopPrice: number; takeProfitPrice: number };
+  | { id: string; type: "RECT"; startIndex: number; endIndex: number; startPrice: number; endPrice: number; startOpenTime?: number; endOpenTime?: number }
+  | { id: string; type: "HLINE"; price: number; startIndex: number; endIndex: number; startOpenTime?: number; endOpenTime?: number }
+  | { id: string; type: "POSITION"; direction: "LONG" | "SHORT"; index: number; entryPrice: number; stopPrice: number; takeProfitPrice: number; openTime?: number };
 
 type DrawingPoint = { index: number; price: number };
 type RectHandle = "START_START" | "START_END" | "END_START" | "END_END";
@@ -58,6 +61,7 @@ export default function PracticalFlashcardReplayPage() {
   const [successAlert, errorAlert] = useAlert();
   const [card, setCard] = React.useState<PracticalFlashcardCard | null>(null);
   const [attempt, setAttempt] = React.useState<PracticalFlashcardAttempt | null>(null);
+  const [replayInterval, setReplayInterval] = React.useState<PracticalFlashcardInterval>("15m");
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [tradeDirection, setTradeDirection] = React.useState<PracticalFlashcardTradeDirection>("LONG");
   const [stopLossPrice, setStopLossPrice] = React.useState("");
@@ -80,6 +84,7 @@ export default function PracticalFlashcardReplayPage() {
   const [historicalCandles, setHistoricalCandles] = React.useState<PracticalFlashcardCandle[]>([]);
   const [loadingHistoricalCandles, setLoadingHistoricalCandles] = React.useState(false);
   const [historicalCandlesExhausted, setHistoricalCandlesExhausted] = React.useState(false);
+  const [switchingInterval, setSwitchingInterval] = React.useState(false);
   const startedCardIdRef = React.useRef<string | null>(null);
   const appliedPositionSourceRef = React.useRef<string | null>(null);
 
@@ -92,25 +97,34 @@ export default function PracticalFlashcardReplayPage() {
     setHistoricalCandles([]);
     setHistoricalCandlesExhausted(false);
     getPracticalFlashcardCard(cardId)
-      .then((res) => {
-        setCard(res);
-        setCurrentIndex(clampIndex(res.initialVisibleCandleIndex, res.candles.length));
+      .then(async (res) => {
+        let runtimeCard = res;
+        let runtimeInterval = res.primaryInterval || "15m";
+        setCard(runtimeCard);
+        setReplayInterval(runtimeInterval);
+        setCurrentIndex(clampIndex(runtimeCard.initialVisibleCandleIndex, runtimeCard.candles.length));
         const requestedAttemptId = new URLSearchParams(window.location.search).get("attemptId");
         if (requestedAttemptId) {
-          return getPracticalFlashcardAttempt(requestedAttemptId).then((existingAttempt) => {
-            if (existingAttempt.targetCardId !== res.cardId) {
-              throw new Error("训练记录与当前实操闪卡不匹配");
-            }
-            setCurrentIndex(
-              clampIndex(
-                existingAttempt.currentCandleIndex ?? existingAttempt.finalCandleIndex ?? res.initialVisibleCandleIndex,
-                res.candles.length,
-              ),
-            );
-            setAttempt(existingAttempt);
-          });
+          const existingAttempt = await getPracticalFlashcardAttempt(requestedAttemptId);
+          if (existingAttempt.targetCardId !== res.cardId) {
+            throw new Error("训练记录与当前实操闪卡不匹配");
+          }
+          runtimeInterval = existingAttempt.tradeExecutionInterval || existingAttempt.replayInterval || runtimeInterval;
+          if (runtimeInterval !== res.primaryInterval) {
+            runtimeCard = await getPracticalFlashcardCard(cardId, { replayInterval: runtimeInterval });
+            setCard(runtimeCard);
+            setReplayInterval(runtimeInterval);
+          }
+          setCurrentIndex(
+            clampIndex(
+              existingAttempt.currentCandleIndex ?? existingAttempt.finalCandleIndex ?? runtimeCard.initialVisibleCandleIndex,
+              runtimeCard.candles.length,
+            ),
+          );
+          setAttempt(existingAttempt);
+          return;
         }
-        return startPracticalFlashcardAttempt(res.cardId).then((attemptRes) => {
+        return startPracticalFlashcardAttempt(runtimeCard.cardId).then((attemptRes) => {
           setAttempt(attemptRes.attempt);
         });
       })
@@ -145,6 +159,7 @@ export default function PracticalFlashcardReplayPage() {
       const result = await getPracticalFlashcardCandlesBefore(card.cardId, {
         beforeOpenTime: firstOpenTime,
         limit: 500,
+        replayInterval,
       });
       const nextItems = result.items.filter((item) => item.openTime < firstOpenTime);
       if (nextItems.length === 0) {
@@ -161,7 +176,46 @@ export default function PracticalFlashcardReplayPage() {
     } finally {
       setLoadingHistoricalCandles(false);
     }
-  }, [card, errorAlert, historicalCandles, historicalCandlesExhausted, loadingHistoricalCandles]);
+  }, [card, errorAlert, historicalCandles, historicalCandlesExhausted, loadingHistoricalCandles, replayInterval]);
+
+  const handleReplayIntervalChange = React.useCallback(async (nextInterval: PracticalFlashcardInterval) => {
+    if (!card || nextInterval === replayInterval) return;
+    if (attempt?.tradeOpenedCandleIndex !== undefined && attempt.status !== "RESOLVED") {
+      errorAlert(`本次交易已按 ${PRACTICAL_FLASHCARD_LABELS[attempt.tradeExecutionInterval || replayInterval]} 结算，不能再切换执行周期`);
+      return;
+    }
+    const anchorOpenTime = currentCandle?.openTime;
+    setSwitchingInterval(true);
+    try {
+      persistDrawingsWithCandleTimes(card.cardId, drawings, displayCandles, historicalOffset);
+      const nextCard = await getPracticalFlashcardCard(card.cardId, { replayInterval: nextInterval });
+      const nextIndex =
+        anchorOpenTime !== undefined
+          ? resolveNearestCandleIndexAtOrBefore(nextCard.candles, anchorOpenTime)
+          : nextCard.initialVisibleCandleIndex;
+      const remappedDrawings = readRemappedStoredDrawings(card.cardId, nextCard.candles, 0);
+      const maxDrawingIndex = getMaxDrawingIndex(remappedDrawings);
+      setCard(nextCard);
+      setReplayInterval(nextInterval);
+      setCurrentIndex(clampIndex(Math.max(nextIndex, maxDrawingIndex), nextCard.candles.length));
+      setHistoricalCandles([]);
+      setHistoricalCandlesExhausted(false);
+    } catch (error) {
+      errorAlert(error instanceof Error ? error.message : "切换时间周期失败");
+    } finally {
+      setSwitchingInterval(false);
+    }
+  }, [
+    attempt?.tradeExecutionInterval,
+    attempt?.tradeOpenedCandleIndex,
+    card,
+    currentCandle?.openTime,
+    displayCandles,
+    drawings,
+    errorAlert,
+    historicalOffset,
+    replayInterval,
+  ]);
 
   React.useEffect(() => {
     if (revealedOrderFlowIndex !== null && revealedOrderFlowIndex >= orderFlowImageUrls.length) {
@@ -246,6 +300,7 @@ export default function PracticalFlashcardReplayPage() {
       const updated = await createPracticalFlashcardAttemptTrade(attempt.attemptId, {
         direction: tradeDirection,
         currentCandleIndex: currentIndex,
+        replayInterval,
         stopLossPrice: stop,
         takeProfitPrice: takeProfit,
         drawingSnapshot: readDrawingSnapshot(card.cardId),
@@ -283,6 +338,7 @@ export default function PracticalFlashcardReplayPage() {
     preTradePriceActionAnalysis,
     reviewNotes,
     reviewSummary,
+    replayInterval,
     stopLossPrice,
     successAlert,
     takeProfitPrice,
@@ -339,13 +395,30 @@ export default function PracticalFlashcardReplayPage() {
   }
 
   return (
-    <TradePageShell title="实操闪卡回放" subtitle={`${card.symbolPairInfo} · ${card.primaryInterval} 冻结行情`} showAddButton={false}>
+    <TradePageShell title="实操闪卡回放" subtitle={`${card.symbolPairInfo} · ${PRACTICAL_FLASHCARD_LABELS[replayInterval] || replayInterval} 回放`} showAddButton={false}>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button asChild variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]">
             <Link href="/trade/practical-flashcard/manage" prefetch={false}>返回管理页</Link>
           </Button>
           <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 rounded-lg border border-[#27272a] bg-[#151515] px-2 py-1">
+              <span className="text-xs text-[#a1a1aa]">周期</span>
+              <Select
+                value={replayInterval}
+                onValueChange={(value) => handleReplayIntervalChange(value as PracticalFlashcardInterval)}
+                disabled={switchingInterval || (attempt?.tradeOpenedCandleIndex !== undefined && attempt.status !== "RESOLVED")}
+              >
+                <SelectTrigger className="h-8 w-[96px] border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border-[#27272a] bg-[#18181b] text-[#e5e7eb]">
+                  {PRACTICAL_FLASHCARD_INTERVALS.map((item) => (
+                    <SelectItem key={item} value={item}>{PRACTICAL_FLASHCARD_LABELS[item]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button
               variant="secondary"
               disabled={orderFlowImageUrls.length === 0}
@@ -420,7 +493,15 @@ export default function PracticalFlashcardReplayPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
                 <div className="font-medium text-[#e5e7eb]">{card.symbolPairInfo}</div>
                 <div className="text-xs text-[#a1a1aa]">
-                  {loadingHistoricalCandles ? "正在加载更早 K 线..." : historicalOffset > 0 ? `已临时扩展 ${historicalOffset} 根更早 K 线` : "向左滚动可自动加载更早 K 线"}
+                  {switchingInterval
+                    ? "正在切换周期..."
+                    : attempt?.tradeOpenedCandleIndex !== undefined
+                      ? `本次交易按 ${PRACTICAL_FLASHCARD_LABELS[attempt.tradeExecutionInterval || replayInterval]} 结算`
+                      : loadingHistoricalCandles
+                        ? "正在加载更早 K 线..."
+                        : historicalOffset > 0
+                          ? `已临时扩展 ${historicalOffset} 根更早 K 线`
+                          : "向左滚动可自动加载更早 K 线"}
                 </div>
               </div>
               <input
@@ -433,6 +514,7 @@ export default function PracticalFlashcardReplayPage() {
               />
             </div>
             <CandlestickReplayChart
+              key={replayInterval}
               card={card}
               attempt={attempt}
               candles={displayCandles}
@@ -617,6 +699,7 @@ function CandlestickReplayChart({
   const [hoveredCandleInfo, setHoveredCandleInfo] = React.useState<HoveredCandleInfo | null>(null);
   const [, setViewportVersion] = React.useState(0);
   const drawingsHydratedRef = React.useRef(false);
+  const skipNextPersistRef = React.useRef(false);
   const previousHistoryOffsetRef = React.useRef(historyOffset);
   const candlesRef = React.useRef<PracticalFlashcardCandle[]>(candles);
   const safeCurrentIndex = clampIndex(currentIndex + historyOffset, candles.length);
@@ -789,7 +872,10 @@ function CandlestickReplayChart({
     setPendingRectStart(null);
     try {
       const raw = window.localStorage.getItem(getDrawingStorageKey(card.cardId));
-      const nextDrawings = raw ? parseStoredDrawings(raw) : [];
+      const attemptDrawings = parseAttemptDrawingSnapshot(attempt?.drawingSnapshot);
+      const sourceDrawings = attemptDrawings.length ? attemptDrawings : raw ? parseStoredDrawings(raw) : [];
+      const nextDrawings = remapDrawingsToCandles(sourceDrawings, candles, historyOffset);
+      skipNextPersistRef.current = true;
       setDrawings(nextDrawings);
       onDrawingsChange(nextDrawings);
     } catch {
@@ -798,17 +884,23 @@ function CandlestickReplayChart({
     } finally {
       drawingsHydratedRef.current = true;
     }
-  }, [card.cardId, onDrawingsChange]);
+  }, [attempt?.attemptId, attempt?.drawingSnapshot, card.cardId, candles, historyOffset, onDrawingsChange]);
 
   React.useEffect(() => {
     if (!drawingsHydratedRef.current) return;
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      onDrawingsChange(drawings);
+      return;
+    }
     try {
-      window.localStorage.setItem(getDrawingStorageKey(card.cardId), JSON.stringify(drawings));
+      const anchoredDrawings = drawings.map((drawing) => withDrawingTimes(drawing, candles, historyOffset));
+      window.localStorage.setItem(getDrawingStorageKey(card.cardId), JSON.stringify(anchoredDrawings));
     } catch {
       // Drawing persistence is best effort; replay itself should keep working.
     }
     onDrawingsChange(drawings);
-  }, [card.cardId, drawings, onDrawingsChange]);
+  }, [card.cardId, candles, drawings, historyOffset, onDrawingsChange]);
 
   const handleDrawingClick = React.useCallback((point: DrawingPoint) => {
     if (activeTool === "SELECT") {
@@ -817,7 +909,7 @@ function CandlestickReplayChart({
     }
     if (activeTool === "HLINE") {
       const id = nanoId();
-      setDrawings((current) => [...current, { id, type: "HLINE", price: point.price, startIndex: -historyOffset, endIndex: currentIndex }]);
+      setDrawings((current) => [...current, withDrawingTimes({ id, type: "HLINE", price: point.price, startIndex: -historyOffset, endIndex: currentIndex }, candles, historyOffset)]);
       setSelectedDrawingId(id);
       setActiveTool("SELECT");
       setPendingRectStart(null);
@@ -829,15 +921,19 @@ function CandlestickReplayChart({
       const id = nanoId();
       setDrawings((current) => [
         ...current,
-        {
-          id,
-          type: "POSITION",
-          direction,
-          index: point.index,
-          entryPrice: point.price,
-          stopPrice: direction === "LONG" ? point.price - risk : point.price + risk,
-          takeProfitPrice: direction === "LONG" ? point.price + risk * 2 : point.price - risk * 2,
-        },
+        withDrawingTimes(
+          {
+            id,
+            type: "POSITION",
+            direction,
+            index: point.index,
+            entryPrice: point.price,
+            stopPrice: direction === "LONG" ? point.price - risk : point.price + risk,
+            takeProfitPrice: direction === "LONG" ? point.price + risk * 2 : point.price - risk * 2,
+          },
+          candles,
+          historyOffset,
+        ),
       ]);
       setSelectedDrawingId(id);
       setActiveTool("SELECT");
@@ -852,20 +948,24 @@ function CandlestickReplayChart({
       const id = nanoId();
       setDrawings((current) => [
         ...current,
-        {
-          id,
-          type: "RECT",
-          startIndex: pendingRectStart.index,
-          endIndex: point.index,
-          startPrice: pendingRectStart.price,
-          endPrice: point.price,
-        },
+        withDrawingTimes(
+          {
+            id,
+            type: "RECT",
+            startIndex: pendingRectStart.index,
+            endIndex: point.index,
+            startPrice: pendingRectStart.price,
+            endPrice: point.price,
+          },
+          candles,
+          historyOffset,
+        ),
       ]);
       setSelectedDrawingId(id);
       setPendingRectStart(null);
       setActiveTool("SELECT");
     }
-  }, [activeTool, currentIndex, drawings, historyOffset, pendingRectStart]);
+  }, [activeTool, candles, currentIndex, drawings, historyOffset, pendingRectStart]);
 
   const handleChartClickRef = React.useRef<(point: DrawingPoint) => void>(() => {});
   React.useEffect(() => {
@@ -906,13 +1006,19 @@ function CandlestickReplayChart({
     setDrawings((current) => current.map((drawing) => {
       if (drawing.id !== id || drawing.type !== "RECT") return drawing;
       const next = { ...drawing };
-      if (handle === "START_START" || handle === "START_END") next.startIndex = point.index;
-      if (handle === "END_START" || handle === "END_END") next.endIndex = point.index;
+      if (handle === "START_START" || handle === "START_END") {
+        next.startIndex = point.index;
+        next.startOpenTime = getCandleOpenTimeForDrawingIndex(candles, historyOffset, point.index);
+      }
+      if (handle === "END_START" || handle === "END_END") {
+        next.endIndex = point.index;
+        next.endOpenTime = getCandleOpenTimeForDrawingIndex(candles, historyOffset, point.index);
+      }
       if (handle === "START_START" || handle === "END_START") next.startPrice = point.price;
       if (handle === "START_END" || handle === "END_END") next.endPrice = point.price;
       return next;
     }));
-  }, []);
+  }, [candles, historyOffset]);
 
   if (visibleCandles.length === 0) {
     return <div className="flex h-[520px] items-center justify-center text-sm text-[#71717a]">暂无 K 线快照</div>;
@@ -1310,18 +1416,25 @@ function buildTradeExecutionMarkers(
     direction: "up" | "down";
   }> = [];
 
-  const entryIndex = attempt.tradeOpenedCandleIndex;
+  const entryIndex =
+    typeof attempt.tradeExecutionSnapshot?.entryCandleOpenTime === "number"
+      ? resolveNearestCandleIndexAtOrBefore(candles, attempt.tradeExecutionSnapshot.entryCandleOpenTime) - historyOffset
+      : attempt.tradeOpenedCandleIndex;
   if (entryIndex === undefined) return markers;
   const entryPrice = typeof attempt.entryPrice === "number" ? attempt.entryPrice : candles[entryIndex + historyOffset]?.close;
   const entryMarker = buildTradeExecutionMarker(chart, series, entryIndex + historyOffset, entryPrice, "入场", "#38bdf8", "up");
   if (entryMarker) markers.push({ key: "entry", ...entryMarker });
 
   if (attempt.tradeClosedCandleIndex !== undefined) {
-    const exitPrice = typeof attempt.exitPrice === "number" ? attempt.exitPrice : candles[attempt.tradeClosedCandleIndex + historyOffset]?.close;
+    const exitIndex =
+      typeof attempt.tradeExecutionSnapshot?.exitCandleOpenTime === "number"
+        ? resolveNearestCandleIndexAtOrBefore(candles, attempt.tradeExecutionSnapshot.exitCandleOpenTime) - historyOffset
+        : attempt.tradeClosedCandleIndex;
+    const exitPrice = typeof attempt.exitPrice === "number" ? attempt.exitPrice : candles[exitIndex + historyOffset]?.close;
     const exitMarker = buildTradeExecutionMarker(
       chart,
       series,
-      attempt.tradeClosedCandleIndex + historyOffset,
+      exitIndex + historyOffset,
       exitPrice,
       getExitMarkerLabel(attempt.exitReason),
       attempt.exitReason === "STOP_LOSS" ? "#fb7185" : "#2dd4bf",
@@ -1421,6 +1534,107 @@ function parseStoredDrawings(raw: string): DrawingShape[] {
   return parsed.filter(isDrawingShape);
 }
 
+function parseAttemptDrawingSnapshot(snapshot: unknown): DrawingShape[] {
+  if (!snapshot || typeof snapshot !== "object") return [];
+  const drawings = (snapshot as { drawings?: unknown }).drawings;
+  return Array.isArray(drawings) ? drawings.filter(isDrawingShape) : [];
+}
+
+function persistDrawingsWithCandleTimes(
+  cardId: string,
+  currentDrawings: DrawingShape[],
+  candles: PracticalFlashcardCandle[],
+  historyOffset: number,
+) {
+  try {
+    const drawings = currentDrawings.length
+      ? currentDrawings
+      : parseStoredDrawings(window.localStorage.getItem(getDrawingStorageKey(cardId)) || "[]");
+    const anchoredDrawings = drawings.map((drawing) => withDrawingTimes(drawing, candles, historyOffset));
+    window.localStorage.setItem(getDrawingStorageKey(cardId), JSON.stringify(anchoredDrawings));
+  } catch {
+    // Best effort: interval switching should still work even if localStorage is unavailable.
+  }
+}
+
+function readRemappedStoredDrawings(cardId: string, candles: PracticalFlashcardCandle[], historyOffset: number) {
+  try {
+    const raw = window.localStorage.getItem(getDrawingStorageKey(cardId));
+    return raw ? remapDrawingsToCandles(parseStoredDrawings(raw), candles, historyOffset) : [];
+  } catch {
+    return [];
+  }
+}
+
+function remapDrawingsToCandles(drawings: DrawingShape[], candles: PracticalFlashcardCandle[], historyOffset: number): DrawingShape[] {
+  return drawings.map((drawing) => {
+    const withTimes = withDrawingTimes(drawing, candles, historyOffset);
+    if (withTimes.type === "RECT") {
+      return {
+        ...withTimes,
+        startIndex: getDrawingIndexForOpenTime(candles, historyOffset, withTimes.startOpenTime, withTimes.startIndex),
+        endIndex: getDrawingIndexForOpenTime(candles, historyOffset, withTimes.endOpenTime, withTimes.endIndex),
+      };
+    }
+    if (withTimes.type === "HLINE") {
+      return {
+        ...withTimes,
+        startIndex: getDrawingIndexForOpenTime(candles, historyOffset, withTimes.startOpenTime, withTimes.startIndex),
+        endIndex: getDrawingIndexForOpenTime(candles, historyOffset, withTimes.endOpenTime, withTimes.endIndex),
+      };
+    }
+    return {
+      ...withTimes,
+      index: getDrawingIndexForOpenTime(candles, historyOffset, withTimes.openTime, withTimes.index),
+    };
+  });
+}
+
+function getMaxDrawingIndex(drawings: DrawingShape[]) {
+  if (!drawings.length) return 0;
+  return drawings.reduce((maxIndex, drawing) => {
+    if (drawing.type === "RECT" || drawing.type === "HLINE") {
+      return Math.max(maxIndex, drawing.startIndex, drawing.endIndex);
+    }
+    return Math.max(maxIndex, drawing.index);
+  }, 0);
+}
+
+function withDrawingTimes(drawing: DrawingShape, candles: PracticalFlashcardCandle[], historyOffset: number): DrawingShape {
+  if (drawing.type === "RECT") {
+    return {
+      ...drawing,
+      startOpenTime: drawing.startOpenTime ?? getCandleOpenTimeForDrawingIndex(candles, historyOffset, drawing.startIndex),
+      endOpenTime: drawing.endOpenTime ?? getCandleOpenTimeForDrawingIndex(candles, historyOffset, drawing.endIndex),
+    };
+  }
+  if (drawing.type === "HLINE") {
+    return {
+      ...drawing,
+      startOpenTime: drawing.startOpenTime ?? getCandleOpenTimeForDrawingIndex(candles, historyOffset, drawing.startIndex),
+      endOpenTime: drawing.endOpenTime ?? getCandleOpenTimeForDrawingIndex(candles, historyOffset, drawing.endIndex),
+    };
+  }
+  return {
+    ...drawing,
+    openTime: drawing.openTime ?? getCandleOpenTimeForDrawingIndex(candles, historyOffset, drawing.index),
+  };
+}
+
+function getCandleOpenTimeForDrawingIndex(candles: PracticalFlashcardCandle[], historyOffset: number, drawingIndex: number) {
+  return candles[drawingIndex + historyOffset]?.openTime;
+}
+
+function getDrawingIndexForOpenTime(
+  candles: PracticalFlashcardCandle[],
+  historyOffset: number,
+  openTime: number | undefined,
+  fallbackIndex: number,
+) {
+  if (openTime === undefined || !candles.length) return fallbackIndex;
+  return resolveNearestCandleIndexAtOrBefore(candles, openTime) - historyOffset;
+}
+
 function readDrawingSnapshot(cardId: string): Record<string, unknown> | undefined {
   try {
     const raw = window.localStorage.getItem(getDrawingStorageKey(cardId));
@@ -1461,6 +1675,16 @@ function clampIndex(index: number | undefined, length: number) {
   if (!length) return 0;
   const value = typeof index === "number" && Number.isFinite(index) ? index : 0;
   return Math.max(0, Math.min(Math.round(value), length - 1));
+}
+
+function resolveNearestCandleIndexAtOrBefore(candles: PracticalFlashcardCandle[], openTime: number) {
+  if (!candles.length) return 0;
+  let candidate = 0;
+  for (let index = 0; index < candles.length; index += 1) {
+    if (candles[index].openTime > openTime) break;
+    candidate = index;
+  }
+  return candidate;
 }
 
 function formatPrice(value?: number) {
