@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Box, CheckCircle2, ChevronLeft, ChevronRight, ChevronsRight, Images, Minus, MousePointer2, RotateCcw, Save, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { Box, CheckCircle2, ChevronLeft, ChevronRight, ChevronsRight, Images, Loader2, Minus, MousePointer2, RotateCcw, Save, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import {
   CandlestickSeries,
   ColorType,
@@ -142,7 +142,6 @@ export default function PracticalFlashcardReplayPage() {
   );
   const historicalOffset = historicalCandles.length;
   const orderFlowImageUrls = React.useMemo(() => card?.orderFlowImageUrls?.filter(Boolean) || [], [card?.orderFlowImageUrls]);
-  const revealedOrderFlowUrl = revealedOrderFlowIndex === null ? null : orderFlowImageUrls[revealedOrderFlowIndex] || null;
   const currentCandle = card ? card.candles[clampIndex(currentIndex, card.candles.length)] : undefined;
   const currentClose = currentCandle?.close;
   const matchingPosition = React.useMemo(
@@ -187,17 +186,34 @@ export default function PracticalFlashcardReplayPage() {
     const anchorOpenTime = currentCandle?.openTime;
     setSwitchingInterval(true);
     try {
-      persistDrawingsWithCandleTimes(card.cardId, drawings, displayCandles, historicalOffset);
+      const anchoredDrawings = persistDrawingsWithCandleTimes(card.cardId, drawings, displayCandles, historicalOffset);
+      debugDrawingRemap("before-switch", {
+        fromInterval: replayInterval,
+        toInterval: nextInterval,
+        currentIndex,
+        currentOpenTime: anchorOpenTime,
+        historyOffset: historicalOffset,
+        drawings: anchoredDrawings,
+      });
       const nextCard = await getPracticalFlashcardCard(card.cardId, { replayInterval: nextInterval });
       const nextIndex =
         anchorOpenTime !== undefined
           ? resolveNearestCandleIndexAtOrBefore(nextCard.candles, anchorOpenTime)
           : nextCard.initialVisibleCandleIndex;
-      const remappedDrawings = readRemappedStoredDrawings(card.cardId, nextCard.candles, 0);
+      const remappedDrawings = remapDrawingsToCandles(anchoredDrawings, nextCard.candles, 0);
+      debugDrawingRemap("after-remap", {
+        fromInterval: replayInterval,
+        toInterval: nextInterval,
+        anchorOpenTime,
+        nextIndex,
+        targetCandles: summarizeCandlesForDebug(nextCard.candles),
+        drawings: remappedDrawings,
+      });
       const maxDrawingIndex = getMaxDrawingIndex(remappedDrawings);
       setCard(nextCard);
       setReplayInterval(nextInterval);
       setCurrentIndex(clampIndex(Math.max(nextIndex, maxDrawingIndex), nextCard.candles.length));
+      setDrawings(remappedDrawings);
       setHistoricalCandles([]);
       setHistoricalCandlesExhausted(false);
     } catch (error) {
@@ -209,6 +225,7 @@ export default function PracticalFlashcardReplayPage() {
     attempt?.tradeExecutionInterval,
     attempt?.tradeOpenedCandleIndex,
     card,
+    currentIndex,
     currentCandle?.openTime,
     displayCandles,
     drawings,
@@ -228,11 +245,10 @@ export default function PracticalFlashcardReplayPage() {
       errorAlert("当前实操闪卡没有足迹图附件");
       return;
     }
-    setRevealedOrderFlowIndex((value) => {
-      if (value === null) return 0;
-      return (value + 1) % orderFlowImageUrls.length;
-    });
-  }, [errorAlert, orderFlowImageUrls.length]);
+    const nextIndex = revealedOrderFlowIndex === null ? 0 : (revealedOrderFlowIndex + 1) % orderFlowImageUrls.length;
+    setRevealedOrderFlowIndex(nextIndex);
+    setPreviewOrderFlowUrl(orderFlowImageUrls[nextIndex]);
+  }, [errorAlert, orderFlowImageUrls, revealedOrderFlowIndex]);
 
   React.useEffect(() => {
     if (!currentClose || attempt?.tradeOpenedCandleIndex !== undefined) return;
@@ -297,20 +313,21 @@ export default function PracticalFlashcardReplayPage() {
     }
     setSubmittingTrade(true);
     try {
+      const drawingSnapshot = buildDrawingSnapshot(drawings, displayCandles, historicalOffset);
       const updated = await createPracticalFlashcardAttemptTrade(attempt.attemptId, {
         direction: tradeDirection,
         currentCandleIndex: currentIndex,
         replayInterval,
         stopLossPrice: stop,
         takeProfitPrice: takeProfit,
-        drawingSnapshot: readDrawingSnapshot(card.cardId),
+        drawingSnapshot,
         preTradeMarketStructureAnalysis,
         preTradePriceActionAnalysis,
         preTradeOrderFlowAnalysis,
       });
       const result = await resolvePracticalFlashcardAttempt(updated.attemptId, {
         finalCandleIndex: card.resultCandleIndex ?? card.candles.length - 1,
-        drawingSnapshot: readDrawingSnapshot(card.cardId),
+        drawingSnapshot,
         notes: reviewNotes,
         summary: reviewSummary,
       });
@@ -332,7 +349,10 @@ export default function PracticalFlashcardReplayPage() {
     attempt,
     card,
     currentIndex,
+    displayCandles,
+    drawings,
     errorAlert,
+    historicalOffset,
     preTradeMarketStructureAnalysis,
     preTradeOrderFlowAnalysis,
     preTradePriceActionAnalysis,
@@ -353,6 +373,7 @@ export default function PracticalFlashcardReplayPage() {
     }
     setSavingReview(true);
     try {
+      const drawingSnapshot = buildDrawingSnapshot(drawings, displayCandles, historicalOffset);
       const result = await resolvePracticalFlashcardAttempt(attempt.attemptId, {
         marketStructureAnalysisCorrect: marketStructureReview === "CORRECT",
         priceActionAnalysisCorrect: priceActionReview === "CORRECT",
@@ -362,7 +383,7 @@ export default function PracticalFlashcardReplayPage() {
             ? orderFlowReview === "CORRECT"
             : undefined,
         riskRewardSetupCorrect: riskRewardReview === "CORRECT",
-        drawingSnapshot: readDrawingSnapshot(card.cardId),
+        drawingSnapshot,
         notes: reviewNotes,
         summary: reviewSummary,
       });
@@ -376,7 +397,10 @@ export default function PracticalFlashcardReplayPage() {
   }, [
     attempt,
     card,
+    displayCandles,
+    drawings,
     errorAlert,
+    historicalOffset,
     marketStructureReview,
     orderFlowReview,
     priceActionReview,
@@ -421,7 +445,7 @@ export default function PracticalFlashcardReplayPage() {
             </div>
             <Button
               variant="secondary"
-              disabled={orderFlowImageUrls.length === 0}
+              disabled={switchingInterval || orderFlowImageUrls.length === 0}
               onClick={handleRevealNextOrderFlowImage}
               className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -429,65 +453,29 @@ export default function PracticalFlashcardReplayPage() {
               {revealedOrderFlowIndex === null ? "查看足迹图" : "下一张足迹图"}
               {orderFlowImageUrls.length ? <span className="text-xs text-[#a1a1aa]">{revealedOrderFlowIndex === null ? `0/${orderFlowImageUrls.length}` : `${revealedOrderFlowIndex + 1}/${orderFlowImageUrls.length}`}</span> : null}
             </Button>
-            <Button variant="secondary" disabled={currentIndex <= 0} onClick={() => setCurrentIndex((value) => Math.max(value - 1, 0))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+            <Button variant="secondary" disabled={switchingInterval || currentIndex <= 0} onClick={() => setCurrentIndex((value) => Math.max(value - 1, 0))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
               <ChevronLeft className="size-4" />
               上一帧
             </Button>
-            <Button variant="secondary" disabled={currentIndex >= maxIndex} onClick={() => setCurrentIndex((value) => Math.min(value + 1, maxIndex))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+            <Button variant="secondary" disabled={switchingInterval || currentIndex >= maxIndex} onClick={() => setCurrentIndex((value) => Math.min(value + 1, maxIndex))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
               下一帧
               <ChevronRight className="size-4" />
             </Button>
-            <Button variant="secondary" disabled={currentIndex >= maxIndex} onClick={() => setCurrentIndex((value) => Math.min(value + 5, maxIndex))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+            <Button variant="secondary" disabled={switchingInterval || currentIndex >= maxIndex} onClick={() => setCurrentIndex((value) => Math.min(value + 5, maxIndex))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
               <ChevronsRight className="size-4" />
               +5
             </Button>
-            <Button variant="secondary" disabled={resultIndex === null} onClick={() => resultIndex !== null && setCurrentIndex(clampIndex(resultIndex, card.candles.length))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+            <Button variant="secondary" disabled={switchingInterval || resultIndex === null} onClick={() => resultIndex !== null && setCurrentIndex(clampIndex(resultIndex, card.candles.length))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
               快进到结果
             </Button>
-            <Button variant="secondary" onClick={() => setCurrentIndex(clampIndex(card.initialVisibleCandleIndex, card.candles.length))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+            <Button variant="secondary" disabled={switchingInterval} onClick={() => setCurrentIndex(clampIndex(card.initialVisibleCandleIndex, card.candles.length))} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
               <RotateCcw className="size-4" />
               重置
             </Button>
           </div>
         </div>
 
-        {revealedOrderFlowUrl ? (
-          <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#101010]">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#27272a] px-4 py-3">
-              <div>
-                <div className="text-sm font-semibold text-white">足迹图附件 {revealedOrderFlowIndex! + 1}/{orderFlowImageUrls.length}</div>
-                {card.orderFlowRemark ? <div className="mt-1 text-xs text-[#a1a1aa]">{card.orderFlowRemark}</div> : null}
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={handleRevealNextOrderFlowImage}
-                className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]"
-              >
-                <ChevronRight className="size-4" />
-                下一张
-              </Button>
-            </div>
-            <div className="flex max-h-[420px] min-h-[240px] items-center justify-center bg-black p-3">
-              <button
-                type="button"
-                onClick={() => setPreviewOrderFlowUrl(revealedOrderFlowUrl)}
-                className="flex max-h-[396px] w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-lg border border-transparent outline-none transition hover:border-[#00c2b2] focus:border-[#00c2b2]"
-                aria-label="放大查看足迹图"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={revealedOrderFlowUrl}
-                  alt={`足迹图附件 ${revealedOrderFlowIndex! + 1}`}
-                  className="max-h-[396px] w-full object-contain"
-                />
-              </button>
-            </div>
-          </section>
-        ) : null}
-
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="relative grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]" aria-busy={switchingInterval}>
           <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#101010]">
             <div className="border-b border-[#27272a] px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -509,8 +497,9 @@ export default function PracticalFlashcardReplayPage() {
                 min={0}
                 max={maxIndex}
                 value={currentIndex}
+                disabled={switchingInterval}
                 onChange={(event) => setCurrentIndex(Number(event.target.value))}
-                className="mt-3 h-2 w-full cursor-pointer accent-[#00c2b2]"
+                className="mt-3 h-2 w-full cursor-pointer accent-[#00c2b2] disabled:cursor-wait disabled:opacity-60"
               />
             </div>
             <CandlestickReplayChart
@@ -634,10 +623,15 @@ export default function PracticalFlashcardReplayPage() {
               </div>
             </section>
           </aside>
+          {switchingInterval ? <PracticalFlashcardLoadingOverlay label="正在切换周期..." /> : null}
         </div>
       </div>
       <OrderFlowImagePreviewDialog
         previewUrl={previewOrderFlowUrl}
+        currentIndex={revealedOrderFlowIndex}
+        total={orderFlowImageUrls.length}
+        remark={card.orderFlowRemark}
+        onNext={handleRevealNextOrderFlowImage}
         onClose={() => setPreviewOrderFlowUrl(null)}
       />
     </TradePageShell>
@@ -646,25 +640,64 @@ export default function PracticalFlashcardReplayPage() {
 
 function OrderFlowImagePreviewDialog({
   previewUrl,
+  currentIndex,
+  total,
+  remark,
+  onNext,
   onClose,
 }: {
   previewUrl: string | null;
+  currentIndex: number | null;
+  total: number;
+  remark?: string;
+  onNext: () => void;
   onClose: () => void;
 }) {
   return (
     <Dialog open={Boolean(previewUrl)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex h-[min(92vh,980px)] w-[min(100vw-24px,1400px)] max-w-none items-center justify-center border-none bg-black/95 p-3 shadow-none sm:w-[min(100vw-48px,1400px)] sm:max-w-none">
+      <DialogContent className="flex h-[min(92vh,980px)] w-[min(100vw-24px,1400px)] max-w-none flex-col border-none bg-black/95 p-3 shadow-none sm:w-[min(100vw-48px,1400px)] sm:max-w-none">
         <DialogTitle className="sr-only">足迹图预览</DialogTitle>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-1 pb-3">
+          <div>
+            <div className="text-sm font-semibold text-white">
+              足迹图附件 {currentIndex === null ? 0 : currentIndex + 1}/{total}
+            </div>
+            {remark ? <div className="mt-1 max-w-[72vw] text-xs text-[#a1a1aa]">{remark}</div> : null}
+          </div>
+          {total > 1 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onNext}
+              className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]"
+            >
+              <ChevronRight className="size-4" />
+              下一张
+            </Button>
+          ) : null}
+        </div>
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={previewUrl}
             alt="足迹图预览"
-            className="max-h-full max-w-full object-contain"
+            className="min-h-0 max-h-full max-w-full flex-1 object-contain"
           />
         ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PracticalFlashcardLoadingOverlay({ label }: { label: string }) {
+  return (
+    <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#050505]/58 backdrop-blur-[2px]">
+      <div className="flex items-center gap-3 rounded-md border border-[#00c2b2]/40 bg-[#101010]/95 px-4 py-3 text-sm font-medium text-[#e5e7eb] shadow-lg shadow-black/35">
+        <Loader2 className="size-5 animate-spin text-[#00c2b2]" />
+        <span>{label}</span>
+      </div>
+    </div>
   );
 }
 
@@ -1545,24 +1578,17 @@ function persistDrawingsWithCandleTimes(
   currentDrawings: DrawingShape[],
   candles: PracticalFlashcardCandle[],
   historyOffset: number,
-) {
+): DrawingShape[] {
   try {
     const drawings = currentDrawings.length
       ? currentDrawings
       : parseStoredDrawings(window.localStorage.getItem(getDrawingStorageKey(cardId)) || "[]");
     const anchoredDrawings = drawings.map((drawing) => withDrawingTimes(drawing, candles, historyOffset));
     window.localStorage.setItem(getDrawingStorageKey(cardId), JSON.stringify(anchoredDrawings));
+    return anchoredDrawings;
   } catch {
     // Best effort: interval switching should still work even if localStorage is unavailable.
-  }
-}
-
-function readRemappedStoredDrawings(cardId: string, candles: PracticalFlashcardCandle[], historyOffset: number) {
-  try {
-    const raw = window.localStorage.getItem(getDrawingStorageKey(cardId));
-    return raw ? remapDrawingsToCandles(parseStoredDrawings(raw), candles, historyOffset) : [];
-  } catch {
-    return [];
+    return currentDrawings.map((drawing) => withDrawingTimes(drawing, candles, historyOffset));
   }
 }
 
@@ -1635,17 +1661,33 @@ function getDrawingIndexForOpenTime(
   return resolveNearestCandleIndexAtOrBefore(candles, openTime) - historyOffset;
 }
 
-function readDrawingSnapshot(cardId: string): Record<string, unknown> | undefined {
+function buildDrawingSnapshot(
+  drawings: DrawingShape[],
+  candles: PracticalFlashcardCandle[],
+  historyOffset: number,
+): Record<string, unknown> {
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    drawings: drawings.map((drawing) => withDrawingTimes(drawing, candles, historyOffset)),
+  };
+}
+
+function summarizeCandlesForDebug(candles: PracticalFlashcardCandle[]) {
+  return {
+    count: candles.length,
+    firstOpenTime: candles[0]?.openTime,
+    lastOpenTime: candles[candles.length - 1]?.openTime,
+  };
+}
+
+function debugDrawingRemap(phase: string, payload: Record<string, unknown>) {
   try {
-    const raw = window.localStorage.getItem(getDrawingStorageKey(cardId));
-    const drawings = raw ? parseStoredDrawings(raw) : [];
-    return {
-      version: 1,
-      savedAt: new Date().toISOString(),
-      drawings,
-    };
+    if (window.localStorage.getItem("pf-drawing-remap-debug") !== "1") return;
+    // eslint-disable-next-line no-console
+    console.log("[PF drawing remap]", JSON.stringify({ phase, ...payload }, null, 2));
   } catch {
-    return undefined;
+    // Debug logging is optional and disabled by default.
   }
 }
 
