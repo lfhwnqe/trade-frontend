@@ -55,6 +55,14 @@ type PositionLineHandle = "ENTRY" | "STOP" | "TAKE_PROFIT";
 type ReviewChoice = "" | "CORRECT" | "WRONG";
 type OrderFlowReviewChoice = "" | "NOT_USED" | "CORRECT" | "WRONG";
 type HoveredCandleInfo = { candle: PracticalFlashcardCandle; price: number | null };
+type DrawingDebugContext = {
+  entrySource: string;
+  routeCardId: string;
+  attemptId: string | null;
+  trainingMode: string | null;
+  storageKey: string;
+  hasBackendDrawingSnapshot: boolean;
+};
 
 export default function PracticalFlashcardReplayPage() {
   const params = useParams<{ cardId: string }>();
@@ -87,6 +95,7 @@ export default function PracticalFlashcardReplayPage() {
   const [switchingInterval, setSwitchingInterval] = React.useState(false);
   const startedCardIdRef = React.useRef<string | null>(null);
   const appliedPositionSourceRef = React.useRef<string | null>(null);
+  const drawingsRef = React.useRef<DrawingShape[]>([]);
 
   React.useEffect(() => {
     const cardId = params?.cardId;
@@ -148,6 +157,19 @@ export default function PracticalFlashcardReplayPage() {
     () => findLatestPositionDrawing(drawings, tradeDirection),
     [drawings, tradeDirection],
   );
+  const drawingStorageKey = React.useMemo(
+    () => (card ? getDrawingStorageKey(card.cardId, attempt) : ""),
+    [attempt, card],
+  );
+  const drawingDebugContext = React.useMemo(
+    () => (card ? buildDrawingDebugContext(card.cardId, attempt, drawingStorageKey) : null),
+    [attempt, card, drawingStorageKey],
+  );
+
+  const handleDrawingsChange = React.useCallback((nextDrawings: DrawingShape[]) => {
+    drawingsRef.current = nextDrawings;
+    setDrawings(nextDrawings);
+  }, []);
 
   const handleNeedOlderHistory = React.useCallback(async () => {
     if (!card || loadingHistoricalCandles || historicalCandlesExhausted) return;
@@ -186,13 +208,16 @@ export default function PracticalFlashcardReplayPage() {
     const anchorOpenTime = currentCandle?.openTime;
     setSwitchingInterval(true);
     try {
-      const anchoredDrawings = persistDrawingsWithCandleTimes(card.cardId, drawings, displayCandles, historicalOffset);
+      const sourceDrawings = drawingsRef.current;
+      const anchoredDrawings = persistDrawingsWithCandleTimes(drawingStorageKey, sourceDrawings, displayCandles, historicalOffset);
       debugDrawingRemap("before-switch", {
+        ...(drawingDebugContext || {}),
         fromInterval: replayInterval,
         toInterval: nextInterval,
         currentIndex,
         currentOpenTime: anchorOpenTime,
         historyOffset: historicalOffset,
+        sourceDrawingCount: sourceDrawings.length,
         drawings: anchoredDrawings,
       });
       const nextCard = await getPracticalFlashcardCard(card.cardId, { replayInterval: nextInterval });
@@ -202,6 +227,7 @@ export default function PracticalFlashcardReplayPage() {
           : nextCard.initialVisibleCandleIndex;
       const remappedDrawings = remapDrawingsToCandles(anchoredDrawings, nextCard.candles, 0);
       debugDrawingRemap("after-remap", {
+        ...(drawingDebugContext || {}),
         fromInterval: replayInterval,
         toInterval: nextInterval,
         anchorOpenTime,
@@ -214,6 +240,7 @@ export default function PracticalFlashcardReplayPage() {
       setReplayInterval(nextInterval);
       setCurrentIndex(clampIndex(Math.max(nextIndex, maxDrawingIndex), nextCard.candles.length));
       setDrawings(remappedDrawings);
+      drawingsRef.current = remappedDrawings;
       setHistoricalCandles([]);
       setHistoricalCandlesExhausted(false);
     } catch (error) {
@@ -227,8 +254,9 @@ export default function PracticalFlashcardReplayPage() {
     card,
     currentIndex,
     currentCandle?.openTime,
+    drawingDebugContext,
+    drawingStorageKey,
     displayCandles,
-    drawings,
     errorAlert,
     historicalOffset,
     replayInterval,
@@ -515,8 +543,10 @@ export default function PracticalFlashcardReplayPage() {
                 candles={displayCandles}
                 currentIndex={currentIndex}
                 historyOffset={historicalOffset}
+                storageKey={drawingStorageKey}
+                debugContext={drawingDebugContext}
                 onNeedOlderHistory={handleNeedOlderHistory}
-                onDrawingsChange={setDrawings}
+                onDrawingsChange={handleDrawingsChange}
               />
             </section>
 
@@ -714,6 +744,8 @@ function CandlestickReplayChart({
   candles,
   currentIndex,
   historyOffset,
+  storageKey,
+  debugContext,
   onNeedOlderHistory,
   onDrawingsChange,
 }: {
@@ -722,6 +754,8 @@ function CandlestickReplayChart({
   candles: PracticalFlashcardCandle[];
   currentIndex: number;
   historyOffset: number;
+  storageKey: string;
+  debugContext: DrawingDebugContext | null;
   onNeedOlderHistory: () => void;
   onDrawingsChange: (drawings: DrawingShape[]) => void;
 }) {
@@ -911,20 +945,35 @@ function CandlestickReplayChart({
     drawingsHydratedRef.current = false;
     setPendingRectStart(null);
     try {
-      const raw = window.localStorage.getItem(getDrawingStorageKey(card.cardId));
+      const raw = window.localStorage.getItem(storageKey);
       const attemptDrawings = parseAttemptDrawingSnapshot(attempt?.drawingSnapshot);
       const sourceDrawings = attemptDrawings.length ? attemptDrawings : raw ? parseStoredDrawings(raw) : [];
       const nextDrawings = remapDrawingsToCandles(sourceDrawings, candles, historyOffset);
       skipNextPersistRef.current = true;
+      debugDrawingRemap("hydrate-drawings", {
+        ...(debugContext || {}),
+        historyOffset,
+        candleSummary: summarizeCandlesForDebug(candles),
+        hasLocalStorageSnapshot: Boolean(raw),
+        localStorageDrawingCount: raw ? parseStoredDrawings(raw).length : 0,
+        attemptDrawingCount: attemptDrawings.length,
+        sourceDrawingCount: sourceDrawings.length,
+        drawings: nextDrawings,
+      });
       setDrawings(nextDrawings);
       onDrawingsChange(nextDrawings);
-    } catch {
+    } catch (error) {
+      debugDrawingRemap("hydrate-drawings-error", {
+        ...(debugContext || {}),
+        historyOffset,
+        error: error instanceof Error ? error.message : String(error),
+      });
       setDrawings([]);
       onDrawingsChange([]);
     } finally {
       drawingsHydratedRef.current = true;
     }
-  }, [attempt?.attemptId, attempt?.drawingSnapshot, card.cardId, candles, historyOffset, onDrawingsChange]);
+  }, [attempt?.attemptId, attempt?.drawingSnapshot, candles, debugContext, historyOffset, onDrawingsChange, storageKey]);
 
   React.useEffect(() => {
     if (!drawingsHydratedRef.current) return;
@@ -935,12 +984,18 @@ function CandlestickReplayChart({
     }
     try {
       const anchoredDrawings = drawings.map((drawing) => withDrawingTimes(drawing, candles, historyOffset));
-      window.localStorage.setItem(getDrawingStorageKey(card.cardId), JSON.stringify(anchoredDrawings));
+      window.localStorage.setItem(storageKey, JSON.stringify(anchoredDrawings));
+      debugDrawingRemap("persist-drawings-effect", {
+        ...(debugContext || {}),
+        historyOffset,
+        drawingCount: anchoredDrawings.length,
+        drawings: anchoredDrawings,
+      });
     } catch {
       // Drawing persistence is best effort; replay itself should keep working.
     }
     onDrawingsChange(drawings);
-  }, [card.cardId, candles, drawings, historyOffset, onDrawingsChange]);
+  }, [candles, debugContext, drawings, historyOffset, onDrawingsChange, storageKey]);
 
   const handleDrawingClick = React.useCallback((point: DrawingPoint) => {
     if (activeTool === "SELECT") {
@@ -1564,8 +1619,33 @@ function nanoId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function getDrawingStorageKey(cardId: string) {
+function getDrawingStorageKey(cardId: string, attempt?: PracticalFlashcardAttempt | null) {
+  if (attempt?.trainingMode === "RANDOM_TRAINING" && attempt.attemptId) {
+    return `practical-flashcard-drawings:attempt:${attempt.attemptId}`;
+  }
   return `practical-flashcard-drawings:${cardId}`;
+}
+
+function buildDrawingDebugContext(
+  cardId: string,
+  attempt: PracticalFlashcardAttempt | null,
+  storageKey: string,
+): DrawingDebugContext {
+  return {
+    entrySource: resolveDrawingEntrySource(attempt),
+    routeCardId: cardId,
+    attemptId: attempt?.attemptId || null,
+    trainingMode: attempt?.trainingMode || null,
+    storageKey,
+    hasBackendDrawingSnapshot: parseAttemptDrawingSnapshot(attempt?.drawingSnapshot).length > 0,
+  };
+}
+
+function resolveDrawingEntrySource(attempt: PracticalFlashcardAttempt | null) {
+  const query = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  if (query?.get("mode") === "random" || attempt?.trainingMode === "RANDOM_TRAINING") return "manage-start-training";
+  if (query?.get("attemptId")) return "attempt-replay";
+  return "manage-replay";
 }
 
 function parseStoredDrawings(raw: string): DrawingShape[] {
@@ -1581,7 +1661,7 @@ function parseAttemptDrawingSnapshot(snapshot: unknown): DrawingShape[] {
 }
 
 function persistDrawingsWithCandleTimes(
-  cardId: string,
+  storageKey: string,
   currentDrawings: DrawingShape[],
   candles: PracticalFlashcardCandle[],
   historyOffset: number,
@@ -1589,9 +1669,9 @@ function persistDrawingsWithCandleTimes(
   try {
     const drawings = currentDrawings.length
       ? currentDrawings
-      : parseStoredDrawings(window.localStorage.getItem(getDrawingStorageKey(cardId)) || "[]");
+      : parseStoredDrawings(window.localStorage.getItem(storageKey) || "[]");
     const anchoredDrawings = drawings.map((drawing) => withDrawingTimes(drawing, candles, historyOffset));
-    window.localStorage.setItem(getDrawingStorageKey(cardId), JSON.stringify(anchoredDrawings));
+    window.localStorage.setItem(storageKey, JSON.stringify(anchoredDrawings));
     return anchoredDrawings;
   } catch {
     // Best effort: interval switching should still work even if localStorage is unavailable.
