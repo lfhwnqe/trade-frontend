@@ -419,8 +419,13 @@ export default function PracticalFlashcardReplayPage() {
   }
 
   return (
-    <TradePageShell title="实操闪卡回放" subtitle={`${card.symbolPairInfo} · ${PRACTICAL_FLASHCARD_LABELS[replayInterval] || replayInterval} 回放`} showAddButton={false}>
-      <div className="space-y-4">
+    <TradePageShell
+      title="实操闪卡回放"
+      subtitle={`${card.symbolPairInfo} · ${PRACTICAL_FLASHCARD_LABELS[replayInterval] || replayInterval} 回放`}
+      showAddButton={false}
+      contentClassName="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto p-4 emerald-scrollbar"
+    >
+      <div className="w-full min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button asChild variant="outline" className="border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#242424]">
             <Link href="/trade/practical-flashcard/manage" prefetch={false}>返回管理页</Link>
@@ -475,53 +480,88 @@ export default function PracticalFlashcardReplayPage() {
           </div>
         </div>
 
-        <div className="relative grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]" aria-busy={switchingInterval}>
-          <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#101010]">
-            <div className="border-b border-[#27272a] px-4 py-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                <div className="font-medium text-[#e5e7eb]">{card.symbolPairInfo}</div>
-                <div className="text-xs text-[#a1a1aa]">
-                  {switchingInterval
-                    ? "正在切换周期..."
-                    : attempt?.tradeOpenedCandleIndex !== undefined
-                      ? `本次交易按 ${PRACTICAL_FLASHCARD_LABELS[attempt.tradeExecutionInterval || replayInterval]} 结算`
-                      : loadingHistoricalCandles
-                        ? "正在加载更早 K 线..."
-                        : historicalOffset > 0
-                          ? `已临时扩展 ${historicalOffset} 根更早 K 线`
-                          : "向左滚动可自动加载更早 K 线"}
+        <div className="relative space-y-3" aria-busy={switchingInterval}>
+          <div className="grid items-stretch gap-3 grid-cols-[minmax(0,1fr)_360px]">
+            <section className="overflow-hidden rounded-xl border border-[#27272a] bg-[#101010]">
+              <div className="border-b border-[#27272a] px-4 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                  <div className="font-medium text-[#e5e7eb]">{card.symbolPairInfo}</div>
+                  <div className="text-xs text-[#a1a1aa]">
+                    {switchingInterval
+                      ? "正在切换周期..."
+                      : attempt?.tradeOpenedCandleIndex !== undefined
+                        ? `本次交易按 ${PRACTICAL_FLASHCARD_LABELS[attempt.tradeExecutionInterval || replayInterval]} 结算`
+                        : loadingHistoricalCandles
+                          ? "正在加载更早 K 线..."
+                          : historicalOffset > 0
+                            ? `已临时扩展 ${historicalOffset} 根更早 K 线`
+                            : "向左滚动可自动加载更早 K 线"}
+                  </div>
                 </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={maxIndex}
+                  value={currentIndex}
+                  disabled={switchingInterval}
+                  onChange={(event) => setCurrentIndex(Number(event.target.value))}
+                  className="mt-2 h-2 w-full cursor-pointer accent-[#00c2b2] disabled:cursor-wait disabled:opacity-60"
+                />
               </div>
-              <input
-                type="range"
-                min={0}
-                max={maxIndex}
-                value={currentIndex}
-                disabled={switchingInterval}
-                onChange={(event) => setCurrentIndex(Number(event.target.value))}
-                className="mt-3 h-2 w-full cursor-pointer accent-[#00c2b2] disabled:cursor-wait disabled:opacity-60"
+              <CandlestickReplayChart
+                key={replayInterval}
+                card={card}
+                attempt={attempt}
+                candles={displayCandles}
+                currentIndex={currentIndex}
+                historyOffset={historicalOffset}
+                onNeedOlderHistory={handleNeedOlderHistory}
+                onDrawingsChange={setDrawings}
               />
-            </div>
-            <CandlestickReplayChart
-              key={replayInterval}
-              card={card}
-              attempt={attempt}
-              candles={displayCandles}
-              currentIndex={currentIndex}
-              historyOffset={historicalOffset}
-              onNeedOlderHistory={handleNeedOlderHistory}
-              onDrawingsChange={setDrawings}
-            />
-          </section>
+            </section>
 
-          <aside className="space-y-4">
-            <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
+            <aside className="grid h-full min-h-0 grid-rows-2 gap-3">
+              <section className="flex min-h-0 flex-col rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                <div className="text-sm font-semibold text-white">标准答案</div>
+                <div className="mt-3 grid flex-1 grid-cols-2 gap-2 text-sm">
+                  <Metric label="方向" value={card.expectedDirection ? PRACTICAL_FLASHCARD_LABELS[card.expectedDirection] : "--"} />
+                  <Metric label="入场价" value={formatPrice(card.standardEntryPrice)} />
+                  <Metric label="止损价" value={formatPrice(card.standardStopLossPrice)} />
+                  <Metric label="止盈价" value={formatPrice(card.standardTakeProfitPrice)} />
+                </div>
+              </section>
+
+              <section className="flex min-h-0 flex-col rounded-lg border border-[#27272a] bg-[#121212] p-3">
+                <div className="text-sm font-semibold text-white">自动结算</div>
+                {attempt?.status === "RESOLVED" ? (
+                  <div className="mt-3 flex flex-1 flex-col gap-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <Metric label="判断结果" value={attempt.isWin ? "正确 / 止盈" : "错误 / 未通过"} />
+                      <Metric label="实现 R" value={formatRatio(attempt.realizedR)} />
+                      <Metric label="最大有利 R" value={formatRatio(attempt.maxFavorableR)} />
+                      <Metric label="最大不利 R" value={formatRatio(attempt.maxAdverseR)} />
+                      <Metric label="离场原因" value={formatExitReason(attempt.exitReason)} />
+                      <Metric label="离场价" value={formatPrice(attempt.exitPrice)} />
+                    </div>
+                    <ResultBanner key={`result-${feedbackPulseId}`} attempt={attempt} />
+                  </div>
+                ) : (
+                  <div className="mt-3 flex flex-1 items-center rounded-lg border border-[#27272a] bg-[#18181b] p-3 text-sm text-[#a1a1aa]">
+                    确认交易后，系统会按后续 K 线自动判断止盈 / 止损结果。
+                  </div>
+                )}
+              </section>
+            </aside>
+          </div>
+
+          <aside className="grid content-start gap-3 grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <section className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm font-semibold text-white">交易执行</div>
                 <div className="text-xs text-[#a1a1aa]">当前收盘 {formatPrice(currentClose)}</div>
               </div>
               {attempt ? (
-                <div className="mt-4 space-y-3">
+                <div className="mt-3 space-y-2">
                   {attempt.tradeOpenedCandleIndex === undefined ? (
                     <PreTradeAnalysisForm
                       marketStructure={preTradeMarketStructureAnalysis}
@@ -532,11 +572,9 @@ export default function PracticalFlashcardReplayPage() {
                       onOrderFlowChange={setPreTradeOrderFlowAnalysis}
                     />
                   ) : null}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <TradeDirectionButton direction="LONG" active={tradeDirection === "LONG"} disabled={attempt.tradeOpenedCandleIndex !== undefined} onClick={() => setTradeDirection("LONG")} />
                     <TradeDirectionButton direction="SHORT" active={tradeDirection === "SHORT"} disabled={attempt.tradeOpenedCandleIndex !== undefined} onClick={() => setTradeDirection("SHORT")} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
                     <PriceField label="止损价" value={stopLossPrice} disabled={attempt.tradeOpenedCandleIndex !== undefined} onChange={setStopLossPrice} />
                     <PriceField label="止盈价" value={takeProfitPrice} disabled={attempt.tradeOpenedCandleIndex !== undefined} onChange={setTakeProfitPrice} />
                   </div>
@@ -561,47 +599,16 @@ export default function PracticalFlashcardReplayPage() {
               )}
             </section>
 
-            <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
-              <div className="text-sm font-semibold text-white">标准答案</div>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <Metric label="方向" value={card.expectedDirection ? PRACTICAL_FLASHCARD_LABELS[card.expectedDirection] : "--"} />
-                <Metric label="入场价" value={formatPrice(card.standardEntryPrice)} />
-                <Metric label="止损价" value={formatPrice(card.standardStopLossPrice)} />
-                <Metric label="止盈价" value={formatPrice(card.standardTakeProfitPrice)} />
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
-              <div className="text-sm font-semibold text-white">自动结算</div>
-              {attempt?.status === "RESOLVED" ? (
-                <div className="mt-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <Metric label="判断结果" value={attempt.isWin ? "正确 / 止盈" : "错误 / 未通过"} />
-                    <Metric label="实现 R" value={formatRatio(attempt.realizedR)} />
-                    <Metric label="最大有利 R" value={formatRatio(attempt.maxFavorableR)} />
-                    <Metric label="最大不利 R" value={formatRatio(attempt.maxAdverseR)} />
-                    <Metric label="离场原因" value={formatExitReason(attempt.exitReason)} />
-                    <Metric label="离场价" value={formatPrice(attempt.exitPrice)} />
-                  </div>
-                  <ResultBanner key={`result-${feedbackPulseId}`} attempt={attempt} />
-                </div>
-              ) : (
-                <div className="mt-4 rounded-lg border border-[#27272a] bg-[#18181b] p-3 text-sm text-[#a1a1aa]">
-                  填写入场前分析、设置止损止盈并点击确认交易后，系统会直接按后续 K 线自动判断止盈 / 止损结果。
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-xl border border-[#27272a] bg-[#121212] p-4">
+            <section className="rounded-lg border border-[#27272a] bg-[#121212] p-3">
               <div className="text-sm font-semibold text-white">复盘分析</div>
-              <div className="mt-4 space-y-3">
+              <div className="mt-3 space-y-2">
                 {attempt?.status === "RESOLVED" ? (
-                  <>
+                  <div className="grid grid-cols-2 gap-2">
                     <ReviewToggle label="市场结构分析" value={marketStructureReview} onChange={setMarketStructureReview} />
                     <ReviewToggle label="价格行为分析" value={priceActionReview} onChange={setPriceActionReview} />
                     <OrderFlowReviewToggle value={orderFlowReview} onChange={setOrderFlowReview} />
                     <ReviewToggle label="止盈止损设置" value={riskRewardReview} onChange={setRiskRewardReview} />
-                  </>
+                  </div>
                 ) : null}
                 <PostTradeNotesForm
                   notes={reviewNotes}
@@ -1862,7 +1869,7 @@ function PreTradeAnalysisForm({
   onOrderFlowChange: (value: string) => void;
 }) {
   return (
-    <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+    <div className="grid grid-cols-3 gap-2 rounded-lg border border-[#27272a] bg-[#18181b] p-2">
       <AnalysisField
         label="市场结构"
         required
@@ -1903,7 +1910,7 @@ function AnalysisField({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 min-h-[58px] w-full rounded-md border border-[#27272a] bg-[#121212] px-2 py-2 text-sm text-[#e5e7eb] outline-none placeholder:text-[#52525b] focus:border-[#00c2b2]"
+        className="mt-1 min-h-[48px] w-full rounded-md border border-[#27272a] bg-[#121212] px-2 py-1.5 text-sm text-[#e5e7eb] outline-none placeholder:text-[#52525b] focus:border-[#00c2b2]"
       />
     </label>
   );
@@ -1921,7 +1928,7 @@ function PostTradeNotesForm({
   onSummaryChange: (value: string) => void;
 }) {
   return (
-    <div className="space-y-2 rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+    <div className="grid grid-cols-2 gap-2 rounded-lg border border-[#27272a] bg-[#18181b] p-2">
       <AnalysisField
         label="备注"
         value={notes}
@@ -1980,7 +1987,7 @@ function ReviewButton({ active, label, onClick }: { active: boolean; label: stri
     <button
       type="button"
       onClick={onClick}
-      className={`h-8 rounded-md border text-xs ${active ? "border-[#00c2b2] bg-[#00c2b2]/15 text-[#5eead4]" : "border-[#27272a] bg-[#18181b] text-[#a1a1aa] hover:border-[#3f3f46] hover:text-[#e5e7eb]"}`}
+      className={`h-7 rounded-md border text-xs ${active ? "border-[#00c2b2] bg-[#00c2b2]/15 text-[#5eead4]" : "border-[#27272a] bg-[#18181b] text-[#a1a1aa] hover:border-[#3f3f46] hover:text-[#e5e7eb]"}`}
     >
       {label}
     </button>
@@ -2046,9 +2053,9 @@ function ResultBanner({ attempt }: { attempt: PracticalFlashcardAttempt }) {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-3">
+    <div className="rounded-lg border border-[#27272a] bg-[#18181b] p-2">
       <div className="text-xs text-[#71717a]">{label}</div>
-      <div className="mt-2 break-words text-sm font-medium text-[#e5e7eb]">{value}</div>
+      <div className="mt-1 break-words text-sm font-medium text-[#e5e7eb]">{value}</div>
     </div>
   );
 }

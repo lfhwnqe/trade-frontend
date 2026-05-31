@@ -8,6 +8,7 @@ type TradePageShellProps = {
   subtitle?: string;
   children: React.ReactNode;
   showAddButton?: boolean;
+  contentClassName?: string;
 };
 
 export default function TradePageShell({
@@ -15,6 +16,7 @@ export default function TradePageShell({
   subtitle,
   children,
   showAddButton = true,
+  contentClassName,
 }: TradePageShellProps) {
   return (
     <div className="flex h-screen flex-col bg-black min-w-0 overflow-hidden">
@@ -45,7 +47,7 @@ export default function TradePageShell({
           </div>
         ) : null}
       </header>
-      <div className="p-6 space-y-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0 emerald-scrollbar">
+      <div className={contentClassName || "p-6 space-y-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0 emerald-scrollbar"}>
         {children}
       </div>
     </div>
