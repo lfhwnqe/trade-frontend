@@ -3,8 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { Ban, CheckCircle2, Edit3, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ColumnDef, RowSelectionState, SortingState } from "@tanstack/react-table";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/common/DataTable";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,7 +30,6 @@ import {
 import { usePracticalFlashcardAdminAccess } from "../use-practical-flashcard-admin-access";
 
 const EMPTY_SELECT_VALUE = "__NONE__";
-const PAGE_SIZE = 20;
 const PRACTICAL_FLASHCARD_STATUSES: PracticalFlashcardStatus[] = ["ACTIVE", "DISABLED"];
 const STATUS_FILTER_OPTIONS = [
   { value: "ALL", label: "全部闪卡" },
@@ -55,6 +56,13 @@ type EditDraft = {
   notes: string;
   summary: string;
 };
+
+function encodeOffsetCursor(offset: number) {
+  if (offset <= 0) return undefined;
+  const json = JSON.stringify({ offset });
+  if (typeof window === "undefined" || typeof window.btoa !== "function") return undefined;
+  return window.btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
 
 export default function PracticalFlashcardManagePage() {
   const { loaded, isAdmin } = usePracticalFlashcardAdminAccess();
@@ -84,9 +92,6 @@ function PracticalFlashcardManageContent() {
   const [successAlert, errorAlert] = useAlert();
   const [items, setItems] = React.useState<PracticalFlashcardCard[]>([]);
   const [totalCount, setTotalCount] = React.useState(0);
-  const [nextCursor, setNextCursor] = React.useState<string | null>(null);
-  const [currentCursor, setCurrentCursor] = React.useState<string | null>(null);
-  const [cursorHistory, setCursorHistory] = React.useState<string[]>([]);
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("ALL");
   const [loading, setLoading] = React.useState(true);
@@ -96,30 +101,35 @@ function PracticalFlashcardManageContent() {
   const [draft, setDraft] = React.useState<EditDraft | null>(null);
   const [playbookTypeOptions, setPlaybookTypeOptions] = React.useState<DictionaryOption[]>([]);
   const [tagOptions, setTagOptions] = React.useState<DictionaryOption[]>([]);
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
   const playbookLabelMap = React.useMemo(
     () => new Map(playbookTypeOptions.map((item) => [item.code, item.label])),
     [playbookTypeOptions],
   );
 
-  const load = React.useCallback(async () => {
+  const fetchPage = React.useCallback(async (targetPage: number, targetPageSize: number) => {
     setLoading(true);
     try {
       const res = await listPracticalFlashcardCards({
-        pageSize: PAGE_SIZE,
-        cursor: currentCursor || undefined,
+        pageSize: targetPageSize,
+        cursor: encodeOffsetCursor((targetPage - 1) * targetPageSize),
         status: statusFilter === "ALL" ? undefined : statusFilter,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
       });
       setItems(res.items);
       setTotalCount(res.totalCount);
-      setNextCursor(res.nextCursor);
+      setPage(targetPage);
+      setPageSize(targetPageSize);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "查询失败");
     } finally {
       setLoading(false);
     }
-  }, [currentCursor, errorAlert, statusFilter, symbolPairInfo]);
+  }, [errorAlert, statusFilter, symbolPairInfo]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -131,30 +141,14 @@ function PracticalFlashcardManageContent() {
   }, []);
 
   React.useEffect(() => {
-    load();
-  }, [load]);
+    void fetchPage(1, pageSize);
+  }, [fetchPage, pageSize]);
 
   React.useEffect(() => {
-    setCurrentCursor(null);
-    setCursorHistory([]);
+    setPage(1);
   }, [statusFilter, symbolPairInfo]);
 
-  const currentPage = cursorHistory.length + 1;
-  const currentStart = totalCount === 0 ? 0 : cursorHistory.length * PAGE_SIZE + 1;
-  const currentEnd = Math.min(cursorHistory.length * PAGE_SIZE + items.length, totalCount);
-
-  const handleNextPage = React.useCallback(() => {
-    if (!nextCursor) return;
-    setCursorHistory((current) => [...current, currentCursor || ""]);
-    setCurrentCursor(nextCursor);
-  }, [currentCursor, nextCursor]);
-
-  const handlePreviousPage = React.useCallback(() => {
-    if (cursorHistory.length === 0) return;
-    const previousCursor = cursorHistory[cursorHistory.length - 1] || null;
-    setCursorHistory((current) => current.slice(0, -1));
-    setCurrentCursor(previousCursor);
-  }, [cursorHistory]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const openEdit = React.useCallback((card: PracticalFlashcardCard) => {
     setEditingCard(card);
@@ -232,33 +226,105 @@ function PracticalFlashcardManageContent() {
     setActionCardId(card.cardId);
     try {
       await updatePracticalFlashcardCard(card.cardId, { status: nextStatus });
-      await load();
+      await fetchPage(page, pageSize);
       successAlert(nextStatus === "DISABLED" ? "实操闪卡已停用" : "实操闪卡已启用");
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "状态更新失败");
     } finally {
       setActionCardId(null);
     }
-  }, [errorAlert, load, successAlert]);
+  }, [errorAlert, fetchPage, page, pageSize, successAlert]);
 
   const handleDelete = React.useCallback(async (card: PracticalFlashcardCard) => {
     if (!window.confirm(`确认删除 ${card.symbolPairInfo} 这张实操闪卡？`)) return;
     setActionCardId(card.cardId);
     try {
       await deletePracticalFlashcardCard(card.cardId);
-      await load();
+      await fetchPage(page, pageSize);
       successAlert("实操闪卡已删除");
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "删除失败");
     } finally {
       setActionCardId(null);
     }
-  }, [errorAlert, load, successAlert]);
+  }, [errorAlert, fetchPage, page, pageSize, successAlert]);
+
+  const columns = React.useMemo<ColumnDef<PracticalFlashcardCard, unknown>[]>(() => [
+    {
+      accessorKey: "symbolPairInfo",
+      header: "交易对",
+      cell: ({ row }) => <span className="font-medium text-[#f4f4f5]">{row.original.symbolPairInfo}</span>,
+    },
+    {
+      accessorKey: "playbookType",
+      header: "剧本",
+      cell: ({ row }) => playbookLabelMap.get(row.original.playbookType) || row.original.playbookType || "--",
+    },
+    {
+      accessorKey: "primaryInterval",
+      header: "周期",
+      cell: ({ row }) => PRACTICAL_FLASHCARD_LABELS[row.original.primaryInterval] || row.original.primaryInterval || "15m",
+    },
+    {
+      id: "tags",
+      header: "标签",
+      cell: ({ row }) => <TagSummary card={row.original} tagOptions={tagOptions} />,
+    },
+    {
+      id: "timeRange",
+      header: "时间范围",
+      cell: ({ row }) => (
+        <div className="whitespace-nowrap text-[#a1a1aa]">
+          <div>{formatDateTime(row.original.entryTimeInfo)}</div>
+          <div className="text-xs text-[#71717a]">{formatDateTime(row.original.exitTimeInfo)}</div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "状态",
+      cell: ({ row }) => PRACTICAL_FLASHCARD_LABELS[row.original.status] || row.original.status,
+    },
+    {
+      accessorKey: "updatedAt",
+      header: "更新时间",
+      cell: ({ row }) => <span className="whitespace-nowrap text-[#a1a1aa]">{formatDateTime(row.original.updatedAt)}</span>,
+    },
+    {
+      id: "actions",
+      header: "操作",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div className="flex flex-nowrap gap-2">
+            <Button asChild size="sm" variant="secondary" className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+              <Link href={`/trade/practical-flashcard/${item.cardId}/play`} prefetch={false}>
+                <Play className="size-4" />
+                回放
+              </Link>
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => openEdit(item)} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+              <Edit3 className="size-4" />
+              编辑
+            </Button>
+            <Button type="button" size="sm" variant="secondary" disabled={actionCardId === item.cardId} onClick={() => void handleToggleStatus(item)} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+              {item.status === "DISABLED" ? <CheckCircle2 className="size-4" /> : <Ban className="size-4" />}
+              {item.status === "DISABLED" ? "启用" : "停用"}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={actionCardId === item.cardId} onClick={() => void handleDelete(item)} className="gap-2 border-[#7f1d1d] bg-[#1e1e1e] text-[#fecaca] hover:bg-[#2a1111]">
+              <Trash2 className="size-4" />
+              删除
+            </Button>
+          </div>
+        );
+      },
+    },
+  ], [actionCardId, handleDelete, handleToggleStatus, openEdit, playbookLabelMap, tagOptions]);
 
   return (
     <TradePageShell title="实操闪卡管理" subtitle="查看和编辑已冻结行情快照的实操闪卡" showAddButton={false}>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:flex-row md:items-end md:justify-between">
+      <div className="flex h-full min-h-0 flex-col gap-4">
+        <div className="flex flex-shrink-0 flex-col gap-3 rounded-xl border border-[#27272a] bg-[#121212] p-4 md:flex-row md:items-end md:justify-between">
           <div className="grid gap-3 md:grid-cols-[260px_180px]">
             <label className="space-y-2">
               <span className="text-sm font-medium text-[#d4d4d8]">交易对筛选</span>
@@ -275,7 +341,7 @@ function PracticalFlashcardManageContent() {
             </label>
           </div>
           <div className="flex gap-2">
-            <Button onClick={load} disabled={loading} variant="secondary" className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
+            <Button onClick={() => void fetchPage(page, pageSize)} disabled={loading} variant="secondary" className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
               <RefreshCw className="size-4" />
               {loading ? "刷新中..." : "刷新"}
             </Button>
@@ -290,98 +356,30 @@ function PracticalFlashcardManageContent() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-[#27272a] bg-[#121212]">
-          <div className="border-b border-[#27272a] px-4 py-3 text-sm text-[#a1a1aa]">
-            共 {totalCount} 张，当前第 {currentPage} 页
-            {items.length > 0 ? `（${currentStart}-${currentEnd}）` : ""}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-[#18181b] text-left text-[#a1a1aa]">
-                <tr>
-                  <th className="px-4 py-3 font-medium">交易对</th>
-                  <th className="px-4 py-3 font-medium">剧本</th>
-                  <th className="px-4 py-3 font-medium">周期</th>
-                  <th className="px-4 py-3 font-medium">标签</th>
-                  <th className="px-4 py-3 font-medium">时间范围</th>
-                  <th className="px-4 py-3 font-medium">状态</th>
-                  <th className="px-4 py-3 font-medium">更新时间</th>
-                  <th className="px-4 py-3 font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td className="px-4 py-8 text-center text-[#71717a]" colSpan={8}>加载中...</td></tr>
-                ) : items.length === 0 ? (
-                  <tr><td className="px-4 py-8 text-center text-[#71717a]" colSpan={8}>暂无实操闪卡</td></tr>
-                ) : items.map((item) => (
-                  <tr key={item.cardId} className="border-t border-[#27272a] text-[#e5e7eb]">
-                    <td className="px-4 py-3 font-medium">{item.symbolPairInfo}</td>
-                    <td className="px-4 py-3">{playbookLabelMap.get(item.playbookType) || item.playbookType}</td>
-                    <td className="px-4 py-3">{PRACTICAL_FLASHCARD_LABELS[item.primaryInterval] || item.primaryInterval || "15m"}</td>
-                    <td className="px-4 py-3">
-                      <TagSummary card={item} tagOptions={tagOptions} />
-                    </td>
-                    <td className="px-4 py-3 text-[#a1a1aa] whitespace-nowrap">
-                      <div>{formatDateTime(item.entryTimeInfo)}</div>
-                      <div className="text-xs text-[#71717a]">{formatDateTime(item.exitTimeInfo)}</div>
-                    </td>
-                    <td className="px-4 py-3">{PRACTICAL_FLASHCARD_LABELS[item.status] || item.status}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-[#a1a1aa]">{formatDateTime(item.updatedAt)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Button asChild size="sm" variant="secondary" className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
-                          <Link href={`/trade/practical-flashcard/${item.cardId}/play`} prefetch={false}>
-                            <Play className="size-4" />
-                            回放
-                          </Link>
-                        </Button>
-                        <Button type="button" size="sm" variant="secondary" onClick={() => openEdit(item)} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
-                          <Edit3 className="size-4" />
-                          编辑
-                        </Button>
-                        <Button type="button" size="sm" variant="secondary" disabled={actionCardId === item.cardId} onClick={() => void handleToggleStatus(item)} className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
-                          {item.status === "DISABLED" ? <CheckCircle2 className="size-4" /> : <Ban className="size-4" />}
-                          {item.status === "DISABLED" ? "启用" : "停用"}
-                        </Button>
-                        <Button type="button" size="sm" variant="outline" disabled={actionCardId === item.cardId} onClick={() => void handleDelete(item)} className="gap-2 border-[#7f1d1d] bg-[#1e1e1e] text-[#fecaca] hover:bg-[#2a1111]">
-                          <Trash2 className="size-4" />
-                          删除
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-col gap-3 border-t border-[#27272a] px-4 py-3 text-sm text-[#a1a1aa] md:flex-row md:items-center md:justify-between">
-            <div>
-              每页 {PAGE_SIZE} 张{items.length > 0 ? `，当前显示 ${currentStart}-${currentEnd}` : ""}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={loading || cursorHistory.length === 0}
-                onClick={handlePreviousPage}
-                className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a] disabled:opacity-50"
-              >
-                上一页
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={loading || !nextCursor}
-                onClick={handleNextPage}
-                className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a] disabled:opacity-50"
-              >
-                下一页
-              </Button>
-            </div>
-          </div>
+        <div className="min-h-0 flex-1">
+          <DataTable<PracticalFlashcardCard, unknown>
+            columns={columns}
+            data={items}
+            sorting={sorting}
+            rowSelection={rowSelection}
+            loading={loading}
+            page={page}
+            pageSize={pageSize}
+            totalItems={totalCount}
+            totalPages={totalPages}
+            onPageChange={(nextPage, nextPageSize) => {
+              void fetchPage(nextPage, nextPageSize ?? pageSize);
+            }}
+            onPageSizeChange={(_, nextPageSize) => {
+              setPage(1);
+              setPageSize(nextPageSize);
+            }}
+            onSortingChange={(nextSorting) => setSorting(nextSorting as SortingState)}
+            onRowSelectionChange={(nextSelection) => setRowSelection(nextSelection as RowSelectionState)}
+            initialColumnPinning={{
+              right: ["actions"],
+            }}
+          />
         </div>
       </div>
 
