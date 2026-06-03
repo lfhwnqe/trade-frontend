@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAlert } from "@/components/common/alert";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 import { createPracticalFlashcardCard, getBrowserTimeZone } from "../request";
+import { ElapsedTimeBackfill } from "../components/ElapsedTimeBackfill";
 import type { ImageResource } from "../../config";
 import {
   PRACTICAL_FLASHCARD_BINANCE_UM_SYMBOLS,
@@ -51,7 +52,7 @@ export default function PracticalFlashcardCreatePage() {
 function PracticalFlashcardCreateForm() {
   const [successAlert, errorAlert] = useAlert();
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
-  const [primaryInterval, setPrimaryInterval] = React.useState<PracticalFlashcardInterval>("15m");
+  const [primaryInterval, setPrimaryInterval] = React.useState<PracticalFlashcardInterval>("1m");
   const [entryTimeInfo, setEntryTimeInfo] = React.useState("");
   const [exitTimeInfo, setExitTimeInfo] = React.useState("");
   const [expectedDirection, setExpectedDirection] = React.useState<PracticalFlashcardDirection | "">("");
@@ -112,7 +113,7 @@ function PracticalFlashcardCreateForm() {
       });
       successAlert(`实操闪卡已创建，周期：${PRACTICAL_FLASHCARD_LABELS[created.primaryInterval] || created.primaryInterval}`);
       setSymbolPairInfo("");
-      setPrimaryInterval("15m");
+      setPrimaryInterval("1m");
       setEntryTimeInfo("");
       setExitTimeInfo("");
       setExpectedDirection("");
@@ -165,6 +166,7 @@ function PracticalFlashcardCreateForm() {
               </Field>
               <Field label="离场 / 结果确认时间">
                 <DateCalendarPicker analysisTime={exitTimeInfo} updateForm={(patch) => setExitTimeInfo(patch.analysisTime)} placeholder="选择离场时间" />
+                <ElapsedTimeBackfill baseTime={entryTimeInfo} onApply={setExitTimeInfo} onError={errorAlert} disabled={submitting} />
               </Field>
             </section>
 

@@ -14,6 +14,7 @@ import { ImageUploader } from "@/components/common/ImageUploader";
 import { useAlert } from "@/components/common/alert";
 import { fetchFlashcardTagOptions, fetchPlaybookTypeOptions } from "../../dictionary";
 import { deletePracticalFlashcardCard, getBrowserTimeZone, listPracticalFlashcardCards, updatePracticalFlashcardCard } from "../request";
+import { ElapsedTimeBackfill } from "../components/ElapsedTimeBackfill";
 import type { ImageResource } from "../../config";
 import {
   PRACTICAL_FLASHCARD_DIRECTIONS,
@@ -27,6 +28,7 @@ import {
 import { usePracticalFlashcardAdminAccess } from "../use-practical-flashcard-admin-access";
 
 const EMPTY_SELECT_VALUE = "__NONE__";
+const PAGE_SIZE = 20;
 const PRACTICAL_FLASHCARD_STATUSES: PracticalFlashcardStatus[] = ["ACTIVE", "DISABLED"];
 const STATUS_FILTER_OPTIONS = [
   { value: "ALL", label: "全部闪卡" },
@@ -82,6 +84,9 @@ function PracticalFlashcardManageContent() {
   const [successAlert, errorAlert] = useAlert();
   const [items, setItems] = React.useState<PracticalFlashcardCard[]>([]);
   const [totalCount, setTotalCount] = React.useState(0);
+  const [nextCursor, setNextCursor] = React.useState<string | null>(null);
+  const [currentCursor, setCurrentCursor] = React.useState<string | null>(null);
+  const [cursorHistory, setCursorHistory] = React.useState<string[]>([]);
   const [symbolPairInfo, setSymbolPairInfo] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("ALL");
   const [loading, setLoading] = React.useState(true);
@@ -101,18 +106,20 @@ function PracticalFlashcardManageContent() {
     setLoading(true);
     try {
       const res = await listPracticalFlashcardCards({
-        pageSize: 50,
+        pageSize: PAGE_SIZE,
+        cursor: currentCursor || undefined,
         status: statusFilter === "ALL" ? undefined : statusFilter,
         symbolPairInfo: symbolPairInfo.trim() || undefined,
       });
       setItems(res.items);
       setTotalCount(res.totalCount);
+      setNextCursor(res.nextCursor);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "查询失败");
     } finally {
       setLoading(false);
     }
-  }, [errorAlert, statusFilter, symbolPairInfo]);
+  }, [currentCursor, errorAlert, statusFilter, symbolPairInfo]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -126,6 +133,28 @@ function PracticalFlashcardManageContent() {
   React.useEffect(() => {
     load();
   }, [load]);
+
+  React.useEffect(() => {
+    setCurrentCursor(null);
+    setCursorHistory([]);
+  }, [statusFilter, symbolPairInfo]);
+
+  const currentPage = cursorHistory.length + 1;
+  const currentStart = totalCount === 0 ? 0 : cursorHistory.length * PAGE_SIZE + 1;
+  const currentEnd = Math.min(cursorHistory.length * PAGE_SIZE + items.length, totalCount);
+
+  const handleNextPage = React.useCallback(() => {
+    if (!nextCursor) return;
+    setCursorHistory((current) => [...current, currentCursor || ""]);
+    setCurrentCursor(nextCursor);
+  }, [currentCursor, nextCursor]);
+
+  const handlePreviousPage = React.useCallback(() => {
+    if (cursorHistory.length === 0) return;
+    const previousCursor = cursorHistory[cursorHistory.length - 1] || null;
+    setCursorHistory((current) => current.slice(0, -1));
+    setCurrentCursor(previousCursor);
+  }, [cursorHistory]);
 
   const openEdit = React.useCallback((card: PracticalFlashcardCard) => {
     setEditingCard(card);
@@ -202,35 +231,29 @@ function PracticalFlashcardManageContent() {
     if (!window.confirm(message)) return;
     setActionCardId(card.cardId);
     try {
-      const updated = await updatePracticalFlashcardCard(card.cardId, { status: nextStatus });
-      setItems((current) => current
-        .map((item) => (item.cardId === updated.cardId ? updated : item))
-        .filter((item) => statusFilter === "ALL" || item.status === statusFilter));
-      if (statusFilter !== "ALL") {
-        setTotalCount((current) => Math.max(0, current - 1));
-      }
+      await updatePracticalFlashcardCard(card.cardId, { status: nextStatus });
+      await load();
       successAlert(nextStatus === "DISABLED" ? "实操闪卡已停用" : "实操闪卡已启用");
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "状态更新失败");
     } finally {
       setActionCardId(null);
     }
-  }, [errorAlert, statusFilter, successAlert]);
+  }, [errorAlert, load, successAlert]);
 
   const handleDelete = React.useCallback(async (card: PracticalFlashcardCard) => {
     if (!window.confirm(`确认删除 ${card.symbolPairInfo} 这张实操闪卡？`)) return;
     setActionCardId(card.cardId);
     try {
       await deletePracticalFlashcardCard(card.cardId);
-      setItems((current) => current.filter((item) => item.cardId !== card.cardId));
-      setTotalCount((current) => Math.max(0, current - 1));
+      await load();
       successAlert("实操闪卡已删除");
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "删除失败");
     } finally {
       setActionCardId(null);
     }
-  }, [errorAlert, successAlert]);
+  }, [errorAlert, load, successAlert]);
 
   return (
     <TradePageShell title="实操闪卡管理" subtitle="查看和编辑已冻结行情快照的实操闪卡" showAddButton={false}>
@@ -269,7 +292,8 @@ function PracticalFlashcardManageContent() {
 
         <div className="overflow-hidden rounded-xl border border-[#27272a] bg-[#121212]">
           <div className="border-b border-[#27272a] px-4 py-3 text-sm text-[#a1a1aa]">
-            共 {totalCount} 张
+            共 {totalCount} 张，当前第 {currentPage} 页
+            {items.length > 0 ? `（${currentStart}-${currentEnd}）` : ""}
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -277,11 +301,11 @@ function PracticalFlashcardManageContent() {
                 <tr>
                   <th className="px-4 py-3 font-medium">交易对</th>
                   <th className="px-4 py-3 font-medium">剧本</th>
-                  <th className="px-4 py-3 font-medium">行情源</th>
                   <th className="px-4 py-3 font-medium">周期</th>
+                  <th className="px-4 py-3 font-medium">标签</th>
                   <th className="px-4 py-3 font-medium">时间范围</th>
-                  <th className="px-4 py-3 font-medium">K 线数</th>
                   <th className="px-4 py-3 font-medium">状态</th>
+                  <th className="px-4 py-3 font-medium">更新时间</th>
                   <th className="px-4 py-3 font-medium">操作</th>
                 </tr>
               </thead>
@@ -294,13 +318,16 @@ function PracticalFlashcardManageContent() {
                   <tr key={item.cardId} className="border-t border-[#27272a] text-[#e5e7eb]">
                     <td className="px-4 py-3 font-medium">{item.symbolPairInfo}</td>
                     <td className="px-4 py-3">{playbookLabelMap.get(item.playbookType) || item.playbookType}</td>
-                    <td className="px-4 py-3">{PRACTICAL_FLASHCARD_LABELS[item.venue] || item.venue}</td>
                     <td className="px-4 py-3">{PRACTICAL_FLASHCARD_LABELS[item.primaryInterval] || item.primaryInterval || "15m"}</td>
-                    <td className="px-4 py-3 text-[#a1a1aa]">
-                      {item.entryTimeInfo} {"->"} {item.exitTimeInfo}
+                    <td className="px-4 py-3">
+                      <TagSummary card={item} tagOptions={tagOptions} />
                     </td>
-                    <td className="px-4 py-3">{formatCandleCount(item)}</td>
+                    <td className="px-4 py-3 text-[#a1a1aa] whitespace-nowrap">
+                      <div>{formatDateTime(item.entryTimeInfo)}</div>
+                      <div className="text-xs text-[#71717a]">{formatDateTime(item.exitTimeInfo)}</div>
+                    </td>
                     <td className="px-4 py-3">{PRACTICAL_FLASHCARD_LABELS[item.status] || item.status}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[#a1a1aa]">{formatDateTime(item.updatedAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
                         <Button asChild size="sm" variant="secondary" className="gap-2 border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a]">
@@ -328,6 +355,33 @@ function PracticalFlashcardManageContent() {
               </tbody>
             </table>
           </div>
+          <div className="flex flex-col gap-3 border-t border-[#27272a] px-4 py-3 text-sm text-[#a1a1aa] md:flex-row md:items-center md:justify-between">
+            <div>
+              每页 {PAGE_SIZE} 张{items.length > 0 ? `，当前显示 ${currentStart}-${currentEnd}` : ""}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={loading || cursorHistory.length === 0}
+                onClick={handlePreviousPage}
+                className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a] disabled:opacity-50"
+              >
+                上一页
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={loading || !nextCursor}
+                onClick={handleNextPage}
+                className="border border-[#27272a] bg-[#1e1e1e] text-[#e5e7eb] hover:bg-[#27272a] disabled:opacity-50"
+              >
+                下一页
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -352,6 +406,7 @@ function PracticalFlashcardManageContent() {
                 </Field>
                 <Field label="离场 / 结果确认时间">
                   <DateCalendarPicker analysisTime={draft.exitTimeInfo} updateForm={(patch) => updateDraft({ exitTimeInfo: patch.analysisTime })} placeholder="选择离场时间" />
+                  <ElapsedTimeBackfill baseTime={draft.entryTimeInfo} onApply={(value) => updateDraft({ exitTimeInfo: value })} onError={errorAlert} disabled={saving} />
                 </Field>
                 <Field label="时间周期 *">
                   <Select value={draft.primaryInterval} onValueChange={(value) => updateDraft({ primaryInterval: value as PracticalFlashcardInterval })}>
@@ -484,4 +539,37 @@ function formatCandleCount(card: PracticalFlashcardCard) {
     return "按需拉取";
   }
   return `${card.candles.length} 根`;
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "--";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function TagSummary({ card, tagOptions }: { card: PracticalFlashcardCard; tagOptions: DictionaryOption[] }) {
+  const tagLabelMap = React.useMemo(() => new Map(tagOptions.map((item) => [item.code, item])), [tagOptions]);
+  const codes = Array.isArray(card.tagCodes) ? card.tagCodes : [];
+  if (codes.length === 0) return <span className="text-[#71717a]">--</span>;
+  return (
+    <div className="flex max-w-[240px] flex-wrap gap-1.5">
+      {codes.slice(0, 3).map((code) => {
+        const option = tagLabelMap.get(code);
+        return (
+          <span key={code} className="inline-flex max-w-[140px] items-center gap-1 rounded-full border border-[#27272a] bg-[#1e1e1e] px-2 py-0.5 text-xs text-[#d4d4d8]">
+            {option?.color ? <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: option.color }} /> : null}
+            <span className="truncate">{option?.label || code}</span>
+          </span>
+        );
+      })}
+      {codes.length > 3 ? <span className="text-xs text-[#71717a]">+{codes.length - 3}</span> : null}
+    </div>
+  );
 }
