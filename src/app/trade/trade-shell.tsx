@@ -19,6 +19,7 @@ import {
   Link2,
   Menu,
   BarChart3,
+  Images,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -172,6 +173,29 @@ const tradeNavSections: NavSection[] = [
       {
         title: "实操闪卡管理",
         href: "/trade/practical-flashcard/manage",
+        icon: ClipboardList,
+        adminOnly: true,
+      },
+    ],
+  },
+  {
+    title: "图片识别闪卡",
+    icon: Images,
+    items: [
+      {
+        title: "图片识别训练",
+        href: "/trade/image-recognition-flashcard/train",
+        icon: Images,
+      },
+      {
+        title: "图片识别录入",
+        href: "/trade/image-recognition-flashcard/create",
+        icon: Layers,
+        adminOnly: true,
+      },
+      {
+        title: "图片识别管理",
+        href: "/trade/image-recognition-flashcard/manage",
         icon: ClipboardList,
         adminOnly: true,
       },

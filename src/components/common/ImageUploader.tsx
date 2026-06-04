@@ -12,6 +12,7 @@ import {
 import { ImageResource } from "../../app/trade/config";
 import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FitImagePreview } from "@/components/common/FitImagePreview";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,12 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useAlert } from "./alert";
+
+type ImageUploaderUploadInfo = {
+  uploadUrl: string;
+  key: string;
+  fileUrl?: string;
+};
 
 /**
  * 图片多图上传控件（支持真实上传、云端预览，shadcn 风格，支持回填和大图预览）
@@ -56,12 +63,18 @@ export function ImageUploader({
   max,
   disabled,
   compress = true,
+  uploadUrlResolver,
 }: {
   value: ImageResource[];
   onChange: (v: ImageResource[]) => void;
   max?: number;
   disabled?: boolean;
   compress?: boolean;
+  uploadUrlResolver?: (params: {
+    fileName: string;
+    contentType: string;
+    date: string;
+  }) => Promise<ImageUploaderUploadInfo>;
 }) {
   const [,errorAlert]= useAlert()
   // 检查是否已达最大数量
@@ -131,26 +144,34 @@ export function ImageUploader({
             const processedFile = await compressImage(file);
             
             const dateStr = new Date().toISOString().slice(0, 10);
-            const { uploadUrl, key } = await getImageUploadUrl({
-              fileName: encodeURIComponent(file.name),
-              fileType: file.type,
-              date: dateStr,
-            });
+            const uploadInfo: ImageUploaderUploadInfo = uploadUrlResolver
+              ? await uploadUrlResolver({
+                  fileName: encodeURIComponent(file.name),
+                  contentType: file.type,
+                  date: dateStr,
+                })
+              : await getImageUploadUrl({
+                  fileName: encodeURIComponent(file.name),
+                  fileType: file.type,
+                  date: dateStr,
+                });
             
-            await uploadToS3(uploadUrl, processedFile);
+            await uploadToS3(uploadInfo.uploadUrl, processedFile);
             
             let cdnUrl = "";
-            if (key.startsWith("http")) {
-              cdnUrl = key;
+            if (uploadInfo.fileUrl) {
+              cdnUrl = uploadInfo.fileUrl;
+            } else if (uploadInfo.key.startsWith("http")) {
+              cdnUrl = uploadInfo.key;
             } else {
               const cloudfrontDomain =
                 process.env.NEXT_PUBLIC_IMAGE_CDN_PREFIX ||
                 "dyslh3g7kcbva.cloudfront.net";
-              cdnUrl = `https://${cloudfrontDomain}/${key}`;
+              cdnUrl = `https://${cloudfrontDomain}/${uploadInfo.key}`;
             }
             
             console.log(`[ImageUploader] 文件 ${file.name} 上传成功: ${cdnUrl}`);
-            return { success: true, loadingKey, result: { key, url: cdnUrl } };
+            return { success: true, loadingKey, result: { key: uploadInfo.key, url: cdnUrl } };
           } catch (err) {
             let msg = "未知错误";
             if (err && typeof err === "object" && "message" in err) {
@@ -196,7 +217,7 @@ export function ImageUploader({
         errorAlert(`${failedCount} 张图片上传失败，请重试`);
       }
     },
-    [onChange, value, max, compress, errorAlert]
+    [onChange, value, max, compress, errorAlert, uploadUrlResolver]
   );
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -335,7 +356,7 @@ export function ImageUploader({
         onOpenChange={(open) => !open && setPreviewUrl(null)}
       >
         <DialogOverlay />
-        <DialogContent className="max-w-full p-0 bg-transparent shadow-none border-none flex items-center justify-center">
+        <DialogContent className="flex h-[calc(100vh-24px)] max-h-none w-[calc(100vw-24px)] max-w-none items-center justify-center overflow-hidden border-none bg-transparent p-1 shadow-none sm:max-w-none">
           <DialogTitle asChild>
             <VisuallyHidden id="img-preview-dialog-title">
               图片预览
@@ -346,14 +367,11 @@ export function ImageUploader({
             aria-label="关闭"
           />
           {previewUrl && (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt="预览图片"
-                className="max-h-[80vh] max-w-[90vw] rounded-md shadow-2xl border bg-white"
-              />
-            </>
+            <FitImagePreview
+              src={previewUrl}
+              alt="预览图片"
+              imageClassName="rounded-md border bg-white shadow-2xl"
+            />
           )}
         </DialogContent>
       </Dialog>
