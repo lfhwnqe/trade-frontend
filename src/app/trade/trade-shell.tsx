@@ -20,6 +20,7 @@ import {
   Menu,
   BarChart3,
   Images,
+  Star,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -198,6 +199,27 @@ const tradeNavSections: NavSection[] = [
         href: "/trade/image-recognition-flashcard/manage",
         icon: ClipboardList,
         adminOnly: true,
+      },
+    ],
+  },
+  {
+    title: "TradingView 训练记录",
+    icon: Star,
+    items: [
+      {
+        title: "训练统计",
+        href: "/trade/tradingview-training-record/analytics",
+        icon: BarChart3,
+      },
+      {
+        title: "训练记录录入",
+        href: "/trade/tradingview-training-record/create",
+        icon: Layers,
+      },
+      {
+        title: "训练记录管理",
+        href: "/trade/tradingview-training-record/manage",
+        icon: ClipboardList,
       },
     ],
   },
