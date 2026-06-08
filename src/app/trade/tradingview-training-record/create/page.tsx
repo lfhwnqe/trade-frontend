@@ -142,12 +142,14 @@ export default function TradingViewTrainingRecordCreatePage() {
             <label className="mb-2 block text-sm font-medium text-[#e5e7eb]">交易结果</label>
             <Select value={tradeResult} onValueChange={(value) => setTradeResult(value as TradingViewTrainingRecordResult)}>
               <SelectTrigger className="border-[#27272a] bg-[#0f0f10] text-[#e5e7eb]">
-                <SelectValue placeholder="选择盈利 / 亏损 / 保本" />
+                <SelectValue placeholder="选择盈利 / 亏损 / 保本 / 暂未入场 / 未离场" />
               </SelectTrigger>
               <SelectContent className="border-[#27272a] bg-[#121212] text-[#e5e7eb]">
                 <SelectItem value="WIN">{TRADINGVIEW_TRAINING_RECORD_LABELS.WIN}</SelectItem>
                 <SelectItem value="LOSS">{TRADINGVIEW_TRAINING_RECORD_LABELS.LOSS}</SelectItem>
                 <SelectItem value="BREAKEVEN">{TRADINGVIEW_TRAINING_RECORD_LABELS.BREAKEVEN}</SelectItem>
+                <SelectItem value="NOT_ENTERED">{TRADINGVIEW_TRAINING_RECORD_LABELS.NOT_ENTERED}</SelectItem>
+                <SelectItem value="NOT_EXITED">{TRADINGVIEW_TRAINING_RECORD_LABELS.NOT_EXITED}</SelectItem>
               </SelectContent>
             </Select>
           </div>

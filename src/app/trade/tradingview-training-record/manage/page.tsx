@@ -201,6 +201,8 @@ export default function TradingViewTrainingRecordManagePage() {
             <SelectItem value="WIN">盈利</SelectItem>
             <SelectItem value="LOSS">亏损</SelectItem>
             <SelectItem value="BREAKEVEN">保本</SelectItem>
+            <SelectItem value="NOT_ENTERED">暂未入场</SelectItem>
+            <SelectItem value="NOT_EXITED">未离场</SelectItem>
           </FilterSelect>
           <FilterSelect label="把握度" value={confidenceFilter} onValueChange={(value) => setConfidenceFilter(value as typeof confidenceFilter)} widthClass="w-32">
             <SelectItem value="ALL">全部</SelectItem>
@@ -245,7 +247,7 @@ export default function TradingViewTrainingRecordManagePage() {
               </button>
               <div className="font-medium text-[#e5e7eb]">{record.symbolPair || "-"}</div>
               <div className="font-medium text-[#e5e7eb]">{record.playbookItem?.label || playbookLabelMap.get(record.playbookType) || record.playbookType}</div>
-              <div className={record.tradeResult === "LOSS" ? "font-medium text-[#ef4444]" : record.tradeResult === "WIN" ? "font-medium text-[#22c55e]" : "font-medium text-[#f59e0b]"}>
+              <div className={`font-medium ${getResultTextClass(record.tradeResult)}`}>
                 {TRADINGVIEW_TRAINING_RECORD_LABELS[record.tradeResult]}
               </div>
               <StarDisplay value={record.entryConfidenceRating} />
@@ -313,7 +315,11 @@ export default function TradingViewTrainingRecordManagePage() {
                   <Select value={draft.tradeResult} onValueChange={(value) => setDraft((prev) => prev ? { ...prev, tradeResult: value as TradingViewTrainingRecordResult } : prev)}>
                     <SelectTrigger className="w-full border-[#27272a] bg-[#0f0f10] text-[#e5e7eb]"><SelectValue /></SelectTrigger>
                     <SelectContent className="border-[#27272a] bg-[#121212] text-[#e5e7eb]">
-                      <SelectItem value="WIN">盈利</SelectItem><SelectItem value="LOSS">亏损</SelectItem><SelectItem value="BREAKEVEN">保本</SelectItem>
+                      <SelectItem value="WIN">盈利</SelectItem>
+                      <SelectItem value="LOSS">亏损</SelectItem>
+                      <SelectItem value="BREAKEVEN">保本</SelectItem>
+                      <SelectItem value="NOT_ENTERED">暂未入场</SelectItem>
+                      <SelectItem value="NOT_EXITED">未离场</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -356,6 +362,14 @@ function FilterSelect({ label, value, onValueChange, widthClass, children }: { l
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="min-w-0"><label className="mb-2 block text-sm font-medium">{label}</label>{children}</div>;
+}
+
+function getResultTextClass(result: TradingViewTrainingRecordResult) {
+  if (result === "WIN") return "text-[#22c55e]";
+  if (result === "LOSS") return "text-[#ef4444]";
+  if (result === "NOT_ENTERED") return "text-[#a1a1aa]";
+  if (result === "NOT_EXITED") return "text-[#38bdf8]";
+  return "text-[#f59e0b]";
 }
 
 function StarDisplay({ value }: { value: number }) {

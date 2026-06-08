@@ -23,6 +23,8 @@ const EMPTY_SUMMARY: TradingViewTrainingRecordSummary = {
   winCount: 0,
   lossCount: 0,
   breakevenCount: 0,
+  notEnteredCount: 0,
+  notExitedCount: 0,
   decisiveCount: 0,
   winRate: null,
   avgEntryConfidenceRating: null,
@@ -110,30 +112,34 @@ export default function TradingViewTrainingRecordAnalyticsPage() {
           </Button>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
           <Metric title="总记录" value={summary.totalCount} />
           <Metric title="胜率" value={formatRate(summary.winRate)} highlight />
           <Metric title="盈利" value={summary.winCount} tone="green" />
           <Metric title="亏损" value={summary.lossCount} tone="red" />
           <Metric title="保本" value={summary.breakevenCount} tone="amber" />
+          <Metric title="暂未入场" value={summary.notEnteredCount} />
+          <Metric title="未离场" value={summary.notExitedCount} tone="blue" />
           <Metric title="平均把握度" value={formatRating(summary.avgEntryConfidenceRating)} />
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-[#27272a] bg-[#121212]">
-          <div className="grid grid-cols-[minmax(180px,1fr)_110px_110px_110px_110px_120px_150px] border-b border-[#27272a] bg-[#18181b] px-4 py-3 text-xs font-medium text-[#a1a1aa]">
-            <div>剧本</div><div>总样本</div><div>盈利</div><div>亏损</div><div>保本</div><div>胜率</div><div>平均把握度</div>
+        <div className="overflow-x-auto rounded-lg border border-[#27272a] bg-[#121212]">
+          <div className="grid min-w-[1080px] grid-cols-[minmax(180px,1fr)_96px_96px_96px_96px_120px_96px_120px_150px] border-b border-[#27272a] bg-[#18181b] px-4 py-3 text-xs font-medium text-[#a1a1aa]">
+            <div>剧本</div><div>总样本</div><div>盈利</div><div>亏损</div><div>保本</div><div>暂未入场</div><div>未离场</div><div>胜率</div><div>平均把握度</div>
           </div>
           {loading ? (
             <div className="p-8 text-center text-sm text-[#71717a]">加载中...</div>
           ) : playbookItems.length === 0 ? (
             <div className="p-8 text-center text-sm text-[#71717a]">暂无统计数据</div>
           ) : playbookItems.map((item) => (
-            <div key={item.playbookType} className="grid grid-cols-[minmax(180px,1fr)_110px_110px_110px_110px_120px_150px] items-center border-b border-[#27272a] px-4 py-3 text-sm last:border-0">
+            <div key={item.playbookType} className="grid min-w-[1080px] grid-cols-[minmax(180px,1fr)_96px_96px_96px_96px_120px_96px_120px_150px] items-center border-b border-[#27272a] px-4 py-3 text-sm last:border-0">
               <div className="font-medium text-[#e5e7eb]">{item.playbookItem?.label || playbookLabelMap.get(item.playbookType) || item.playbookType}</div>
               <div className="text-[#e5e7eb]">{item.totalCount}</div>
               <div className="text-[#22c55e]">{item.winCount}</div>
               <div className="text-[#ef4444]">{item.lossCount}</div>
               <div className="text-[#f59e0b]">{item.breakevenCount}</div>
+              <div className="text-[#a1a1aa]">{item.notEnteredCount}</div>
+              <div className="text-[#38bdf8]">{item.notExitedCount}</div>
               <div className="font-medium text-white">{formatRate(item.winRate)}</div>
               <div className="flex items-center gap-2 text-[#e5e7eb]"><Star className="h-4 w-4 fill-[#facc15] text-[#facc15]" />{formatRating(item.avgEntryConfidenceRating)}</div>
             </div>
@@ -144,8 +150,8 @@ export default function TradingViewTrainingRecordAnalyticsPage() {
   );
 }
 
-function Metric({ title, value, highlight, tone }: { title: string; value: React.ReactNode; highlight?: boolean; tone?: "green" | "red" | "amber" }) {
-  const color = highlight ? "text-white" : tone === "green" ? "text-[#22c55e]" : tone === "red" ? "text-[#ef4444]" : tone === "amber" ? "text-[#f59e0b]" : "text-[#e5e7eb]";
+function Metric({ title, value, highlight, tone }: { title: string; value: React.ReactNode; highlight?: boolean; tone?: "green" | "red" | "amber" | "blue" }) {
+  const color = highlight ? "text-white" : tone === "green" ? "text-[#22c55e]" : tone === "red" ? "text-[#ef4444]" : tone === "amber" ? "text-[#f59e0b]" : tone === "blue" ? "text-[#38bdf8]" : "text-[#e5e7eb]";
   return (
     <div className="rounded-lg border border-[#27272a] bg-[#121212] p-4">
       <div className="text-xs text-[#a1a1aa]">{title}</div>
