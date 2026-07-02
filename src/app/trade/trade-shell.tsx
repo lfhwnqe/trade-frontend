@@ -21,6 +21,7 @@ import {
   BarChart3,
   Images,
   Star,
+  BookOpen,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -219,6 +220,27 @@ const tradeNavSections: NavSection[] = [
       {
         title: "训练记录管理",
         href: "/trade/tradingview-training-record/manage",
+        icon: ClipboardList,
+      },
+    ],
+  },
+  {
+    title: "剧本模板",
+    icon: BookOpen,
+    items: [
+      {
+        title: "模板查看",
+        href: "/trade/playbook-template/view",
+        icon: BookOpen,
+      },
+      {
+        title: "模板录入",
+        href: "/trade/playbook-template/create",
+        icon: Layers,
+      },
+      {
+        title: "模板管理",
+        href: "/trade/playbook-template/manage",
         icon: ClipboardList,
       },
     ],
