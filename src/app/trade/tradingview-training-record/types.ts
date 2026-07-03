@@ -14,6 +14,12 @@ export type TradingViewTrainingRecordPlaybookItem = {
   status?: string;
 };
 
+export type TradingViewTrainingRecordImageItem = {
+  imageUrl: string;
+  imageKey?: string;
+  remark?: string;
+};
+
 export type TradingViewTrainingRecord = {
   id: string;
   userId: string;
@@ -21,7 +27,12 @@ export type TradingViewTrainingRecord = {
   recordId: string;
   entityType: "TRADINGVIEW_TRAINING_RECORD";
   symbolPair?: string;
-  imageUrl: string;
+  analysisStartImages?: TradingViewTrainingRecordImageItem[];
+  postAnalysisTrendImages?: TradingViewTrainingRecordImageItem[];
+  pendingOrderImages?: TradingViewTrainingRecordImageItem[];
+  exitImages?: TradingViewTrainingRecordImageItem[];
+  postExitTrendImages?: TradingViewTrainingRecordImageItem[];
+  imageUrl?: string;
   imageKey?: string;
   tradeResult: TradingViewTrainingRecordResult;
   playbookType: string;
@@ -34,6 +45,14 @@ export type TradingViewTrainingRecord = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type TradingViewTrainingRecordImageScope =
+  | "analysis-start"
+  | "post-analysis-trend"
+  | "pending-order"
+  | "exit"
+  | "post-exit-trend"
+  | "training-image";
 
 export type TradingViewTrainingRecordSummary = {
   totalCount: number;

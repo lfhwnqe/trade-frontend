@@ -4,19 +4,25 @@ import React from "react";
 import Link from "next/link";
 import { Save, Star } from "lucide-react";
 import TradePageShell from "../../components/trade-page-shell";
-import { ImageUploader } from "@/components/common/ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAlert } from "@/components/common/alert";
 import { fetchPlaybookTypeOptions } from "../../dictionary";
-import type { ImageResource } from "../../config";
 import {
   createTradingViewTrainingRecord,
   getTradingViewTrainingRecordUploadUrl,
 } from "../request";
 import type { TradingViewTrainingRecordResult } from "../types";
 import { TRADINGVIEW_TRAINING_RECORD_LABELS } from "../types";
+import {
+  createEmptyStageImages,
+  getMissingRequiredStageLabel,
+  StageImageEditor,
+  stageImagesToPayload,
+  stageKeyToUploadScope,
+  type TvtrStageImagesState,
+} from "../image-stages";
 
 type DictionaryOption = { code: string; label: string; color?: string };
 
@@ -25,7 +31,7 @@ const TVTR_SYMBOL_OPTIONS = ["BTCUSDT", "BTCUSDC", "ETHUSDT", "ETHUSDC"] as cons
 
 export default function TradingViewTrainingRecordCreatePage() {
   const [successAlert, errorAlert] = useAlert();
-  const [images, setImages] = React.useState<ImageResource[]>([]);
+  const [stageImages, setStageImages] = React.useState<TvtrStageImagesState>(() => createEmptyStageImages());
   const [symbolPair, setSymbolPair] = React.useState("BTCUSDC");
   const [playbookType, setPlaybookType] = React.useState("");
   const [tradeResult, setTradeResult] = React.useState<TradingViewTrainingRecordResult | "">("");
@@ -44,20 +50,20 @@ export default function TradingViewTrainingRecordCreatePage() {
     };
   }, []);
 
-  const uploadUrlResolver = React.useCallback(
-    (params: { fileName: string; contentType: string }) =>
+  const uploadUrlResolverFactory = React.useCallback(
+    (scope: ReturnType<typeof stageKeyToUploadScope>) => (params: { fileName: string; contentType: string }) =>
       getTradingViewTrainingRecordUploadUrl({
         fileName: params.fileName,
         contentType: params.contentType,
-        scope: "training-image",
+        scope,
       }),
     [],
   );
 
   const handleSubmit = async () => {
-    const image = images.find((item) => item.url && !item.key.startsWith("__loading__"));
-    if (!image) {
-      errorAlert("请先上传 TradingView 训练图片");
+    const missingStageLabel = getMissingRequiredStageLabel(stageImages);
+    if (missingStageLabel) {
+      errorAlert(`请先上传${missingStageLabel}`);
       return;
     }
     if (!playbookType) {
@@ -75,17 +81,20 @@ export default function TradingViewTrainingRecordCreatePage() {
 
     setSaving(true);
     try {
+      const imagePayload = stageImagesToPayload(stageImages);
+      const primaryImage = imagePayload.analysisStartImages[0];
       await createTradingViewTrainingRecord({
         symbolPair: symbolPair.trim().toUpperCase() || undefined,
-        imageUrl: image.url,
-        imageKey: image.key,
+        ...imagePayload,
+        imageUrl: primaryImage.imageUrl,
+        imageKey: primaryImage.imageKey,
         tradeResult,
         playbookType,
         entryConfidenceRating,
         notes,
       });
       successAlert("TradingView 训练记录已保存");
-      setImages([]);
+      setStageImages(createEmptyStageImages());
       setTradeResult("");
       setEntryConfidenceRating(null);
       setNotes("");
@@ -100,8 +109,11 @@ export default function TradingViewTrainingRecordCreatePage() {
     <TradePageShell title="TradingView 训练记录录入" subtitle="保存 TradingView 手动复盘训练样本" showAddButton={false}>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section className="rounded-lg border border-[#27272a] bg-[#121212] p-5">
-          <div className="mb-4 text-sm font-semibold text-white">交易图片</div>
-          <ImageUploader value={images} onChange={setImages} max={1} uploadUrlResolver={uploadUrlResolver} />
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-white">交易过程图片</div>
+            <p className="mt-1 text-xs text-[#a1a1aa]">按交易训练过程保存图片和每张图备注，方便后续按阶段复盘分析逻辑。</p>
+          </div>
+          <StageImageEditor value={stageImages} onChange={setStageImages} uploadUrlResolverFactory={uploadUrlResolverFactory} />
         </section>
 
         <aside className="space-y-4 rounded-lg border border-[#27272a] bg-[#121212] p-5">

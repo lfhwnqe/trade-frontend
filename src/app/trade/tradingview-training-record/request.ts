@@ -1,6 +1,8 @@
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import type {
   TradingViewTrainingRecord,
+  TradingViewTrainingRecordImageItem,
+  TradingViewTrainingRecordImageScope,
   TradingViewTrainingRecordPlaybookAnalytics,
   TradingViewTrainingRecordResult,
   TradingViewTrainingRecordSortBy,
@@ -17,7 +19,12 @@ export const TRADINGVIEW_TRAINING_RECORD_ALLOWED_IMAGE_TYPES = [
 
 type CreateTradingViewTrainingRecordPayload = {
   symbolPair?: string;
-  imageUrl: string;
+  analysisStartImages: TradingViewTrainingRecordImageItem[];
+  postAnalysisTrendImages?: TradingViewTrainingRecordImageItem[];
+  pendingOrderImages: TradingViewTrainingRecordImageItem[];
+  exitImages: TradingViewTrainingRecordImageItem[];
+  postExitTrendImages?: TradingViewTrainingRecordImageItem[];
+  imageUrl?: string;
   imageKey?: string;
   tradeResult: TradingViewTrainingRecordResult;
   playbookType: string;
@@ -37,7 +44,7 @@ function sanitizePayload<T extends Record<string, unknown>>(payload: T) {
 export async function getTradingViewTrainingRecordUploadUrl(params: {
   fileName: string;
   contentType: string;
-  scope?: "training-image";
+  scope?: TradingViewTrainingRecordImageScope;
 }): Promise<{ uploadUrl: string; fileUrl: string; key: string }> {
   const res = await fetchWithAuth("/api/proxy-post", {
     method: "POST",

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Edit3, Eye, Plus, RefreshCw, Search, Star, Trash2 } from "lucide-react";
 import TradePageShell from "../../components/trade-page-shell";
 import { FitImagePreview } from "@/components/common/FitImagePreview";
-import { ImageUploader } from "@/components/common/ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAlert } from "@/components/common/alert";
 import { fetchPlaybookTypeOptions } from "../../dictionary";
-import type { ImageResource } from "../../config";
 import {
   deleteTradingViewTrainingRecord,
   getTradingViewTrainingRecordUploadUrl,
@@ -25,6 +23,18 @@ import type {
   TradingViewTrainingRecordResult,
 } from "../types";
 import { TRADINGVIEW_TRAINING_RECORD_LABELS } from "../types";
+import {
+  getRecordThumbnail,
+  flattenStageImages,
+  hasRequiredStageImages,
+  hasStagedImages,
+  recordToCarouselSlides,
+  recordToStageImages,
+  StageImageCarousel,
+  StageImageEditor,
+  stageImagesToPayload,
+  type TvtrStageImagesState,
+} from "../image-stages";
 
 const ALL_VALUE = "__ALL__";
 const EMPTY_SELECT_VALUE = "__NONE__";
@@ -33,7 +43,7 @@ const TVTR_SYMBOL_OPTIONS = ["BTCUSDT", "BTCUSDC", "ETHUSDT", "ETHUSDC"] as cons
 type DictionaryOption = { code: string; label: string; color?: string };
 
 type EditDraft = {
-  image: ImageResource[];
+  stageImages: TvtrStageImagesState;
   symbolPair: string;
   playbookType: string;
   tradeResult: TradingViewTrainingRecordResult;
@@ -65,6 +75,7 @@ export default function TradingViewTrainingRecordManagePage() {
   const [to, setTo] = React.useState("");
   const [keyword, setKeyword] = React.useState("");
   const [playbookOptions, setPlaybookOptions] = React.useState<DictionaryOption[]>([]);
+  const [detailRecord, setDetailRecord] = React.useState<TradingViewTrainingRecord | null>(null);
   const [editingRecord, setEditingRecord] = React.useState<TradingViewTrainingRecord | null>(null);
   const [draft, setDraft] = React.useState<EditDraft | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
@@ -75,12 +86,13 @@ export default function TradingViewTrainingRecordManagePage() {
     [playbookOptions],
   );
 
-  const uploadUrlResolver = React.useCallback(
+  const uploadUrlResolverFactory = React.useCallback(
+    (scope: Parameters<typeof getTradingViewTrainingRecordUploadUrl>[0]["scope"] = "training-image") =>
     (params: { fileName: string; contentType: string }) =>
       getTradingViewTrainingRecordUploadUrl({
         fileName: params.fileName,
         contentType: params.contentType,
-        scope: "training-image",
+        scope,
       }),
     [],
   );
@@ -127,7 +139,7 @@ export default function TradingViewTrainingRecordManagePage() {
   const openEdit = (record: TradingViewTrainingRecord) => {
     setEditingRecord(record);
     setDraft({
-      image: [{ key: record.imageKey || record.imageUrl, url: record.imageUrl }],
+      stageImages: recordToStageImages(record),
       symbolPair: record.symbolPair || "",
       playbookType: record.playbookType,
       tradeResult: record.tradeResult,
@@ -139,9 +151,10 @@ export default function TradingViewTrainingRecordManagePage() {
 
   const handleSave = async () => {
     if (!editingRecord || !draft) return;
-    const image = draft.image.find((item) => item.url && !item.key.startsWith("__loading__"));
-    if (!image) {
-      errorAlert("请上传图片");
+    const stagedPayloadIsComplete = hasRequiredStageImages(draft.stageImages);
+    const existingRecordHasStages = hasStagedImages(editingRecord);
+    if (existingRecordHasStages && !stagedPayloadIsComplete) {
+      errorAlert("分析开始时图片、挂单图片、离场时图片都至少需要 1 张");
       return;
     }
     if (!draft.playbookType) {
@@ -150,9 +163,15 @@ export default function TradingViewTrainingRecordManagePage() {
     }
     setSaving(true);
     try {
+      const stagePayload = stageImagesToPayload(draft.stageImages);
+      const legacyImage = stagePayload.analysisStartImages[0] || {
+        imageUrl: editingRecord.imageUrl || "",
+        imageKey: editingRecord.imageKey,
+      };
       await updateTradingViewTrainingRecord(editingRecord.recordId, {
-        imageUrl: image.url,
-        imageKey: image.key,
+        ...(stagedPayloadIsComplete ? stagePayload : {}),
+        imageUrl: legacyImage.imageUrl,
+        imageKey: legacyImage.imageKey,
         symbolPair: draft.symbolPair.trim().toUpperCase(),
         playbookType: draft.playbookType,
         tradeResult: draft.tradeResult,
@@ -239,11 +258,13 @@ export default function TradingViewTrainingRecordManagePage() {
             <div className="p-8 text-center text-sm text-[#71717a]">加载中...</div>
           ) : items.length === 0 ? (
             <div className="p-8 text-center text-sm text-[#71717a]">暂无数据</div>
-          ) : items.map((record) => (
+          ) : items.map((record) => {
+            const thumbnailUrl = getRecordThumbnail(record);
+            return (
             <div key={record.recordId} className="grid min-w-[1260px] grid-cols-[92px_110px_minmax(150px,190px)_100px_110px_minmax(220px,1fr)_150px_150px_150px_160px] items-center border-b border-[#27272a] px-4 py-3 text-sm last:border-0">
-              <button type="button" onClick={() => setPreviewUrl(record.imageUrl)} className="h-16 w-16 overflow-hidden rounded-md border border-[#27272a] bg-black">
+              <button type="button" onClick={() => thumbnailUrl && setPreviewUrl(thumbnailUrl)} className="h-16 w-16 overflow-hidden rounded-md border border-[#27272a] bg-black">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={record.imageUrl} alt="" className="h-full w-full object-cover" />
+                {thumbnailUrl ? <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" /> : null}
               </button>
               <div className="font-medium text-[#e5e7eb]">{record.symbolPair || "-"}</div>
               <div className="font-medium text-[#e5e7eb]">{record.playbookItem?.label || playbookLabelMap.get(record.playbookType) || record.playbookType}</div>
@@ -256,12 +277,13 @@ export default function TradingViewTrainingRecordManagePage() {
               <div className="text-xs text-[#a1a1aa]">{formatDateTime(record.createdAt)}</div>
               <div className="text-xs text-[#a1a1aa]">{formatDateTime(record.updatedAt)}</div>
               <div className="flex justify-end gap-2">
-                <Button size="sm" variant="outline" onClick={() => setPreviewUrl(record.imageUrl)} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]"><Eye className="h-4 w-4" /></Button>
+                <Button size="sm" variant="outline" onClick={() => setDetailRecord(record)} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]"><Eye className="h-4 w-4" /></Button>
                 <Button size="sm" variant="outline" onClick={() => openEdit(record)} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]"><Edit3 className="h-4 w-4" /></Button>
                 <Button size="sm" variant="destructive" onClick={() => handleDelete(record)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[#a1a1aa]">
@@ -283,16 +305,8 @@ export default function TradingViewTrainingRecordManagePage() {
         <DialogContent className="max-h-[calc(100vh-32px)] w-[min(1120px,calc(100vw-32px))] max-w-none overflow-y-auto border-[#27272a] bg-[#121212] text-[#e5e7eb] sm:max-w-none">
           <DialogHeader><DialogTitle>编辑 TradingView 训练记录</DialogTitle></DialogHeader>
           {draft ? (
-            <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="min-w-0">
-                <div className="mb-2 text-sm font-medium">图片</div>
-                <ImageUploader value={draft.image} onChange={(image) => setDraft((prev) => prev ? { ...prev, image } : prev)} max={1} uploadUrlResolver={uploadUrlResolver} />
-                {draft.image[0]?.url ? (
-                  <Button type="button" variant="outline" onClick={() => setPreviewUrl(draft.image[0]?.url || null)} className="mt-2 w-full border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]">
-                    <Eye className="mr-2 h-4 w-4" />放大查看当前图片
-                  </Button>
-                ) : null}
-              </div>
+            <div className="space-y-6">
+              <StageImageCarousel slides={flattenStageImages(draft.stageImages)} onPreview={setPreviewUrl} />
               <div className="grid min-w-0 gap-4 md:grid-cols-2">
                 <Field label="交易币对">
                   <Select value={draft.symbolPair || EMPTY_SELECT_VALUE} onValueChange={(value) => setDraft((prev) => prev ? { ...prev, symbolPair: value === EMPTY_SELECT_VALUE ? "" : value } : prev)}>
@@ -330,12 +344,46 @@ export default function TradingViewTrainingRecordManagePage() {
                   <Textarea value={draft.notes} onChange={(event) => setDraft((prev) => prev ? { ...prev, notes: event.target.value } : prev)} className="min-h-36 border-[#27272a] bg-[#0f0f10] text-[#e5e7eb]" />
                 </div>
               </div>
+              <div>
+                <div className="mb-3 text-sm font-semibold text-white">过程图片编辑</div>
+                <StageImageEditor
+                  value={draft.stageImages}
+                  onChange={(stageImages) => setDraft((prev) => prev ? { ...prev, stageImages } : prev)}
+                  uploadUrlResolverFactory={uploadUrlResolverFactory}
+                  compact
+                />
+              </div>
             </div>
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => (setEditingRecord(null), setDraft(null))} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]">取消</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-[#00c2b2] text-black hover:bg-[#14b8a6]">{saving ? "保存中..." : "保存"}</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!detailRecord} onOpenChange={(open) => !open && setDetailRecord(null)}>
+        <DialogContent className="max-h-[calc(100vh-32px)] w-[min(1120px,calc(100vw-32px))] max-w-none overflow-y-auto border-[#27272a] bg-[#121212] text-[#e5e7eb] sm:max-w-none">
+          <DialogHeader>
+            <DialogTitle>TradingView 训练记录详情</DialogTitle>
+          </DialogHeader>
+          {detailRecord ? (
+            <div className="space-y-4">
+              <StageImageCarousel slides={recordToCarouselSlides(detailRecord)} onPreview={setPreviewUrl} />
+              <div className="grid gap-3 rounded-lg border border-[#27272a] bg-[#0f0f10] p-4 text-sm md:grid-cols-2">
+                <div><span className="text-[#a1a1aa]">币对：</span>{detailRecord.symbolPair || "-"}</div>
+                <div><span className="text-[#a1a1aa]">剧本：</span>{detailRecord.playbookItem?.label || playbookLabelMap.get(detailRecord.playbookType) || detailRecord.playbookType}</div>
+                <div><span className="text-[#a1a1aa]">结果：</span>{TRADINGVIEW_TRAINING_RECORD_LABELS[detailRecord.tradeResult]}</div>
+                <div><span className="text-[#a1a1aa]">把握度：</span>{detailRecord.entryConfidenceRating} 星</div>
+                <div><span className="text-[#a1a1aa]">创建时间：</span>{formatDateTime(detailRecord.createdAt)}</div>
+                <div><span className="text-[#a1a1aa]">复盘 K 线：</span>{formatDateTime(detailRecord.reviewCandleTime)}</div>
+                <div className="md:col-span-2">
+                  <div className="mb-1 text-[#a1a1aa]">整条备注</div>
+                  <div className="whitespace-pre-wrap leading-6 text-[#e5e7eb]">{detailRecord.notes || "无备注"}</div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
 
