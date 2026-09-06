@@ -19,7 +19,9 @@ const isDevEnv = (() => {
 
 const devtoolItems: NavItem[] = [
   { title: "API Token", href: "/trade/devtools/tokens", icon: KeyRound },
-  { title: "Webhook", href: "/trade/devtools/webhook", icon: Webhook },
+  { title: "Bridge 通知记录", href: "/trade/devtools/bridge/notifications", icon: Webhook },
+  { title: "Webhook Bridge", href: "/trade/devtools/bridge", icon: Webhook },
+  { title: "交易 Webhook", href: "/trade/devtools/webhook", icon: Webhook },
   { title: "币安合约同步", href: "/trade/devtools/binance-futures", icon: Link2 },
   ...(isDevEnv
     ? [{ title: "图片接口测试", href: "/trade/devtools/image-resolve-test", icon: ImageIcon }]
@@ -42,7 +44,7 @@ export default function DevtoolsShell({ children }: { children: React.ReactNode 
 
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
         {devtoolItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = pathname === item.href || (item.href !== "/trade/devtools/bridge" && pathname.startsWith(`${item.href}/`));
           return (
             <Link
               prefetch={false}

@@ -185,11 +185,12 @@ export default function TradeTokensPage() {
                 创建 Token
               </h3>
               <p className="text-sm text-[#9ca3af] mt-1">
-                用于 claw/脚本访问你的交易数据（可读写，不可删除）。
+                用于脚本读写交易数据（不可删除交易）。Admin / SuperAdmin 还可查询 Bridge 未读任务并标记已读；已有 Token 可直接使用。
               </p>
             </div>
           </div>
 
+          <a href="/trade/devtools/bridge" className="mt-3 inline-block text-sm text-[#00c2b2] underline">创建独立 Webhook Bridge</a>
           <div className="mt-4 flex flex-col sm:flex-row gap-3">
             <Input
               value={newName}

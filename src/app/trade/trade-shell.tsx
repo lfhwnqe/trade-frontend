@@ -248,13 +248,14 @@ const tradeNavSections: NavSection[] = [
 ];
 
 const integrationItems: NavItem[] = [
+  { title: "Webhook Bridge", href: "/trade/devtools/bridge", icon: Webhook },
   {
     title: "API Token",
     href: "/trade/devtools/tokens",
     icon: KeyRound,
   },
   {
-    title: "Webhook",
+    title: "交易 Webhook",
     href: "/trade/devtools/webhook",
     icon: Webhook,
   },

@@ -49,7 +49,7 @@ export default function ApiTokenDocPage() {
             Token 前缀为 <code>tc_</code>，创建时明文只返回一次，请妥善保存。
           </li>
           <li>
-            Token 默认仅允许访问 <code>/trade/*</code>；当前额外开放了一个只读闪卡统计接口：
+            Token 可访问 <code>/trade/*</code>，另有只读闪卡统计接口：
             <code>/flashcard/cards/today-summary</code>。
           </li>
           <li>
@@ -59,6 +59,15 @@ export default function ApiTokenDocPage() {
           </li>
         </ul>
       </div>
+
+      <section>
+        <h2>Webhook Bridge</h2>
+        <p>Admin / SuperAdmin 可用现有 Token 查询未读通知并标记已读。先到 <Link href="/trade/devtools/bridge">Webhook Bridge</Link> 创建独立 hook，将 URL 提供给 TradingView。Hook 管理使用网页登录，API Token 只用于消费任务。</p>
+        <CodeBlock>{`# 查询未读通知
+curl "https://<YOUR_API_BASE>/bridge/tasks" -H "Authorization: Bearer tc_xxx"
+# 标记自己的任务已读
+curl -X POST "https://<YOUR_API_BASE>/bridge/tasks/<taskId>/read" -H "Authorization: Bearer tc_xxx"`}</CodeBlock>
+      </section>
 
       <section id="create">
         <h2>如何生成 Token</h2>
@@ -88,11 +97,12 @@ export default function ApiTokenDocPage() {
         <h2>权限范围与限制</h2>
         <ul>
           <li>
-            默认仅允许 <code>/trade/*</code>
+            常规交易接口为 <code>/trade/*</code>
           </li>
           <li>
             额外开放只读接口：<code>GET /flashcard/cards/today-summary</code>
           </li>
+          <li>Admin / SuperAdmin 额外允许查询 Bridge 未读任务和标记已读；hook 管理仅支持网页登录。</li>
           <li>允许创建/更新/查询交易</li>
           <li>禁止删除交易</li>
         </ul>
