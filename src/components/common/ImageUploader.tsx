@@ -35,6 +35,7 @@ type ImageUploaderUploadInfo = {
  * @param max 最多几张（不限传 Infinity 或不设）
  * @param disabled 是否禁用
  * @param compress 是否压缩图片后再上传（默认为 true）
+ * @param reorderable 是否显示图片顺序调整按钮（默认为 false）
  */
 /** 隐藏视觉但对屏幕阅读器可见的文本，用于可访问性 */
 function VisuallyHidden(props: React.HTMLAttributes<HTMLSpanElement>) {
@@ -64,12 +65,16 @@ export function ImageUploader({
   disabled,
   compress = true,
   uploadUrlResolver,
+  onPreview,
+  reorderable = false,
 }: {
   value: ImageResource[];
   onChange: (v: ImageResource[]) => void;
   max?: number;
   disabled?: boolean;
   compress?: boolean;
+  onPreview?: (index: number) => void;
+  reorderable?: boolean;
   uploadUrlResolver?: (params: {
     fileName: string;
     contentType: string;
@@ -114,6 +119,10 @@ export function ImageUploader({
       if (!acceptedFiles || acceptedFiles.length === 0) return;
       const n = max ? max - value.length : acceptedFiles.length;
       if (n <= 0) return;
+      if (acceptedFiles.length > n) {
+        errorAlert(`最多上传 ${max} 张图片，当前还可添加 ${n} 张`);
+        return;
+      }
       const filesToAdd = acceptedFiles.slice(0, n);
       
       // 为所有文件创建唯一的 loading 占位符
@@ -222,6 +231,13 @@ export function ImageUploader({
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
+    onDropRejected: (rejections) => {
+      if (rejections.some(({ errors }) => errors.some(({ code }) => code === "too-many-files"))) {
+        errorAlert(`最多上传 ${max} 张图片，当前还可添加 ${Math.max(0, (max || 0) - value.length)} 张`);
+      } else {
+        errorAlert("请选择支持的图片格式");
+      }
+    },
     accept: ALLOWED_IMAGE_TYPES.reduce((acc, t) => ({ ...acc, [t]: [] }), {}),
     multiple: true,
     maxFiles: max ? max - value.length : undefined,
@@ -269,6 +285,15 @@ export function ImageUploader({
   const isLoadingImage = (img: ImageResource) =>
     img.key.startsWith("__loading__");
 
+  const reorderDisabled = disabled || value.some(isLoadingImage);
+  const moveImage = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (reorderDisabled || target < 0 || target >= value.length) return;
+    const reordered = [...value];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    onChange(reordered);
+  };
+
   return (
     <div className="mb-3">
       <div
@@ -286,7 +311,8 @@ export function ImageUploader({
             className="relative w-28 h-28 rounded-lg border border-border bg-muted flex items-center justify-center shadow-sm group overflow-hidden cursor-pointer"
             onClick={() => {
               if (!isLoadingImage(img) && img.url) {
-                setPreviewUrl(img.url);
+                if (onPreview) onPreview(idx);
+                else setPreviewUrl(img.url);
               }
             }}
             tabIndex={0}
@@ -308,6 +334,35 @@ export function ImageUploader({
                   alt=""
                   draggable={false}
                 />
+              </>
+            )}
+            {reorderable && (
+              <>
+                <span className="absolute left-1 top-1 rounded bg-black/75 px-1.5 py-0.5 text-xs text-white">
+                  {idx + 1}
+                </span>
+                <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-black/75 p-1" onClick={(event) => event.stopPropagation()}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-7 flex-1 px-1 text-xs text-white hover:bg-white/20 hover:text-white"
+                    disabled={reorderDisabled || idx === 0}
+                    aria-label={`前移第 ${idx + 1} 张图片`}
+                    onClick={() => moveImage(idx, -1)}
+                  >
+                    前移
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-7 flex-1 px-1 text-xs text-white hover:bg-white/20 hover:text-white"
+                    disabled={reorderDisabled || idx === value.length - 1}
+                    aria-label={`后移第 ${idx + 1} 张图片`}
+                    onClick={() => moveImage(idx, 1)}
+                  >
+                    后移
+                  </Button>
+                </div>
               </>
             )}
             {!disabled && (

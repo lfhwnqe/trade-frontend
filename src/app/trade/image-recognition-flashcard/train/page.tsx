@@ -4,14 +4,14 @@ import React from "react";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Play, RotateCcw } from "lucide-react";
 import TradePageShell from "../../components/trade-page-shell";
 import { Button } from "@/components/ui/button";
-import { FitImagePreview } from "@/components/common/FitImagePreview";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAlert } from "@/components/common/alert";
 import { fetchPlaybookTypeOptions } from "../../dictionary";
 import { randomImageRecognitionFlashcardTraining } from "../request";
 import type { ImageRecognitionFlashcardCard } from "../types";
+import { getImageRecognitionFlashcardImages } from "../types";
+import { ImageGalleryPreview, type ImageGallerySelection } from "../image-gallery-preview";
 
 const ALL_VALUE = "__ALL__";
 
@@ -26,7 +26,8 @@ export default function ImageRecognitionFlashcardTrainPage() {
   const [index, setIndex] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
   const [notesVisible, setNotesVisible] = React.useState(false);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [preview, setPreview] = React.useState<ImageGallerySelection | null>(null);
+  const [imageIndex, setImageIndex] = React.useState(0);
 
   React.useEffect(() => {
     let mounted = true;
@@ -39,6 +40,7 @@ export default function ImageRecognitionFlashcardTrainPage() {
   }, []);
 
   const current = cards[index];
+  const currentImages = current ? getImageRecognitionFlashcardImages(current) : [];
 
   const startTraining = async () => {
     setLoading(true);
@@ -50,6 +52,8 @@ export default function ImageRecognitionFlashcardTrainPage() {
       });
       setCards(res.cards);
       setIndex(0);
+      setImageIndex(0);
+      setPreview(null);
     } catch (error) {
       errorAlert(error instanceof Error ? error.message : "开始训练失败");
     } finally {
@@ -60,6 +64,8 @@ export default function ImageRecognitionFlashcardTrainPage() {
   const goTo = (nextIndex: number) => {
     setIndex(Math.min(Math.max(nextIndex, 0), Math.max(cards.length - 1, 0)));
     setNotesVisible(false);
+    setImageIndex(0);
+    setPreview(null);
   };
 
   return (
@@ -134,13 +140,21 @@ export default function ImageRecognitionFlashcardTrainPage() {
 
               <button
                 type="button"
-                onClick={() => setPreviewUrl(current.imageUrl)}
+                onClick={() => setPreview({ images: currentImages, index: imageIndex })}
                 className="flex h-[520px] w-full items-center justify-center overflow-hidden rounded-lg bg-black outline-none ring-offset-2 ring-offset-[#121212] transition focus-visible:ring-2 focus-visible:ring-[#00c2b2]"
                 aria-label="放大查看当前图片"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={current.imageUrl} alt="图片识别闪卡" className="h-full w-full object-contain" />
+                <img src={currentImages[imageIndex]?.url} alt={`图片识别闪卡第 ${imageIndex + 1} 张图`} className="h-full w-full object-contain" />
               </button>
+
+              {currentImages.length > 1 ? (
+                <div className="flex items-center justify-center gap-3">
+                  <Button variant="outline" disabled={imageIndex === 0} onClick={() => setImageIndex((value) => value - 1)}>上一张图片</Button>
+                  <span className="text-sm text-[#a1a1aa]">图片 {imageIndex + 1} / {currentImages.length}</span>
+                  <Button variant="outline" disabled={imageIndex === currentImages.length - 1} onClick={() => setImageIndex((value) => value + 1)}>下一张图片</Button>
+                </div>
+              ) : null}
 
               {notesVisible ? (
                 <div className="rounded-lg border border-[#27272a] bg-[#0f0f10] p-4 text-sm leading-6 text-[#e5e7eb] whitespace-pre-wrap">
@@ -158,7 +172,7 @@ export default function ImageRecognitionFlashcardTrainPage() {
                     className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]"
                   >
                     <ChevronLeft className="mr-2 h-4 w-4" />
-                    上一张
+                    上一条闪卡
                   </Button>
                   <Button
                     type="button"
@@ -166,7 +180,7 @@ export default function ImageRecognitionFlashcardTrainPage() {
                     disabled={index >= cards.length - 1}
                     className="bg-[#00c2b2] text-black hover:bg-[#14b8a6]"
                   >
-                    下一张
+                    下一条闪卡
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
@@ -185,13 +199,10 @@ export default function ImageRecognitionFlashcardTrainPage() {
         </section>
       </div>
 
-      <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
-        <DialogContent className="flex h-[calc(100vh-24px)] max-h-none w-[calc(100vw-24px)] max-w-none items-center justify-center gap-0 overflow-hidden border-[#27272a] bg-[#121212] p-1 sm:max-w-none">
-          {previewUrl ? (
-            <FitImagePreview src={previewUrl} alt="图片预览" />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <ImageGalleryPreview selection={preview} onChange={(selection) => {
+        setPreview(selection);
+        if (selection) setImageIndex(selection.index);
+      }} />
     </TradePageShell>
   );
 }

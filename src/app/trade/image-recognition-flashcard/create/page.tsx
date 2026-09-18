@@ -16,7 +16,8 @@ import {
   getImageRecognitionFlashcardUploadUrl,
 } from "../request";
 import type { ImageRecognitionFlashcardSampleResult } from "../types";
-import { IMAGE_RECOGNITION_FLASHCARD_LABELS } from "../types";
+import { IMAGE_RECOGNITION_FLASHCARD_LABELS, IMAGE_RECOGNITION_FLASHCARD_MAX_IMAGES } from "../types";
+import { ImageGalleryPreview, type ImageGallerySelection } from "../image-gallery-preview";
 import { useImageRecognitionFlashcardAdminAccess } from "../use-image-recognition-flashcard-admin-access";
 
 type DictionaryOption = { code: string; label: string; color?: string };
@@ -52,6 +53,8 @@ function ImageRecognitionFlashcardCreateContent() {
   const [sampleResult, setSampleResult] = React.useState<ImageRecognitionFlashcardSampleResult | "">("");
   const [notes, setNotes] = React.useState("");
   const [saving, setSaving] = React.useState(false);
+  const [preview, setPreview] = React.useState<ImageGallerySelection | null>(null);
+  const uploading = images.some((image) => image.key.startsWith("__loading__"));
   const [playbookOptions, setPlaybookOptions] = React.useState<DictionaryOption[]>([]);
 
   React.useEffect(() => {
@@ -75,9 +78,13 @@ function ImageRecognitionFlashcardCreateContent() {
   );
 
   const handleSubmit = async () => {
-    const image = images.find((item) => item.url && !item.key.startsWith("__loading__"));
-    if (!image) {
-      errorAlert("请先上传图片");
+    if (saving) return;
+    if (uploading) {
+      errorAlert("请等待所有图片上传完成");
+      return;
+    }
+    if (!images.length || images.length > IMAGE_RECOGNITION_FLASHCARD_MAX_IMAGES || images.some((image) => !image.url)) {
+      errorAlert("请上传 1–5 张图片");
       return;
     }
     if (!playbookType) {
@@ -92,8 +99,7 @@ function ImageRecognitionFlashcardCreateContent() {
     setSaving(true);
     try {
       await createImageRecognitionFlashcardCard({
-        imageUrl: image.url,
-        imageKey: image.key,
+        images,
         playbookType,
         sampleResult,
         notes,
@@ -112,11 +118,13 @@ function ImageRecognitionFlashcardCreateContent() {
     <TradePageShell title="图片识别闪卡录入" subtitle="上传图片，选择剧本类型，沉淀识别记忆卡" showAddButton={false}>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="rounded-lg border border-[#27272a] bg-[#121212] p-5">
-          <div className="mb-4 text-sm font-semibold text-white">图片</div>
+          <div className="mb-4 text-sm font-semibold text-white">图片（{images.length} / 5，按分析先后顺序上传）</div>
           <ImageUploader
             value={images}
             onChange={setImages}
-            max={1}
+            max={IMAGE_RECOGNITION_FLASHCARD_MAX_IMAGES}
+            disabled={saving || uploading}
+            onPreview={(index) => !uploading && setPreview({ images, index })}
             uploadUrlResolver={uploadUrlResolver}
           />
         </section>
@@ -162,7 +170,7 @@ function ImageRecognitionFlashcardCreateContent() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={saving} className="bg-[#00c2b2] text-black hover:bg-[#14b8a6]">
+            <Button onClick={handleSubmit} disabled={saving || uploading} className="bg-[#00c2b2] text-black hover:bg-[#14b8a6]">
               <Save className="mr-2 h-4 w-4" />
               {saving ? "保存中..." : "保存"}
             </Button>
@@ -172,6 +180,7 @@ function ImageRecognitionFlashcardCreateContent() {
           </div>
         </aside>
       </div>
+      <ImageGalleryPreview selection={preview} onChange={setPreview} />
     </TradePageShell>
   );
 }

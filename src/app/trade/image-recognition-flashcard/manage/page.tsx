@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { Edit3, Eye, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import TradePageShell from "../../components/trade-page-shell";
-import { FitImagePreview } from "@/components/common/FitImagePreview";
 import { ImageUploader } from "@/components/common/ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -27,7 +26,8 @@ import type {
   ImageRecognitionFlashcardStatus,
   ImageRecognitionFlashcardStatusFilter,
 } from "../types";
-import { IMAGE_RECOGNITION_FLASHCARD_LABELS } from "../types";
+import { getImageRecognitionFlashcardImages, IMAGE_RECOGNITION_FLASHCARD_LABELS, IMAGE_RECOGNITION_FLASHCARD_MAX_IMAGES } from "../types";
+import { ImageGalleryPreview, type ImageGallerySelection } from "../image-gallery-preview";
 import { useImageRecognitionFlashcardAdminAccess } from "../use-image-recognition-flashcard-admin-access";
 
 const ALL_VALUE = "__ALL__";
@@ -94,7 +94,8 @@ function ImageRecognitionFlashcardManageContent() {
   const [playbookOptions, setPlaybookOptions] = React.useState<DictionaryOption[]>([]);
   const [editingCard, setEditingCard] = React.useState<ImageRecognitionFlashcardCard | null>(null);
   const [draft, setDraft] = React.useState<EditDraft | null>(null);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [preview, setPreview] = React.useState<ImageGallerySelection | null>(null);
+  const uploading = !!draft?.image.some((image) => image.key.startsWith("__loading__"));
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const playbookLabelMap = React.useMemo(
@@ -152,7 +153,7 @@ function ImageRecognitionFlashcardManageContent() {
   const openEdit = (card: ImageRecognitionFlashcardCard) => {
     setEditingCard(card);
     setDraft({
-      image: [{ key: card.imageKey || card.imageUrl, url: card.imageUrl }],
+      image: getImageRecognitionFlashcardImages(card).map((image) => ({ key: image.key || image.url, url: image.url })),
       playbookType: card.playbookType,
       sampleResult: card.sampleResult || "SUCCESS",
       notes: card.notes || "",
@@ -161,10 +162,13 @@ function ImageRecognitionFlashcardManageContent() {
   };
 
   const handleSave = async () => {
-    if (!editingCard || !draft) return;
-    const image = draft.image.find((item) => item.url && !item.key.startsWith("__loading__"));
-    if (!image) {
-      errorAlert("请上传图片");
+    if (!editingCard || !draft || saving) return;
+    if (uploading) {
+      errorAlert("请等待所有图片上传完成");
+      return;
+    }
+    if (!draft.image.length || draft.image.length > IMAGE_RECOGNITION_FLASHCARD_MAX_IMAGES || draft.image.some((image) => !image.url)) {
+      errorAlert("请上传 1–5 张图片");
       return;
     }
     if (!draft.playbookType) {
@@ -175,8 +179,7 @@ function ImageRecognitionFlashcardManageContent() {
     setSaving(true);
     try {
       await updateImageRecognitionFlashcardCard(editingCard.cardId, {
-        imageUrl: image.url,
-        imageKey: image.key,
+        images: draft.image,
         playbookType: draft.playbookType,
         sampleResult: draft.sampleResult,
         notes: draft.notes,
@@ -312,9 +315,10 @@ function ImageRecognitionFlashcardManageContent() {
           ) : (
             items.map((card) => (
               <div key={card.cardId} className="grid grid-cols-[96px_minmax(140px,220px)_120px_minmax(220px,1fr)_120px_150px_180px] items-center border-b border-[#27272a] px-4 py-3 text-sm last:border-0">
-                <button type="button" onClick={() => setPreviewUrl(card.imageUrl)} className="h-16 w-16 overflow-hidden rounded-md border border-[#27272a] bg-black">
+                <button type="button" onClick={() => setPreview({ images: getImageRecognitionFlashcardImages(card), index: 0 })} aria-label={`查看闪卡的 ${getImageRecognitionFlashcardImages(card).length} 张图片`} className="relative h-16 w-16 overflow-hidden rounded-md border border-[#27272a] bg-black">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={card.imageUrl} alt="" className="h-full w-full object-cover" />
+                  <span className="absolute bottom-0 right-0 rounded-tl bg-black/80 px-1.5 py-0.5 text-xs text-white">{getImageRecognitionFlashcardImages(card).length} 张</span>
                 </button>
                 <div className="font-medium text-[#e5e7eb]">{card.playbookItem?.label || playbookLabelMap.get(card.playbookType) || card.playbookType}</div>
                 <div className={card.sampleResult === "FAIL" ? "font-medium text-[#ef4444]" : "font-medium text-[#22c55e]"}>
@@ -328,7 +332,7 @@ function ImageRecognitionFlashcardManageContent() {
                 </div>
                 <div className="text-xs text-[#a1a1aa]">{formatDateTime(card.updatedAt)}</div>
                 <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setPreviewUrl(card.imageUrl)} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]">
+                  <Button size="sm" variant="outline" aria-label="预览闪卡图片" onClick={() => setPreview({ images: getImageRecognitionFlashcardImages(card), index: 0 })} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]">
                     <Eye className="h-4 w-4" />
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => openEdit(card)} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]">
@@ -364,30 +368,35 @@ function ImageRecognitionFlashcardManageContent() {
         </div>
       </div>
 
-      <Dialog open={!!editingCard && !!draft} onOpenChange={(open) => !open && (setEditingCard(null), setDraft(null))}>
-        <DialogContent className="max-w-3xl border-[#27272a] bg-[#121212] text-[#e5e7eb]">
+      <Dialog open={!!editingCard && !!draft} onOpenChange={(open) => !open && !saving && !uploading && (setEditingCard(null), setDraft(null))}>
+        <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto border-[#27272a] bg-[#121212] text-[#e5e7eb]">
           <DialogHeader>
             <DialogTitle>编辑图片识别闪卡</DialogTitle>
           </DialogHeader>
           {draft ? (
             <div className="grid gap-5 md:grid-cols-[260px_minmax(0,1fr)]">
               <div>
-                <div className="mb-2 text-sm font-medium">图片</div>
+                <div className="mb-2 text-sm font-medium">图片（{draft.image.length} / 5）</div>
                 <ImageUploader
                   value={draft.image}
                   onChange={(image) => setDraft((prev) => prev ? { ...prev, image } : prev)}
-                  max={1}
+                  max={IMAGE_RECOGNITION_FLASHCARD_MAX_IMAGES}
+                  reorderable
+                  disabled={saving || uploading}
+                  onPreview={(index) => !uploading && setPreview({ images: draft.image, index })}
                   uploadUrlResolver={uploadUrlResolver}
                 />
+                <p className="text-xs text-[#a1a1aa]">使用前移 / 后移调整顺序；第一张作为列表封面，点击保存后生效。</p>
                 {draft.image[0]?.url ? (
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setPreviewUrl(draft.image[0]?.url || null)}
+                    disabled={uploading}
+                    onClick={() => setPreview({ images: draft.image, index: 0 })}
                     className="mt-2 w-full border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]"
                   >
                     <Eye className="mr-2 h-4 w-4" />
-                    放大查看当前图片
+                    放大浏览图片组
                   </Button>
                 ) : null}
               </div>
@@ -443,21 +452,15 @@ function ImageRecognitionFlashcardManageContent() {
             </div>
           ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => (setEditingCard(null), setDraft(null))} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]">取消</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-[#00c2b2] text-black hover:bg-[#14b8a6]">
+            <Button variant="outline" disabled={saving || uploading} onClick={() => (setEditingCard(null), setDraft(null))} className="border-[#27272a] bg-transparent text-[#e5e7eb] hover:bg-[#1f1f22]">取消</Button>
+            <Button onClick={handleSave} disabled={saving || uploading} className="bg-[#00c2b2] text-black hover:bg-[#14b8a6]">
               {saving ? "保存中..." : "保存"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
-        <DialogContent className="flex h-[calc(100vh-24px)] max-h-none w-[calc(100vw-24px)] max-w-none items-center justify-center gap-0 overflow-hidden border-[#27272a] bg-[#121212] p-1 sm:max-w-none">
-          {previewUrl ? (
-            <FitImagePreview src={previewUrl} alt="图片预览" />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <ImageGalleryPreview selection={preview} onChange={setPreview} />
     </TradePageShell>
   );
 }

@@ -1,6 +1,7 @@
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import type {
   ImageRecognitionFlashcardCard,
+  ImageRecognitionFlashcardImage,
   ImageRecognitionFlashcardCardSortBy,
   ImageRecognitionFlashcardCardSortOrder,
   ImageRecognitionFlashcardPlaybookStat,
@@ -17,7 +18,8 @@ export const IMAGE_RECOGNITION_FLASHCARD_ALLOWED_IMAGE_TYPES = [
 ] as const;
 
 type CreateImageRecognitionFlashcardPayload = {
-  imageUrl: string;
+  images: ImageRecognitionFlashcardImage[];
+  imageUrl?: string;
   imageKey?: string;
   playbookType: string;
   sampleResult: ImageRecognitionFlashcardSampleResult;

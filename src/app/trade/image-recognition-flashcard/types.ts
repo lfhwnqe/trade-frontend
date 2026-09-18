@@ -19,6 +19,14 @@ export type ImageRecognitionFlashcardPlaybookItem = {
   status?: string;
 };
 
+export const IMAGE_RECOGNITION_FLASHCARD_MAX_IMAGES = 5;
+
+export type ImageRecognitionFlashcardImage = { url: string; key?: string };
+
+export function getImageRecognitionFlashcardImages(card: ImageRecognitionFlashcardCard): ImageRecognitionFlashcardImage[] {
+  return card.images?.length ? card.images : [{ url: card.imageUrl, key: card.imageKey }];
+}
+
 export type ImageRecognitionFlashcardCard = {
   id: string;
   userId: string;
@@ -26,6 +34,7 @@ export type ImageRecognitionFlashcardCard = {
   entityType: "IMAGE_RECOGNITION_FLASHCARD";
   imageUrl: string;
   imageKey?: string;
+  images?: ImageRecognitionFlashcardImage[];
   playbookType: string;
   playbookItem?: ImageRecognitionFlashcardPlaybookItem;
   sampleResult?: ImageRecognitionFlashcardSampleResult;
